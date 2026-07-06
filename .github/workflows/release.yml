@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+      - name: Build
+        run: |
+          GOOS=windows GOARCH=amd64 go build -o hawkward-windows-amd64.exe ./cmd/hawkward
+          GOOS=linux GOARCH=amd64 go build -o hawkward-linux-amd64 ./cmd/hawkward
+          GOOS=darwin GOARCH=amd64 go build -o hawkward-darwin-amd64 ./cmd/hawkward
+          GOOS=darwin GOARCH=arm64 go build -o hawkward-darwin-arm64 ./cmd/hawkward
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            hawkward-windows-amd64.exe
+            hawkward-linux-amd64
+            hawkward-darwin-amd64
+            hawkward-darwin-arm64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
