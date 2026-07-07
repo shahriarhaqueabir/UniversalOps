@@ -33,13 +33,13 @@ type InterfaceInfo struct {
 // BandwidthResult holds the outcome of a non-blocking bandwidth capture.
 type BandwidthResult struct {
 	Interfaces []InterfaceInfo
-	Counters   map[string]bandwidthCounter
+	Counters   map[string]BandwidthCounter
 }
 
 // GetInterfaces returns information about all network interfaces without blocking.
 // It uses the provided lastCounters and elapsed duration to calculate rates.
-func GetInterfaces(lastCounters map[string]bandwidthCounter, elapsed time.Duration) (BandwidthResult, error) {
-	current, err := getBandwidthCounters()
+func GetInterfaces(lastCounters map[string]BandwidthCounter, elapsed time.Duration) (BandwidthResult, error) {
+	current, err := GetBandwidthCounters()
 	if err != nil {
 		return BandwidthResult{}, err
 	}
@@ -97,7 +97,7 @@ func GetInterfaces(lastCounters map[string]bandwidthCounter, elapsed time.Durati
 	return BandwidthResult{Interfaces: result, Counters: current}, nil
 }
 
-type bandwidthCounter struct {
+type BandwidthCounter struct {
 	Name    string
 	RXBytes uint64
 	TXBytes uint64
@@ -110,24 +110,20 @@ type bandwidthRate struct {
 	TXRateBps float64
 }
 
-func getBandwidthCounters() (map[string]bandwidthCounter, error) {
+func GetBandwidthCounters() (map[string]BandwidthCounter, error) {
 	counters, err := gopsnet.IOCounters(true)
 	if err != nil {
 		return nil, fmt.Errorf("get network counters: %w", err)
 	}
 
-	result := make(map[string]bandwidthCounter, len(counters))
+	result := make(map[string]BandwidthCounter, len(counters))
 	for _, counter := range counters {
-		result[counter.Name] = bandwidthCounter{
-			Name:    counter.Name,
-			RXBytes: counter.BytesRecv,
-			TXBytes: counter.BytesSent,
-		}
+		result[counter.Name] = BandwidthCounter{Name: counter.Name, RXBytes: counter.BytesRecv, TXBytes: counter.BytesSent}
 	}
 	return result, nil
 }
 
-func calculateBandwidthRates(before, after map[string]bandwidthCounter, elapsed time.Duration) map[string]bandwidthRate {
+func calculateBandwidthRates(before, after map[string]BandwidthCounter, elapsed time.Duration) map[string]bandwidthRate {
 	rates := make(map[string]bandwidthRate, len(after))
 	if elapsed <= 0 {
 		return rates

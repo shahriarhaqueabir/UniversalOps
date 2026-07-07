@@ -537,11 +537,11 @@ func TestTracerouteCommand(t *testing.T) {
 }
 
 func TestCalculateBandwidthRates(t *testing.T) {
-	before := map[string]bandwidthCounter{
+	before := map[string]BandwidthCounter{
 		"eth0": {Name: "eth0", RXBytes: 1_000, TXBytes: 2_000},
 		"wifi": {Name: "wifi", RXBytes: 4_000, TXBytes: 8_000},
 	}
-	after := map[string]bandwidthCounter{
+	after := map[string]BandwidthCounter{
 		"eth0": {Name: "eth0", RXBytes: 3_000, TXBytes: 2_500},
 		"wifi": {Name: "wifi", RXBytes: 3_000, TXBytes: 9_000},
 		"new0": {Name: "new0", RXBytes: 100, TXBytes: 200},

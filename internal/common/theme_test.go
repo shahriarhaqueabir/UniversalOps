@@ -12,28 +12,72 @@ func TestThemeCycling(t *testing.T) {
 		t.Errorf("CurrentTheme() = %q, want %q", CurrentTheme(), ThemeDefault)
 	}
 
-	// Cycle to Dark
-	NextTheme()
-	if CurrentTheme() != ThemeDark {
-		t.Errorf("NextTheme() should go to dark, got %q", CurrentTheme())
+	// Cycle through all themes and verify each step
+	allThemes := ThemeNames()
+	startIdx := 0
+	for i, name := range allThemes {
+		if name == ThemeDefault {
+			startIdx = i
+			break
+		}
 	}
 
-	// Cycle to Light
-	NextTheme()
-	if CurrentTheme() != ThemeLight {
-		t.Errorf("NextTheme() should go to light, got %q", CurrentTheme())
+	for step := 0; step < len(allThemes); step++ {
+		expected := allThemes[(startIdx+step)%len(allThemes)]
+		if CurrentTheme() != expected {
+			t.Errorf("Step %d: CurrentTheme() = %q, want %q", step, CurrentTheme(), expected)
+		}
+		NextTheme()
 	}
 
-	// Cycle to High Contrast
-	NextTheme()
-	if CurrentTheme() != ThemeHighContrast {
-		t.Errorf("NextTheme() should go to high-contrast, got %q", CurrentTheme())
-	}
-
-	// Cycle back to Default
-	NextTheme()
+	// After a full cycle we should be back at ThemeDefault
 	if CurrentTheme() != ThemeDefault {
-		t.Errorf("NextTheme() should wrap to default, got %q", CurrentTheme())
+		t.Errorf("After full cycle, CurrentTheme() = %q, want %q", CurrentTheme(), ThemeDefault)
+	}
+}
+
+func TestAllThemesAreUnique(t *testing.T) {
+	seen := make(map[ThemeName]bool)
+	for _, name := range ThemeNames() {
+		if seen[name] {
+			t.Errorf("Duplicate theme name: %q", name)
+		}
+		seen[name] = true
+	}
+	if len(ThemeNames()) != 10 {
+		t.Errorf("Expected 10 themes, got %d", len(ThemeNames()))
+	}
+}
+
+func TestAllPalettesHaveChartColors(t *testing.T) {
+	for _, name := range ThemeNames() {
+		p := PaletteForTheme(name)
+		if p.ChartLine1 == "" || p.ChartLine2 == "" || p.ChartLine3 == "" {
+			t.Errorf("Theme %q missing chart line colors", name)
+		}
+		if p.ChartGrid == "" {
+			t.Errorf("Theme %q missing chart grid color", name)
+		}
+		if p.ChartText == "" {
+			t.Errorf("Theme %q missing chart text color", name)
+		}
+		if p.CardBg == "" || p.CardBorder == "" {
+			t.Errorf("Theme %q missing card colors", name)
+		}
+		if p.CardFocusedBg == "" || p.CardFocusedBorder == "" {
+			t.Errorf("Theme %q missing card focused colors", name)
+		}
+	}
+}
+
+func TestThemeCyclingWrapsToDefault(t *testing.T) {
+	SetTheme(ThemeDefault)
+	// Cycle 10 times (full cycle)
+	for i := 0; i < 10; i++ {
+		NextTheme()
+	}
+	if CurrentTheme() != ThemeDefault {
+		t.Errorf("After 10 cycles, CurrentTheme() = %q, want %q", CurrentTheme(), ThemeDefault)
 	}
 }
 

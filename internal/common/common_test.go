@@ -142,6 +142,7 @@ func TestPlatformChecks(t *testing.T) {
 
 func TestScreenNames(t *testing.T) {
 	want := map[Screen]string{
+		ScreenDashboard:  "Dashboard",
 		ScreenMainMenu:   "Main Menu",
 		ScreenSysOps:     "System Operations",
 		ScreenNetOps:     "Network Operations",
