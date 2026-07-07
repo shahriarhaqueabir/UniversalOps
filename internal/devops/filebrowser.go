@@ -52,6 +52,11 @@ func ReadFile(path string) (string, error) {
 	return string(data), nil
 }
 
+// WriteFile writes data to a file.
+func WriteFile(path string, data string) error {
+	return os.WriteFile(path, []byte(data), 0644)
+}
+
 // formatSize converts bytes to a human-readable string.
 func formatSize(size int64) string {
 	const unit = 1024

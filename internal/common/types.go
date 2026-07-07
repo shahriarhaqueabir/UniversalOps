@@ -10,7 +10,8 @@ import (
 type Screen int
 
 const (
-	ScreenMainMenu Screen = iota
+	ScreenDashboard Screen = iota
+	ScreenMainMenu
 	ScreenSysOps
 	ScreenNetOps
 	ScreenSecOps
@@ -22,6 +23,7 @@ const (
 
 // Screen names for display.
 var ScreenNames = map[Screen]string{
+	ScreenDashboard:  "Dashboard",
 	ScreenMainMenu:   "Main Menu",
 	ScreenSysOps:     "System Operations",
 	ScreenNetOps:     "Network Operations",

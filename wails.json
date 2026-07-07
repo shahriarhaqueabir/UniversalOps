@@ -1,0 +1,14 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "hawkward-gui",
+  "outputfilename": "hawkward-gui",
+  "frontend:dir": "cmd/hawkward-gui/frontend",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "http://localhost:5173",
+  "author": {
+    "name": "Hawkward",
+    "email": "dev@hawkward.io"
+  }
+}

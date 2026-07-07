@@ -67,8 +67,28 @@ var (
 
 	LabelStyle lipgloss.Style
 
+	// Card styles
+	CardStyle lipgloss.Style
+
+	CardFocusedStyle lipgloss.Style
+
+	CardTitleStyle lipgloss.Style
+
+	CardBodyStyle lipgloss.Style
+
+	DashboardTitleStyle lipgloss.Style
+
+	GridContainerStyle lipgloss.Style
+
+	DashboardSectionStyle lipgloss.Style
+
 	// Divider
 	Divider string
+
+	// Chart style helpers
+	ChartLineStyle lipgloss.Style
+	ChartGridStyle lipgloss.Style
+	ChartTextStyle lipgloss.Style
 )
 
 func init() {
@@ -168,7 +188,53 @@ func rebuildStyles(p common.Palette) {
 	LabelStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(p.Muted))
 
+	// ── Card styles ──
+
+	CardStyle = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color(p.CardBorder)).
+		Background(lipgloss.Color(p.CardBg)).
+		Padding(0, 1).
+		Margin(0, 0, 1, 0)
+
+	CardFocusedStyle = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color(p.CardFocusedBorder)).
+		Background(lipgloss.Color(p.CardFocusedBg)).
+		Padding(0, 1).
+		Margin(0, 0, 1, 0)
+
+	CardTitleStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(p.Primary)).
+		Bold(true)
+
+	CardBodyStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(p.Text))
+
+	DashboardTitleStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(p.Primary)).
+		Bold(true).
+		Padding(0, 0, 1, 0)
+
+	GridContainerStyle = lipgloss.NewStyle().
+		Padding(0, 0, 1, 0)
+
+	DashboardSectionStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(p.Secondary)).
+		Bold(true).
+		Padding(0, 0, 1, 0)
+
 	Divider = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(p.Border)).
 		Render(strings.Repeat("-", 40))
+
+	// Chart style helpers (used by dashboard/sysops views)
+	ChartLineStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(p.ChartLine1))
+
+	ChartGridStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(p.ChartGrid))
+
+	ChartTextStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(p.ChartText))
 }

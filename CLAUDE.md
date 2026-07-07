@@ -1,29 +1,30 @@
-# Project Instructions: Hawkward TUI
+# Project Instructions: Hawkward GUI
 
 ## Tech Stack
-- **Language**: Go 1.26.4
-- **TUI Framework**: Bubble Tea v2 (`charm.land/bubbletea/v2`)
-- **Styling**: Lip Gloss v2 (`charm.land/lipgloss/v2`)
+- **Backend**: Go 1.26.4
+- **Frontend**: React + TypeScript + Vite (Tailwind v4)
+- **GUI Framework**: Wails v2 (`github.com/wailsapp/wails/v2`)
 - **Ops Libraries**: `gopsutil/v4`, `miekg/dns`, `golang.org/x/net`
 
 ## Build & Run
-- **Build**: `go build -o hawkward.exe ./cmd/hawkward`
-- **Run**: `./hawkward.exe` (or `go run ./cmd/hawkward`)
-- **Test**: `go test ./...`
-- **Release**: `./scripts/release.sh` or `scripts/build.bat`
+- **Build**: `wails build`
+- **Dev**: `wails dev`
+- **Frontend Dev**: `cd cmd/hawkward-gui/frontend && npm run dev`
+- **Test (Go)**: `go test ./...`
+- **Test (Frontend)**: `cd cmd/hawkward-gui/frontend && npm test`
 
 ## Code Style
-- **Pattern**: Follow The Elm Architecture (TEA).
-- **Update Loop**: Delegate keyboard events to a private `handleKeyPress` helper in `update.go`.
-- **Screen Routing**: Always use the `Screen` enum in `internal/common/types.go`.
-- **Styling**: Use `internal/common/` styles; avoid hardcoded colors.
-- **Naming**: `PascalCase` for exported Go symbols, `camelCase` for internal. Kebab-case for file names (except `*_test.go`).
-- **Logging**: Use `common.LogInfo`, `common.LogWarn`, and `common.LogError`.
-- **Async**: Wrap long-running tasks in `tea.Cmd` and use `ResultMsg` structs for completions.
+- **Pattern**: Wails Bindings (Go) + React Hooks (Frontend).
+- **Subsystems**: Bound in `main.go` from `internal/app/`.
+- **Styling**: Squib-inspired design system in `globals.css`.
+- **Icons**: Lucide React.
+- **Charts**: Recharts.
+- **Naming**: `PascalCase` for exported Go symbols, `camelCase` for internal. `camelCase` for TS/JS.
+- **Logging**: Use `common.LogInfo` in Go; `console.log` or a dedicated hook in Frontend.
 
 ## Testing
-- Ensure unit tests exist for all new features in `*_test.go`.
-- Prefer table-driven tests (see `internal/sysops/sysops_test.go` for examples).
+- **Go**: Unit tests in `*_test.go` using standard `testing` package.
+- **Frontend**: Vitest + React Testing Library (RTL).
 
 ## Project Structure
 - `cmd/hawkward/`: Entry point.

@@ -55,6 +55,15 @@ var (
 	InfoColor    color.Color
 )
 
+// Chart colors exported for use by chart rendering.
+var (
+	ChartLine1Color color.Color
+	ChartLine2Color color.Color
+	ChartLine3Color color.Color
+	ChartGridColor  color.Color
+	ChartTextColor  color.Color
+)
+
 func init() {
 	rebuildCommonStyles(CurrentPalette())
 }
@@ -94,6 +103,12 @@ func rebuildCommonStyles(p Palette) {
 	WarningColor = lipgloss.Color(p.Warning)
 	DangerColor = lipgloss.Color(p.Danger)
 	InfoColor = lipgloss.Color(p.Info)
+
+	ChartLine1Color = lipgloss.Color(p.ChartLine1)
+	ChartLine2Color = lipgloss.Color(p.ChartLine2)
+	ChartLine3Color = lipgloss.Color(p.ChartLine3)
+	ChartGridColor = lipgloss.Color(p.ChartGrid)
+	ChartTextColor = lipgloss.Color(p.ChartText)
 }
 
 // RenderSparkline renders a compact ASCII-only trend line.
@@ -146,4 +161,19 @@ func GetHealthColor(pct float64) color.Color {
 	default:
 		return HealthyColor
 	}
+}
+
+// PaletteSeriesColors returns chart line colors from the palette.
+func PaletteSeriesColors(p Palette) []color.Color {
+	return []color.Color{
+		lipgloss.Color(p.ChartLine1),
+		lipgloss.Color(p.ChartLine2),
+		lipgloss.Color(p.ChartLine3),
+	}
+}
+
+// PaletteForCharts returns the chart-level exported vars for a given palette.
+// This is used by chart configs to pick up theme-aware colors.
+func PaletteForCharts() (line1, line2, line3, grid, text color.Color) {
+	return ChartLine1Color, ChartLine2Color, ChartLine3Color, ChartGridColor, ChartTextColor
 }

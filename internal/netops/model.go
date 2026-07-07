@@ -26,7 +26,7 @@ type Model struct {
 	pingCount  int
 
 	// Bandwidth state
-	lastCounters  map[string]bandwidthCounter
+	lastCounters  map[string]BandwidthCounter
 	lastCapture   time.Time
 	selectedIndex int
 
@@ -81,8 +81,23 @@ type ConnectionsResultMsg struct {
 // InterfacesResultMsg is sent after collecting interfaces.
 type InterfacesResultMsg struct {
 	Interfaces []InterfaceInfo
-	Counters   map[string]bandwidthCounter
+	Counters   map[string]BandwidthCounter
 	Err        error
+}
+
+// CollectInterfaces collects interface bandwidth data using the model's
+// internal counter state for rate calculation. Returns the interface list.
+func (m *Model) CollectInterfaces() ([]InterfaceInfo, error) {
+	elapsed := time.Since(m.lastCapture)
+	res, err := GetInterfaces(m.lastCounters, elapsed)
+	if err != nil {
+		return nil, err
+	}
+	m.lastCounters = res.Counters
+	m.lastCapture = time.Now()
+	m.InterfaceData = mergeInterfaceBandwidthHistory(m.InterfaceData, res.Interfaces)
+	m.ready = true
+	return res.Interfaces, nil
 }
 
 // Ready returns true if data has been collected at least once.

@@ -620,12 +620,12 @@ func TestRootModelPushPopScreen(t *testing.T) {
 
 func TestRootModelPopScreenEmpty(t *testing.T) {
 	m := NewRootModel()
-	// Pop with empty stack should go to MainMenu
+	// Pop with empty stack should go to Dashboard
 	m.previousScreens = nil
 	m.popScreen()
-	if m.activeScreen != common.ScreenMainMenu {
-		t.Errorf("activeScreen = %d, want ScreenMainMenu (%d)",
-			m.activeScreen, common.ScreenMainMenu)
+	if m.activeScreen != common.ScreenDashboard {
+		t.Errorf("activeScreen = %d, want ScreenDashboard (%d)",
+			m.activeScreen, common.ScreenDashboard)
 	}
 }
 
