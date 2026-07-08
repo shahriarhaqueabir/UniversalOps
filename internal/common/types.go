@@ -1,47 +1,5 @@
 package common
 
-import (
-	"time"
-
-	tea "charm.land/bubbletea/v2"
-)
-
-// Screen represents the active screen/layer in the TUI.
-type Screen int
-
-const (
-	ScreenDashboard Screen = iota
-	ScreenMainMenu
-	ScreenSysOps
-	ScreenNetOps
-	ScreenSecOps
-	ScreenDevOps
-	ScreenAIOps
-	ScreenOnboarding
-	ScreenHelp
-)
-
-// Screen names for display.
-var ScreenNames = map[Screen]string{
-	ScreenDashboard:  "Dashboard",
-	ScreenMainMenu:   "Main Menu",
-	ScreenSysOps:     "System Operations",
-	ScreenNetOps:     "Network Operations",
-	ScreenSecOps:     "Security Operations",
-	ScreenDevOps:     "Development Operations",
-	ScreenAIOps:      "AI Operations",
-	ScreenOnboarding: "Welcome",
-	ScreenHelp:       "Help",
-}
-
-// MenuItem represents a selectable menu item.
-type MenuItem struct {
-	Title       string
-	Description string
-	Screen      Screen
-	Key         string
-}
-
 // SystemStats holds a snapshot of system metrics.
 type SystemStats struct {
 	CPUPercent    float64
@@ -70,13 +28,3 @@ const (
 	MaxScheduledTasks       = 20  // cap for scheduled task table in Markdown reports
 	MaxFirewallRulesDisplay = 30  // cap for firewall rule rows in Markdown table
 )
-
-// TickMsg is sent periodically to refresh dashboards.
-type TickMsg time.Time
-
-// StartTickCmd creates a ticking command for periodic refresh.
-func StartTickCmd(interval time.Duration) tea.Cmd {
-	return tea.Tick(interval, func(t time.Time) tea.Msg {
-		return TickMsg(t)
-	})
-}

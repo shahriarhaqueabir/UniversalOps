@@ -35,3 +35,4 @@ vendor/
 coverage.out
 coverage.txt
 cmd/hawkward-gui/nul
+nul

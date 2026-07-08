@@ -1,8 +1,6 @@
 package app
 
 import (
-	"time"
-
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
@@ -69,14 +67,8 @@ func (a *AlertAPI) AddRule(metric string, threshold float64, severity string, co
 }
 
 // RemoveRule removes an alert rule by metric and threshold.
-// In a full implementation we'd need to identify rules uniquely.
-// For now this provides a simple interface.
 func (a *AlertAPI) RemoveRule(metric string, threshold float64) {
-	// Get current rules
-	rules := a.app.alerts.AllAlerts()
-	_ = rules // In a production version we'd maintain a rule list
-
-	common.LogInfo("RemoveRule requested: metric=%s, threshold=%.2f (stub)", metric, threshold)
+	a.app.alerts.RemoveRule(metric, threshold)
 }
 
 // GetAlertCount returns the number of unresolved alerts.
@@ -92,13 +84,4 @@ func (a *AlertAPI) EvaluateNow() []AlertInfo {
 		out = append(out, convertAlert(alert))
 	}
 	return out
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-func alertTime(t time.Time) string {
-	if t.IsZero() {
-		return ""
-	}
-	return t.Format(time.RFC3339)
 }

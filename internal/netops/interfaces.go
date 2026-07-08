@@ -3,14 +3,10 @@ package netops
 import (
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	gopsnet "github.com/shirou/gopsutil/v4/net"
-)
-
-const (
-	bandwidthHistoryLimit   = 24
-	bandwidthSparklineWidth = 12
 )
 
 // InterfaceInfo holds information about a network interface.
@@ -91,6 +87,15 @@ func GetInterfaces(lastCounters map[string]BandwidthCounter, elapsed time.Durati
 			info.Speed = "unknown"
 		}
 
+		// Heuristic labeler for UI
+		if iface.Flags&net.FlagLoopback != 0 {
+			info.Name = "[Loopback] " + iface.Name
+		} else if strings.Contains(strings.ToLower(iface.Name), "wi-fi") || strings.Contains(strings.ToLower(iface.Name), "wlan") {
+			info.Name = "[WiFi] " + iface.Name
+		} else if strings.Contains(strings.ToLower(iface.Name), "ethernet") {
+			info.Name = "[Wired] " + iface.Name
+		}
+
 		result = append(result, info)
 	}
 
@@ -154,31 +159,4 @@ func counterDelta(before, after uint64) uint64 {
 		return 0
 	}
 	return after - before
-}
-
-func appendRateHistory(history []float64, value float64, limit int) []float64 {
-	if limit <= 0 {
-		return nil
-	}
-
-	next := append(append([]float64(nil), history...), value)
-	if len(next) > limit {
-		next = next[len(next)-limit:]
-	}
-	return next
-}
-
-func mergeInterfaceBandwidthHistory(previous, current []InterfaceInfo) []InterfaceInfo {
-	histories := make(map[string]InterfaceInfo, len(previous))
-	for _, iface := range previous {
-		histories[iface.Name] = iface
-	}
-
-	for i := range current {
-		if previousIface, ok := histories[current[i].Name]; ok {
-			current[i].RXHistory = appendRateHistory(previousIface.RXHistory, current[i].RXRateBps, bandwidthHistoryLimit)
-			current[i].TXHistory = appendRateHistory(previousIface.TXHistory, current[i].TXRateBps, bandwidthHistoryLimit)
-		}
-	}
-	return current
 }

@@ -67,15 +67,15 @@ var allThemeOrder = []ThemeName{
 var palettes = map[ThemeName]Palette{
 	// ── default — Purple/green dark ──
 	ThemeDefault: {
-		Primary:    ColorPrimary,
-		Secondary:  ColorSecondary,
-		Warning:    ColorWarning,
-		Danger:     ColorDanger,
-		Info:       ColorInfo,
-		Muted:      ColorMuted,
-		Text:       ColorText,
-		Background: ColorDarkBg,
-		Border:     ColorBorder,
+		Primary:    "#7C3AED",
+		Secondary:  "#10B981",
+		Warning:    "#FBBF24",
+		Danger:     "#F87171",
+		Info:       "#60A5FA",
+		Muted:      "#9CA3AF",
+		Text:       "#F9FAFB",
+		Background: "#111827",
+		Border:     "#4B5563",
 
 		ChartLine1: "#7C3AED",
 		ChartLine2: "#10B981",
@@ -344,7 +344,6 @@ func ThemeFromEnv() ThemeName {
 // SetTheme updates the shared common styles for a theme.
 func SetTheme(name ThemeName) ThemeName {
 	activeTheme = ParseThemeName(string(name))
-	rebuildCommonStyles(CurrentPalette())
 	_ = SaveTheme(activeTheme) // ignore persistence error
 	return activeTheme
 }

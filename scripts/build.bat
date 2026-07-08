@@ -1,12 +1,11 @@
 @echo off
-REM Build script for Hawkward on Windows
-REM Requires Go 1.26.4+
-
-echo Building Hawkward...
-go build -ldflags="-s -w" -o hawkward.exe .\cmd\hawkward\
+REM Build script for Hawkward GUI on Windows
+REM Requires: Go 1.26.4+, Node.js, npm, Wails CLI
+echo Building Hawkward GUI...
+wails build -o hawkward-gui.exe
 if %ERRORLEVEL% EQU 0 (
-    echo Build successful: hawkward.exe
+    echo Build successful: build/bin/hawkward-gui.exe
 ) else (
-    echo Build failed with error code %ERRORLEVEL%
+    echo Build failed
     exit /b %ERRORLEVEL%
 )

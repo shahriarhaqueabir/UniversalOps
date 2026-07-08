@@ -10,7 +10,7 @@ import (
 // CollectionConfig controls how the data pipeline collects and stores metrics.
 type CollectionConfig struct {
 	// Capacity is the number of samples retained per time series (ring buffer).
-	// Default 240 = 12 min at 3 s tick interval.
+	// Default 240 = 4 min at 1 s tick interval.
 	Capacity int
 
 	// TickInterval is the nominal collection interval.
@@ -28,7 +28,7 @@ type CollectionConfig struct {
 func DefaultCollectionConfig() CollectionConfig {
 	return CollectionConfig{
 		Capacity:       240,
-		TickInterval:   3 * time.Second,
+		TickInterval:   1 * time.Second,
 		ForecastSteps:  12,
 		ForecastWindow: 60,
 	}
@@ -105,6 +105,11 @@ func (dp *DataPipeline) PushMetric(name, unit string, value float64) {
 		dp.forecast[name] = fe
 	}
 	fe.Push(value)
+
+	// Persist to database
+	if s := GetStorage(); s != nil {
+		s.InsertMetric(name, unit, value)
+	}
 }
 
 // ── Retrieval ───────────────────────────────────────────────────────────────

@@ -4,6 +4,10 @@ import {app} from '../models';
 
 export function GetDevProcesses():Promise<Array<app.ProcessInfo>>;
 
+export function GetPowerShellWorkflows():Promise<Array<string>>;
+
+export function GetServices():Promise<Array<app.ServiceEntry>>;
+
 export function KillProcess(arg1:number):Promise<app.CommandResult>;
 
 export function ListDirectory(arg1:string):Promise<Array<app.FileEntry>>;
@@ -13,6 +17,8 @@ export function ReadFile(arg1:string):Promise<string>;
 export function RunCommand(arg1:string):Promise<app.CommandResult>;
 
 export function RunCommandLive(arg1:string,arg2:string):Promise<app.CommandResult>;
+
+export function RunPowerShell(arg1:string):Promise<app.CommandResult>;
 
 export function SearchLog(arg1:string,arg2:string):Promise<Array<string>>;
 

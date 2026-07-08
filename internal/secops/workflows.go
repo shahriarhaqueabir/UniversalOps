@@ -7,6 +7,14 @@ import (
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
+// boolStr returns "enabled" or "disabled" for use in report text.
+func boolStr(v bool) string {
+	if v {
+		return "enabled"
+	}
+	return "disabled"
+}
+
 // SecurityReport is a combined security audit report.
 type SecurityReport struct {
 	FirewallRules  []FirewallRule

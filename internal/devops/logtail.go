@@ -15,6 +15,9 @@ type LogEntry struct {
 
 // TailLog reads the last n lines from a file.
 func TailLog(path string, n int) ([]string, error) {
+	if err := isPathSafe(path); err != nil {
+		return nil, err
+	}
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -39,6 +42,9 @@ func TailLog(path string, n int) ([]string, error) {
 
 // SearchLog searches a file for lines containing the given pattern.
 func SearchLog(path string, pattern string) ([]string, error) {
+	if err := isPathSafe(path); err != nil {
+		return nil, err
+	}
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err

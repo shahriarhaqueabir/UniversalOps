@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -58,9 +59,12 @@ func (n *NetOps) Ping(host string, count int) PingResult {
 	}
 }
 
-// DNSLookup performs DNS lookups for a given hostname.
+// DNSLookup performs DNS lookups for a given hostname with a 10-second timeout.
 func (n *NetOps) DNSLookup(hostname string) DNSResult {
-	result, err := netops.LookupDNS(hostname)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	result, err := netops.LookupDNSWithContext(ctx, hostname)
 	if err != nil {
 		common.LogWarn("DNSLookup failed: %v", err)
 		return DNSResult{Hostname: hostname, Error: err.Error()}
@@ -97,9 +101,12 @@ func (n *NetOps) PortScan(host string, ports []int) []PortResult {
 	return out
 }
 
-// Traceroute runs traceroute to a target host.
+// Traceroute runs traceroute to a target host with a 30-second timeout.
 func (n *NetOps) Traceroute(host string) TraceResult {
-	result, err := netops.TraceRoute(host)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	result, err := netops.TraceRouteWithContext(ctx, host)
 	if err != nil {
 		common.LogWarn("Traceroute failed: %v", err)
 		return TraceResult{Target: host, Error: err.Error()}

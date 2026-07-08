@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -27,16 +28,17 @@ func (d *DevOps) RunCommand(cmd string) CommandResult {
 	dur := time.Since(start).Milliseconds()
 	if err != nil {
 		common.LogWarn("RunCommand failed: %v", err)
+		errMsg := sanitizeError(err)
 		if result != nil {
 			return CommandResult{
 				Command:  cmd,
 				Output:   result.Output,
 				ExitCode: result.ExitCode,
 				Duration: dur,
-				Error:    err.Error(),
+				Error:    errMsg,
 			}
 		}
-		return CommandResult{Command: cmd, Duration: dur, Error: err.Error()}
+		return CommandResult{Command: cmd, Duration: dur, Error: errMsg}
 	}
 	return CommandResult{
 		Command:  cmd,
@@ -66,16 +68,17 @@ func (d *DevOps) RunCommandLive(cmd string, id string) CommandResult {
 	dur := time.Since(start).Milliseconds()
 	if err != nil {
 		common.LogWarn("RunCommandLive failed: %v", err)
+		errMsg := sanitizeError(err)
 		if result != nil {
 			return CommandResult{
 				Command:  cmd,
 				Output:   result.Output,
 				ExitCode: result.ExitCode,
 				Duration: dur,
-				Error:    err.Error(),
+				Error:    errMsg,
 			}
 		}
-		return CommandResult{Command: cmd, Duration: dur, Error: err.Error()}
+		return CommandResult{Command: cmd, Duration: dur, Error: errMsg}
 	}
 	return CommandResult{
 		Command:  cmd,
@@ -175,4 +178,83 @@ func (d *DevOps) SearchLog(path string, pattern string) []string {
 		return nil
 	}
 	return lines
+}
+
+// GetServices returns a list of system services.
+func (d *DevOps) GetServices() []ServiceEntry {
+	services, err := devops.ListServices(0)
+	if err != nil {
+		common.LogWarn("GetServices failed: %v", err)
+		return nil
+	}
+	out := make([]ServiceEntry, 0, len(services))
+	for _, s := range services {
+		out = append(out, ServiceEntry{
+			Name:        s.Name,
+			DisplayName: s.DisplayName,
+			Status:      s.Status,
+			StartType:   s.StartType,
+		})
+	}
+	return out
+}
+
+// ControlService manages a service state.
+func (d *DevOps) ControlService(name, action string) bool {
+	common.LogInfo("Service control: %s %s", action, name)
+	err := devops.ControlService(name, action)
+	if err != nil {
+		common.LogWarn("ControlService failed: %v", err)
+		return false
+	}
+	return true
+}
+
+// RunPowerShell executes a PowerShell command using the HawkwardHybrid profile.
+func (d *DevOps) RunPowerShell(cmd string) CommandResult {
+	start := time.Now()
+	result, err := devops.RunPowerShell(cmd)
+	dur := time.Since(start).Milliseconds()
+	if err != nil {
+		common.LogWarn("RunPowerShell failed: %v", err)
+		errMsg := sanitizeError(err)
+		if result != nil {
+			return CommandResult{
+				Command:  cmd,
+				Output:   result.Output,
+				ExitCode: result.ExitCode,
+				Duration: dur,
+				Error:    errMsg,
+			}
+		}
+		return CommandResult{Command: cmd, Duration: dur, Error: errMsg}
+	}
+	return CommandResult{
+		Command:  cmd,
+		Output:   result.Output,
+		ExitCode: result.ExitCode,
+		Duration: dur,
+	}
+}
+
+// GetPowerShellWorkflows returns a list of available PowerShell diagnostic workflows.
+func (d *DevOps) GetPowerShellWorkflows() []string {
+	return []string{
+		"Invoke-HawkDailyOps",
+		"Invoke-HawkSystemReview",
+		"Invoke-HawkSecurityAudit",
+		"Invoke-HawkNetworkDiagnostics",
+		"Invoke-HawkThreatHunt",
+		"Invoke-HawkChangeAudit",
+		"Invoke-HawkComplianceCheck",
+	}
+}
+
+// sanitizeError strips internal details from errors sent to the frontend.
+func sanitizeError(err error) string {
+	if errors.Is(err, devops.ErrDangerousCommand) {
+		return "command rejected by security policy"
+	}
+	// For all other errors, return the message but log full details server-side.
+	return err.Error()
 }

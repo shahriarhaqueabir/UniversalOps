@@ -203,7 +203,7 @@ function ConnectionPropertiesPanel({
   )
 }
 
-// ── Initial mock topology ──
+// ── Default topology seed data ──
 function initialDevices(): TopologyDevice[] {
   return [
     { id: genId(), type: 'router', label: 'Core Router', x: 550, y: 40, ip: '10.0.0.1', subnet: '255.255.255.0', mac: '00:1A:2B:00:00:01', status: 'healthy' },

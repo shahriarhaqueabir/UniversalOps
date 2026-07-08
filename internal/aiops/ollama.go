@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"os"
 	"time"
-
-	tea "charm.land/bubbletea/v2"
 )
 
 // ChatMessage represents a message in a chat conversation.
@@ -47,9 +45,9 @@ type ollamaModel struct {
 }
 
 const (
-	defaultOllamaURL = "http://localhost:11434"
-	defaultOllamaModel  = "llama3.2"
-	httpTimeout   = 30 * time.Second
+	defaultOllamaURL   = "http://localhost:11434"
+	defaultOllamaModel = "llama3.2"
+	httpTimeout        = 30 * time.Second
 )
 
 func getOllamaURL() string {
@@ -138,15 +136,4 @@ func Chat(messages []ChatMessage) (string, error) {
 	}
 
 	return chatResp.Message.Content, nil
-}
-
-// checkOllama returns a tea.Cmd that checks Ollama availability.
-func (m *Model) checkOllama() tea.Cmd {
-	return func() tea.Msg {
-		status, err := CheckOllama()
-		if err != nil {
-			status = &OllamaStatus{Available: false}
-		}
-		return OllamaStatusMsg{Status: status}
-	}
 }

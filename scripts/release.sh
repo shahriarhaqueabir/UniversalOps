@@ -12,7 +12,7 @@ build_target() {
   ext="$3"
   name="hawkward-${VERSION}-${goos}-${goarch}${ext}"
   echo "Building ${name}"
-  GOOS="$goos" GOARCH="$goarch" go build -trimpath -ldflags="-s -w" -o "${OUTPUT_DIR}/${name}" ./cmd/hawkward/
+  wails build -platform "${goos}/${goarch}" -trimpath -ldflags="-s -w" -o "${OUTPUT_DIR}/${name}"
 }
 
 build_target windows amd64 .exe

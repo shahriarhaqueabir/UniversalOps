@@ -6,6 +6,14 @@ export function GetDevProcesses() {
   return window['go']['app']['DevOps']['GetDevProcesses']();
 }
 
+export function GetPowerShellWorkflows() {
+  return window['go']['app']['DevOps']['GetPowerShellWorkflows']();
+}
+
+export function GetServices() {
+  return window['go']['app']['DevOps']['GetServices']();
+}
+
 export function KillProcess(arg1) {
   return window['go']['app']['DevOps']['KillProcess'](arg1);
 }
@@ -24,6 +32,10 @@ export function RunCommand(arg1) {
 
 export function RunCommandLive(arg1, arg2) {
   return window['go']['app']['DevOps']['RunCommandLive'](arg1, arg2);
+}
+
+export function RunPowerShell(arg1) {
+  return window['go']['app']['DevOps']['RunPowerShell'](arg1);
 }
 
 export function SearchLog(arg1, arg2) {

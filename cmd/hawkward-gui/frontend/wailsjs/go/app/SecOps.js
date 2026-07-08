@@ -25,3 +25,7 @@ export function GetSecurityEvents() {
 export function GetUsers() {
   return window['go']['app']['SecOps']['GetUsers']();
 }
+
+export function SetFirewallRuleState(arg1, arg2) {
+  return window['go']['app']['SecOps']['SetFirewallRuleState'](arg1, arg2);
+}

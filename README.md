@@ -1,6 +1,19 @@
 # Hawkward Operations Platform
 
-A premium native desktop operations platform built with Go and Wails v2.
+A premium native desktop operations platform built with Go + Wails v2 + React.
+
+## Download
+
+**No programming skills required.**
+
+1. Go to the [Releases page](https://github.com/shahriarhaqueabir/AllOpsFull/releases)
+2. Download the latest version for your OS:
+   - **Windows**: `hawkward-v1.0.0-windows-amd64.exe` or the `.exe.nsis` installer
+   - **macOS**: `hawkward-v1.0.0-darwin-universal`
+   - **Linux**: `hawkward-v1.0.0-linux-amd64`
+3. Double-click to launch
+
+---
 
 ## Features
 

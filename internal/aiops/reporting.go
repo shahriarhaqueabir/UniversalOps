@@ -81,18 +81,3 @@ func ReportToCSV(sections []ReportSection) (string, error) {
 func SaveReport(content, path string) error {
 	return os.WriteFile(path, []byte(content), 0644)
 }
-
-// addSection adds a report section from user input.
-// Input format: "Title|Content" or "Title" for a section with just a title.
-func addSection(sections []ReportSection, input string) []ReportSection {
-	parts := strings.SplitN(input, "|", 2)
-	title := strings.TrimSpace(parts[0])
-	content := ""
-	if len(parts) == 2 {
-		content = strings.TrimSpace(parts[1])
-	}
-	if title == "" {
-		return sections
-	}
-	return append(sections, ReportSection{Title: title, Content: content})
-}

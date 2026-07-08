@@ -5,8 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"sort"
-	"strconv"
-	"strings"
 
 	"github.com/shirou/gopsutil/v4/process"
 )
@@ -124,16 +122,4 @@ func RestartProcess(pid int32) error {
 		return fmt.Errorf("restart process %d: %w", pid, err)
 	}
 	return nil
-}
-
-func parsePID(input, prefix string) (int32, error) {
-	value := strings.TrimSpace(strings.TrimPrefix(input, prefix))
-	if value == "" {
-		return 0, fmt.Errorf("missing process id")
-	}
-	pid, err := strconv.ParseInt(value, 10, 32)
-	if err != nil || pid <= 0 {
-		return 0, fmt.Errorf("invalid process id %q", value)
-	}
-	return int32(pid), nil
 }

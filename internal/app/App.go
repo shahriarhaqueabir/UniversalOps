@@ -2,7 +2,9 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"strings"
+
 	"sync"
 	"time"
 
@@ -70,6 +72,11 @@ func NewApp() *App {
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 
+	// Initialize persistent storage
+	if err := common.InitStorage("hawkward.db"); err != nil {
+		fmt.Printf("Failed to init storage: %v\n", err)
+	}
+
 	// Initialize the common logger
 	if err := common.InitLogger("hawkward-gui.log"); err != nil {
 		common.LogWarn("Failed to init logger: %v", err)
@@ -88,6 +95,11 @@ func (a *App) Shutdown(ctx context.Context) {
 	// Stop the tick loop
 	close(a.tickQuit)
 	a.tickWg.Wait()
+
+	// Close persistent storage
+	if s := common.GetStorage(); s != nil {
+		s.Close()
+	}
 
 	common.CloseLogger()
 }
@@ -177,32 +189,35 @@ func (a *App) collectAndEmit() {
 	if a.ctx == nil {
 		return
 	}
+	if a.ctx.Err() != nil {
+		return
+	}
 
-	// Collect system stats from sysops collector
+	// 1. Collect ALL raw values FIRST — same timestamp window
 	stats, err := a.SysOps.collector.CollectAllStats()
 	if err != nil {
 		common.LogWarn("CollectAllStats failed: %v", err)
 		return
 	}
 
-	// Push metrics to pipeline
+	// Collect network rates at the same time
+	var rxTotal, txTotal float64
+	ifaces, err := a.NetOps.collectInterfaces()
+	if err == nil && len(ifaces) > 0 {
+		for _, iface := range ifaces {
+			rxTotal += iface.RXRateBps
+			txTotal += iface.TXRateBps
+		}
+	}
+
+	// 2. Push ALL metrics to pipeline (fast, no blocking I/O)
 	if stats != nil {
 		a.pipeline.PushMetric(common.MetricCPU, "%", stats.CPUPercent)
 		a.pipeline.PushMetric(common.MetricMem, "%", stats.MemoryUsed)
 		a.pipeline.PushMetric(common.MetricDisk, "%", stats.DiskUsed)
 		a.pipeline.PushMetric(common.MetricProcCnt, "count", float64(stats.ProcessCount))
-
-		// Network rates - best effort via netops
-		ifaces, err := a.NetOps.collectInterfaces()
-		if err == nil && len(ifaces) > 0 {
-			var rxTotal, txTotal float64
-			for _, iface := range ifaces {
-				rxTotal += iface.RXRateBps
-				txTotal += iface.TXRateBps
-			}
-			a.pipeline.PushMetric(common.MetricNetRX, "bps", rxTotal)
-			a.pipeline.PushMetric(common.MetricNetTX, "bps", txTotal)
-		}
+		a.pipeline.PushMetric(common.MetricNetRX, "bps", rxTotal)
+		a.pipeline.PushMetric(common.MetricNetTX, "bps", txTotal)
 	}
 
 	// Evaluate alerts

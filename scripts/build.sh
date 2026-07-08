@@ -1,9 +1,7 @@
 #!/bin/bash
-# Build script for Hawkward on Linux/macOS
-# Requires Go 1.26.4+
-
+# Build script for Hawkward GUI on Linux/macOS
+# Requires: Go 1.26.4+, Node.js, npm, Wails CLI
 set -e
-
-echo "Building Hawkward..."
-go build -ldflags="-s -w" -o hawkward ./cmd/hawkward/
-echo "Build successful: hawkward"
+echo "Building Hawkward GUI..."
+wails build -o hawkward-gui
+echo "Build successful: build/bin/hawkward-gui"

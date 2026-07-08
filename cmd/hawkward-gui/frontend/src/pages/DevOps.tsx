@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import {
   Terminal,
   Server,
@@ -14,11 +14,23 @@ import {
   PlayCircle,
   StopCircle,
   RotateCcw,
+  Zap,
+  Activity,
+  ShieldCheck,
+  Globe,
+  Crosshair,
+  History,
+  FileCheck,
+  TerminalSquare,
+  Lock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import * as Tabs from '@radix-ui/react-tabs'
+import { useBackend } from '@/hooks/useBackend'
+import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
+import type { CommandResult, ServiceEntry, FileEntry } from '@/types'
 
-type TabId = 'terminal' | 'services' | 'file-browser'
+type TabId = 'terminal' | 'powershell-pro' | 'services' | 'file-browser'
 
 // ── Inline helpers ──
 
@@ -31,83 +43,10 @@ function StatusBadge({ status }: { status: string }) {
     disabled: 'bg-muted/20 text-muted',
   }
   return (
-    <span className={cn('px-2 py-0.5 rounded text-xs font-medium', colors[status.toLowerCase()] || 'bg-muted/20 text-muted')}>
+    <span className={cn('px-2 py-0.5 rounded text-xs font-medium border border-current opacity-80', colors[status.toLowerCase()] || 'bg-muted/20 text-muted')}>
       {status}
     </span>
   )
-}
-
-// ── Mock data ──
-
-interface ServiceInfo {
-  name: string
-  displayName: string
-  status: 'running' | 'stopped'
-  startType: 'auto' | 'manual' | 'disabled'
-}
-
-const mockServices: ServiceInfo[] = [
-  { name: 'hawkward-api', displayName: 'Hawkward API Server', status: 'running', startType: 'auto' },
-  { name: 'hawkward-worker', displayName: 'Hawkward Worker', status: 'running', startType: 'auto' },
-  { name: 'postgresql', displayName: 'PostgreSQL Database', status: 'running', startType: 'auto' },
-  { name: 'redis', displayName: 'Redis Cache', status: 'running', startType: 'auto' },
-  { name: 'nginx', displayName: 'Nginx Reverse Proxy', status: 'running', startType: 'auto' },
-  { name: 'prometheus', displayName: 'Prometheus Metrics', status: 'running', startType: 'auto' },
-  { name: 'grafana', displayName: 'Grafana Dashboards', status: 'running', startType: 'auto' },
-  { name: 'docker', displayName: 'Docker Engine', status: 'running', startType: 'auto' },
-  { name: 'sshd', displayName: 'OpenSSH Server', status: 'stopped', startType: 'manual' },
-  { name: 'cron', displayName: 'Cron Scheduler', status: 'running', startType: 'auto' },
-  { name: 'syslog', displayName: 'System Logger', status: 'stopped', startType: 'disabled' },
-]
-
-interface FSNode {
-  name: string
-  type: 'file' | 'dir'
-  size?: string
-  modified: string
-  children?: FSNode[]
-  content?: string
-}
-
-function buildMockFileSystem(): FSNode[] {
-  return [
-    {
-      name: 'src', type: 'dir', modified: '2026-07-07 10:30',
-      children: [
-        { name: 'main.go', type: 'file', size: '12.4 KB', modified: '2026-07-06 15:20', content: 'package main\n\nimport (\n\t"fmt"\n\t"log"\n)\n\nfunc main() {\n\tfmt.Println("Hello, Hawkward!")\n}\n' },
-        { name: 'handler.go', type: 'file', size: '8.1 KB', modified: '2026-07-05 11:10', content: 'package main\n\nfunc handleRequest(req Request) Response {\n\treturn Response{Status: 200}\n}\n' },
-        {
-          name: 'utils', type: 'dir', modified: '2026-07-04 09:00',
-          children: [
-            { name: 'helpers.go', type: 'file', size: '3.2 KB', modified: '2026-07-03 16:45', content: 'package utils\n\nfunc Min(a, b int) int {\n\tif a < b { return a }\n\treturn b\n}\n' },
-            { name: 'config.go', type: 'file', size: '5.7 KB', modified: '2026-07-02 14:30', content: 'package utils\n\ntype Config struct {\n\tPort int\n\tDebug bool\n}\n' },
-          ],
-        },
-      ],
-    },
-    {
-      name: 'cmd', type: 'dir', modified: '2026-07-07 09:00',
-      children: [
-        {
-          name: 'hawkward', type: 'dir', modified: '2026-07-07 09:00',
-          children: [
-            { name: 'main.go', type: 'file', size: '2.1 KB', modified: '2026-07-07 09:00', content: 'package main\n\nfunc main() {\n\tapp := NewApp()\n\tapp.Run()\n}\n' },
-          ],
-        },
-      ],
-    },
-    { name: 'go.mod', type: 'file', size: '156 B', modified: '2026-07-01 12:00', content: 'module github.com/hawkward\n\ngo 1.22\n' },
-    { name: 'go.sum', type: 'file', size: '45.2 KB', modified: '2026-07-01 12:00', content: 'github.com/charmbracelet/bubbletea v0.26.0 h1:abc...\n' },
-    { name: 'README.md', type: 'file', size: '3.1 KB', modified: '2026-07-07 08:30', content: '# Hawkward\n\nAll-in-one operations tool.\n' },
-    { name: 'package.json', type: 'file', size: '890 B', modified: '2026-07-07 08:30', content: '{\n  "name": "hawkward",\n  "version": "0.1.0"\n}\n' },
-    {
-      name: 'scripts', type: 'dir', modified: '2026-07-06 16:00',
-      children: [
-        { name: 'build.sh', type: 'file', size: '420 B', modified: '2026-07-06 16:00', content: '#!/bin/bash\ngo build -o hawkward ./cmd/hawkward\n' },
-        { name: 'test.sh', type: 'file', size: '180 B', modified: '2026-07-06 15:30', content: '#!/bin/bash\ngo test ./... -v\n' },
-      ],
-    },
-  ]
 }
 
 // ══════════════════════════════════════════════
@@ -116,46 +55,65 @@ function buildMockFileSystem(): FSNode[] {
 
 export function DevOps() {
   const [activeTab, setActiveTab] = useState<TabId>('terminal')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 50)
+    return () => clearTimeout(t)
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-4 animate-pulse">
+        <div className="h-8 w-48 bg-panel-2 rounded" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="h-32 bg-panel-2 rounded" />
+          <div className="h-32 bg-panel-2 rounded" />
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="flex h-full">
+    <div className="flex flex-col h-full bg-background">
+      <div className="p-8 border-b border-border bg-panel-2">
+        <h1 className="text-3xl font-bold text-text flex items-center gap-3">
+          <TerminalSquare size={32} className="text-primary" />
+          DevOps Console
+        </h1>
+        <p className="text-text-dim text-lg mt-2">
+          Unified command center for terminal, automated workflows, and system services.
+        </p>
+      </div>
+
       <Tabs.Root value={activeTab} onValueChange={(v) => setActiveTab(v as TabId)} className="flex-1 flex flex-col min-w-0">
-        <Tabs.List className="flex border-b border-border bg-background">
-          <Tabs.Trigger
-            value="terminal"
-            className={cn(
-              'flex items-center gap-2 px-4 py-3 text-sm border-b-2 border-transparent transition-colors',
-              activeTab === 'terminal' ? 'border-primary text-text' : 'text-muted hover:text-text',
-            )}
-          >
-            <Terminal size={16} />
-            Terminal
-          </Tabs.Trigger>
-          <Tabs.Trigger
-            value="services"
-            className={cn(
-              'flex items-center gap-2 px-4 py-3 text-sm border-b-2 border-transparent transition-colors',
-              activeTab === 'services' ? 'border-primary text-text' : 'text-muted hover:text-text',
-            )}
-          >
-            <Server size={16} />
-            Services
-          </Tabs.Trigger>
-          <Tabs.Trigger
-            value="file-browser"
-            className={cn(
-              'flex items-center gap-2 px-4 py-3 text-sm border-b-2 border-transparent transition-colors',
-              activeTab === 'file-browser' ? 'border-primary text-text' : 'text-muted hover:text-text',
-            )}
-          >
-            <Folder size={16} />
-            File Browser
-          </Tabs.Trigger>
+        <Tabs.List className="flex border-b border-border bg-panel px-4">
+          {[
+            { id: 'terminal', label: 'Interactive Terminal', icon: <Terminal size={20} /> },
+            { id: 'powershell-pro', label: 'PowerShell Pro', icon: <Zap size={20} className="text-warning" /> },
+            { id: 'services', label: 'System Services', icon: <Server size={20} /> },
+            { id: 'file-browser', label: 'File Explorer', icon: <Folder size={20} /> },
+          ].map((tab) => (
+            <Tabs.Trigger
+              key={tab.id}
+              value={tab.id}
+              className={cn(
+                'flex items-center gap-3 px-6 py-4 text-base font-bold transition-all border-b-2 border-transparent',
+                activeTab === tab.id ? 'border-primary text-text bg-primary/5' : 'text-text-faint hover:text-text hover:bg-white/5',
+              )}
+            >
+              {tab.icon}
+              {tab.label}
+            </Tabs.Trigger>
+          ))}
         </Tabs.List>
 
         <div className="flex-1 overflow-hidden">
           <Tabs.Content value="terminal" className="h-full">
             <TerminalTab />
+          </Tabs.Content>
+          <Tabs.Content value="powershell-pro" className="h-full">
+            <PowerShellProTab />
           </Tabs.Content>
           <Tabs.Content value="services" className="h-full">
             <ServicesTab />
@@ -173,53 +131,51 @@ export function DevOps() {
 //  Terminal Tab
 // ══════════════════════════════════════════════
 
-const mockOutputs: Record<string, string> = {
-  docker: 'NAMES\t\t\tSTATUS\nhawkward-api\t\tUp 3 days\nhawkward-db\t\tUp 3 days\nprometheus\t\tUp 14 days\ngrafana\t\t\tUp 14 days',
-  kubectl: 'NAME\t\t\t\t\tREADY\tSTATUS\tRESTARTS\tAGE\nhawkward-api-7d4f8c9b6-abc12\t1/1\tRunning\t0\t\t3d\nhawkward-worker-5e6f7a8b9-def34\t1/1\tRunning\t1\t\t3d',
-  ping: 'PING 8.8.8.8 (8.8.8.8): 56 data bytes\n64 bytes from 8.8.8.8: icmp_seq=0 ttl=117 time=12.5 ms\n64 bytes from 8.8.8.8: icmp_seq=1 ttl=117 time=11.8 ms\n64 bytes from 8.8.8.8: icmp_seq=2 ttl=117 time=13.2 ms\n\n--- 8.8.8.8 ping statistics ---\n4 packets transmitted, 4 received, 0% packet loss',
-  build: '[1/5] Compiling core package... OK\n[2/5] Compiling sysops module... OK\n[3/5] Compiling netops module... OK\n[4/5] Compiling secops module... OK\n[5/5] Linking binary... OK\nBuild completed in 3.42s',
-  error: 'Error: command not found: unknown-command\nExit code: 127',
-  default: 'Command completed successfully (exit code: 0)',
-}
-
-function getSimulatedOutput(command: string): string {
-  if (command.includes('docker')) return mockOutputs.docker
-  if (command.includes('kubectl')) return mockOutputs.kubectl
-  if (command.includes('ping')) return mockOutputs.ping
-  if (command.includes('build') || command.includes('go build')) return mockOutputs.build
-  if (Math.random() > 0.85 && command.length > 0) return mockOutputs.error
-  return mockOutputs.default
-}
-
 function TerminalTab() {
+  const { call } = useBackend()
   const [input, setInput] = useState('')
-  const [output, setOutput] = useState<string[]>([`Hawkward Terminal v0.1\nType a command and press Enter to run.\n`])
+  const [output, setOutput] = useState<string[]>([`Hawkward Terminal v1.0\nType a command and press Enter to run. Permissions will be requested for impactful actions.\n`])
   const [history, setHistory] = useState<string[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
   const [isRunning, setIsRunning] = useState(false)
-  const [workingDir] = useState('/home/hawkward/projects/hawkward')
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [pendingCmd, setPendingCmd] = useState('')
   const outputRef = useRef<HTMLDivElement>(null)
 
-  const runCommand = useCallback((cmd: string) => {
+  const runCommand = useCallback(async (cmd: string) => {
     if (!cmd.trim() || isRunning) return
     setIsRunning(true)
     setHistory(prev => [...prev, cmd])
     setOutput(prev => [...prev, `$ ${cmd}`])
 
-    setTimeout(() => {
-      const result = getSimulatedOutput(cmd)
-      setOutput(prev => [...prev, result])
+    try {
+      const res = await call('DevOps.RunCommand', cmd) as CommandResult
+      if (res.error) {
+        setOutput(prev => [...prev, `\u001b[31mError: ${res.error}\u001b[0m`])
+      } else {
+        setOutput(prev => [...prev, res.output || 'Command completed successfully (no output).'])
+      }
+    } catch (err) {
+      setOutput(prev => [...prev, `\u001b[31mExecution Error: ${String(err)}\u001b[0m`])
+    } finally {
       setIsRunning(false)
-    }, 300 + Math.random() * 700)
-  }, [isRunning])
+    }
+  }, [call, isRunning])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault()
       if (input.trim()) {
-        runCommand(input)
-        setInput('')
-        setHistoryIndex(-1)
+        const lowerCmd = input.trim().toLowerCase()
+        const dangerous = ['rm ', 'del ', 'format', 'mkfs', 'kill', 'stop-process', 'shutdown', 'restart', 'set-service', 'remove-item', 'stop-service']
+        if (dangerous.some(d => lowerCmd.includes(d))) {
+          setPendingCmd(input)
+          setConfirmOpen(true)
+        } else {
+          runCommand(input)
+          setInput('')
+          setHistoryIndex(-1)
+        }
       }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
@@ -241,45 +197,55 @@ function TerminalTab() {
     }
   }
 
-  const clearOutput = () => {
-    setOutput([`Output cleared.\n`])
-  }
+  useEffect(() => {
+    if (outputRef.current) {
+      outputRef.current.scrollTop = outputRef.current.scrollHeight
+    }
+  }, [output])
 
   return (
-    <div className="flex flex-col h-full p-4">
-      {/* Working directory */}
-      <div className="flex items-center gap-2 mb-3 text-xs text-muted">
-        <Folder size={12} />
-        <span className="font-[JetBrains_Mono]">{workingDir}</span>
-      </div>
+    <div className="flex flex-col h-full p-8 space-y-6">
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Impactful Command Detected"
+        description={`You are about to run a command that may modify system state or delete data: "${pendingCmd}". Are you sure you want to proceed?`}
+        type="danger"
+        confirmText="Execute Command"
+        onConfirm={() => {
+          runCommand(pendingCmd)
+          setInput('')
+          setPendingCmd('')
+        }}
+        onClose={() => setConfirmOpen(false)}
+      />
 
       {/* Command input */}
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-4">
         <div className="relative flex-1">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Enter command..."
-            className="w-full bg-[#0b1120] border border-border rounded-lg pl-9 pr-3 py-2.5 text-sm font-[JetBrains_Mono] text-text placeholder-muted focus:outline-none focus:border-primary"
+            placeholder="Enter shell command (cmd/sh)..."
+            className="w-full bg-[#0b1120] border border-border rounded-xl pl-12 pr-4 py-4 text-lg font-[JetBrains_Mono] text-text placeholder-text-faint focus:outline-none focus:border-primary shadow-inner"
             disabled={isRunning}
           />
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-success text-sm font-[JetBrains_Mono]">$</span>
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-success text-xl font-bold font-[JetBrains_Mono]">$</span>
         </div>
         <button
           onClick={() => { if (input.trim()) runCommand(input) }}
           disabled={isRunning || !input.trim()}
-          className="flex items-center gap-1.5 px-4 py-2.5 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="flex items-center gap-2 px-8 py-4 text-lg font-bold bg-primary text-white rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg active:scale-95"
         >
-          <Play size={14} />
-          Run
+          <Play size={20} />
+          Execute
         </button>
         <button
-          onClick={clearOutput}
-          className="flex items-center gap-1.5 px-3 py-2.5 text-sm text-muted border border-border rounded-lg hover:bg-sidebar-hover transition-colors"
+          onClick={() => setOutput([`Output cleared.\n`])}
+          className="flex items-center gap-2 px-6 py-4 text-lg font-bold text-text-dim border border-border rounded-xl hover:bg-panel-3 transition-all"
         >
-          <Trash2 size={14} />
+          <Trash2 size={20} />
           Clear
         </button>
       </div>
@@ -287,17 +253,128 @@ function TerminalTab() {
       {/* Output */}
       <div
         ref={outputRef}
-        className="flex-1 bg-[#0b1120] border border-border rounded-lg p-4 overflow-y-auto font-[JetBrains_Mono] text-sm leading-relaxed whitespace-pre-wrap"
-        style={{ minHeight: 200 }}
+        className="flex-1 bg-[#0b1120] border border-border rounded-2xl p-8 overflow-y-auto font-[JetBrains_Mono] text-lg leading-relaxed whitespace-pre-wrap shadow-inner"
       >
         {output.map((block, i) => (
-          <div key={i} className="whitespace-pre-wrap break-all">
+          <div key={i} className="whitespace-pre-wrap break-all mb-2">
             {block}
           </div>
         ))}
         {isRunning && (
-          <span className="inline-block w-2 h-4 bg-success animate-pulse ml-1" />
+          <div className="flex items-center gap-2 mt-2">
+            <span className="inline-block w-3 h-6 bg-success animate-pulse" />
+            <span className="text-sm font-bold text-success uppercase tracking-widest animate-pulse">Running...</span>
+          </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════
+//  PowerShell Pro Tab
+// ══════════════════════════════════════════════
+
+function PowerShellProTab() {
+  const { call } = useBackend()
+  const [workflows, setWorkflows] = useState<string[]>([])
+  const [isRunning, setIsRunning] = useState(false)
+  const [output, setOutput] = useState('')
+  const [selectedWorkflow, setSelectedWorkflow] = useState('')
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  useEffect(() => {
+    call('DevOps.GetPowerShellWorkflows').then(res => setWorkflows(res as string[]))
+  }, [call])
+
+  const runWorkflow = async (name: string) => {
+    setIsRunning(true)
+    setOutput(`Running workflow: ${name}...\n`)
+    try {
+      const res = await call('DevOps.RunPowerShell', name) as CommandResult
+      if (res.error) setOutput(prev => prev + `\u001b[31mError: ${res.error}\u001b[0m`)
+      else setOutput(prev => prev + res.output)
+    } catch (err) {
+      setOutput(prev => prev + `Execution Error: ${String(err)}`)
+    } finally {
+      setIsRunning(false)
+    }
+  }
+
+  const workflowIcons: Record<string, React.ReactNode> = {
+    'Invoke-HawkDailyOps': <Activity size={24} />,
+    'Invoke-HawkSystemReview': <Search size={24} />,
+    'Invoke-HawkSecurityAudit': <ShieldCheck size={24} />,
+    'Invoke-HawkNetworkDiagnostics': <Globe size={24} />,
+    'Invoke-HawkThreatHunt': <Crosshair size={24} />,
+    'Invoke-HawkChangeAudit': <History size={24} />,
+    'Invoke-HawkComplianceCheck': <FileCheck size={24} />,
+  }
+
+  const workflowDescs: Record<string, string> = {
+    'Invoke-HawkDailyOps': 'Aggregate health check, storage audit, and network connectivity.',
+    'Invoke-HawkSystemReview': 'Deep dive into hardware specs, performance metrics, and licensing.',
+    'Invoke-HawkSecurityAudit': 'Full audit of firewall, startup entries, tasks, and defender status.',
+    'Invoke-HawkNetworkDiagnostics': 'Verify internet, DNS resolvers, interfaces, and network shares.',
+    'Invoke-HawkThreatHunt': 'Search for suspicious processes, ghost ports, and file anomalies.',
+    'Invoke-HawkChangeAudit': 'Review recent files, patches, driver changes, and crash dumps.',
+    'Invoke-HawkComplianceCheck': 'CIS-inspired baseline verification and compliance scoring.',
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 h-full p-8 gap-8 overflow-hidden">
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Execute PowerShell Workflow"
+        description={`This will run the advanced diagnostic workflow "${selectedWorkflow}" which performs multiple system queries. Proceed?`}
+        onConfirm={() => runWorkflow(selectedWorkflow)}
+        onClose={() => setConfirmOpen(false)}
+      />
+
+      {/* Workflow Selection */}
+      <div className="lg:col-span-1 space-y-4 overflow-y-auto pr-2">
+        <h3 className="text-lg font-bold text-text-dim uppercase tracking-widest mb-4">Diagnostic Workflows</h3>
+        {workflows.map(wf => (
+          <button
+            key={wf}
+            onClick={() => {
+              setSelectedWorkflow(wf)
+              setConfirmOpen(true)
+            }}
+            disabled={isRunning}
+            className="w-full text-left bg-panel border border-border rounded-2xl p-6 transition-all hover:border-primary/50 hover:bg-primary/5 group disabled:opacity-50"
+          >
+            <div className="flex items-center gap-4 mb-3">
+              <div className="w-12 h-12 rounded-xl bg-panel-3 flex items-center justify-center text-text-dim group-hover:text-primary transition-colors border border-border">
+                {workflowIcons[wf] || <Zap size={24} />}
+              </div>
+              <span className="text-xl font-bold text-text group-hover:text-primary transition-colors">{wf.replace('Invoke-Hawk', '')}</span>
+            </div>
+            <p className="text-text-dim text-base leading-relaxed">{workflowDescs[wf]}</p>
+          </button>
+        ))}
+      </div>
+
+      {/* Output Console */}
+      <div className="lg:col-span-2 flex flex-col space-y-4 min-w-0">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-text-dim uppercase tracking-widest">Workflow Output</h3>
+          {isRunning && (
+            <div className="flex items-center gap-2 text-warning animate-pulse">
+              <Zap size={16} />
+              <span className="text-sm font-bold uppercase tracking-tighter">Processing...</span>
+            </div>
+          )}
+        </div>
+        <div className="flex-1 bg-[#0b1120] border border-border rounded-2xl p-8 overflow-y-auto font-[JetBrains_Mono] text-lg leading-relaxed whitespace-pre shadow-inner">
+          {output || 'Select a workflow to begin diagnostic execution.'}
+        </div>
+        <button
+          onClick={() => setOutput('')}
+          className="self-end px-6 py-3 text-lg font-bold text-text-dim border border-border rounded-xl hover:bg-panel-3 transition-all"
+        >
+          Clear Console
+        </button>
       </div>
     </div>
   )
@@ -308,107 +385,167 @@ function TerminalTab() {
 // ══════════════════════════════════════════════
 
 function ServicesTab() {
-  const [services, setServices] = useState<ServiceInfo[]>(mockServices)
+  const { call } = useBackend()
+  const [services, setServices] = useState<ServiceEntry[]>([])
   const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [pendingAction, setPendingAction] = useState<{ name: string; action: string } | null>(null)
+
+  const fetchServices = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await call('DevOps.GetServices')
+      setServices((res as ServiceEntry[]) || [])
+    } catch (err) {
+      console.error(err)
+      setServices([])
+    } finally {
+      setLoading(false)
+    }
+  }, [call])
+
+  const controlService = async (name: string, action: string) => {
+    const success = await call('DevOps.ControlService', name, action)
+    if (success) {
+      fetchServices()
+    }
+    setPendingAction(null)
+  }
+
+  useEffect(() => {
+    fetchServices()
+  }, [fetchServices])
 
   const filtered = services.filter(s =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
-    s.displayName.toLowerCase().includes(search.toLowerCase()),
+    s.display_name.toLowerCase().includes(search.toLowerCase()),
   )
 
-  const toggleService = (name: string, action: 'start' | 'stop') => {
-    setServices(prev =>
-      prev.map(s =>
-        s.name === name ? { ...s, status: action === 'start' ? 'running' : 'stopped' } : s,
-      ),
-    )
-  }
-
-  const runningCount = services.filter(s => s.status === 'running').length
-  const stoppedCount = services.filter(s => s.status === 'stopped').length
+  const runningCount = services.filter(s => s.status === 'Running').length
+  const stoppedCount = services.filter(s => s.status === 'Stopped').length
 
   return (
-    <div className="flex flex-col h-full p-4">
-      {/* Summary + Search */}
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <div className="flex items-center gap-3 text-xs text-muted">
-          <span><span className="text-success font-medium">{runningCount}</span> running</span>
-          <span><span className="text-danger font-medium">{stoppedCount}</span> stopped</span>
-          <span className="text-border">|</span>
-          <span>{services.length} total</span>
+    <div className="flex flex-col h-full p-8 space-y-6">
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Service Control Permission"
+        description={`You are about to perform a ${pendingAction?.action} operation on the service "${pendingAction?.name}". This may affect system availability.`}
+        type={pendingAction?.action === 'stop' ? 'danger' : 'warning'}
+        confirmText={`${pendingAction?.action?.toUpperCase()} SERVICE`}
+        onConfirm={() => {
+          if (pendingAction) controlService(pendingAction.name, pendingAction.action)
+        }}
+        onClose={() => setConfirmOpen(false)}
+      />
+
+      <div className="flex items-center gap-6 flex-wrap">
+        <div className="flex items-center gap-8 bg-panel border border-border px-6 py-3 rounded-2xl">
+          <div className="flex items-center gap-3">
+            <span className="w-3 h-3 rounded-full bg-success shadow-[0_0_8px_var(--color-success)]" />
+            <span className="text-lg font-bold"><span className="text-success">{runningCount}</span> Running</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="w-3 h-3 rounded-full bg-danger shadow-[0_0_8px_var(--color-danger)]" />
+            <span className="text-lg font-bold"><span className="text-danger">{stoppedCount}</span> Stopped</span>
+          </div>
+          <div className="text-text-faint text-lg font-medium">| &nbsp; {services.length} Total</div>
         </div>
+
         <div className="flex-1" />
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+
+        <div className="relative group w-80">
+          <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-primary transition-colors" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search services..."
-            className="bg-[#0f172a] border border-border rounded-lg pl-8 pr-3 py-1.5 text-sm text-text placeholder-muted focus:outline-none focus:border-primary w-56"
+            className="w-full bg-panel border border-border rounded-xl pl-12 pr-4 py-3 text-lg text-text placeholder-text-faint focus:outline-none focus:border-primary transition-all shadow-inner"
           />
         </div>
+
+        <button
+          onClick={fetchServices}
+          className="p-3.5 bg-panel border border-border rounded-xl hover:bg-panel-3 text-text-dim hover:text-text transition-all shadow-md active:rotate-180 duration-500"
+        >
+          <RefreshCw size={24} />
+        </button>
       </div>
 
-      {/* Table */}
-      <div className="flex-1 bg-[#0b1120] border border-border rounded-lg overflow-y-auto min-h-0">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-xs text-muted">
-              <th className="text-left px-4 py-2.5 font-medium">Name</th>
-              <th className="text-left px-4 py-2.5 font-medium">Display Name</th>
-              <th className="text-left px-4 py-2.5 font-medium">Status</th>
-              <th className="text-left px-4 py-2.5 font-medium">Start Type</th>
-              <th className="text-right px-4 py-2.5 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 && (
+      <div className="flex-1 bg-[#0b1120] border border-border rounded-2xl overflow-hidden shadow-inner">
+        <div className="overflow-y-auto h-full">
+          <table className="w-full text-left border-collapse">
+            <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border">
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-muted text-sm">No services found</td>
+                <th className="px-8 py-5 text-sm font-bold text-text-dim uppercase tracking-widest">Name</th>
+                <th className="px-8 py-5 text-sm font-bold text-text-dim uppercase tracking-widest">Display Name</th>
+                <th className="px-8 py-5 text-sm font-bold text-text-dim uppercase tracking-widest">Status</th>
+                <th className="px-8 py-5 text-sm font-bold text-text-dim uppercase tracking-widest">Startup</th>
+                <th className="px-8 py-5 text-sm font-bold text-text-dim uppercase tracking-widest text-right">Control</th>
               </tr>
-            )}
-            {filtered.map((svc) => (
-              <tr key={svc.name} className="border-b border-border/30 hover:bg-white/5 transition-colors">
-                <td className="px-4 py-2.5 font-[JetBrains_Mono] text-xs text-text">{svc.name}</td>
-                <td className="px-4 py-2.5 text-text">{svc.displayName}</td>
-                <td className="px-4 py-2.5"><StatusBadge status={svc.status} /></td>
-                <td className="px-4 py-2.5"><StatusBadge status={svc.startType} /></td>
-                <td className="px-4 py-2.5 text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    {svc.status === 'stopped' ? (
-                      <button
-                        onClick={() => toggleService(svc.name, 'start')}
-                        className="p-1.5 text-success hover:bg-success/10 rounded transition-colors"
-                        title="Start"
-                      >
-                        <PlayCircle size={14} />
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => toggleService(svc.name, 'stop')}
-                        className="p-1.5 text-danger hover:bg-danger/10 rounded transition-colors"
-                        title="Stop"
-                      >
-                        <StopCircle size={14} />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => {
-                        toggleService(svc.name, 'stop')
-                        setTimeout(() => toggleService(svc.name, 'start'), 300)
-                      }}
-                      className="p-1.5 text-warning hover:bg-warning/10 rounded transition-colors"
-                      title="Restart"
-                    >
-                      <RotateCcw size={14} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="px-8 py-20 text-center">
+                    <div className="flex flex-col items-center gap-4 text-text-faint">
+                      <RefreshCw size={48} className="animate-spin opacity-20" />
+                      <p className="text-xl">Enumerating System Services...</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-8 py-20 text-center text-text-faint text-xl italic">No services matching your criteria</td>
+                </tr>
+              ) : (
+                filtered.map((svc) => (
+                  <tr key={svc.name} className="border-b border-border/20 hover:bg-white/5 transition-colors group">
+                    <td className="px-8 py-4 font-[JetBrains_Mono] text-base text-primary font-medium">{svc.name}</td>
+                    <td className="px-8 py-4 text-lg text-text">{svc.display_name}</td>
+                    <td className="px-8 py-4"><StatusBadge status={svc.status} /></td>
+                    <td className="px-8 py-4"><StatusBadge status={svc.start_type} /></td>
+                    <td className="px-8 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => {
+                            setPendingAction({ name: svc.name, action: 'start' })
+                            setConfirmOpen(true)
+                          }}
+                          className="p-2 text-success hover:bg-success/10 rounded-lg"
+                          title="Start"
+                        >
+                          <PlayCircle size={20} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setPendingAction({ name: svc.name, action: 'stop' })
+                            setConfirmOpen(true)
+                          }}
+                          className="p-2 text-danger hover:bg-danger/10 rounded-lg"
+                          title="Stop"
+                        >
+                          <StopCircle size={20} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setPendingAction({ name: svc.name, action: 'restart' })
+                            setConfirmOpen(true)
+                          }}
+                          className="p-2 text-warning hover:bg-warning/10 rounded-lg"
+                          title="Restart"
+                        >
+                          <RotateCcw size={20} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
@@ -418,207 +555,131 @@ function ServicesTab() {
 //  File Browser Tab
 // ══════════════════════════════════════════════
 
-interface PathSegment {
-  name: string
-  path: string
-}
-
-const mockPaths: string[] = [
-  '/home/hawkward/projects/hawkward',
-  '/var/log',
-  '/etc/nginx',
-  '/opt/hawkward',
-]
-
 function FileBrowserTab() {
-  const [filesystem] = useState<FSNode[]>(buildMockFileSystem())
-  const [currentPath, setCurrentPath] = useState<string[]>([])
-  const [navHistory, setNavHistory] = useState<string[][]>([])
-  const [previewFile, setPreviewFile] = useState<FSNode | null>(null)
-  const [pathInput, setPathInput] = useState('')
+  const { call } = useBackend()
+  const [currentPath, setCurrentPath] = useState('E:/Projects/projectx/AllOpsFull')
+  const [entries, setEntries] = useState<FileEntry[]>([])
+  const [history, setHistory] = useState<string[]>([])
+  const [loading, setLoading] = useState(false)
+  const [previewFile, setPreviewFile] = useState<FileEntry | null>(null)
+  const [fileContent, setPreviewContent] = useState('')
 
-  const getCurrentDir = (): FSNode[] => {
-    let current: FSNode[] = filesystem
-    for (const seg of currentPath) {
-      const found = current.find(n => n.name === seg && n.type === 'dir')
-      if (found && found.children) {
-        current = found.children
-      } else {
-        return filesystem
-      }
+  const fetchDir = useCallback(async (path: string) => {
+    setLoading(true)
+    try {
+      const res = await call('DevOps.ListDirectory', path)
+      setEntries(res as FileEntry[])
+      setCurrentPath(path)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
-    return current
-  }
+  }, [call])
 
-  const currentDir = getCurrentDir()
+  useEffect(() => {
+    fetchDir(currentPath)
+  }, [fetchDir, currentPath])
 
-  const segments: PathSegment[] = [
-    { name: 'root', path: '' },
-    ...currentPath.map((seg, i) => ({ name: seg, path: currentPath.slice(0, i + 1).join('/') })),
-  ]
-
-  const navigateInto = (name: string) => {
-    setNavHistory(prev => [...prev, currentPath])
-    setCurrentPath(prev => [...prev, name])
-    setPreviewFile(null)
-  }
-
-  const navigateTo = (index: number) => {
-    setCurrentPath(index === 0 ? [] : currentPath.slice(0, index))
+  const navigate = (path: string) => {
+    setHistory(prev => [...prev, currentPath])
+    fetchDir(path)
     setPreviewFile(null)
   }
 
   const goBack = () => {
-    if (navHistory.length > 0) {
-      const prev = navHistory[navHistory.length - 1]
-      setNavHistory(prev => prev.slice(0, -1))
-      setCurrentPath(prev)
+    if (history.length > 0) {
+      const prev = history[history.length - 1]
+      setHistory(h => h.slice(0, -1))
+      fetchDir(prev)
       setPreviewFile(null)
     }
   }
 
-  const handleBrowse = () => {
-    if (!pathInput.trim()) return
-    const parts = pathInput.trim().split('/').filter(Boolean)
-    setCurrentPath(parts)
-    setNavHistory([])
-    setPreviewFile(null)
-  }
-
-  const isTextFile = (name: string): boolean => {
-    const ext = name.split('.').pop()?.toLowerCase()
-    return ['go', 'ts', 'tsx', 'js', 'jsx', 'json', 'md', 'yaml', 'yml', 'toml', 'sh', 'bat', 'py', 'css', 'html', 'txt', 'conf', 'mod', 'sum', 'env'].includes(ext || '')
-  }
-
-  const openPreview = (node: FSNode) => {
-    if (node.type === 'dir') {
-      navigateInto(node.name)
-    } else if (isTextFile(node.name)) {
-      setPreviewFile(node)
+  const openFile = async (file: FileEntry) => {
+    if (file.is_dir) {
+      navigate(file.path)
+    } else {
+      setPreviewFile(file)
+      const content = await call('DevOps.ReadFile', file.path) as string
+      setPreviewContent(content)
     }
   }
 
   return (
-    <div className="flex h-full p-4 gap-4">
+    <div className="flex h-full p-8 gap-8">
       {/* File list */}
-      <div className={cn('flex flex-col flex-1 min-w-0', previewFile ? 'w-1/2' : 'w-full')}>
-        {/* Path input */}
-        <div className="flex items-center gap-2 mb-3">
-          <div className="relative flex-1">
-            <Folder size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-            <input
-              type="text"
-              value={pathInput}
-              onChange={(e) => setPathInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleBrowse() }}
-              placeholder="Enter path to browse..."
-              list="mock-paths"
-              className="w-full bg-[#0f172a] border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-text placeholder-muted focus:outline-none focus:border-primary"
-            />
-            <datalist id="mock-paths">
-              {mockPaths.map(p => <option key={p} value={p} />)}
-            </datalist>
+      <div className={cn('flex flex-col flex-1 min-w-0 space-y-4', previewFile ? 'w-1/2' : 'w-full')}>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={goBack}
+            disabled={history.length === 0}
+            className="p-3 bg-panel border border-border rounded-xl hover:bg-panel-3 disabled:opacity-30 transition-all shadow-md"
+          >
+            <ChevronRight size={24} className="rotate-180" />
+          </button>
+          <div className="flex-1 bg-panel border border-border rounded-xl px-6 py-3 flex items-center gap-3 overflow-hidden shadow-inner">
+            <Home size={20} className="text-text-faint shrink-0" />
+            <span className="text-lg font-medium text-text truncate">{currentPath}</span>
           </div>
-          <button
-            onClick={handleBrowse}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Browse
-          </button>
         </div>
 
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-1 mb-3 text-sm flex-wrap">
-          <button onClick={() => { setCurrentPath([]); setPreviewFile(null) }} className="text-muted hover:text-text transition-colors">
-            <Home size={14} />
-          </button>
-          {currentPath.length > 0 && (
-            <button onClick={goBack} className="text-muted hover:text-text transition-colors ml-1 text-xs">
-              &larr; Back
-            </button>
-          )}
-          {segments.map((seg, i) => (
-            <div key={i} className="flex items-center gap-1">
-              <ChevronRight size={12} className="text-muted" />
-              <button
-                onClick={() => navigateTo(i)}
-                className={cn(
-                  'text-xs hover:text-text transition-colors',
-                  i === segments.length - 1 ? 'text-text font-medium' : 'text-muted',
-                )}
-              >
-                {seg.name}
-              </button>
-            </div>
-          ))}
-          <div className="flex-1" />
-          <button
-            onClick={() => { setPreviewFile(null); setCurrentPath([...currentPath]) }}
-            className="text-xs text-muted hover:text-text transition-colors flex items-center gap-1"
-          >
-            <RefreshCw size={12} /> Refresh
-          </button>
-        </div>
-
-        {/* File table */}
-        <div className="flex-1 bg-[#0b1120] border border-border rounded-lg overflow-y-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs text-muted">
-                <th className="text-left px-4 py-2 font-medium">Name</th>
-                <th className="text-right px-4 py-2 font-medium w-24">Size</th>
-                <th className="text-left px-4 py-2 font-medium w-20">Type</th>
-                <th className="text-left px-4 py-2 font-medium w-40">Modified</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentDir.length === 0 && (
+        <div className="flex-1 bg-[#0b1120] border border-border rounded-2xl overflow-hidden shadow-inner">
+          <div className="overflow-y-auto h-full">
+            <table className="w-full text-left border-collapse">
+              <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border">
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-muted text-sm">Empty directory</td>
+                  <th className="px-8 py-4 text-sm font-bold text-text-dim uppercase tracking-widest">Name</th>
+                  <th className="px-8 py-4 text-sm font-bold text-text-dim uppercase tracking-widest text-right">Size</th>
+                  <th className="px-8 py-4 text-sm font-bold text-text-dim uppercase tracking-widest">Modified</th>
                 </tr>
-              )}
-              {currentDir.map((node) => (
-                <tr
-                  key={node.name}
-                  onClick={() => openPreview(node)}
-                  className="border-b border-border/30 hover:bg-white/5 cursor-pointer transition-colors"
-                >
-                  <td className="px-4 py-2 flex items-center gap-2">
-                    {node.type === 'dir' ? (
-                      <span className="text-lg">📁</span>
-                    ) : (
-                      <span className="text-lg">📄</span>
-                    )}
-                    <span className="text-text">{node.name}</span>
-                  </td>
-                  <td className="px-4 py-2 text-right text-muted font-[JetBrains_Mono] text-xs">{node.size || '—'}</td>
-                  <td className="px-4 py-2 text-muted text-xs">{node.type}</td>
-                  <td className="px-4 py-2 text-muted text-xs">{node.modified}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={3} className="px-8 py-20 text-center animate-pulse text-xl text-text-faint">Reading File System...</td></tr>
+                ) : (
+                  entries.map((file) => (
+                    <tr
+                      key={file.path}
+                      onClick={() => openFile(file)}
+                      className="border-b border-border/20 hover:bg-white/5 cursor-pointer transition-colors group"
+                    >
+                      <td className="px-8 py-4 flex items-center gap-4">
+                        {file.is_dir ? <Folder size={24} className="text-primary" /> : <FileText size={24} className="text-text-faint" />}
+                        <span className="text-lg text-text group-hover:text-primary transition-colors">{file.name}</span>
+                      </td>
+                      <td className="px-8 py-4 text-right font-[JetBrains_Mono] text-base text-text-dim">{file.size}</td>
+                      <td className="px-8 py-4 text-base text-text-faint">{new Date(file.mod_time).toLocaleString()}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       {/* Preview panel */}
       {previewFile && (
-        <div className="w-1/2 flex flex-col">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-text flex items-center gap-2">
-              <FileText size={14} className="text-primary" />
+        <div className="w-1/2 flex flex-col space-y-4 animate-in slide-in-from-right-8 duration-300">
+          <div className="flex items-center justify-between p-2">
+            <h3 className="text-xl font-bold text-text flex items-center gap-3">
+              <FileText size={24} className="text-primary" />
               {previewFile.name}
             </h3>
             <button
               onClick={() => setPreviewFile(null)}
-              className="p-1 text-muted hover:text-text transition-colors"
+              className="p-2 rounded-lg hover:bg-danger/10 text-text-faint hover:text-danger transition-all"
             >
-              <X size={14} />
+              <X size={28} />
             </button>
           </div>
-          <div className="flex-1 bg-[#0b1120] border border-border rounded-lg overflow-y-auto p-4">
-            <pre className="font-[JetBrains_Mono] text-xs text-text leading-relaxed whitespace-pre-wrap">
-              {previewFile.content || '// No content available'}
+          <div className="flex-1 bg-[#0b1120] border border-border rounded-2xl p-8 overflow-y-auto shadow-inner relative group">
+            <div className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Lock size={20} className="text-text-faint" />
+            </div>
+            <pre className="font-[JetBrains_Mono] text-base text-text leading-relaxed whitespace-pre-wrap">
+              {fileContent || '// No readable content or file is too large.'}
             </pre>
           </div>
         </div>

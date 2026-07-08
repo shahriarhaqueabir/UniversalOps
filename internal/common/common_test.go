@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 )
 
 func TestFormatBytes(t *testing.T) {
@@ -140,50 +139,6 @@ func TestPlatformChecks(t *testing.T) {
 	}
 }
 
-func TestScreenNames(t *testing.T) {
-	want := map[Screen]string{
-		ScreenDashboard:  "Dashboard",
-		ScreenMainMenu:   "Main Menu",
-		ScreenSysOps:     "System Operations",
-		ScreenNetOps:     "Network Operations",
-		ScreenSecOps:     "Security Operations",
-		ScreenDevOps:     "Development Operations",
-		ScreenAIOps:      "AI Operations",
-		ScreenOnboarding: "Welcome",
-		ScreenHelp:       "Help",
-	}
-
-	// Check that every screen defined in the constant block has a non-empty name.
-	for screen, expected := range want {
-		t.Run(expected, func(t *testing.T) {
-			got, ok := ScreenNames[screen]
-			if !ok {
-				t.Errorf("ScreenNames[%d] missing for screen %q", screen, expected)
-				return
-			}
-			if got == "" {
-				t.Errorf("ScreenNames[%d] = empty string, want %q", screen, expected)
-				return
-			}
-			if got != expected {
-				t.Errorf("ScreenNames[%d] = %q, want %q", screen, got, expected)
-			}
-		})
-	}
-
-	// Verify count matches (no extra entries).
-	if got, want := len(ScreenNames), len(want); got != want {
-		t.Errorf("ScreenNames has %d entries, want %d", got, want)
-	}
-}
-
-func TestStartTickCmd(t *testing.T) {
-	cmd := StartTickCmd(100 * time.Millisecond)
-	if cmd == nil {
-		t.Error("StartTickCmd returned nil command")
-	}
-}
-
 func TestConfigDir(t *testing.T) {
 	dir, err := ConfigDir()
 	if err != nil {
@@ -214,10 +169,8 @@ func TestIsOnboarded(t *testing.T) {
 
 func TestMarkAndClearOnboarded(t *testing.T) {
 	// Use a temporary config dir to isolate tests.
-	origDir := os.Getenv("XDG_CONFIG_HOME")
-	if origDir == "" {
-		origDir = os.Getenv("HOME")
-	}
+	_ = os.Getenv("XDG_CONFIG_HOME")
+	_ = os.Getenv("HOME")
 	// Can't unset/restore on Windows easily via HOME, so use the simple
 	// approach: call MarkOnboarded and verify, then Clear and verify.
 

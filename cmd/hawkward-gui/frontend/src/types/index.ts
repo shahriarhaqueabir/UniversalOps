@@ -140,12 +140,6 @@ export interface PortResult {
   service: string
 }
 
-export interface TraceResult {
-  target: string
-  hops: TraceHop[]
-  error?: string
-}
-
 export interface TraceHop {
   number: number
   host: string
@@ -153,6 +147,12 @@ export interface TraceHop {
   rtts_ms: number[]
   timed: boolean
   avg_rtt: number | null
+}
+
+export interface TraceResult {
+  target: string
+  hops: TraceHop[]
+  error?: string
 }
 
 export interface ConnectionInfo {
@@ -243,6 +243,66 @@ export interface SecurityEvent {
   time: string
   message: string
   important: boolean
+}
+
+// ── DevOps Types ──
+
+export interface CommandResult {
+  command: string
+  output: string
+  exit_code: number
+  duration_ms: number
+  error?: string
+}
+
+export interface ServiceEntry {
+  name: string
+  display_name: string
+  status: string
+  start_type: string
+}
+
+export interface FileEntry {
+  name: string
+  path: string
+  size: string
+  is_dir: boolean
+  mode: string
+  mod_time: string
+}
+
+// ── Log Types ──
+
+export interface LogEntry {
+  timestamp: string
+  level: string
+  module: string
+  message: string
+  line: string
+  source: string
+}
+
+// ── AIOps Types ──
+
+export interface ChatMessage {
+  role: string
+  content: string
+}
+
+export interface OllamaStatus {
+  available: boolean
+  model: string
+  version: string
+  error?: string
+}
+
+export interface AnomalyInfo {
+  metric: string
+  value: number
+  expected: number
+  deviation: number
+  severity: string
+  timestamp: string
 }
 
 // ── Topology Types ──

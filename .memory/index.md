@@ -1,28 +1,22 @@
 # Hawkward — Workspace Memory
 
-## Active Sprint
-- [[plans/2026-07-08-sprint-7-gui-finalization]] — **Sprint 7: GUI Finalization & Production Readiness** (ACTIVE PLAN)
+## Active Session
+- **Sprint 12: TUI Remnants Cleanup & Release** — Complete 🎉
 
-## Current Session Context
-- **Status**: Full project audit complete, research gathered from netscanner, hackingtool, squib
-- **Goal**: Transform TUI-based Bubble Tea app into a Wails v2 native GUI with squib-inspired design
-- **Architecture**: Go backend (Wails bindings) + React/TypeScript/Vite frontend (Tailwind v4 + Recharts)
-- **Key Insight**: Frontend has mock data stubs — all 9 pages, components, hooks exist but use mockData.ts not real Wails runtime calls
-- **Design Target**: Squib-inspired dark theme with purple accent (`#7c6cff`), Inter + JetBrains Mono typography, 252px sidebar, KPI cards with sparklines, glassmorphism topbar, status dots with glow
+## Current State
+- **Go Backend**: 5/7 packages test-passing (2 no-test-files). `go build`, `go vet`, `staticcheck` all clean.
+- **Frontend**: Build passes (4.7s). All 15 tests pass.
+- **TUI Cleanup**: 25 files removed (~5,754 lines), bubbletea & lipgloss dependencies gone.
+- **What's Left**: Only **S-06** — tag & publish v1.0.0
 
 ## Topics
-- [[plans/gui-overhaul-v2]] — Comprehensive overhaul plan: design system, architecture, sprints
-- [[hawkward-card-system]] — Card types, layout engine, states, interaction
-- [[hawkward-command-palette]] — Search algorithm, key bindings, operation registry
-- [[hawkward-architecture]] — Go + Wails v2 architecture, package layout
-- [[hawkward-charts]] — Chart library design (Recharts in GUI)
-- [[hawkward-cross-platform]] — Windows/Linux notes
+- [[project-graph]] — Entity relationship, data flow, and dependency graph
+- [[sprint-12-tui-remnants-cleanup]] — TUI removal execution detail
+- [[hawkward-architecture]] — Go + Wails v2 architecture
+- [[hawkward-sandbox]] — Sandbox layer implementation
+- [[hawkward-known-issues]] — Known issues & pitfalls
 
-## Known Issues
-- Wails bindings need real frontend calls (currently mock data)
-- No `wailsjs/go/` bindings generated (uses `-skipbindings`)
-- Light theme not fully implemented
-- No frontend tests
-- No network topology persistence
-- Log viewer lacks virtual scrolling
-- Missing error boundaries and offline states
+## Remaining Work
+| ID | Status | Description |
+|----|--------|-------------|
+| S-06 | 🔲 TODO | Tag & publish v1.0.0 on GitHub |
