@@ -3,30 +3,124 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  build-windows:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.26'
+          go-version: "1.26"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: cmd/hawkward-gui/frontend/package-lock.json
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Install frontend dependencies
+        run: cd cmd/hawkward-gui/frontend && npm ci
+
+      - name: Build with NSIS installer
+        run: wails build -platform windows/amd64 -nsis -o hawkward-${{ github.ref_name }}-windows-amd64
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: build/bin/*
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: cmd/hawkward-gui/frontend/package-lock.json
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y gcc libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Install frontend dependencies
+        run: cd cmd/hawkward-gui/frontend && npm ci
+
       - name: Build
-        run: |
-          GOOS=windows GOARCH=amd64 go build -o hawkward-windows-amd64.exe ./cmd/hawkward
-          GOOS=linux GOARCH=amd64 go build -o hawkward-linux-amd64 ./cmd/hawkward
-          GOOS=darwin GOARCH=amd64 go build -o hawkward-darwin-amd64 ./cmd/hawkward
-          GOOS=darwin GOARCH=arm64 go build -o hawkward-darwin-arm64 ./cmd/hawkward
-      - name: Release
+        run: wails build -platform linux/amd64 -o hawkward-${{ github.ref_name }}-linux-amd64
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          path: build/bin/*
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: cmd/hawkward-gui/frontend/package-lock.json
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Install frontend dependencies
+        run: cd cmd/hawkward-gui/frontend && npm ci
+
+      - name: Build (universal binary)
+        run: wails build -platform darwin/universal -o hawkward-${{ github.ref_name }}-darwin-universal
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release
+          path: build/bin/*
+
+  publish:
+    needs: [build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            hawkward-windows-amd64.exe
-            hawkward-linux-amd64
-            hawkward-darwin-amd64
-            hawkward-darwin-arm64
+            windows-release/*
+            linux-release/*
+            macos-release/*
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

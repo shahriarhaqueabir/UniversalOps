@@ -3,7 +3,7 @@
 ## Go Module
 - **Module name**: `hawkward`
 - **Import prefix**: `hawkward/...`
-- **Entry point**: `cmd/hawkward/main.go`
+- **Entry point**: `cmd/hawkward-gui/main.go` (Wails app)
 - **Go version**: 1.26.4
 
 ## Package Layout
@@ -34,12 +34,10 @@ internal/
   aiops/                      — AI operations (Ollama)
     ollama.go, reporting.go
     model.go, update.go, view.go, workflows.go
-  ui/                         — TUI layer
-    root.go, mainmenu.go, help.go, keys.go, onboarding.go, statusbar.go, styles.go
 ```
 
 ## Key Design Decisions
 - No external CLI dependencies — all ops use Go native libs + `exec.Command`
 - No Docker, no web UI, no data egress — fully local terminal app
 - Reports: each ops layer has `Run*()` function + report struct with `String()` and `Markdown()` methods
-- TUI: Charm Bubble Tea v2 + Lipgloss v2
+- GUI: Wails v2 (Go + React/TypeScript frontend with Tailwind v4 + Recharts)

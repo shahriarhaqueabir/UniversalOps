@@ -6,33 +6,41 @@ Thank you for considering contributing to Hawkward! This document outlines the p
 
 Be respectful, constructive, and inclusive. We're all here to build something useful.
 
+## Prerequisites
+
+- **Go** 1.26+
+- **Node.js** 20+ and **npm**
+- **Wails CLI**: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
+
 ## Getting Started
 
 1. Fork the repository
 2. Clone your fork: `git clone https://github.com/your-username/hawkward.git`
 3. Create a branch: `git checkout -b feat/your-feature-name`
-4. Install Go 1.26.4+
-5. Run tests: `go test ./...`
 
 ## Development Workflow
 
-### Building
+### Quick Start
 
 ```bash
-go build -o hawkward.exe ./cmd/hawkward
+cd AllOpsFull
+wails dev        # development with hot-reload
+wails build      # production binary
 ```
 
 ### Testing
 
 ```bash
-go test ./...
-go vet ./...
+go test ./internal/...                                          # backend tests
+cd cmd/hawkward-gui/frontend && npm test                        # frontend tests
+cd cmd/hawkward-gui/frontend && npx tsc --noEmit                # type check
 ```
 
 ### Linting
 
 ```bash
 golangci-lint run ./...
+cd cmd/hawkward-gui/frontend && npm run lint
 ```
 
 ## Pull Request Guidelines
@@ -52,25 +60,36 @@ golangci-lint run ./...
 ```
 
 Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
-Scopes: `ui`, `sysops`, `netops`, `secops`, `devops`, `aiops`, `common`, `docs`
+Scopes: `sysops`, `netops`, `secops`, `devops`, `aiops`, `common`, `frontend`, `docs`
 
 ## Project Structure
 
 See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for a detailed overview.
 
 Key directories:
-- `cmd/hawkward/` — Entry point
-- `internal/` — Application logic organized by ops layer
-- `internal/ui/` — TUI components and routing
-- `internal/common/` — Shared utilities and styles
+
+```
+AllOpsFull/
+├── main.go                  ← Entry point (Wails)
+├── internal/
+│   ├── app/                 ← Wails bound facades
+│   ├── common/              ← Shared utilities, storage, pipeline
+│   ├── sysops/              ← CPU/Memory/Disk monitoring
+│   ├── netops/              ← Network operations
+│   ├── secops/              ← Security operations
+│   ├── devops/              ← Shell/services/file ops
+│   └── aiops/               ← AI operations (Ollama)
+├── cmd/hawkward-gui/
+│   └── frontend/            ← React + Vite + Tailwind
+├── scripts/                 ← Build & release scripts
+└── docs/                    ← Documentation
+```
 
 ## Coding Standards
 
-- Follow the Standard Go Project Layout
-- Use Bubble Tea's Model-View-Update pattern
-- Use Lip Gloss for all styling; avoid hardcoded ANSI escapes
-- Use `common` formatters and styles instead of inline hex colors
-- Test coverage should remain at or above 80%
+- **Go**: Follow standard Go project layout, error wrapping, idiomatic Go patterns. Use `common.LogInfo` for logging.
+- **Frontend**: React + TypeScript with `camelCase` naming, Tailwind v4 utility classes, Lucide React icons, Recharts for charts, Radix UI primitives.
+- Follow existing patterns in each subsystem rather than introducing new styles.
 
 ## Security
 

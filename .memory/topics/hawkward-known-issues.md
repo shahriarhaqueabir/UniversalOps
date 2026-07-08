@@ -16,8 +16,7 @@
 - Large rule/connection/task sets truncated: 100 firewall rules, 20 connections, 20 tasks — intentional but undocumented
 
 ## Testing
-- No integration tests for TUI wire-up (`R` key → workflow → display)
-- Unit tests cover workflow functions only, not UI message routing
+- GUI testing via Vitest + RTL for React components; Go unit tests for backend workflows
 
 ## Code Quality
 - `internal/netops/ping.go`: `_ = echo` dead code after ICMP reply parsing (cleanup pending)

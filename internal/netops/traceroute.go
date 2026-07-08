@@ -1,6 +1,7 @@
 package netops
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"runtime"
@@ -30,6 +31,12 @@ type TraceRouteResult struct {
 
 // TraceRoute runs the platform traceroute command and parses its output.
 func TraceRoute(target string) (*TraceRouteResult, error) {
+	return TraceRouteWithContext(context.Background(), target)
+}
+
+// TraceRouteWithContext runs the platform traceroute command with context-based
+// cancellation. The context can be used to set a deadline or timeout.
+func TraceRouteWithContext(ctx context.Context, target string) (*TraceRouteResult, error) {
 	if strings.TrimSpace(target) == "" {
 		return nil, fmt.Errorf("target is required")
 	}
@@ -37,7 +44,7 @@ func TraceRoute(target string) (*TraceRouteResult, error) {
 	name, args := tracerouteCommand(target, defaultTracerouteMaxHops)
 	cfg := common.SystemQuerySandbox()
 	cfg.DenyNetworkAccess = false
-	cmd := common.SandboxedCommandWithConfig(cfg, name, args...)
+	cmd := common.SandboxedCommandWithConfigContext(ctx, cfg, name, args...)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {

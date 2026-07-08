@@ -173,50 +173,6 @@ func DetectAnomalies(history []common.SystemStats) []Anomaly {
 	return findings
 }
 
-func (m *Model) rememberStats(stats *common.SystemStats) {
-	if stats == nil {
-		return
-	}
-
-	snapshot := *stats
-	m.latestStats = &snapshot
-	if len(m.metricHistory) > 0 && sameStats(m.metricHistory[len(m.metricHistory)-1], snapshot) {
-		return
-	}
-
-	m.metricHistory = append(m.metricHistory, snapshot)
-	if len(m.metricHistory) > maxMetricHistoryItems {
-		m.metricHistory = m.metricHistory[len(m.metricHistory)-maxMetricHistoryItems:]
-	}
-}
-
-func (m *Model) localSystemAnswer(input string) string {
-	anomalies := DetectAnomalies(m.metricHistory)
-	return AnswerSystemStateQuery(input, m.latestStats, m.reports, anomalies)
-}
-
-func isLocalSystemQuery(input string) bool {
-	q := strings.ToLower(strings.TrimSpace(input))
-	return q == "anomalies" ||
-		q == "state" ||
-		q == "status" ||
-		strings.HasPrefix(q, "state ") ||
-		strings.HasPrefix(q, "query ") ||
-		strings.HasPrefix(q, "ask ") ||
-		strings.HasPrefix(q, "anomalies ")
-}
-
-func stripLocalCommand(input string) string {
-	trimmed := strings.TrimSpace(input)
-	lower := strings.ToLower(trimmed)
-	for _, prefix := range []string{"state ", "query ", "ask ", "anomalies "} {
-		if strings.HasPrefix(lower, prefix) {
-			return strings.TrimSpace(trimmed[len(prefix):])
-		}
-	}
-	return trimmed
-}
-
 func thresholdAnomaly(metric string, value float64) []Anomaly {
 	switch {
 	case value >= criticalThreshold:
@@ -333,18 +289,6 @@ func average(stats []common.SystemStats, value func(common.SystemStats) float64)
 		total += value(stat)
 	}
 	return total / float64(len(stats))
-}
-
-func sameStats(a, b common.SystemStats) bool {
-	return a.CPUPercent == b.CPUPercent &&
-		a.MemoryUsed == b.MemoryUsed &&
-		a.MemoryTotal == b.MemoryTotal &&
-		a.MemoryUsedGB == b.MemoryUsedGB &&
-		a.MemoryTotalGB == b.MemoryTotalGB &&
-		a.DiskUsed == b.DiskUsed &&
-		a.DiskFree == b.DiskFree &&
-		a.Uptime == b.Uptime &&
-		a.ProcessCount == b.ProcessCount
 }
 
 func titleMetric(metric string) string {

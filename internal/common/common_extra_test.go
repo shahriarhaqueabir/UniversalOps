@@ -35,15 +35,6 @@ func TestParseThemeName(t *testing.T) {
 	}
 }
 
-func TestRenderSparkline(t *testing.T) {
-	// Simple sanity check for sparkline rendering
-	values := []float64{0, 10, 20, 30, 40, 50}
-	spark := RenderSparkline(values, 10)
-	if len(spark) != 10 {
-		t.Errorf("Expected sparkline width 10, got %d", len(spark))
-	}
-}
-
 func TestAllThemePalettesAreValid(t *testing.T) {
 	for _, name := range ThemeNames() {
 		p := PaletteForTheme(name)

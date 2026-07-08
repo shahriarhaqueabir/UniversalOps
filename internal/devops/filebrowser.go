@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -17,8 +18,23 @@ type FileEntry struct {
 	ModTime time.Time
 }
 
+// isPathSafe checks that the path does not escape the sandbox.
+func isPathSafe(path string) error {
+	if filepath.IsAbs(path) {
+		return fmt.Errorf("absolute paths are not allowed")
+	}
+	clean := filepath.Clean(path)
+	if strings.HasPrefix(clean, "..") || strings.Contains(clean, ".."+string(filepath.Separator)) {
+		return fmt.Errorf("directory traversal is not allowed")
+	}
+	return nil
+}
+
 // ListDir lists the contents of a directory.
 func ListDir(path string) ([]FileEntry, error) {
+	if err := isPathSafe(path); err != nil {
+		return nil, err
+	}
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
@@ -45,6 +61,9 @@ func ListDir(path string) ([]FileEntry, error) {
 
 // ReadFile reads the entire contents of a file.
 func ReadFile(path string) (string, error) {
+	if err := isPathSafe(path); err != nil {
+		return "", err
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
@@ -54,7 +73,10 @@ func ReadFile(path string) (string, error) {
 
 // WriteFile writes data to a file.
 func WriteFile(path string, data string) error {
-	return os.WriteFile(path, []byte(data), 0644)
+	if err := isPathSafe(path); err != nil {
+		return err
+	}
+	return os.WriteFile(path, []byte(data), 0600)
 }
 
 // formatSize converts bytes to a human-readable string.

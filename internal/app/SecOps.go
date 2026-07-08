@@ -143,3 +143,15 @@ func (s *SecOps) GetSecurityEvents() []SecurityEvent {
 	}
 	return out
 }
+
+// SetFirewallRuleState enables or disables a firewall rule.
+func (s *SecOps) SetFirewallRuleState(name string, enable bool) bool {
+	common.LogInfo("Setting firewall rule %s enabled=%v", name, enable)
+	err := secops.SetFirewallRuleState(name, enable)
+	if err != nil {
+		common.LogWarn("SetFirewallRuleState failed: %v", err)
+		return false
+	}
+	return true
+}
+

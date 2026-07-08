@@ -266,11 +266,14 @@ type CommandResult struct {
 
 // LogEntry holds a log line with metadata.
 type LogEntry struct {
-	Line      string `json:"line"`
-	Level     string `json:"level"`
 	Timestamp string `json:"timestamp"`
+	Level     string `json:"level"`
+	Module    string `json:"module"`
+	Message   string `json:"message"`
+	Line      string `json:"line"`
 	Source    string `json:"source"`
 }
+
 
 // FileEntry holds a file or directory entry.
 type FileEntry struct {

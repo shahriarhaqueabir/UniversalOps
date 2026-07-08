@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   Send,
   Trash2,
@@ -8,43 +8,53 @@ import {
   RefreshCw,
   AlertTriangle,
   Activity,
-  Clock,
+  Sparkles,
+  ChevronRight,
+  BrainCircuit,
+  MessageSquare,
+  ShieldCheck,
+  Zap,
+  Globe,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { mockReportContent } from '@/lib/mockData'
+import { useBackend } from '@/hooks/useBackend'
 import * as Tabs from '@radix-ui/react-tabs'
+import type { ChatMessage, AnomalyInfo } from '@/types'
 
 type TabId = 'ai-chat' | 'reports' | 'anomalies'
-type ReportType = 'health' | 'network' | 'security' | 'combined'
 
 // ── Inline helpers ──
 
-function ChatBubble({ role, content }: { role: 'user' | 'assistant'; content: string }) {
+function ChatBubble({ role, content }: { role: string; content: string }) {
+  const isAssistant = role === 'assistant' || role === 'system'
   return (
-    <div className={cn('flex gap-3 max-w-[80%]', role === 'user' ? 'ml-auto flex-row-reverse' : '')}>
+    <div className={cn('flex gap-6 max-w-[90%] animate-in fade-in slide-in-from-bottom-2 duration-300', !isAssistant ? 'ml-auto flex-row-reverse' : '')}>
       <div
         className={cn(
-          'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
-          role === 'user' ? 'bg-primary/20' : 'bg-[#a78bfa]/20',
+          'w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg border',
+          !isAssistant ? 'bg-primary border-primary/20' : 'bg-panel-3 border-accent/20',
         )}
       >
-        {role === 'user' ? (
-          <User size={14} className="text-primary" />
+        {!isAssistant ? (
+          <User size={24} className="text-white" />
         ) : (
-          <Bot size={14} className="text-[#a78bfa]" />
+          <Bot size={24} className="text-accent" />
         )}
       </div>
-      <div>
+      <div className="flex flex-col space-y-2">
         <div
           className={cn(
-            'rounded-2xl px-4 py-3 text-sm',
-            role === 'user'
-              ? 'bg-primary text-primary-foreground rounded-br-md'
-              : 'bg-card border border-border text-text rounded-bl-md',
+            'rounded-2xl px-6 py-4 text-lg shadow-xl',
+            !isAssistant
+              ? 'bg-primary text-white rounded-tr-none'
+              : 'bg-panel-2 border border-border text-text rounded-tl-none',
           )}
         >
-          <div className="whitespace-pre-wrap leading-relaxed">{content}</div>
+          <div className="whitespace-pre-wrap leading-relaxed tabular-nums">{content}</div>
         </div>
+        <span className={cn("text-xs font-bold uppercase tracking-widest text-text-faint px-1", !isAssistant ? "text-right" : "text-left")}>
+          {role} • {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </span>
       </div>
     </div>
   )
@@ -52,92 +62,21 @@ function ChatBubble({ role, content }: { role: 'user' | 'assistant'; content: st
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    critical: 'bg-danger/20 text-danger',
-    high: 'bg-warning/20 text-warning',
-    medium: 'bg-warning/20 text-warning',
-    low: 'bg-primary/20 text-primary',
-    warning: 'bg-warning/20 text-warning',
-    info: 'bg-primary/20 text-primary',
-    healthy: 'bg-success/20 text-success',
-    warning2: 'bg-warning/20 text-warning',
-    needs_review: 'bg-warning/20 text-warning',
-    pass: 'bg-success/20 text-success',
-    operational: 'bg-success/20 text-success',
+    critical: 'bg-danger/20 text-danger border-danger/30',
+    high: 'bg-warning/20 text-warning border-warning/30',
+    medium: 'bg-warning/15 text-warning border-warning/20',
+    low: 'bg-primary/20 text-primary border-primary/30',
+    warning: 'bg-warning/20 text-warning border-warning/30',
+    info: 'bg-primary/20 text-primary border-primary/30',
+    healthy: 'bg-success/20 text-success border-success/30',
   }
-  const key = status.toLowerCase().replace(/\s+/g, '_')
+  const key = status.toLowerCase()
   return (
-    <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', colors[key] || 'bg-muted/20 text-muted')}>
+    <span className={cn('px-3 py-1 rounded-full text-xs font-bold uppercase tracking-tighter border', colors[key] || 'bg-muted/20 text-muted border-border')}>
       {status}
     </span>
   )
 }
-
-// ── Mock data ──
-
-interface ChatMsg {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: string
-}
-
-const initialMessages: ChatMsg[] = [
-  {
-    id: 'chat-1',
-    role: 'user',
-    content: 'Can you analyze the current system health and identify any issues?',
-    timestamp: new Date(Date.now() - 300000).toISOString(),
-  },
-  {
-    id: 'chat-2',
-    role: 'assistant',
-    content: "I've analyzed the system metrics. Everything looks operational with no critical issues detected.\n\n**Summary:**\n- CPU: 42% (normal)\n- Memory: 58% (normal)\n- Disk: 55% (normal)\n- Network: 2.1 MB/s\n\nNo immediate action required.",
-    timestamp: new Date(Date.now() - 290000).toISOString(),
-  },
-]
-
-const aiResponses = [
-  "I'll analyze that data for you. Based on the current system metrics, everything looks operational with no critical issues detected.",
-  "Here's what I found: CPU usage is at 42%, memory at 58%, and disk at 55%. All within normal ranges. The network is performing well with 2.1 MB/s throughput.",
-  'Let me check the logs. I can see there was a failed login attempt from 203.0.113.42 about 15 minutes ago. This could be worth investigating further.',
-  "Based on the anomaly detection model, I'm seeing normal patterns across all metrics. No statistically significant deviations detected in the last hour.",
-  "I've generated a quick summary:\n\n**System Health**: Good\n**Security Events**: 1 warning (failed login)\n**Network**: All interfaces up\n**Recommendation**: No immediate action required.",
-]
-
-interface AnomalyItem {
-  time: string
-  metric: string
-  value: number
-  expected: number
-  deviation: number
-  severity: 'critical' | 'high' | 'medium' | 'low'
-}
-
-function generateMockAnomalies(): AnomalyItem[] {
-  const metrics = ['CPU', 'Memory', 'Network RX', 'Network TX', 'Disk I/O']
-  const severities: Array<AnomalyItem['severity']> = ['critical', 'high', 'medium', 'low']
-  const now = Date.now()
-  return Array.from({ length: 12 }, (_, i) => {
-    const severity = severities[Math.floor(Math.random() * severities.length)]
-    const base = 30 + Math.random() * 40
-    const anomaly = Math.random() < 0.4 ? 50 + Math.random() * 80 : 0
-    return {
-      time: new Date(now - (12 - i) * 60000 * 5).toLocaleTimeString(),
-      metric: metrics[Math.floor(Math.random() * metrics.length)],
-      value: base + anomaly,
-      expected: base,
-      deviation: anomaly > 0 ? anomaly / base * 100 : Math.random() * 5,
-      severity: anomaly > 70 ? 'critical' : anomaly > 40 ? 'high' : severity,
-    }
-  }).filter(a => a.deviation > 3).slice(0, 8)
-}
-
-const reportTemplatesList: { id: ReportType; label: string; description: string }[] = [
-  { id: 'health', label: 'System Health', description: 'CPU, memory, disk, and process overview' },
-  { id: 'network', label: 'Network Audit', description: 'Interfaces, connections, DNS, and ports' },
-  { id: 'security', label: 'Security Audit', description: 'Events, firewall, and threat analysis' },
-  { id: 'combined', label: 'Combined Report', description: 'Full operations summary across all domains' },
-]
 
 // ══════════════════════════════════════════════
 //  AIOps Page
@@ -145,41 +84,66 @@ const reportTemplatesList: { id: ReportType; label: string; description: string 
 
 export function AIOps() {
   const [activeTab, setActiveTab] = useState<TabId>('ai-chat')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 50)
+    return () => clearTimeout(t)
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-4 animate-pulse">
+        <div className="h-8 w-48 bg-panel-2 rounded" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="h-32 bg-panel-2 rounded" />
+          <div className="h-32 bg-panel-2 rounded" />
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="flex h-full">
+    <div className="flex flex-col h-full bg-background">
+      <div className="p-8 border-b border-border bg-panel-2 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-text flex items-center gap-3">
+            <BrainCircuit size={32} className="text-accent" />
+            AI Operations Analyst
+          </h1>
+          <p className="text-text-dim text-lg mt-2">
+            Local intelligence for system diagnostics, trend analysis, and anomaly detection.
+          </p>
+        </div>
+        <div className="flex items-center gap-4 bg-panel border border-border px-6 py-3 rounded-2xl shadow-inner">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-success animate-pulse shadow-[0_0_8px_var(--color-success)]" />
+            <span className="text-sm font-bold text-text-dim uppercase tracking-widest">Ollama Online</span>
+          </div>
+          <div className="w-px h-4 bg-border" />
+          <span className="text-sm font-bold text-accent">llama3.2:latest</span>
+        </div>
+      </div>
+
       <Tabs.Root value={activeTab} onValueChange={(v) => setActiveTab(v as TabId)} className="flex-1 flex flex-col min-w-0">
-        <Tabs.List className="flex border-b border-border bg-background">
-          <Tabs.Trigger
-            value="ai-chat"
-            className={cn(
-              'flex items-center gap-2 px-4 py-3 text-sm border-b-2 border-transparent transition-colors',
-              activeTab === 'ai-chat' ? 'border-primary text-text' : 'text-muted hover:text-text',
-            )}
-          >
-            <Bot size={16} />
-            Chat
-          </Tabs.Trigger>
-          <Tabs.Trigger
-            value="reports"
-            className={cn(
-              'flex items-center gap-2 px-4 py-3 text-sm border-b-2 border-transparent transition-colors',
-              activeTab === 'reports' ? 'border-primary text-text' : 'text-muted hover:text-text',
-            )}
-          >
-            <FileText size={16} />
-            Reports
-          </Tabs.Trigger>
-          <Tabs.Trigger
-            value="anomalies"
-            className={cn(
-              'flex items-center gap-2 px-4 py-3 text-sm border-b-2 border-transparent transition-colors',
-              activeTab === 'anomalies' ? 'border-primary text-text' : 'text-muted hover:text-text',
-            )}
-          >
-            <Activity size={16} />
-            Anomalies
-          </Tabs.Trigger>
+        <Tabs.List className="flex border-b border-border bg-panel px-4">
+          {[
+            { id: 'ai-chat', label: 'Analyst Chat', icon: <MessageSquare size={20} /> },
+            { id: 'reports', label: 'Intelligence Reports', icon: <FileText size={20} /> },
+            { id: 'anomalies', label: 'Anomaly Detection', icon: <Activity size={20} /> },
+          ].map((tab) => (
+            <Tabs.Trigger
+              key={tab.id}
+              value={tab.id}
+              className={cn(
+                'flex items-center gap-3 px-8 py-5 text-base font-bold transition-all border-b-2 border-transparent',
+                activeTab === tab.id ? 'border-accent text-text bg-accent-soft' : 'text-text-faint hover:text-text hover:bg-white/5',
+              )}
+            >
+              {tab.icon}
+              {tab.label}
+            </Tabs.Trigger>
+          ))}
         </Tabs.List>
 
         <div className="flex-1 overflow-hidden">
@@ -203,38 +167,30 @@ export function AIOps() {
 // ══════════════════════════════════════════════
 
 function ChatTab() {
-  const [messages, setMessages] = useState<ChatMsg[]>(initialMessages)
+  const { call } = useBackend()
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { role: 'assistant', content: 'Greeting, Operator. I am the Hawkward AI Analyst. I have full visibility into your system metrics, network state, and security logs. How can I assist you with your operations today?' }
+  ])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const chatRef = useRef<HTMLDivElement>(null)
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim() || isTyping) return
 
-    const userMsg: ChatMsg = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: input,
-      timestamp: new Date().toISOString(),
-    }
+    const userMsg: ChatMessage = { role: 'user', content: input }
     setMessages(prev => [...prev, userMsg])
     setInput('')
     setIsTyping(true)
 
-    setTimeout(() => {
-      const aiMsg: ChatMsg = {
-        id: `ai-${Date.now()}`,
-        role: 'assistant',
-        content: aiResponses[Math.floor(Math.random() * aiResponses.length)],
-        timestamp: new Date().toISOString(),
-      }
-      setMessages(prev => [...prev, aiMsg])
+    try {
+      const response = await call('AIOps.Chat', input) as string
+      setMessages(prev => [...prev, { role: 'assistant', content: response }])
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', content: `Analyst Error: ${String(err)}` }])
+    } finally {
       setIsTyping(false)
-    }, 1000 + Math.random() * 1500)
-  }
-
-  const clearChat = () => {
-    setMessages([])
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -244,70 +200,75 @@ function ChatTab() {
     }
   }
 
+  useEffect(() => {
+    if (chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight
+    }
+  }, [messages, isTyping])
+
   return (
-    <div className="flex h-full">
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Bot size={16} className="text-[#a78bfa]" />
-            <span className="text-sm font-medium text-text">AI Assistant</span>
+    <div className="flex flex-col h-full bg-[#0b1120] relative">
+      {/* Background Decor */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-accent rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-primary rounded-full blur-[150px] opacity-30" />
+      </div>
+
+      {/* Messages */}
+      <div ref={chatRef} className="flex-1 overflow-y-auto p-10 space-y-8 relative z-10 scroll-smooth">
+        {messages.map((msg, i) => (
+          <ChatBubble key={i} role={msg.role} content={msg.content} />
+        ))}
+        {isTyping && (
+          <div className="flex gap-6 max-w-[80%] animate-pulse">
+            <div className="w-12 h-12 rounded-xl bg-panel-3 border border-accent/20 flex items-center justify-center shrink-0">
+              <Bot size={24} className="text-accent" />
+            </div>
+            <div className="bg-panel-2 border border-border rounded-2xl rounded-tl-none px-6 py-4">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <span className="ml-2 text-sm font-bold text-text-faint uppercase tracking-widest">Analyzing System Context...</span>
+              </div>
+            </div>
           </div>
-          <button
-            onClick={clearChat}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted border border-border rounded-lg hover:bg-sidebar-hover transition-colors"
-          >
-            <Trash2 size={12} /> Clear Chat
-          </button>
-        </div>
+        )}
+      </div>
 
-        {/* Messages */}
-        <div ref={chatRef} className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full text-muted">
-              <Bot size={40} className="mb-3 opacity-30" />
-              <p className="text-sm">Start a conversation with the AI assistant</p>
-            </div>
-          )}
-          {messages.map((msg) => (
-            <ChatBubble key={msg.id} role={msg.role} content={msg.content} />
-          ))}
-          {isTyping && (
-            <div className="flex gap-3 max-w-[80%]">
-              <div className="w-8 h-8 rounded-lg bg-[#a78bfa]/20 flex items-center justify-center shrink-0">
-                <Bot size={14} className="text-[#a78bfa]" />
-              </div>
-              <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-3">
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-[#a78bfa] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1.5 h-1.5 bg-[#a78bfa] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1.5 h-1.5 bg-[#a78bfa] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Input */}
-        <div className="border-t border-border p-4">
-          <div className="flex items-center gap-2">
+      {/* Input Area */}
+      <div className="p-8 bg-panel-2 border-t border-border relative z-20">
+        <div className="max-w-5xl mx-auto flex items-end gap-4">
+          <div className="relative flex-1 group">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Type a message... (Enter to send, Shift+Enter for newline)"
+              placeholder="Ask about system health, anomalies, or network state..."
               rows={1}
-              className="flex-1 bg-[#0f172a] border border-border rounded-lg px-4 py-2.5 text-sm text-text placeholder-muted focus:outline-none focus:border-primary resize-none"
-              style={{ minHeight: 40, maxHeight: 120 }}
+              className="w-full bg-[#0f172a] border border-border rounded-2xl px-6 py-5 text-xl text-text placeholder-text-faint focus:outline-none focus:border-accent transition-all shadow-inner resize-none min-h-[64px] max-h-40"
+              style={{ height: 'auto' }}
             />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || isTyping}
-              className="flex items-center gap-1.5 px-4 py-2.5 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <Send size={14} />
-            </button>
+            <div className="absolute right-4 bottom-4 flex items-center gap-3 text-text-faint">
+              <span className="text-xs font-bold uppercase tracking-tighter group-focus-within:text-accent transition-colors">Shift+Enter for newline</span>
+              <div className="w-px h-3 bg-border" />
+              <Zap size={14} className="group-focus-within:text-warning transition-colors" />
+            </div>
           </div>
+          <button
+            onClick={handleSend}
+            disabled={!input.trim() || isTyping}
+            className="h-16 w-16 flex items-center justify-center bg-accent text-white rounded-2xl hover:bg-accent/90 disabled:opacity-30 disabled:scale-95 transition-all shadow-lg active:scale-90"
+          >
+            <Send size={28} />
+          </button>
+          <button
+            onClick={() => setMessages([])}
+            className="h-16 w-16 flex items-center justify-center text-text-faint border border-border rounded-2xl hover:bg-danger/10 hover:text-danger transition-all"
+            title="Clear History"
+          >
+            <Trash2 size={24} />
+          </button>
         </div>
       </div>
     </div>
@@ -319,101 +280,75 @@ function ChatTab() {
 // ══════════════════════════════════════════════
 
 function ReportsTab() {
-  const [reportType, setReportType] = useState<ReportType>('health')
+  const { call } = useBackend()
+  const [reportType, setReportType] = useState('System Health')
   const [reportContent, setReportContent] = useState('')
-  const [recentReports, setRecentReports] = useState<{ type: ReportType; date: string }[]>([])
+  const [isGenerating, setIsGenerating] = useState(false)
 
-  const generateReport = (type: ReportType) => {
-    setReportType(type)
-    const content = mockReportContent(type)
-    setReportContent(content)
-    setRecentReports(prev => {
-      const updated = [{ type, date: new Date().toLocaleString() }, ...prev]
-      return updated.slice(0, 5)
-    })
+  const templates = [
+    { id: 'health', label: 'System Health', desc: 'Aggregate performance, uptime, and resource usage.', icon: <Activity size={20} /> },
+    { id: 'security', label: 'Security Audit', desc: 'Failed logins, firewall status, and user changes.', icon: <ShieldCheck size={20} /> },
+    { id: 'network', label: 'Network Triage', desc: 'Latency trends, DNS health, and connection density.', icon: <Globe size={20} /> },
+  ]
+
+  const generate = async (name: string) => {
+    setReportType(name)
+    setIsGenerating(true)
+    setReportContent('')
+    try {
+      const res = await call('AIOps.GenerateReport', [name]) as string
+      setReportContent(res)
+    } catch (err) {
+      setReportContent(`Generation Error: ${String(err)}`)
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   return (
-    <div className="flex h-full p-4 gap-4">
-      {/* Left: Template cards */}
-      <div className="w-64 shrink-0 space-y-3">
-        <h3 className="text-sm font-medium text-text mb-2">Report Templates</h3>
-        {reportTemplatesList.map((t) => (
-          <div
+    <div className="grid grid-cols-1 lg:grid-cols-4 h-full p-8 gap-8 overflow-hidden">
+      <div className="lg:col-span-1 space-y-4 overflow-y-auto pr-2">
+        <h3 className="text-lg font-bold text-text-dim uppercase tracking-widest mb-4">Intelligence Templates</h3>
+        {templates.map(t => (
+          <button
             key={t.id}
+            onClick={() => generate(t.label)}
+            disabled={isGenerating}
             className={cn(
-              'bg-card border rounded-lg p-4 transition-colors',
-              reportType === t.id ? 'border-primary/50 bg-primary/5' : 'border-border',
+              "w-full text-left border rounded-2xl p-6 transition-all group disabled:opacity-50",
+              reportType === t.label ? "bg-accent-soft border-accent/50" : "bg-panel border-border hover:bg-white/5"
             )}
           >
-            <h4 className="text-sm font-medium text-text mb-1">{t.label}</h4>
-            <p className="text-xs text-muted mb-3">{t.description}</p>
-            <button
-              onClick={() => generateReport(t.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              <RefreshCw size={12} />
-              Generate
-            </button>
-          </div>
-        ))}
-
-        {recentReports.length > 0 && (
-          <div className="bg-card border border-border rounded-lg p-4 mt-4">
-            <h3 className="text-sm font-medium text-text mb-3">Recent Reports</h3>
-            <div className="space-y-1.5">
-              {recentReports.map((r, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs text-muted">
-                  <Clock size={10} />
-                  <span className="truncate capitalize">{r.type}</span>
-                  <span className="shrink-0">{r.date}</span>
-                </div>
-              ))}
+            <div className="flex items-center gap-4 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-panel-3 flex items-center justify-center text-accent border border-border">
+                {t.icon}
+              </div>
+              <span className="text-xl font-bold text-text">{t.label}</span>
             </div>
-          </div>
-        )}
+            <p className="text-text-dim text-base leading-relaxed mb-4">{t.desc}</p>
+            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest text-accent opacity-0 group-hover:opacity-100 transition-opacity">
+              <span>Draft Intel Report</span>
+              <ChevronRight size={14} />
+            </div>
+          </button>
+        ))}
       </div>
 
-      {/* Right: Report content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-medium text-text capitalize">{reportType} Report</h3>
-        </div>
-        <div className="flex-1 bg-[#0b1120] border border-border rounded-lg overflow-y-auto p-6 font-[JetBrains_Mono] text-sm leading-relaxed">
-          {reportContent ? (
-            reportContent.split('\n').map((line, i) => {
-              if (line.startsWith('# ')) {
-                return <h1 key={i} className="text-xl font-bold text-text mb-4 font-sans">{line.replace('# ', '')}</h1>
-              }
-              if (line.startsWith('## ')) {
-                return <h2 key={i} className="text-lg font-bold text-text mt-6 mb-2 font-sans">{line.replace('## ', '')}</h2>
-              }
-              if (line.startsWith('| ') && line.endsWith('|')) {
-                const isSep = line.includes('---')
-                if (isSep) return null
-                const cells = line.split('|').filter(c => c.trim()).map(c => c.trim())
-                return (
-                  <div key={i} className="flex text-sm border-b border-border/30 py-1">
-                    {cells.map((c, j) => (
-                      <span key={j} className="flex-1 px-2">{c}</span>
-                    ))}
-                  </div>
-                )
-              }
-              if (line.startsWith('- ')) {
-                return <p key={i} className="text-sm text-text ml-4 my-1">• {line.slice(2)}</p>
-              }
-              if (line.startsWith('> ')) {
-                return <p key={i} className="text-sm italic text-muted border-l-2 border-border pl-3 my-2">{line.slice(2)}</p>
-              }
-              if (line.trim() === '') return <div key={i} className="h-2" />
-              return <p key={i} className="text-sm text-text leading-relaxed">{line}</p>
-            })
-          ) : (
-            <div className="flex items-center justify-center h-full text-muted text-sm">
-              Select a template and click Generate to create a report
+      <div className="lg:col-span-3 flex flex-col space-y-4 min-w-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <FileText size={20} className="text-text-faint" />
+            <h3 className="text-lg font-bold text-text-dim uppercase tracking-widest">{reportType} Document</h3>
+          </div>
+          {isGenerating && (
+            <div className="flex items-center gap-2 text-accent animate-pulse">
+              <Sparkles size={16} />
+              <span className="text-sm font-bold uppercase tracking-tighter">AI Synthesizing Report...</span>
             </div>
           )}
+        </div>
+        <div className="flex-1 bg-[#0b1120] border border-border rounded-2xl p-10 overflow-y-auto font-[JetBrains_Mono] text-lg leading-relaxed whitespace-pre shadow-inner">
+          {reportContent || (isGenerating ? 'Collecting system metrics and performing heuristic analysis...' : 'Select a template to generate a professional intelligence report.')}
         </div>
       </div>
     </div>
@@ -425,121 +360,93 @@ function ReportsTab() {
 // ══════════════════════════════════════════════
 
 function AnomaliesTab() {
-  const [anomalies, setAnomalies] = useState<AnomalyItem[]>(() => generateMockAnomalies())
-  const [metricFilter, setMetricFilter] = useState('ALL')
-  const [autoRefresh, setAutoRefresh] = useState(false)
+  const { call } = useBackend()
+  const [anomalies, setAnomalies] = useState<AnomalyInfo[]>([])
+  const [loading, setLoading] = useState(false)
 
-  const metrics = ['ALL', 'CPU', 'Memory', 'Network RX', 'Network TX', 'Disk I/O']
+  const scan = useCallback(async () => {
+    try {
+      const res = await call('AIOps.DetectAnomalies') as AnomalyInfo[]
+      setAnomalies(res || [])
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [call])
 
-  const filtered = metricFilter === 'ALL'
-    ? anomalies
-    : anomalies.filter(a => a.metric === metricFilter)
+  useEffect(() => {
+    scan()
+    const timer = setInterval(scan, 10000)
+    return () => clearInterval(timer)
+  }, [scan])
 
   return (
-    <div className="flex flex-col h-full p-4">
-      {/* Controls */}
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted">Metric:</span>
-          <select
-            value={metricFilter}
-            onChange={(e) => setMetricFilter(e.target.value)}
-            className="bg-[#0f172a] border border-border rounded-lg px-3 py-1.5 text-sm text-text focus:outline-none focus:border-primary"
-          >
-            {metrics.map(m => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
+    <div className="flex flex-col h-full p-8 space-y-8">
+      <div className="flex items-center justify-between bg-panel border border-border px-8 py-6 rounded-2xl shadow-lg">
+        <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4">
+            <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center border shadow-xl", anomalies.length > 0 ? "bg-danger/10 border-danger/30 text-danger" : "bg-success/10 border-success/30 text-success")}>
+              {anomalies.length > 0 ? <AlertTriangle size={32} /> : <ShieldCheck size={32} />}
+            </div>
+            <div>
+              <p className="text-3xl font-black text-text">{anomalies.length}</p>
+              <p className="text-sm font-bold text-text-dim uppercase tracking-widest">Detected Anomalies</p>
+            </div>
+          </div>
+          <div className="w-px h-12 bg-border" />
+          <div className="text-text-dim text-lg leading-relaxed max-w-xl italic">
+            Statistical deviation tracking compares current live metrics against a 12-minute rolling window of history.
+          </div>
         </div>
-        {autoRefresh && (
-          <span className="text-xs text-primary animate-pulse">● Live</span>
-        )}
-        <div className="flex-1" />
-        <label className="flex items-center gap-2 text-xs text-muted cursor-pointer">
-          <input
-            type="checkbox"
-            checked={autoRefresh}
-            onChange={(e) => setAutoRefresh(e.target.checked)}
-            className="rounded border-border bg-[#0f172a]"
-          />
-          Auto-refresh
-        </label>
         <button
-          onClick={() => setAnomalies(generateMockAnomalies())}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted border border-border rounded-lg hover:bg-sidebar-hover transition-colors"
+          onClick={scan}
+          className="flex items-center gap-3 px-8 py-4 bg-panel-3 border border-border rounded-xl hover:bg-panel hover:border-accent/40 text-text font-bold transition-all shadow-lg active:scale-95"
         >
-          <RefreshCw size={12} /> Refresh
+          <RefreshCw size={20} className={cn(loading && "animate-spin")} />
+          Deep Scan Now
         </button>
       </div>
 
-      {/* Summary */}
-      <div className="flex items-center gap-4 mb-3 text-xs">
-        <span className="text-muted">{filtered.length} anomalies</span>
-        {['critical', 'high', 'medium', 'low'].map(sev => {
-          const count = filtered.filter(a => a.severity === sev).length
-          if (count === 0) return null
-          return (
-            <span key={sev} className="flex items-center gap-1">
-              <span className={cn(
-                'w-1.5 h-1.5 rounded-full',
-                sev === 'critical' ? 'bg-danger' : sev === 'high' || sev === 'medium' ? 'bg-warning' : 'bg-primary',
-              )} />
-              <span className={cn(
-                'font-medium',
-                sev === 'critical' ? 'text-danger' : sev === 'high' || sev === 'medium' ? 'text-warning' : 'text-primary',
-              )}>
-                {count}
-              </span>
-              <span className="text-muted">{sev}</span>
-            </span>
-          )
-        })}
-      </div>
-
-      {/* Table */}
-      <div className="flex-1 bg-[#0b1120] border border-border rounded-lg overflow-y-auto min-h-0">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-xs text-muted">
-              <th className="text-left px-4 py-2.5 font-medium">Timestamp</th>
-              <th className="text-left px-4 py-2.5 font-medium">Metric</th>
-              <th className="text-right px-4 py-2.5 font-medium">Value</th>
-              <th className="text-right px-4 py-2.5 font-medium">Expected</th>
-              <th className="text-right px-4 py-2.5 font-medium">Deviation</th>
-              <th className="text-left px-4 py-2.5 font-medium">Severity</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 && (
+      <div className="flex-1 bg-[#0b1120] border border-border rounded-2xl overflow-hidden shadow-inner">
+        <div className="overflow-y-auto h-full">
+          <table className="w-full text-left border-collapse">
+            <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border">
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-muted text-sm">
-                  <div className="flex flex-col items-center gap-2">
-                    <AlertTriangle size={20} className="opacity-30" />
-                    No anomalies detected
-                  </div>
-                </td>
+                <th className="px-10 py-6 text-sm font-bold text-text-dim uppercase tracking-widest">Heuristic Signal</th>
+                <th className="px-10 py-6 text-sm font-bold text-text-dim uppercase tracking-widest">Observed</th>
+                <th className="px-10 py-6 text-sm font-bold text-text-dim uppercase tracking-widest">Expected (Mean)</th>
+                <th className="px-10 py-6 text-sm font-bold text-text-dim uppercase tracking-widest">Deviation</th>
+                <th className="px-10 py-6 text-sm font-bold text-text-dim uppercase tracking-widest">Severity</th>
               </tr>
-            )}
-            {filtered.map((a, i) => (
-              <tr key={i} className="border-b border-border/30 hover:bg-white/5 transition-colors">
-                <td className="px-4 py-2.5 text-muted text-xs font-[JetBrains_Mono]">{a.time}</td>
-                <td className="px-4 py-2.5 text-text">{a.metric}</td>
-                <td className="px-4 py-2.5 text-right font-[JetBrains_Mono] text-xs text-text">{a.value.toFixed(1)}</td>
-                <td className="px-4 py-2.5 text-right font-[JetBrains_Mono] text-xs text-muted">{a.expected.toFixed(1)}</td>
-                <td className="px-4 py-2.5 text-right font-[JetBrains_Mono] text-xs">
-                  <span className={cn(
-                    a.severity === 'critical' ? 'text-danger' : 'text-warning',
-                  )}>
-                    +{a.deviation.toFixed(1)}%
-                  </span>
-                </td>
-                <td className="px-4 py-2.5">
-                  <StatusBadge status={a.severity} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {anomalies.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-10 py-32 text-center">
+                    <div className="flex flex-col items-center gap-6 opacity-30">
+                      <ShieldCheck size={80} className="text-success" />
+                      <p className="text-2xl font-medium text-text-faint italic">System operating within established statistical baseline.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                anomalies.map((a, i) => (
+                  <tr key={i} className="border-b border-border/20 hover:bg-white/5 transition-colors group">
+                    <td className="px-10 py-6 font-bold text-xl text-text group-hover:text-accent transition-colors flex items-center gap-4">
+                      <Zap size={20} className="text-warning" />
+                      {a.metric.replace('.percent', '').toUpperCase()}
+                    </td>
+                    <td className="px-10 py-6 text-2xl font-black text-text tabular-nums">{a.value.toFixed(2)}%</td>
+                    <td className="px-10 py-6 text-xl text-text-faint tabular-nums">{a.expected.toFixed(2)}%</td>
+                    <td className="px-10 py-6 text-2xl font-bold text-danger tabular-nums">+{a.deviation.toFixed(1)}σ</td>
+                    <td className="px-10 py-6"><StatusBadge status={a.severity} /></td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

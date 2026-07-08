@@ -23,3 +23,12 @@ const mockWails = {
 
 Object.defineProperty(window, 'go', { value: mockWails.go })
 Object.defineProperty(window, 'runtime', { value: mockWails.runtime })
+
+// Polyfill ResizeObserver for Radix UI components
+class ResizeObserverMock {
+  observe() { }
+  unobserve() { }
+  disconnect() { }
+}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock class satisfies type
+window.ResizeObserver = ResizeObserverMock as any

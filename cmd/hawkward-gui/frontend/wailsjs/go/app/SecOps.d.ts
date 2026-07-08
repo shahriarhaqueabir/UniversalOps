@@ -13,3 +13,5 @@ export function GetScheduledTasks():Promise<Array<app.ScheduledTask>>;
 export function GetSecurityEvents():Promise<Array<app.SecurityEvent>>;
 
 export function GetUsers():Promise<Array<app.UserInfo>>;
+
+export function SetFirewallRuleState(arg1:string,arg2:boolean):Promise<boolean>;

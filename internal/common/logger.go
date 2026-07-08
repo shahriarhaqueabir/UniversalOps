@@ -40,21 +40,34 @@ func CloseLogger() {
 
 // LogInfo logs an informational message.
 func LogInfo(format string, v ...interface{}) {
+	msg := fmt.Sprintf(format, v...)
 	if logger != nil {
-		logger.Printf("[INFO] "+format, v...)
+		logger.Printf("[INFO] %s", msg)
+	}
+	if s := GetStorage(); s != nil {
+		go s.InsertLog("INFO", "SYSTEM", msg)
 	}
 }
 
 // LogWarn logs a warning message.
 func LogWarn(format string, v ...interface{}) {
+	msg := fmt.Sprintf(format, v...)
 	if logger != nil {
-		logger.Printf("[WARN] "+format, v...)
+		logger.Printf("[WARN] %s", msg)
+	}
+	if s := GetStorage(); s != nil {
+		go s.InsertLog("WARN", "SYSTEM", msg)
 	}
 }
 
 // LogError logs an error message.
 func LogError(format string, v ...interface{}) {
+	msg := fmt.Sprintf(format, v...)
 	if logger != nil {
-		logger.Printf("[ERROR] "+format, v...)
+		logger.Printf("[ERROR] %s", msg)
+	}
+	if s := GetStorage(); s != nil {
+		go s.InsertLog("ERROR", "SYSTEM", msg)
 	}
 }
+

@@ -1,7 +1,10 @@
 package app
 
 import (
+	"fmt"
+
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/aiops"
+
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
@@ -17,7 +20,21 @@ func NewAIOps(app *App) *AIOps {
 
 // Chat sends a message to the Ollama chat API and returns the response.
 func (a *AIOps) Chat(message string) string {
+	storage := common.GetStorage()
+	var historyContext string
+	if storage != nil {
+		// Fetch last 10 CPU and RAM metrics to give AI historical context
+		// We use a strictly capped window to keep the prompt lightweight
+		cpuHistory, _ := storage.GetMetricHistory(common.MetricCPU, 10)
+		memHistory, _ := storage.GetMetricHistory(common.MetricMem, 10)
+		if len(cpuHistory) > 0 {
+			historyContext = fmt.Sprintf("\nHistorical Context (10s window):\nCPU usage patterns: %v\nRAM occupancy patterns: %v\n", cpuHistory, memHistory)
+		}
+	}
+
+
 	messages := []aiops.ChatMessage{
+		{Role: "system", Content: "You are the Hawkward AI Assistant. Use current stats and historical context provided to answer accurately." + historyContext},
 		{Role: "user", Content: message},
 	}
 	response, err := aiops.Chat(messages)
@@ -27,6 +44,7 @@ func (a *AIOps) Chat(message string) string {
 	}
 	return response
 }
+
 
 // GenerateReport creates a formatted text report from the given sections.
 // Sections are provided as a list of section title strings (content is auto-generated).

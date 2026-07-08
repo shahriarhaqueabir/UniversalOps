@@ -114,6 +114,18 @@ func (ae *AlertEngine) AddRule(rule AlertRule) {
 	ae.rules = append(ae.rules, rule)
 }
 
+// RemoveRule removes the first matching rule by metric and threshold.
+func (ae *AlertEngine) RemoveRule(metric string, threshold float64) {
+	ae.mu.Lock()
+	defer ae.mu.Unlock()
+	for i, r := range ae.rules {
+		if r.Metric == metric && r.Threshold == threshold {
+			ae.rules = append(ae.rules[:i], ae.rules[i+1:]...)
+			return
+		}
+	}
+}
+
 // AddDefaultRules registers sensible default thresholds for CPU, memory, disk,
 // and CPU temperature.
 func (ae *AlertEngine) AddDefaultRules() {

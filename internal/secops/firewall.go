@@ -42,6 +42,21 @@ func GetFirewallRules() ([]FirewallRule, error) {
 	return nil, fmt.Errorf("firewall query not supported on this platform")
 }
 
+// SetFirewallRuleState enables or disables a firewall rule by name.
+func SetFirewallRuleState(name string, enable bool) error {
+	state := "no"
+	if enable {
+		state = "yes"
+	}
+
+	if common.IsWindows() {
+		cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "cmd", "/c", "netsh advfirewall firewall set rule name=\""+name+"\" new enable="+state)
+		return cmd.Run()
+	}
+
+	return fmt.Errorf("firewall state modification not supported on this platform")
+}
+
 // getFirewallRulesLinux retrieves firewall rules using iptables-save or nft.
 func getFirewallRulesLinux() ([]FirewallRule, error) {
 	// Try iptables-save first

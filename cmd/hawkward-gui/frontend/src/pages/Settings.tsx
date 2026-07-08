@@ -11,17 +11,20 @@ import {
 import { cn } from '@/lib/utils'
 import * as Slider from '@radix-ui/react-slider'
 import { useBackend } from '@/hooks/useBackend'
+import { useTheme } from '@/hooks/useTheme'
 
-// ── Section Card ──
+// ── Section Card (aligned with Squib design system) ──
 
 function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="bg-card border border-border rounded-lg">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-        <span className="text-primary">{icon}</span>
-        <h2 className="text-sm font-semibold text-text">{title}</h2>
+    <div className="bg-panel border border-border rounded-[24px] p-8 shadow-xl">
+      <div className="flex items-center gap-4 mb-6 pb-4 border-b border-border/50">
+        <div className="w-10 h-10 rounded-xl bg-accent-soft flex items-center justify-center text-accent">
+          {icon}
+        </div>
+        <h2 className="text-sm font-black text-text uppercase tracking-[0.2em]">{title}</h2>
       </div>
-      <div className="p-4 space-y-4">{children}</div>
+      <div className="space-y-6">{children}</div>
     </div>
   )
 }
@@ -32,8 +35,8 @@ function SettingRow({ label, description, children }: { label: string; descripti
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="min-w-0">
-        <p className="text-sm text-text">{label}</p>
-        {description && <p className="text-xs text-muted mt-0.5">{description}</p>}
+        <p className="text-base font-bold text-text">{label}</p>
+        {description && <p className="text-sm text-text-faint mt-1">{description}</p>}
       </div>
       <div className="shrink-0">{children}</div>
     </div>
@@ -69,8 +72,8 @@ const DEFAULT_APP_INFO: AppInfo = {
 export function Settings() {
   const { call } = useBackend()
 
-  // Theme
-  const [darkMode, setDarkMode] = useState(true)
+  // Theme — use the shared hook instead of local state
+  const { theme, toggle } = useTheme()
 
   // Collection / Refresh
   const [refreshInterval, setRefreshInterval] = useState(5000)
@@ -96,42 +99,51 @@ export function Settings() {
     })
   }, [call])
 
+  const isDark = theme === 'dark'
+
   return (
-    <div className="h-full overflow-y-auto p-6 max-w-3xl space-y-6">
-      <h1 className="text-xl font-bold text-text">Settings</h1>
+    <div className="h-full overflow-y-auto p-8 space-y-6 max-w-3xl">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-text flex items-center gap-4">
+          <Monitor size={32} className="text-accent" /> Settings
+        </h1>
+        <p className="text-lg text-text-dim mt-2 font-medium">
+          Configure theme, collection intervals, and network parameters.
+        </p>
+      </div>
 
       {/* ── Theme ── */}
-      <Section title="Theme" icon={<Monitor size={16} />}>
+      <Section title="Theme" icon={<Monitor size={20} />}>
         <SettingRow label="Appearance" description="Switch between dark and light theme">
-          <div className="flex items-center rounded-lg overflow-hidden border border-border">
+          <div className="flex items-center rounded-xl overflow-hidden border border-border">
             <button
-              onClick={() => setDarkMode(true)}
+              onClick={() => { if (!isDark) toggle() }}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
-                darkMode
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-background text-muted hover:text-text',
+                'flex items-center gap-2 px-4 py-2 text-sm font-bold transition-all',
+                isDark
+                  ? 'bg-accent text-white shadow-lg'
+                  : 'bg-panel-2 text-text-dim hover:text-text',
               )}
             >
-              <Moon size={13} /> Dark
+              <Moon size={16} /> Dark
             </button>
             <button
-              onClick={() => setDarkMode(false)}
+              onClick={() => { if (isDark) toggle() }}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
-                !darkMode
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-background text-muted hover:text-text',
+                'flex items-center gap-2 px-4 py-2 text-sm font-bold transition-all',
+                !isDark
+                  ? 'bg-accent text-white shadow-lg'
+                  : 'bg-panel-2 text-text-dim hover:text-text',
               )}
             >
-              <Sun size={13} /> Light
+              <Sun size={16} /> Light
             </button>
           </div>
         </SettingRow>
       </Section>
 
       {/* ── Collection Interval ── */}
-      <Section title="Collection" icon={<Activity size={16} />}>
+      <Section title="Collection" icon={<Activity size={20} />}>
         <SettingRow
           label="Refresh Interval"
           description="How often the dashboard and metrics refresh"
@@ -143,7 +155,7 @@ export function Settings() {
               setRefreshInterval(val)
               call('PipelineAPI.UpdateSettings', val, 0)
             }}
-            className="bg-background border border-border rounded-lg px-3 py-1.5 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary"
+            className="bg-panel-2 border border-border rounded-xl px-4 py-2.5 text-base font-bold text-text focus:outline-none focus:border-accent transition-colors"
           >
             {intervalOptions.map((o) => (
               <option key={o.value} value={o.value}>
@@ -155,7 +167,7 @@ export function Settings() {
       </Section>
 
       {/* ── Network ── */}
-      <Section title="Network" icon={<Network size={16} />}>
+      <Section title="Network" icon={<Network size={20} />}>
         <SettingRow
           label="Default Ping Count"
           description="Number of echo requests per ping (1–20)"
@@ -169,12 +181,12 @@ export function Settings() {
               step={1}
               className="relative flex items-center flex-1 h-5 cursor-pointer"
             >
-              <Slider.Track className="relative h-1.5 flex-1 rounded-full bg-background border border-border">
-                <Slider.Range className="absolute h-full rounded-full bg-primary" />
+              <Slider.Track className="relative h-1.5 flex-1 rounded-full bg-panel-2 border border-border">
+                <Slider.Range className="absolute h-full rounded-full bg-accent" />
               </Slider.Track>
-              <Slider.Thumb className="block w-4 h-4 bg-text rounded-full shadow focus:outline-none focus:ring-2 focus:ring-primary" />
+              <Slider.Thumb className="block w-4 h-4 bg-text rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-accent" />
             </Slider.Root>
-            <span className="text-xs font-mono text-text w-5 text-right">{pingCount}</span>
+            <span className="text-sm font-bold font-[JetBrains_Mono] text-text w-6 text-right">{pingCount}</span>
           </div>
         </SettingRow>
 
@@ -191,43 +203,43 @@ export function Settings() {
               step={100}
               className="relative flex items-center flex-1 h-5 cursor-pointer"
             >
-              <Slider.Track className="relative h-1.5 flex-1 rounded-full bg-background border border-border">
-                <Slider.Range className="absolute h-full rounded-full bg-primary" />
+              <Slider.Track className="relative h-1.5 flex-1 rounded-full bg-panel-2 border border-border">
+                <Slider.Range className="absolute h-full rounded-full bg-accent" />
               </Slider.Track>
-              <Slider.Thumb className="block w-4 h-4 bg-text rounded-full shadow focus:outline-none focus:ring-2 focus:ring-primary" />
+              <Slider.Thumb className="block w-4 h-4 bg-text rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-accent" />
             </Slider.Root>
-            <span className="text-xs font-mono text-text w-10 text-right">{dnsTimeout}ms</span>
+            <span className="text-sm font-bold font-[JetBrains_Mono] text-text w-14 text-right">{dnsTimeout}ms</span>
           </div>
         </SettingRow>
       </Section>
 
       {/* ── About ── */}
-      <Section title="About" icon={<Info size={16} />}>
-        <div className="grid grid-cols-2 gap-4 text-sm">
+      <Section title="About" icon={<Info size={20} />}>
+        <div className="grid grid-cols-2 gap-6 text-base">
           <div>
-            <p className="text-xs text-muted mb-0.5">Application</p>
-            <p className="text-text font-medium">{appInfo.name}</p>
+            <p className="text-xs font-black text-text-faint uppercase tracking-[0.2em] mb-1">Application</p>
+            <p className="text-text font-bold">{appInfo.name}</p>
           </div>
           <div>
-            <p className="text-xs text-muted mb-0.5">Version</p>
-            <p className="text-text font-mono">{appInfo.version}</p>
+            <p className="text-xs font-black text-text-faint uppercase tracking-[0.2em] mb-1">Version</p>
+            <p className="text-text font-bold font-[JetBrains_Mono]">{appInfo.version}</p>
           </div>
           <div>
-            <p className="text-xs text-muted mb-0.5">Go Version</p>
-            <p className="text-text font-mono">{appInfo.goVersion}</p>
+            <p className="text-xs font-black text-text-faint uppercase tracking-[0.2em] mb-1">Go Version</p>
+            <p className="text-text font-bold font-[JetBrains_Mono]">{appInfo.goVersion}</p>
           </div>
           <div>
-            <p className="text-xs text-muted mb-0.5">Uptime</p>
-            <p className="text-text font-mono">{appInfo.uptime}</p>
+            <p className="text-xs font-black text-text-faint uppercase tracking-[0.2em] mb-1">Uptime</p>
+            <p className="text-text font-bold font-[JetBrains_Mono]">{appInfo.uptime}</p>
           </div>
         </div>
-        <div className="pt-4 border-t border-border mt-4">
-          <div className="flex items-center gap-4">
-            <a href="#" className="flex items-center gap-1 text-xs text-primary hover:underline">
-              <ExternalLink size={12} /> GitHub
+        <div className="pt-6 border-t border-border/50 mt-6">
+          <div className="flex items-center gap-6">
+            <a href="#" className="flex items-center gap-2 text-sm font-bold text-accent hover:text-accent-2 transition-colors">
+              <ExternalLink size={16} /> GitHub
             </a>
-            <a href="#" className="flex items-center gap-1 text-xs text-primary hover:underline">
-              <ExternalLink size={12} /> Documentation
+            <a href="#" className="flex items-center gap-2 text-sm font-bold text-accent hover:text-accent-2 transition-colors">
+              <ExternalLink size={16} /> Documentation
             </a>
           </div>
         </div>

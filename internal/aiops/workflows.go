@@ -74,7 +74,7 @@ func (r *EnhancedReport) Save(path, format string) error {
 // OllamaReport sends sections to Ollama for AI-powered analysis and returns the response.
 func (r *EnhancedReport) OllamaReport() (string, error) {
 	if !checkOllamaAvailable() {
-		return "", fmt.Errorf("Ollama is not available")
+		return "", fmt.Errorf("ollama is not available")
 	}
 
 	var b strings.Builder

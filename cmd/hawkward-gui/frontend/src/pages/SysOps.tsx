@@ -1,35 +1,19 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Monitor,
   LayoutList,
   Info,
   Cpu,
   MemoryStick,
-  HardDrive,
-  Activity,
   Search,
-  RefreshCw,
-  X,
   Trash2,
-  AlertTriangle,
-  Server,
-  Clock,
-  Copy,
-  Check,
   Disc,
+  Box,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ProcessManager } from '@/components/dialogs/ProcessManager'
 import { useBackend } from '@/hooks/useBackend'
-import { useEvents } from '@/hooks/useEvents'
-import {
-  mockCPUInfo,
-  mockMemoryInfo,
-  mockDiskInfo,
-  mockProcesses,
-  mockSystemInfo,
-} from '@/lib/mockData'
-import type { CPUInfo, MemoryInfo, DiskInfo, ProcessInfo, SystemInfo, DiskPartition } from '@/types'
+import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
+import type { CPUInfo, MemoryInfo, ProcessInfo, SystemInfo } from '@/types'
 
 // ── Types ──
 
@@ -42,12 +26,12 @@ interface TabDef {
 }
 
 const tabs: TabDef[] = [
-  { id: 'overview', label: 'Overview', icon: <Monitor size={16} /> },
-  { id: 'processes', label: 'Processes', icon: <LayoutList size={16} /> },
-  { id: 'system-info', label: 'System Info', icon: <Info size={16} /> },
+  { id: 'overview', label: 'Analysis', icon: <Monitor size={20} /> },
+  { id: 'processes', label: 'Runtime', icon: <LayoutList size={20} /> },
+  { id: 'system-info', label: 'Inventory', icon: <Box size={20} /> },
 ]
 
-type ProcSortKey = 'pid' | 'name' | 'cpu' | 'memory' | 'mem_pct' | 'status' | 'num_fds'
+void 'ProcSortKey'; // preserved for future use
 
 const BAR_GREEN = '#4ade80'
 const BAR_AMBER = '#fbbf24'
@@ -57,623 +41,306 @@ function pctColor(pct: number): string {
   return pct >= 70 ? BAR_RED : pct >= 25 ? BAR_AMBER : BAR_GREEN
 }
 
-// ── Inline Helpers ──
+// ── Enhanced Components ──
 
-function Bar({
-  label,
-  value,
-  max = 100,
-  color,
-  unit = '%',
-  showLabel = true,
-  className,
-}: {
-  label: string
-  value: number
-  max?: number
-  color?: string
-  unit?: string
-  showLabel?: boolean
-  className?: string
-}) {
-  const pct = Math.min((value / max) * 100, 100)
-  const barColor = color ?? pctColor(pct)
-
+function SectionBriefing({ title, steps }: { title: string, steps: string[] }) {
   return (
-    <div className={cn('space-y-1', className)}>
-      {showLabel && (
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-text-dim">{label}</span>
-          <span className="text-text font-mono text-xs">
-            {typeof value === 'number' && value % 1 !== 0 ? value.toFixed(1) : value}
-            {unit}
-          </span>
+    <div className="bg-panel-2 border border-border rounded-[24px] p-8 shadow-xl">
+      <div className="flex items-center gap-4 mb-6">
+        <div className="w-10 h-10 rounded-xl bg-panel-3 border border-border flex items-center justify-center text-accent shadow-inner">
+          <Info size={20} />
         </div>
-      )}
-      <div className="h-2.5 bg-[var(--color-border)] rounded-full overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all duration-700 ease-out"
-          style={{
-            width: `${pct}%`,
-            background: `linear-gradient(90deg, ${barColor}88, ${barColor})`,
-          }}
-        />
+        <h3 className="text-xl font-black text-text uppercase tracking-widest">{title}</h3>
+      </div>
+      <div className="space-y-4">
+        {steps.map((step, i) => (
+          <div key={i} className="flex gap-4 group">
+            <div className="flex flex-col items-center">
+              <div className="w-6 h-6 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center text-[10px] font-black text-accent">{i + 1}</div>
+              {i < steps.length - 1 && <div className="w-px flex-1 bg-border my-1" />}
+            </div>
+            <p className="text-base text-text-dim leading-snug pb-2 group-hover:text-text transition-colors">{step}</p>
+          </div>
+        ))}
       </div>
     </div>
   )
 }
 
-function InfoRow({
-  label,
-  value,
-  copyable = false,
-}: {
-  label: string
-  value: string | number
-  copyable?: boolean
-}) {
+function Bar({ label, value, max = 100, color, unit = '%', showLabel = true }: { label: string, value: number, max?: number, color?: string, unit?: string, showLabel?: boolean }) {
+  const pct = Math.min((value / max) * 100, 100)
+  const barColor = color ?? pctColor(pct)
+
   return (
-    <div className="flex items-center justify-between py-1.5 border-b border-[var(--color-border)] last:border-0">
-      <span className="text-xs text-text-dim">{label}</span>
-      {copyable ? (
-        <CopyChip text={String(value)} />
-      ) : (
-        <span className="text-xs text-text font-mono font-medium">{String(value)}</span>
+    <div className="space-y-2">
+      {showLabel && (
+        <div className="flex items-center justify-between">
+          <span className="text-text-dim text-lg font-medium">{label}</span>
+          <span className="text-text font-black text-lg tabular-nums">{value.toFixed(1)}{unit}</span>
+        </div>
       )}
+      <div className="h-4 bg-panel-3 rounded-full overflow-hidden border border-border shadow-inner">
+        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${barColor}88, ${barColor})` }} />
+      </div>
     </div>
   )
 }
 
-function Badge({ text, color }: { text: string; color?: string }) {
-  const colorClass =
-    color === 'green'
-      ? 'bg-success/20 text-success'
-      : color === 'amber'
-        ? 'bg-warning/20 text-warning'
-        : color === 'red'
-          ? 'bg-danger/20 text-danger'
-          : 'bg-muted/20 text-muted'
+function InfoRow({ label, value, copyable = false }: { label: string, value: string | number, copyable?: boolean }) {
   return (
-    <span className={cn('inline-block px-1.5 py-0.5 text-[10px] font-medium rounded-full', colorClass)}>
-      {text}
-    </span>
+    <div className="flex items-center justify-between py-4 border-b border-border last:border-0 group">
+      <span className="text-lg text-text-faint font-bold uppercase tracking-tighter">{label}</span>
+      {copyable ? (
+        <button onClick={() => navigator.clipboard.writeText(String(value))} className="px-4 py-1.5 bg-panel-3 border border-border rounded-full text-base text-text font-bold hover:border-accent transition-all shadow-md active:scale-95">
+          {String(value)}
+        </button>
+      ) : (
+        <span className="text-lg text-text font-black tabular-nums">{String(value)}</span>
+      )}
+    </div>
   )
-}
-
-function CopyChip({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false)
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    })
-  }, [text])
-  return (
-    <button
-      onClick={handleCopy}
-      className="inline-flex items-center gap-1 px-2 py-0.5 bg-panel border border-[var(--color-border)] rounded-full text-[11px] text-text font-mono hover:border-primary/50 transition-colors shrink-0"
-    >
-      {text}
-      {copied ? <Check size={10} className="text-success" /> : <Copy size={10} className="text-text-dim" />}
-    </button>
-  )
-}
-
-// ── Section Header ──
-
-function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
-  return (
-    <h3 className="text-xs font-semibold text-text-dim uppercase tracking-wider flex items-center gap-1.5 mb-1">
-      {icon} {title}
-    </h3>
-  )
-}
-
-// ── Sort Helper ──
-
-const SortIcon = ({ col, sortKey, sortDir }: { col: ProcSortKey; sortKey: ProcSortKey; sortDir: 'asc' | 'desc' }) => {
-  if (sortKey !== col) return null
-  return <span className="ml-1 text-[10px]">{sortDir === 'asc' ? '▲' : '▼'}</span>
 }
 
 // ── Main Component ──
 
 export function SysOps() {
   const { call } = useBackend()
-
-  // ── Tab state ──
   const [activeTab, setActiveTab] = useState<SysOpsTab>('overview')
+  const [cpuInfo, setCpuInfo] = useState<CPUInfo | null>(null)
+  const [memInfo, setMemInfo] = useState<MemoryInfo | null>(null)
+  const [sysInfo, setSysInfo] = useState<SystemInfo | null>(null)
+  const [processes, setProcesses] = useState<ProcessInfo[]>([])
+  const [search, setSearch] = useState('')
+  const [killTarget, setKillTarget] = useState<{ pid: number, name: string } | null>(null)
 
-  // ── Data state ──
-  const [cpuInfo, setCpuInfo] = useState<CPUInfo>(mockCPUInfo)
-  const [memInfo, setMemInfo] = useState<MemoryInfo>(mockMemoryInfo)
-  const [diskInfo, setDiskInfo] = useState<DiskInfo>(mockDiskInfo)
-  const [sysInfo, setSysInfo] = useState<SystemInfo>(mockSystemInfo)
-  const [processes, setProcesses] = useState<ProcessInfo[]>(mockProcesses)
-
-  // ── Process UI state ──
-  const [processSearch, setProcessSearch] = useState('')
-  const [sortKey, setSortKey] = useState<ProcSortKey>('cpu')
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
-  const [procManagerOpen, setProcManagerOpen] = useState(false)
-  const [autoRefresh, setAutoRefresh] = useState(true)
-  const [killConfirmPid, setKillConfirmPid] = useState<number | null>(null)
-
-  // ── Data loading ──
   const loadData = useCallback(async () => {
-    const [newCpu, newMem, newDisk, newSys, newProcs] = await Promise.all([
-      call('SysOps.GetCPUInfo').catch(() => mockCPUInfo()),
-      call('SysOps.GetMemoryInfo').catch(() => mockMemoryInfo()),
-      call('SysOps.GetDiskInfo').catch(() => mockDiskInfo()),
-      call('SysOps.GetSystemInfo').catch(() => mockSystemInfo()),
-      call('SysOps.ListAllProcesses', 100).catch(() => mockProcesses()),
-    ])
-    if (newCpu) setCpuInfo(newCpu as CPUInfo)
-    if (newMem) setMemInfo(newMem as MemoryInfo)
-    if (newDisk) setDiskInfo(newDisk as DiskInfo)
-    if (newSys) setSysInfo(newSys as SystemInfo)
-    if (newProcs) setProcesses(newProcs as ProcessInfo[])
+    try {
+      const [c, m, s, p] = await Promise.all([
+        call('SysOps.GetCPUInfo'),
+        call('SysOps.GetMemoryInfo'),
+        call('SysOps.GetSystemInfo'),
+        call('SysOps.ListAllProcesses', 100),
+      ])
+      setCpuInfo(c as CPUInfo); setMemInfo(m as MemoryInfo); setSysInfo(s as SystemInfo); setProcesses(p as ProcessInfo[])
+    } catch (err) { console.error(err) }
   }, [call])
 
-  // Initial load
-  useEffect(() => {
+  useEffect(() => { loadData(); const t = setInterval(loadData, 5000); return () => clearInterval(t) }, [loadData])
+
+  const killProcess = async (pid: number) => {
+    await call('DevOps.KillProcess', pid)
     loadData()
-  }, [loadData])
-
-  // Auto-refresh every 4s
-  useEffect(() => {
-    if (!autoRefresh) return
-    const interval = setInterval(loadData, 4000)
-    return () => clearInterval(interval)
-  }, [autoRefresh, loadData])
-
-  // Live metrics events
-  useEvents('metrics', useCallback((data: any) => {
-    if (data?.cpu) {
-      setCpuInfo((prev) => ({ ...prev, ...data.cpu }))
-    }
-    if (data?.memory) {
-      setMemInfo((prev) => ({ ...prev, ...data.memory }))
-    }
-  }, []))
-
-  // ── Sort logic ──
-  const toggleSort = (key: ProcSortKey) => {
-    if (sortKey === key) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortKey(key)
-      setSortDir('desc')
-    }
+    setKillTarget(null)
   }
 
-  const sortedProcesses = useMemo(() => {
-    const searchLower = processSearch.toLowerCase()
-    const filtered = searchLower
-      ? processes.filter((p) => p.name.toLowerCase().includes(searchLower))
-      : processes
-    return [...filtered].sort((a, b) => {
-      let cmp = 0
-      switch (sortKey) {
-        case 'pid':
-        case 'cpu':
-        case 'memory':
-        case 'mem_pct':
-        case 'num_fds':
-          cmp = (a[sortKey] as number) - (b[sortKey] as number)
-          break
-        case 'name':
-        case 'status':
-          cmp = (a[sortKey] as string).localeCompare(b[sortKey] as string)
-          break
-      }
-      return sortDir === 'asc' ? cmp : -cmp
-    })
-  }, [processes, processSearch, sortKey, sortDir])
-
-  // ── Kill handler ──
-  const handleKill = useCallback((pid: number) => {
-    setProcesses((prev) => prev.filter((p) => p.pid !== pid))
-    setKillConfirmPid(null)
-  }, [])
-
-  // ── Memory helpers ──
-  const memPct = memInfo.used_percent ?? ((memInfo.used_gb / memInfo.total_gb) * 100)
-  const availGb = memInfo.total_gb - memInfo.used_gb
-  const swapPct = memInfo.swap_percent ?? 0
-
-  // ── Render ──
+  if (!cpuInfo || !memInfo || !sysInfo) {
+    return (
+      <div className="p-6 space-y-4 animate-pulse">
+        <div className="h-8 w-48 bg-panel-2 rounded" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="h-32 bg-panel-2 rounded" />
+          <div className="h-32 bg-panel-2 rounded" />
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-full">
-      {/* ── Page header ── */}
-      <div>
-        <h1 className="text-2xl font-bold text-text flex items-center gap-2">
-          <Activity size={24} /> System Operations
-        </h1>
-        <p className="text-text-dim text-sm mt-1">Monitor and manage system resources, processes, and hardware</p>
+    <div className="flex flex-col h-full bg-background">
+      <ConfirmDialog
+        open={killTarget !== null}
+        title="Impactful Intervention"
+        description={`Forcing the termination of "${killTarget?.name}" (PID: ${killTarget?.pid}) will immediately release its held resources. Ensure no unsaved work exists within this process.`}
+        type="danger"
+        confirmText="Execute Kill"
+        onConfirm={() => killProcess(killTarget!.pid)}
+        onClose={() => setKillTarget(null)}
+      />
+
+      <div className="p-8 border-b border-border bg-panel-2 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-black text-text flex items-center gap-4">
+            <Cpu size={32} className="text-accent" /> SYSTEM OPERATIONS
+          </h1>
+          <p className="text-text-dim text-lg mt-2">Architecture monitoring, runtime thread audit, and resource inventory.</p>
+        </div>
+        <div className="flex gap-1 bg-panel border border-border rounded-2xl p-1.5 shadow-inner">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'flex items-center gap-3 px-8 py-3 rounded-xl text-lg font-black transition-all',
+                activeTab === tab.id ? 'bg-accent text-white shadow-lg' : 'text-text-dim hover:text-text hover:bg-white/5',
+              )}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* ── Tab bar ── */}
-      <div className="flex gap-1 bg-panel-2 rounded-[9px] p-1 inline-flex">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-[7px] text-sm font-medium transition-all',
-              activeTab === tab.id
-                ? 'bg-panel text-text shadow-sm'
-                : 'text-text-dim hover:text-text',
-            )}
-          >
-            {tab.icon}
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* ════════════════════════════════════════ */}
-      {/* OVERVIEW TAB */}
-      {/* ════════════════════════════════════════ */}
-      {activeTab === 'overview' && (
-        <div className="space-y-6">
-          {/* ── CPU Section ── */}
-          <div className="bg-panel border border-[var(--color-border)] rounded-[12px] p-5 space-y-4">
-            <SectionHeader icon={<Cpu size={14} />} title="CPU" />
-
-            {/* Per-core bars */}
-            {cpuInfo.per_cpu && cpuInfo.per_cpu.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
-                {cpuInfo.per_cpu.map((corePct, i) => (
-                  <Bar
-                    key={i}
-                    label={`Core ${i}`}
-                    value={corePct}
-                    showLabel={true}
-                    unit="%"
-                    className="space-y-0.5"
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Load avg & details */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-[var(--color-border)]">
-              <div>
-                <span className="text-[11px] text-text-dim">Load (1m)</span>
-                <p className="text-sm text-text font-mono">{cpuInfo.load_avg_1.toFixed(2)}</p>
-              </div>
-              <div>
-                <span className="text-[11px] text-text-dim">Load (5m)</span>
-                <p className="text-sm text-text font-mono">{cpuInfo.load_avg_5.toFixed(2)}</p>
-              </div>
-              <div>
-                <span className="text-[11px] text-text-dim">Load (15m)</span>
-                <p className="text-sm text-text font-mono">{cpuInfo.load_avg_15.toFixed(2)}</p>
-              </div>
-              <div>
-                <span className="text-[11px] text-text-dim">Cores</span>
-                <p className="text-sm text-text font-mono">{cpuInfo.core_count}</p>
-              </div>
+      <div className="flex-1 overflow-y-auto p-10 space-y-12">
+        {activeTab === 'overview' && (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="lg:col-span-1 space-y-8">
+              <SectionBriefing
+                title="Compute Audit"
+                steps={[
+                  "Identify CPU spikes (>80%) that correlate with specific tasks.",
+                  "Verify Load Average stability across 1/5/15 minute windows.",
+                  "Check RAM Occupancy for evidence of memory exhaustion.",
+                  "Audit swap partition if physical RAM is > 90%."
+                ]}
+              />
             </div>
 
-            <div className="text-[11px] text-text-dim">
-              Model: <span className="text-text font-mono">{cpuInfo.model_name}</span>
-            </div>
-          </div>
-
-          {/* ── Memory Section ── */}
-          <div className="bg-panel border border-[var(--color-border)] rounded-[12px] p-5 space-y-4">
-            <SectionHeader icon={<MemoryStick size={14} />} title="Memory" />
-
-            <div className="flex items-center gap-3 mb-1">
-              <span className="text-2xl font-bold font-mono tracking-tight" style={{ color: pctColor(memPct) }}>
-                {memPct.toFixed(1)}%
-              </span>
-              <div className="text-xs text-text-dim space-y-0.5">
-                <p>{memInfo.used_gb.toFixed(1)} GB / {memInfo.total_gb.toFixed(1)} GB used</p>
-                <p>{availGb.toFixed(1)} GB available</p>
-              </div>
-            </div>
-
-            <Bar label="Usage" value={memPct} max={100} showLabel={false} />
-
-            {/* Swap */}
-            {memInfo.swap_total > 0 && (
-              <div className="space-y-1 pt-2 border-t border-[var(--color-border)]">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-text-dim">Swap</span>
-                  <span className="text-text font-mono">
-                    {swapPct.toFixed(1)}% ({memInfo.swap_used ? (memInfo.swap_used / 1024 / 1024 / 1024).toFixed(1) : '0.0'} GB)
-                  </span>
+            <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* CPU Card */}
+              <div className="bg-panel border border-border rounded-[28px] p-8 shadow-2xl">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-xl font-black text-text uppercase tracking-widest flex items-center gap-3"><Cpu size={24} className="text-accent" /> Processor Health</h3>
+                  <span className="text-3xl font-black text-text">{cpuInfo.percent.toFixed(1)}%</span>
                 </div>
-                <Bar label="Swap" value={swapPct} max={100} showLabel={false} />
+                <div className="grid grid-cols-2 gap-x-10 gap-y-6">
+                  {cpuInfo.per_cpu.slice(0, 8).map((p, i) => <Bar key={i} label={`Core ${i}`} value={p} />)}
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* ── Disk Section ── */}
-          <div className="bg-panel border border-[var(--color-border)] rounded-[12px] p-5 space-y-4">
-            <SectionHeader icon={<HardDrive size={14} />} title="Disk" />
-
-            {diskInfo.partitions.map((part: DiskPartition) => {
-              const totalGb = (part.total_bytes / 1024 / 1024 / 1024).toFixed(1)
-              const usedGb = (part.used_bytes / 1024 / 1024 / 1024).toFixed(1)
-              return (
-                <div key={part.mountpoint} className="space-y-1.5 pb-3 border-b border-[var(--color-border)] last:border-0 last:pb-0">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Disc size={14} className="text-text-dim shrink-0" />
-                      <span className="text-sm text-text font-medium">{part.mountpoint}</span>
-                      <Badge text={part.fs_type} color={part.fs_type === 'NTFS' ? 'amber' : 'green'} />
-                    </div>
-                    <span className="text-xs text-text-dim font-mono">
-                      {usedGb} GB / {totalGb} GB
-                    </span>
+              {/* Memory Card */}
+              <div className="bg-panel border border-border rounded-[28px] p-8 shadow-2xl">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-xl font-black text-text uppercase tracking-widest flex items-center gap-3"><MemoryStick size={24} className="text-success" /> Volatile RAM</h3>
+                  <span className="text-3xl font-black text-success">{memInfo.used_percent.toFixed(1)}%</span>
+                </div>
+                <Bar label="Physical Allocation" value={memInfo.used_percent} color="#2dd4a7" showLabel={false} />
+                <div className="mt-8 pt-8 border-t border-border grid grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-xs font-black text-text-faint uppercase mb-1">Available</p>
+                    <p className="text-2xl font-black text-text">{(memInfo.total_gb - memInfo.used_gb).toFixed(2)} GB</p>
                   </div>
-                  <Bar label="Usage" value={part.used_percent} max={100} showLabel={false} />
-                  <p className="text-[11px] text-text-dim font-mono truncate">{part.device}</p>
+                  <div>
+                    <p className="text-xs font-black text-text-faint uppercase mb-1">Swap Usage</p>
+                    <p className="text-2xl font-black text-warning">{memInfo.swap_percent.toFixed(1)}%</p>
+                  </div>
                 </div>
-              )
-            })}
-          </div>
-
-          {/* ── System Info Card ── */}
-          <div className="bg-panel border border-[var(--color-border)] rounded-[12px] p-5">
-            <SectionHeader icon={<Server size={14} />} title="System" />
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 mt-2">
-              <InfoRow label="Hostname" value={sysInfo.hostname} copyable />
-              <InfoRow label="OS" value={sysInfo.os} />
-              <InfoRow label="Platform" value={sysInfo.platform} />
-              <InfoRow label="Kernel" value={sysInfo.kernel_version} />
-              <InfoRow label="Uptime" value={sysInfo.uptime} />
-              <InfoRow label="Processes" value={sysInfo.process_count} />
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ════════════════════════════════════════ */}
-      {/* PROCESSES TAB */}
-      {/* ════════════════════════════════════════ */}
-      {activeTab === 'processes' && (
-        <div className="space-y-4">
-          {/* Toolbar */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative flex-1 min-w-[200px] max-w-sm">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim" />
-              <input
-                type="text"
-                placeholder="Search by name..."
-                value={processSearch}
-                onChange={(e) => setProcessSearch(e.target.value)}
-                className="w-full bg-panel border border-[var(--color-border)] rounded-[9px] pl-9 pr-3 py-2 text-sm text-text placeholder-text-dim focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
-            </div>
-
-            <label className="flex items-center gap-2 text-xs text-text-dim cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-[var(--color-border)] text-primary focus:ring-primary/50"
-              />
-              Auto-refresh
-            </label>
-
-            <button
-              onClick={loadData}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-text-dim border border-[var(--color-border)] rounded-[9px] hover:text-text hover:bg-panel-2 transition-colors"
-            >
-              <RefreshCw size={14} /> Refresh
-            </button>
-
-            <button
-              onClick={() => setProcManagerOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-primary border border-primary/30 rounded-[9px] hover:bg-primary/10 transition-colors"
-            >
-              <Activity size={14} /> Open Manager
-            </button>
-          </div>
-
-          {/* Table */}
-          <div className="bg-panel border border-[var(--color-border)] rounded-[12px] overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--color-border)]">
-                    {(['pid', 'name', 'cpu', 'mem_pct', 'memory', 'status', 'num_fds'] as ProcSortKey[]).map((col) => (
-                      <th
-                        key={col}
-                        className={cn(
-                          'text-left px-4 py-3 text-xs font-medium text-text-dim uppercase tracking-wider cursor-pointer hover:text-text transition-colors',
-                          col === 'pid' ? 'w-[72px]' : '',
-                          col === 'cpu' || col === 'mem_pct' || col === 'memory' || col === 'num_fds' ? 'text-right' : '',
-                        )}
-                        onClick={() => toggleSort(col)}
-                      >
-                        {col === 'pid' ? 'PID' :
-                          col === 'name' ? 'Name' :
-                            col === 'cpu' ? 'CPU%' :
-                              col === 'mem_pct' ? 'Mem%' :
-                                col === 'memory' ? 'Memory (MB)' :
-                                  col === 'status' ? 'Status' :
-                                    col === 'num_fds' ? 'FDs' : col}
-                        <SortIcon col={col} sortKey={sortKey} sortDir={sortDir} />
-                      </th>
-                    ))}
-                    <th className="w-[60px]" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedProcesses.slice(0, 100).map((proc) => {
-                    const cpuColor = pctColor(proc.cpu)
-                    const memColor = pctColor(proc.mem_pct)
-                    return (
-                      <tr
-                        key={proc.pid}
-                        className="border-b border-[var(--color-border)] hover:bg-panel-2/50 transition-colors cursor-pointer"
-                        onClick={() => {
-                          setKillConfirmPid(null)
-                          setProcManagerOpen(true)
-                        }}
-                      >
-                        <td className="px-4 py-2.5 font-mono text-xs text-text-dim">{proc.pid}</td>
-                        <td className="px-4 py-2.5 text-text font-medium">{proc.name}</td>
-                        <td className="px-4 py-2.5">
-                          <div className="flex items-center gap-2 justify-end min-w-[100px]">
-                            <span className="font-mono text-xs" style={{ color: cpuColor }}>
-                              {proc.cpu.toFixed(1)}%
-                            </span>
-                            <div className="flex-1 max-w-[80px] h-1.5 bg-[var(--color-border)] rounded-full overflow-hidden">
-                              <div
-                                className="h-full rounded-full transition-all"
-                                style={{
-                                  width: `${Math.min(proc.cpu, 100)}%`,
-                                  backgroundColor: cpuColor,
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <div className="flex items-center gap-2 justify-end min-w-[100px]">
-                            <span className="font-mono text-xs" style={{ color: memColor }}>
-                              {proc.mem_pct.toFixed(1)}%
-                            </span>
-                            <div className="flex-1 max-w-[80px] h-1.5 bg-[var(--color-border)] rounded-full overflow-hidden">
-                              <div
-                                className="h-full rounded-full transition-all"
-                                style={{
-                                  width: `${Math.min(proc.mem_pct, 100)}%`,
-                                  backgroundColor: memColor,
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2.5 text-right font-mono text-xs text-text-dim">
-                          {proc.memory.toFixed(0)}
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          <Badge
-                            text={proc.status}
-                            color={
-                              proc.status === 'running'
-                                ? 'green'
-                                : proc.status === 'sleeping'
-                                  ? 'amber'
-                                  : undefined
-                            }
-                          />
-                        </td>
-                        <td className="px-4 py-2.5 text-right font-mono text-xs text-text-dim">
-                          {proc.num_fds}
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          {killConfirmPid === proc.pid ? (
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleKill(proc.pid)
-                                }}
-                                className="p-1 text-danger hover:bg-danger/10 rounded transition-colors"
-                                title="Confirm kill"
-                              >
-                                <AlertTriangle size={14} />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setKillConfirmPid(null)
-                                }}
-                                className="p-1 text-text-dim hover:text-text rounded transition-colors"
-                                title="Cancel"
-                              >
-                                <X size={14} />
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setKillConfirmPid(killConfirmPid === proc.pid ? null : proc.pid)
-                              }}
-                              className="p-1 text-text-dim hover:text-danger rounded transition-colors opacity-0 group-hover:opacity-100"
-                              title="Kill process"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-            {sortedProcesses.length === 0 && (
-              <p className="text-sm text-text-dim text-center py-8">No processes match your search</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ════════════════════════════════════════ */}
-      {/* SYSTEM INFO TAB */}
-      {/* ════════════════════════════════════════ */}
-      {activeTab === 'system-info' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Hardware */}
-          <div className="bg-panel border border-[var(--color-border)] rounded-[12px] p-5 space-y-2">
-            <SectionHeader icon={<Cpu size={14} />} title="Hardware" />
-            <InfoRow label="CPU Model" value={cpuInfo.model_name} copyable />
-            <InfoRow label="Cores" value={cpuInfo.core_count} />
-            <InfoRow label="RAM" value={`${memInfo.total_gb.toFixed(0)} GB`} />
-            <InfoRow label="Load (1m)" value={cpuInfo.load_avg_1.toFixed(2)} />
-            <InfoRow label="Load (5m)" value={cpuInfo.load_avg_5.toFixed(2)} />
-            <InfoRow label="Load (15m)" value={cpuInfo.load_avg_15.toFixed(2)} />
-            <InfoRow
-              label="Partitions"
-              value={diskInfo.partitions.length}
-            />
-          </div>
-
-          {/* OS */}
-          <div className="bg-panel border border-[var(--color-border)] rounded-[12px] p-5 space-y-2">
-            <SectionHeader icon={<Server size={14} />} title="Operating System" />
-            <InfoRow label="Hostname" value={sysInfo.hostname} copyable />
-            <InfoRow label="OS" value={sysInfo.os} copyable />
-            <InfoRow label="Platform" value={sysInfo.platform} copyable />
-            <InfoRow label="Version" value={sysInfo.platform_version} copyable />
-            <InfoRow label="Build" value={sysInfo.kernel_version} copyable />
-            <InfoRow label="Kernel" value={sysInfo.kernel_version} copyable />
-            <InfoRow label="Architecture" value={sysInfo.kernel_arch} copyable />
-          </div>
-
-          {/* Runtime */}
-          <div className="bg-panel border border-[var(--color-border)] rounded-[12px] p-5 space-y-2">
-            <SectionHeader icon={<Clock size={14} />} title="Runtime" />
-            <InfoRow label="Uptime" value={sysInfo.uptime} copyable />
-            <InfoRow label="Processes" value={sysInfo.process_count} />
-            <InfoRow label="Virtualization" value={sysInfo.virtualization} copyable />
-            <div className="pt-2">
-              {diskInfo.partitions.map((part: DiskPartition) => (
-                <InfoRow
-                  key={part.mountpoint}
-                  label={`Disk (${part.mountpoint})`}
-                  value={`${(part.used_bytes / 1024 / 1024 / 1024).toFixed(0)} GB / ${(part.total_bytes / 1024 / 1024 / 1024).toFixed(0)} GB`}
+        {activeTab === 'processes' && (
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+              <div className="lg:col-span-1">
+                <SectionBriefing
+                  title="Runtime Audit"
+                  steps={[
+                    "Search for unauthorized background executables.",
+                    "Sort by CPU to identify 'Resource Hogs'.",
+                    "Check 'FDs' (File Descriptors) for potential handle leaks.",
+                    "Use 'Force Kill' only for non-responsive applications."
+                  ]}
                 />
-              ))}
+              </div>
+              <div className="lg:col-span-3 space-y-6">
+                <div className="flex items-center gap-6 bg-panel-2 border border-border p-6 rounded-[24px] shadow-inner">
+                  <div className="relative group flex-1">
+                    <Search size={24} className="absolute left-5 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-accent transition-colors" />
+                    <input
+                      type="text"
+                      placeholder="Filter active threads..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-5 text-2xl font-bold text-text placeholder-text-faint focus:outline-none focus:border-accent shadow-xl"
+                    />
+                  </div>
+                  <div className="px-8 py-4 bg-panel border border-border rounded-2xl shadow-lg">
+                    <span className="text-xl font-black text-text tabular-nums">{processes.length} ACTIVE</span>
+                  </div>
+                </div>
+
+                <div className="bg-panel border border-border rounded-[28px] overflow-hidden shadow-2xl">
+                  <div className="max-h-[600px] overflow-y-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border">
+                        <tr>
+                          <th className="px-10 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Process Name</th>
+                          <th className="px-10 py-6 text-sm font-black text-text-dim uppercase tracking-widest text-right">CPU %</th>
+                          <th className="px-10 py-6 text-sm font-black text-text-dim uppercase tracking-widest text-right">RAM (MB)</th>
+                          <th className="px-10 py-6 text-sm font-black text-text-dim uppercase tracking-widest text-right">Impact</th>
+                          <th className="px-10 py-6 w-20" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {processes.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).map(p => (
+                          <tr key={p.pid} className="border-b border-border/20 hover:bg-white/5 transition-all group">
+                            <td className="px-10 py-5">
+                              <div className="flex flex-col">
+                                <span className="text-xl font-black text-text">{p.name}</span>
+                                <span className="text-sm font-bold text-text-faint uppercase tracking-tighter">PID: {p.pid} • {p.status}</span>
+                              </div>
+                            </td>
+                            <td className="px-10 py-5 text-right font-black text-2xl text-accent tabular-nums">{p.cpu.toFixed(1)}%</td>
+                            <td className="px-10 py-5 text-right font-bold text-xl text-text-dim tabular-nums">{p.memory.toFixed(0)}</td>
+                            <td className="px-10 py-5 text-right">
+                              <span className={cn("px-4 py-1.5 rounded-full text-xs font-black uppercase border", p.cpu > 5 ? "bg-danger/10 text-danger border-danger/30" : "bg-success/10 text-success border-success/30")}>
+                                {p.cpu > 5 ? 'High Impact' : 'Nominal'}
+                              </span>
+                            </td>
+                            <td className="px-10 py-5">
+                              <button onClick={() => setKillTarget({ pid: p.pid, name: p.name })} className="p-3 text-text-faint hover:text-danger hover:bg-danger/10 rounded-xl transition-all">
+                                <Trash2 size={24} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Process Manager Dialog */}
-      <ProcessManager open={procManagerOpen} onClose={() => setProcManagerOpen(false)} />
+        {activeTab === 'system-info' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+            <div className="bg-panel border border-border rounded-[32px] p-10 shadow-2xl space-y-8">
+              <h3 className="text-2xl font-black text-text uppercase tracking-widest flex items-center gap-4"><Disc size={32} className="text-warning" /> Operating Logic</h3>
+              <div className="space-y-2">
+                <InfoRow label="Hostname" value={sysInfo.hostname} copyable />
+                <InfoRow label="Platform" value={sysInfo.platform} />
+                <InfoRow label="Kernel" value={sysInfo.kernel_version} />
+                <InfoRow label="Build" value={sysInfo.platform_version} />
+              </div>
+            </div>
+
+            <div className="bg-panel border border-border rounded-[32px] p-10 shadow-2xl space-y-8">
+              <h3 className="text-2xl font-black text-text uppercase tracking-widest flex items-center gap-4"><Cpu size={32} className="text-accent" /> Hardware Tier</h3>
+              <div className="space-y-2">
+                <InfoRow label="Architecture" value={sysInfo.kernel_arch} />
+                <InfoRow label="Logic Threads" value={cpuInfo.core_count} />
+                <InfoRow label="Virtualization" value={sysInfo.virtualization || 'None'} />
+                <InfoRow label="Uptime" value={sysInfo.uptime} />
+              </div>
+            </div>
+
+            <div className="lg:col-span-1">
+              <SectionBriefing
+                title="Asset Inventory"
+                steps={[
+                  "Hostname confirms network identity.",
+                  "Kernel version defines security patch level.",
+                  "Thread count limits parallel task execution.",
+                  "Uptime identifies pending reboot cycles."
+                ]}
+              />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

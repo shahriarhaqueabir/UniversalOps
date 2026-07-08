@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"os/exec"
 )
 
@@ -48,6 +49,14 @@ func SandboxedCommand(name string, args ...string) *exec.Cmd {
 // SandboxedCommandWithConfig creates an exec.Cmd with custom sandbox config.
 func SandboxedCommandWithConfig(cfg SandboxConfig, name string, args ...string) *exec.Cmd {
 	cmd := exec.Command(name, args...)
+	applySandbox(cmd, cfg)
+	return cmd
+}
+
+// SandboxedCommandWithConfigContext creates an exec.Cmd with sandbox restrictions
+// that respects the given context for cancellation/deadlines.
+func SandboxedCommandWithConfigContext(ctx context.Context, cfg SandboxConfig, name string, args ...string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, name, args...)
 	applySandbox(cmd, cfg)
 	return cmd
 }

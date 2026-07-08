@@ -6,25 +6,20 @@ param(
 $ErrorActionPreference = "Stop"
 
 $targets = @(
-    @{ GOOS = "windows"; GOARCH = "amd64"; Ext = ".exe" },
-    @{ GOOS = "linux"; GOARCH = "amd64"; Ext = "" },
-    @{ GOOS = "darwin"; GOARCH = "amd64"; Ext = "" },
-    @{ GOOS = "darwin"; GOARCH = "arm64"; Ext = "" }
+    @{ Platform = "windows/amd64"; Ext = ".exe" },
+    @{ Platform = "linux/amd64"; Ext = "" },
+    @{ Platform = "darwin/amd64"; Ext = "" },
+    @{ Platform = "darwin/arm64"; Ext = "" }
 )
 
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 
 foreach ($target in $targets) {
-    $name = "hawkward-$Version-$($target.GOOS)-$($target.GOARCH)$($target.Ext)"
+    $name = "hawkward-$Version-$($target.Platform.Replace('/','-'))$($target.Ext)"
     $path = Join-Path $OutputDir $name
     Write-Host "Building $name"
-    $env:GOOS = $target.GOOS
-    $env:GOARCH = $target.GOARCH
-    go build -trimpath -ldflags="-s -w" -o $path .\cmd\hawkward\
+    wails build -platform $target.Platform -trimpath -ldflags="-s -w" -o $path
 }
-
-Remove-Item Env:\GOOS -ErrorAction SilentlyContinue
-Remove-Item Env:\GOARCH -ErrorAction SilentlyContinue
 
 $checksumPath = Join-Path $OutputDir "checksums.txt"
 Get-ChildItem $OutputDir -File |

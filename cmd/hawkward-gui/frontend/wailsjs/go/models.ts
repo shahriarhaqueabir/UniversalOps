@@ -433,9 +433,11 @@ export namespace app {
 	    }
 	}
 	export class LogEntry {
-	    line: string;
-	    level: string;
 	    timestamp: string;
+	    level: string;
+	    module: string;
+	    message: string;
+	    line: string;
 	    source: string;
 	
 	    static createFrom(source: any = {}) {
@@ -444,9 +446,11 @@ export namespace app {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.line = source["line"];
-	        this.level = source["level"];
 	        this.timestamp = source["timestamp"];
+	        this.level = source["level"];
+	        this.module = source["module"];
+	        this.message = source["message"];
+	        this.line = source["line"];
 	        this.source = source["source"];
 	    }
 	}
@@ -709,6 +713,24 @@ export namespace app {
 	        this.time = source["time"];
 	        this.message = source["message"];
 	        this.important = source["important"];
+	    }
+	}
+	export class ServiceEntry {
+	    name: string;
+	    display_name: string;
+	    status: string;
+	    start_type: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ServiceEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.display_name = source["display_name"];
+	        this.status = source["status"];
+	        this.start_type = source["start_type"];
 	    }
 	}
 	

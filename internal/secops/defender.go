@@ -57,7 +57,7 @@ func GetDefenderStatus() (*DefenderStatus, error) {
 		return nil, fmt.Errorf("failed to query Windows Defender: all approaches failed")
 	}
 
-	return nil, fmt.Errorf("Windows Defender is not available on this platform")
+	return nil, fmt.Errorf("windows Defender is not available on this platform")
 }
 
 // defenderWMICFallback queries Windows Defender via WMIC as a fallback

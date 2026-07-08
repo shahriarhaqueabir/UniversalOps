@@ -4,24 +4,40 @@ on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main, develop]
+    branches: [main]
 
 jobs:
   test:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        go: ['1.26']
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go }}
-      - name: Tidy
-        run: go mod tidy
+          go-version: "1.26"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: cmd/hawkward-gui/frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: cd cmd/hawkward-gui/frontend && npm ci
+
       - name: Vet
         run: go vet ./...
-      - name: Test
-        run: go test ./... -count=1
+
+      - name: Go test
+        run: go test ./internal/... -count=1
+
+      - name: TypeScript check
+        run: cd cmd/hawkward-gui/frontend && npx tsc --noEmit
+
+      - name: Frontend test
+        run: cd cmd/hawkward-gui/frontend && npm test
+
+      - name: Lint
+        run: cd cmd/hawkward-gui/frontend && npm run lint

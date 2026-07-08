@@ -21,17 +21,26 @@ type SecurityEvent struct {
 // GetSecurityEvents retrieves recent security events from the current platform.
 func GetSecurityEvents() ([]SecurityEvent, error) {
 	if common.IsWindows() {
+		// Try Security log first (requires Admin)
 		cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-Command",
-			"Get-WinEvent -LogName Security -MaxEvents 25 | Select-Object Id,LevelDisplayName,ProviderName,TimeCreated,Message | ConvertTo-Json -Compress")
+			"Get-WinEvent -LogName Security -MaxEvents 25 -ErrorAction Stop | Select-Object Id,LevelDisplayName,ProviderName,TimeCreated,Message | ConvertTo-Json -Compress")
 		output, err := cmd.Output()
 		if err != nil {
-			return nil, fmt.Errorf("failed to query Windows security event log: %w", err)
+			// Fallback: Try System log (usually accessible by non-admins)
+			common.LogWarn("Security log inaccessible, falling back to System log: %v", err)
+			cmd = common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-Command",
+				"Get-WinEvent -LogName System -MaxEvents 25 -ErrorAction SilentlyContinue | Select-Object Id,LevelDisplayName,ProviderName,TimeCreated,Message | ConvertTo-Json -Compress")
+			output, err = cmd.Output()
+			if err != nil {
+				return nil, fmt.Errorf("failed to query Windows security/system event logs: %w", err)
+			}
 		}
 		return parseSecurityEventsJSON(string(output))
 	}
 
 	return nil, fmt.Errorf("security event log query not supported on this platform")
 }
+
 
 func parseSecurityEventsJSON(jsonStr string) ([]SecurityEvent, error) {
 	jsonStr = strings.TrimSpace(jsonStr)

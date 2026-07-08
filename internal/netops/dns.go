@@ -1,6 +1,7 @@
 package netops
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -29,6 +30,11 @@ var publicDNS = []string{
 
 // LookupDNS performs DNS lookups for a given hostname using public DNS servers.
 func LookupDNS(hostname string) (*DNSResult, error) {
+	return LookupDNSWithContext(context.Background(), hostname)
+}
+
+// LookupDNSWithContext performs DNS lookups with context-based cancellation.
+func LookupDNSWithContext(ctx context.Context, hostname string) (*DNSResult, error) {
 	result := &DNSResult{
 		Hostname: hostname,
 	}
@@ -39,8 +45,15 @@ func LookupDNS(hostname string) (*DNSResult, error) {
 	// Try each DNS server until one works
 	var lastErr error
 	for _, server := range publicDNS {
+		// Check if context is cancelled before proceeding
+		select {
+		case <-ctx.Done():
+			return result, ctx.Err()
+		default:
+		}
+
 		// A records
-		records, err := queryDNS(client, server, hostname, dns.TypeA)
+		records, err := queryDNS(ctx, client, server, hostname, dns.TypeA)
 		if err == nil {
 			result.A = records
 		} else {
@@ -48,31 +61,31 @@ func LookupDNS(hostname string) (*DNSResult, error) {
 		}
 
 		// AAAA records
-		records, err = queryDNS(client, server, hostname, dns.TypeAAAA)
+		records, err = queryDNS(ctx, client, server, hostname, dns.TypeAAAA)
 		if err == nil {
 			result.AAAA = records
 		}
 
 		// MX records
-		mxRecords, err := queryMX(client, server, hostname)
+		mxRecords, err := queryMX(ctx, client, server, hostname)
 		if err == nil {
 			result.MX = mxRecords
 		}
 
 		// NS records
-		records, err = queryDNS(client, server, hostname, dns.TypeNS)
+		records, err = queryDNS(ctx, client, server, hostname, dns.TypeNS)
 		if err == nil {
 			result.NS = records
 		}
 
 		// CNAME
-		cname, err := queryCNAME(client, server, hostname)
+		cname, err := queryCNAME(ctx, client, server, hostname)
 		if err == nil {
 			result.CNAME = cname
 		}
 
 		// TXT records
-		records, err = queryDNS(client, server, hostname, dns.TypeTXT)
+		records, err = queryDNS(ctx, client, server, hostname, dns.TypeTXT)
 		if err == nil {
 			result.TXT = records
 		}
@@ -96,11 +109,11 @@ func LookupDNS(hostname string) (*DNSResult, error) {
 }
 
 // queryDNS performs a DNS query for a specific record type.
-func queryDNS(client *dns.Client, server, hostname string, qtype uint16) ([]string, error) {
+func queryDNS(ctx context.Context, client *dns.Client, server, hostname string, qtype uint16) ([]string, error) {
 	msg := new(dns.Msg)
 	msg.SetQuestion(dns.Fqdn(hostname), qtype)
 
-	reply, _, err := client.Exchange(msg, server)
+	reply, _, err := client.ExchangeContext(ctx, msg, server)
 	if err != nil {
 		return nil, err
 	}
@@ -145,11 +158,11 @@ func queryDNS(client *dns.Client, server, hostname string, qtype uint16) ([]stri
 }
 
 // queryMX performs an MX record lookup.
-func queryMX(client *dns.Client, server, hostname string) ([]string, error) {
+func queryMX(ctx context.Context, client *dns.Client, server, hostname string) ([]string, error) {
 	msg := new(dns.Msg)
 	msg.SetQuestion(dns.Fqdn(hostname), dns.TypeMX)
 
-	reply, _, err := client.Exchange(msg, server)
+	reply, _, err := client.ExchangeContext(ctx, msg, server)
 	if err != nil {
 		return nil, err
 	}
@@ -187,11 +200,11 @@ func queryMX(client *dns.Client, server, hostname string) ([]string, error) {
 }
 
 // queryCNAME performs a CNAME lookup.
-func queryCNAME(client *dns.Client, server, hostname string) (string, error) {
+func queryCNAME(ctx context.Context, client *dns.Client, server, hostname string) (string, error) {
 	msg := new(dns.Msg)
 	msg.SetQuestion(dns.Fqdn(hostname), dns.TypeCNAME)
 
-	reply, _, err := client.Exchange(msg, server)
+	reply, _, err := client.ExchangeContext(ctx, msg, server)
 	if err != nil {
 		return "", err
 	}

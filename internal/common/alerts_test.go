@@ -286,6 +286,92 @@ func TestAlertLevelStrings(t *testing.T) {
 	}
 }
 
+func TestRemoveRule(t *testing.T) {
+	dp := NewDataPipeline(CollectionConfig{Capacity: 10})
+	ae := NewAlertEngine(dp)
+
+	ae.AddRule(AlertRule{
+		Metric:    MetricCPU,
+		Condition: AlertGT,
+		Threshold: 80,
+		FlapCount: 1,
+		Severity:  AlertWarning,
+	})
+
+	// Verify rule fires before removal
+	dp.PushMetric(MetricCPU, "%", 90)
+	fired := ae.Evaluate()
+	if len(fired) != 1 {
+		t.Fatalf("expected 1 alert before removal, got %d", len(fired))
+	}
+
+	// Remove the rule
+	ae.RemoveRule(MetricCPU, 80)
+
+	// Same value should no longer fire
+	dp.PushMetric(MetricCPU, "%", 90)
+	fired = ae.Evaluate()
+	if len(fired) != 0 {
+		t.Errorf("expected 0 alerts after rule removal, got %d", len(fired))
+	}
+}
+
+func TestRemoveRuleNonExistent(t *testing.T) {
+	dp := NewDataPipeline(CollectionConfig{Capacity: 10})
+	ae := NewAlertEngine(dp)
+
+	ae.AddRule(AlertRule{
+		Metric:    MetricCPU,
+		Condition: AlertGT,
+		Threshold: 80,
+		FlapCount: 1,
+		Severity:  AlertWarning,
+	})
+
+	// Removing a non-existent rule should not panic or affect existing rules
+	ae.RemoveRule("nonexistent", 999)
+
+	dp.PushMetric(MetricCPU, "%", 90)
+	fired := ae.Evaluate()
+	if len(fired) != 1 {
+		t.Errorf("expected 1 alert after removing non-existent rule, got %d", len(fired))
+	}
+}
+
+func TestRemoveRuleOnlyRemovesFirstMatch(t *testing.T) {
+	dp := NewDataPipeline(CollectionConfig{Capacity: 10})
+	ae := NewAlertEngine(dp)
+
+	// Two identical rules
+	ae.AddRule(AlertRule{
+		Metric:    MetricCPU,
+		Condition: AlertGT,
+		Threshold: 80,
+		FlapCount: 1,
+		Severity:  AlertWarning,
+	})
+	ae.AddRule(AlertRule{
+		Metric:    MetricCPU,
+		Condition: AlertGT,
+		Threshold: 80,
+		FlapCount: 1,
+		Severity:  AlertCritical,
+	})
+
+	// Remove first matching rule
+	ae.RemoveRule(MetricCPU, 80)
+
+	// Should still fire the second rule
+	dp.PushMetric(MetricCPU, "%", 90)
+	fired := ae.Evaluate()
+	if len(fired) != 1 {
+		t.Errorf("expected 1 alert from remaining rule, got %d", len(fired))
+	}
+	if len(fired) > 0 && fired[0].Level != AlertCritical {
+		t.Errorf("expected remaining rule (critical) to fire, got level %v", fired[0].Level)
+	}
+}
+
 func TestAllAlerts(t *testing.T) {
 	dp := NewDataPipeline(CollectionConfig{Capacity: 10})
 	ae := NewAlertEngine(dp)

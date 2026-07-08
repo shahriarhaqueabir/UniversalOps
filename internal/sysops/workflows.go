@@ -107,7 +107,7 @@ func (r *HealthReport) Markdown() string {
 
 	if r.System != nil {
 		b.WriteString("## System Overview\n\n")
-		b.WriteString(fmt.Sprintf("| Metric | Value |\n|--------|-------|\n"))
+		b.WriteString("| Metric | Value |\n|--------|-------|\n")
 		b.WriteString(fmt.Sprintf("| Hostname | %s |\n", r.System.Hostname))
 		b.WriteString(fmt.Sprintf("| OS | %s %s |\n", r.System.Platform, r.System.PlatformVersion))
 		b.WriteString(fmt.Sprintf("| Kernel | %s |\n", r.System.KernelVersion))

@@ -38,6 +38,54 @@ func ListServices(limit int) ([]ServiceEntry, error) {
 	return services, nil
 }
 
+// isValidServiceName checks that the service name contains only safe characters.
+func isValidServiceName(name string) bool {
+	if len(name) == 0 || len(name) > 256 {
+		return false
+	}
+	for _, r := range name {
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '.' || r == '_') {
+			return false
+		}
+	}
+	return true
+}
+
+// ControlService manages a service state (start, stop, restart).
+func ControlService(name, action string) error {
+	if !isValidServiceName(name) {
+		return fmt.Errorf("invalid service name: %q", name)
+	}
+
+	if common.IsWindows() {
+		var netAction string
+		switch action {
+		case "start":
+			netAction = "start"
+		case "stop":
+			netAction = "stop"
+		case "restart":
+			stopCmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "net", "stop", name)
+			if err := stopCmd.Run(); err != nil {
+				return fmt.Errorf("stop service %s: %w", name, err)
+			}
+			startCmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "net", "start", name)
+			return startCmd.Run()
+		default:
+			return fmt.Errorf("invalid service action: %s", action)
+		}
+		cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "net", netAction, name)
+		return cmd.Run()
+	}
+
+	if common.IsLinux() {
+		cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "systemctl", action, name)
+		return cmd.Run()
+	}
+
+	return fmt.Errorf("service control not supported on this platform")
+}
+
 func listWindowsServices() ([]ServiceEntry, error) {
 	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-Command",
 		"Get-Service | Sort-Object Status,Name | Select-Object Name,DisplayName,Status,StartType | ConvertTo-Json -Compress")
