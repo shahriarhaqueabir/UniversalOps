@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   Send,
   Trash2,
@@ -16,9 +17,11 @@ import {
   Zap,
   Globe,
 } from 'lucide-react'
+import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import * as Tabs from '@radix-ui/react-tabs'
+import { useOllamaStore } from '@/stores/useOllamaStore'
 import type { ChatMessage, AnomalyInfo, OllamaStatus } from '@/types'
 
 type TabId = 'ai-chat' | 'reports' | 'anomalies'
@@ -53,7 +56,7 @@ function ChatBubble({ role, content }: { role: string; content: string }) {
           <div className="whitespace-pre-wrap leading-relaxed tabular-nums">{content}</div>
         </div>
         <span className={cn("text-xs font-bold uppercase tracking-widest text-text-faint px-1", !isAssistant ? "text-right" : "text-left")}>
-          {role} • {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {role} • {format(new Date(), 'HH:mm')}
         </span>
       </div>
     </div>
@@ -85,31 +88,19 @@ function StatusBadge({ status }: { status: string }) {
 export function AIOps() {
   const { call } = useBackend()
   const [activeTab, setActiveTab] = useState<TabId>('ai-chat')
-  const [loading, setLoading] = useState(true)
-  const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus>({ available: false, model: '', version: '' })
+  const setOllamaStatus = useOllamaStore((s) => s.setStatus)
 
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 50)
-    return () => clearTimeout(t)
-  }, [])
-
-  useEffect(() => {
-    call('AIOps.GetOllamaStatus')
-      .then((res) => setOllamaStatus(res as OllamaStatus))
-      .catch(() => setOllamaStatus({ available: false, model: '', version: '', error: 'Connection failed' }))
-  }, [call])
-
-  if (loading) {
-    return (
-      <div className="p-6 space-y-4 animate-pulse">
-        <div className="h-8 w-48 bg-panel-2 rounded" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="h-32 bg-panel-2 rounded" />
-          <div className="h-32 bg-panel-2 rounded" />
-        </div>
-      </div>
-    )
-  }
+  // Ollama status via react-query, synced to zustand store
+  const { data: ollamaStatus = { available: false, model: '', version: '' } } = useQuery<OllamaStatus>({
+    queryKey: ['ollama-status'],
+    queryFn: async () => {
+      const res = await call('AIOps.GetOllamaStatus') as OllamaStatus
+      setOllamaStatus(res)
+      return res
+    },
+    refetchInterval: 10000,
+    retry: false,
+  })
 
   return (
     <div className="flex flex-col h-full bg-[var(--color-bg)]">
@@ -395,25 +386,15 @@ function ReportsTab() {
 
 function AnomaliesTab() {
   const { call } = useBackend()
-  const [anomalies, setAnomalies] = useState<AnomalyInfo[]>([])
-  const [loading, setLoading] = useState(false)
 
-  const scan = useCallback(async () => {
-    try {
+  const { data: anomalies = [], isLoading, refetch } = useQuery<AnomalyInfo[]>({
+    queryKey: ['anomalies'],
+    queryFn: async () => {
       const res = await call('AIOps.DetectAnomalies') as AnomalyInfo[]
-      setAnomalies(res || [])
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }, [call])
-
-  useEffect(() => {
-    scan()
-    const timer = setInterval(scan, 10000)
-    return () => clearInterval(timer)
-  }, [scan])
+      return res || []
+    },
+    refetchInterval: 10000,
+  })
 
   return (
     <div className="flex flex-col h-full p-8 space-y-8">
@@ -434,10 +415,10 @@ function AnomaliesTab() {
           </div>
         </div>
         <button
-          onClick={scan}
+          onClick={() => refetch()}
           className="flex items-center gap-3 px-8 py-4 bg-panel-3 border border-border rounded-xl hover:bg-panel hover:border-accent/40 text-text font-bold transition-all shadow-lg active:scale-95"
         >
-          <RefreshCw size={20} className={cn(loading && "animate-spin")} />
+          <RefreshCw size={20} className={cn(isLoading && "animate-spin")} />
           Deep Scan Now
         </button>
       </div>

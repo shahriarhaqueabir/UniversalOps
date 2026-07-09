@@ -1,6 +1,6 @@
 import { Sun, Moon, Bell } from 'lucide-react'
 import type { Page } from '../../App'
-import { useTheme } from '../../hooks/useTheme'
+import { useThemeStore, useAlertStore } from '../../stores/useSettingsStore'
 
 interface TopBarProps {
   currentPage: Page
@@ -19,7 +19,8 @@ const pageLabels: Record<Page, string> = {
 }
 
 export function TopBar({ currentPage }: TopBarProps) {
-  const { theme, toggle } = useTheme()
+  const { theme, toggle } = useThemeStore()
+  const alertCount = useAlertStore((s) => s.alertCount)
 
   return (
     <header
@@ -52,13 +53,17 @@ export function TopBar({ currentPage }: TopBarProps) {
           </span>
         </div>
 
-        {/* Notification bell */}
+        {/* Notification bell with alert badge */}
         <button
           className="relative text-[var(--color-text-dim)] hover:text-[var(--color-text)] transition-colors"
-          aria-label="Notifications"
+          aria-label={`Notifications${alertCount > 0 ? `, ${alertCount} active alerts` : ''}`}
         >
           <Bell size={18} />
-          <span className="absolute -top-0.5 -right-0.5 w-[7px] h-[7px] rounded-full bg-[var(--color-danger)]" />
+          {alertCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-[var(--color-danger)] text-[10px] font-bold text-white flex items-center justify-center leading-none">
+              {alertCount > 99 ? '99+' : alertCount}
+            </span>
+          )}
         </button>
 
         {/* Theme toggle */}

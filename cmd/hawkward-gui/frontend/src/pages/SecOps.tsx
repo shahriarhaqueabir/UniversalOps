@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import {
   Shield,
@@ -77,28 +78,24 @@ function SecurityStatusBadge({ status }: { status: string }) {
 // ── Firewall Tab ──
 
 function FirewallTab({ call }: { call: BackendCall }) {
-  const [rules, setRules] = useState<FirewallRule[]>([])
   const [search, setSearch] = useState('')
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState<{ index: number, name: string } | null>(null)
+  const queryClient = useQueryClient()
 
-  const fetchRules = useCallback(async () => {
-    try {
+  const { data: rules = [] } = useQuery<FirewallRule[]>({
+    queryKey: ['secops-firewall'],
+    queryFn: async () => {
       const data = await call('SecOps.GetFirewallRules')
-      setRules((data as FirewallRule[]) || [])
-    } catch (err) {
-      console.error(err)
-      setRules([])
-    }
-  }, [call])
-
-  useEffect(() => { fetchRules() }, [fetchRules])
+      return (data as FirewallRule[]) || []
+    },
+  })
 
   const toggleRule = async (index: number) => {
     const rule = rules[index]
     const success = await call('SecOps.SetFirewallRuleState', rule.name, !rule.enabled)
     if (success) {
-      setRules(prev => prev.map((r, i) => i === index ? { ...r, enabled: !r.enabled } : r))
+      queryClient.invalidateQueries({ queryKey: ['secops-firewall'] })
     }
   }
 
@@ -204,11 +201,13 @@ function FirewallTab({ call }: { call: BackendCall }) {
 // ── Users Tab ──
 
 function UsersTab({ call }: { call: BackendCall }) {
-  const [users, setUsers] = useState<UserInfo[]>([])
-
-  useEffect(() => {
-    call('SecOps.GetUsers').then(res => setUsers((res as UserInfo[]) || []))
-  }, [call])
+  const { data: users = [] } = useQuery<UserInfo[]>({
+    queryKey: ['secops-users'],
+    queryFn: async () => {
+      const res = await call('SecOps.GetUsers')
+      return (res as UserInfo[]) || []
+    },
+  })
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -245,11 +244,13 @@ function UsersTab({ call }: { call: BackendCall }) {
 // ── Defender Tab ──
 
 function DefenderTab({ call }: { call: BackendCall }) {
-  const [status, setStatus] = useState<DefenderStatus | null>(null)
-
-  useEffect(() => {
-    call('SecOps.GetDefenderStatus').then(res => setStatus(res as DefenderStatus))
-  }, [call])
+  const { data: status } = useQuery<DefenderStatus | null>({
+    queryKey: ['secops-defender'],
+    queryFn: async () => {
+      const res = await call('SecOps.GetDefenderStatus')
+      return (res as DefenderStatus) || null
+    },
+  })
 
   if (!status) return null
 
@@ -307,22 +308,15 @@ function DefenderTab({ call }: { call: BackendCall }) {
 // ── Listening Tab ──
 
 function ListeningTab({ call }: { call: BackendCall }) {
-  const [ports, setPorts] = useState<ListeningPort[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data: ports = [], isLoading: loading, error: fetchError } = useQuery<ListeningPort[]>({
+    queryKey: ['secops-listening'],
+    queryFn: async () => {
+      const res = await call('SecOps.GetListeningPorts')
+      return (res as ListeningPort[]) || []
+    },
+  })
 
-  useEffect(() => {
-    call('SecOps.GetListeningPorts')
-      .then(res => {
-        setPorts((res as ListeningPort[]) || [])
-        setLoading(false)
-      })
-      .catch((err: unknown) => {
-        console.error(err)
-        setError('Failed to retrieve listening ports.')
-        setLoading(false)
-      })
-  }, [call])
+  const error = fetchError ? 'Failed to retrieve listening ports.' : null
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -403,11 +397,13 @@ function ListeningTab({ call }: { call: BackendCall }) {
 // ── Events Tab ──
 
 function EventsTab({ call }: { call: BackendCall }) {
-  const [events, setEvents] = useState<SecurityEvent[]>([])
-
-  useEffect(() => {
-    call('SecOps.GetSecurityEvents').then(res => setEvents((res as SecurityEvent[]) || []))
-  }, [call])
+  const { data: events = [] } = useQuery<SecurityEvent[]>({
+    queryKey: ['secops-events'],
+    queryFn: async () => {
+      const res = await call('SecOps.GetSecurityEvents')
+      return (res as SecurityEvent[]) || []
+    },
+  })
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -456,25 +452,6 @@ function EventsTab({ call }: { call: BackendCall }) {
 export function SecOps() {
   const { call } = useBackend()
   const [activeTab, setActiveTab] = useState<SecOpsTab>('firewall')
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    // Brief initial render before sub-tabs load their data
-    const t = setTimeout(() => setLoading(false), 50)
-    return () => clearTimeout(t)
-  }, [])
-
-  if (loading) {
-    return (
-      <div className="p-6 space-y-4 animate-pulse">
-        <div className="h-8 w-48 bg-panel-2 rounded" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="h-32 bg-panel-2 rounded" />
-          <div className="h-32 bg-panel-2 rounded" />
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="flex flex-col h-full bg-[var(--color-bg)]">

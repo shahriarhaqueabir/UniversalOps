@@ -1,4 +1,7 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useRef, useCallback, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useVirtualizer } from '@tanstack/react-virtual'
+import { format } from 'date-fns'
 import {
   Search,
   ArrowDownToDot,
@@ -19,7 +22,6 @@ import type { LogEntry } from '@/types'
 // ── Constants ──
 const ROW_HEIGHT = 76          // px per collapsed row
 const EXPANDED_HEIGHT = 380    // px for expanded detail area
-const OVERSCAN = 20            // rows to render above/below visible area
 const LEVELS = ['INFO', 'WARN', 'ERROR', 'DEBUG'] as const
 
 // ── Helpers ──
@@ -70,16 +72,12 @@ function DetailPanel({ entry, idx }: { entry: LogEntry; idx: number }) {
 
 export function Logs() {
   const { call } = useBackend()
-  const [allLogs, setAllLogs] = useState<LogEntry[]>([])
   const [search, setSearch] = useState('')
   const [activeLevels, setActiveLevels] = useState<Set<string>>(new Set(LEVELS))
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null)
   const [autoScroll, setAutoScroll] = useState(true)
-  const [loading, setLoading] = useState(true)
 
   const scrollRef = useRef<HTMLDivElement>(null)
-  const [scrollTop, setScrollTop] = useState(0)
-  const [viewportHeight, setViewportHeight] = useState(600)
 
   const toggleLevel = (level: string) => {
     setActiveLevels((prev) => {
@@ -90,23 +88,15 @@ export function Logs() {
     })
   }
 
-  // ── Data fetching ──
-  const fetchLogs = useCallback(async () => {
-    try {
+  // ── React Query for polling ──
+  const { data: allLogs = [], isLoading, refetch } = useQuery<LogEntry[]>({
+    queryKey: ['logs'],
+    queryFn: async () => {
       const res = await call('Logs.GetLogs', '', '', 200) as LogEntry[]
-      setAllLogs(res || [])
-    } catch (err) {
-      console.error('Fetch Logs Error:', err)
-    } finally {
-      setLoading(false)
-    }
-  }, [call])
-
-  useEffect(() => {
-    fetchLogs()
-    const timer = setInterval(fetchLogs, 2000)
-    return () => clearInterval(timer)
-  }, [fetchLogs])
+      return res || []
+    },
+    refetchInterval: 2000,
+  })
 
   // ── Filtering ──
   const filteredLogs = useMemo(() => {
@@ -121,76 +111,33 @@ export function Logs() {
     return result
   }, [allLogs, activeLevels, search])
 
-  // ── Auto-scroll to top on new data ──
-  useEffect(() => {
-    if (autoScroll && scrollRef.current) {
-      scrollRef.current.scrollTop = 0
-    }
-  }, [allLogs, autoScroll])
-
-  // ── Scroll handling ──
-  const handleScroll = useCallback(() => {
-    const el = scrollRef.current
-    if (!el) return
-    setScrollTop(el.scrollTop)
-    setViewportHeight(el.clientHeight)
-  }, [])
-
-  // Measure viewport once on mount
-  useEffect(() => {
-    const el = scrollRef.current
-    if (el) {
-      setViewportHeight(el.clientHeight)
-    }
-  }, [])
-
-  // ── Virtualization math ──
-  const totalItems = filteredLogs.length
-
-  const rowHeightAt = useCallback((i: number): number => {
-    return expandedIdx === i ? ROW_HEIGHT + EXPANDED_HEIGHT : ROW_HEIGHT
-  }, [expandedIdx])
-
-  // Compute total height — single expanded row at a time
-  // When no row is expanded: all rows are ROW_HEIGHT
-  // When a row is expanded: add extra EXPANDED_HEIGHT on top of its ROW_HEIGHT
-  const totalHeight = useMemo(() => {
-    const base = totalItems * ROW_HEIGHT
-    if (expandedIdx === null) return base
-    // The expanded row already has ROW_HEIGHT in 'base'; we add the extra detail height
-    return base + EXPANDED_HEIGHT
-  }, [totalItems, expandedIdx])
-
-  // Compute row offsets for positioning
-  const getRowOffset = useCallback((targetIdx: number): number => {
-    if (expandedIdx === null || targetIdx <= expandedIdx) {
-      return targetIdx * ROW_HEIGHT
-    }
-    // Rows after expanded row need extra space
-    return targetIdx * ROW_HEIGHT + EXPANDED_HEIGHT
-  }, [expandedIdx])
-
-  // Visible range
-  const visibleRange = useMemo(() => {
-    const start = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN)
-    // Find the end by counting rows until we reach past viewport + buffer
-    let end = start
-    let y = 0
-    const maxY = scrollTop + viewportHeight + OVERSCAN * ROW_HEIGHT
-    while (end < totalItems && y < maxY) {
-      y += rowHeightAt(end)
-      end++
-    }
-    return { start: Math.max(0, start - 1), end: Math.min(totalItems, end + 1) }
-  }, [scrollTop, viewportHeight, totalItems, rowHeightAt])
-
-  const visibleLogs = useMemo(
-    () => filteredLogs.slice(visibleRange.start, visibleRange.end),
-    [filteredLogs, visibleRange.start, visibleRange.end],
-  )
+  // ── React Virtual for virtualized list ──
+  const count = filteredLogs.length
+  const virtualizer = useVirtualizer({
+    count,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: useCallback((i: number) => {
+      return expandedIdx === i ? ROW_HEIGHT + EXPANDED_HEIGHT : ROW_HEIGHT
+    }, [expandedIdx]),
+    overscan: 20,
+  })
 
   const handleRowClick = (idx: number) => {
     setExpandedIdx(expandedIdx === idx ? null : idx)
+  }
+
+  // ── Auto-scroll to top on new data ──
+  // We reset scroll position when data refreshes if autoScroll is enabled
+  const prevLengthRef = useRef(0)
+  const prevLength = prevLengthRef.current
+  if (autoScroll && allLogs.length !== prevLength && allLogs.length > 0) {
+    prevLengthRef.current = allLogs.length
+    // schedule for after render
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = 0
+      }
+    })
   }
 
   // ── Render ──
@@ -212,8 +159,8 @@ export function Logs() {
             <span className="w-2 h-2 rounded-full bg-success animate-pulse shadow-[0_0_8px_var(--color-success)]" />
             <span className="text-sm font-black text-text-dim uppercase tracking-widest">Streaming</span>
           </div>
-          <button onClick={fetchLogs} className="p-3 bg-panel border border-border rounded-xl hover:bg-panel-3 text-text-dim hover:text-text transition-all shadow-md">
-            <RefreshCw size={24} className={cn(loading && "animate-spin")} />
+          <button onClick={() => refetch()} className="p-3 bg-panel border border-border rounded-xl hover:bg-panel-3 text-text-dim hover:text-text transition-all shadow-md">
+            <RefreshCw size={24} className={cn(isLoading && "animate-spin")} />
           </button>
         </div>
       </div>
@@ -262,10 +209,9 @@ export function Logs() {
       {/* ── Virtualized Log List ── */}
       <div
         ref={scrollRef}
-        onScroll={handleScroll}
         className="flex-1 overflow-y-auto bg-[var(--color-bg)] shadow-inner"
       >
-        {/* ── Column headers (sticky, direct child of scroll container) ── */}
+        {/* ── Column headers (sticky) ── */}
         <div
           className="sticky top-0 z-10 grid grid-cols-[160px_130px_1fr_160px_40px] bg-panel-2 border-b border-border shadow-md"
           style={{ height: ROW_HEIGHT }}
@@ -277,7 +223,7 @@ export function Logs() {
           <div />
         </div>
 
-        {totalItems === 0 ? (
+        {count === 0 ? (
           <div className="flex flex-col items-center justify-center text-text-faint opacity-20 py-40">
             <LayoutList size={120} className="mb-8" />
             <p className="text-4xl font-black uppercase tracking-[0.2em]">Idle Stream</p>
@@ -285,23 +231,25 @@ export function Logs() {
         ) : (
           <div
             className="relative w-full"
-            style={{ height: totalHeight }}
+            style={{ height: virtualizer.getTotalSize() }}
           >
-            {/* ── Visible rows ── */}
-            {visibleLogs.map((entry, visIdx) => {
-              const globalIdx = visibleRange.start + visIdx
-              const y = getRowOffset(globalIdx)
-              const isExpanded = expandedIdx === globalIdx
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const entry = filteredLogs[virtualItem.index]
+              const isExpanded = expandedIdx === virtualItem.index
 
               return (
                 <div
-                  key={globalIdx}
+                  key={virtualItem.key}
                   className="absolute left-0 right-0"
-                  style={{ top: y, height: isExpanded ? ROW_HEIGHT + EXPANDED_HEIGHT : ROW_HEIGHT }}
+                  style={{
+                    top: 0,
+                    transform: `translateY(${virtualItem.start}px)`,
+                    height: isExpanded ? ROW_HEIGHT + EXPANDED_HEIGHT : ROW_HEIGHT,
+                  }}
                 >
                   {/* Main row */}
                   <div
-                    onClick={() => handleRowClick(globalIdx)}
+                    onClick={() => handleRowClick(virtualItem.index)}
                     className={cn(
                       'grid grid-cols-[160px_130px_1fr_160px_40px] border-b border-border/20 cursor-pointer transition-colors group',
                       'hover:bg-white/[0.03]',
@@ -310,7 +258,7 @@ export function Logs() {
                     style={{ height: ROW_HEIGHT }}
                   >
                     <div className="px-8 py-5 text-lg text-text-faint font-bold font-[JetBrains_Mono] whitespace-nowrap truncate self-center">
-                      {entry.timestamp.split(' ').pop()}
+                      {entry.timestamp ? entry.timestamp.split(' ').pop() : format(new Date(), 'HH:mm:ss')}
                     </div>
                     <div className="px-4 py-5 self-center">
                       <LogBadge level={entry.level} />
@@ -332,7 +280,7 @@ export function Logs() {
                   {/* Expanded detail */}
                   {isExpanded && (
                     <div style={{ height: EXPANDED_HEIGHT }}>
-                      <DetailPanel entry={entry} idx={globalIdx} />
+                      <DetailPanel entry={entry} idx={virtualItem.index} />
                     </div>
                   )}
                 </div>

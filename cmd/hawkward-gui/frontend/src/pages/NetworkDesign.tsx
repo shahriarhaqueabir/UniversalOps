@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useMemo } from 'react'
+import { nanoid } from 'nanoid'
 import { cn } from '@/lib/utils'
 import { DeviceNode } from '@/components/network/DeviceNode'
 import { ConnectionLine } from '@/components/network/ConnectionLine'
@@ -35,13 +36,12 @@ const deviceTypes: { type: DeviceType; label: string; icon: React.ReactNode }[] 
   { type: 'cloud', label: 'Cloud', icon: <Cloud size={16} /> },
 ]
 
-let nextId = 1
 function genId(): string {
-  return `dev-${nextId++}`
+  return `dev-${nanoid(8)}`
 }
 
 function genConnId(): string {
-  return `conn-${nextId++}`
+  return `conn-${nanoid(8)}`
 }
 
 // ── Properties Panel ──

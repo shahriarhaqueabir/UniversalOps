@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   Cpu,
   MemoryStick,
@@ -15,6 +16,7 @@ import {
   Target,
   FileSearch,
 } from 'lucide-react'
+import { format } from 'date-fns'
 import {
   AreaChart as RechartsAreaChart,
   Area,
@@ -207,15 +209,23 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
   // Refs for accumulating event data (no need to re-render on every alert)
   const alertCount = useRef(0);
 
-  useEffect(() => {
-    call('Dashboard.GetDashboardData').then(res => setData(res as DashboardData))
-  }, [call])
+  // Initial data load via react-query (cached, deduped)
+  useQuery<DashboardData>({
+    queryKey: ['dashboard'],
+    queryFn: async () => {
+      const res = await call('Dashboard.GetDashboardData') as DashboardData
+      setData(res)
+      return res
+    },
+    staleTime: 10000,
+    refetchOnWindowFocus: false,
+  })
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Wails event payload is dynamic
   useEvents('metrics', useCallback((payload: any) => {
     const d = payload.data ?? payload
     setData(d)
-    const t = new Date().toLocaleTimeString()
+    const t = format(new Date(), 'HH:mm:ss')
     setCpuHistory(prev => [...prev.slice(-59), { time: t, value: d.cpu.value }])
   }, []))
 

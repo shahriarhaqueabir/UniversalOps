@@ -1,12 +1,14 @@
 package aiops
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
+
+	"github.com/ollama/ollama/api"
 )
 
 // ChatMessage represents a message in a chat conversation.
@@ -21,28 +23,6 @@ type OllamaStatus struct {
 	Model           string
 	Version         string
 	AvailableModels []string
-}
-
-// ollamaChatRequest is the request body for /api/chat.
-type ollamaChatRequest struct {
-	Model    string        `json:"model"`
-	Messages []ChatMessage `json:"messages"`
-	Stream   bool          `json:"stream"`
-}
-
-// ollamaChatResponse is the response body from /api/chat.
-type ollamaChatResponse struct {
-	Message ChatMessage `json:"message"`
-	Done    bool        `json:"done"`
-}
-
-// ollamaTagsResponse is the response from /api/tags.
-type ollamaTagsResponse struct {
-	Models []ollamaModel `json:"models"`
-}
-
-type ollamaModel struct {
-	Name string `json:"name"`
 }
 
 const (
@@ -65,78 +45,87 @@ func getOllamaModel() string {
 	return defaultOllamaModel
 }
 
-// CheckOllama checks if the Ollama service is available.
-func CheckOllama() (*OllamaStatus, error) {
-	client := &http.Client{Timeout: 5 * time.Second}
-
-	resp, err := client.Get(getOllamaURL() + "/api/tags")
+func newClient() *api.Client {
+	baseURL := getOllamaURL()
+	u, err := url.Parse(baseURL)
 	if err != nil {
-		return &OllamaStatus{Available: false}, nil
+		u = &url.URL{Scheme: "http", Host: "localhost:11434"}
 	}
-	defer resp.Body.Close()
+	return api.NewClient(u, &http.Client{Timeout: httpTimeout})
+}
 
-	var tagsResp ollamaTagsResponse
-	if err := json.NewDecoder(resp.Body).Decode(&tagsResp); err != nil {
-		return &OllamaStatus{Available: true, Model: "unknown"}, nil
+// CheckOllama checks if the Ollama service is available using the typed SDK.
+func CheckOllama() (*OllamaStatus, error) {
+	client := newClient()
+
+	listResp, err := client.List(context.Background())
+	if err != nil {
+		// Ollama not running or unreachable
+		return &OllamaStatus{Available: false}, nil
 	}
 
 	modelName := getOllamaModel()
-	availableModels := make([]string, 0, len(tagsResp.Models))
-	if len(tagsResp.Models) > 0 {
-		// Verify if the requested model exists, otherwise fallback to the first available
+	availableModels := make([]string, 0, len(listResp.Models))
+	if len(listResp.Models) > 0 {
 		found := false
-		for _, m := range tagsResp.Models {
+		for _, m := range listResp.Models {
 			availableModels = append(availableModels, m.Name)
 			if m.Name == modelName {
 				found = true
 			}
 		}
 		if !found {
-			modelName = tagsResp.Models[0].Name
+			modelName = listResp.Models[0].Name
+		}
+	}
+
+	version := "detected"
+	if len(listResp.Models) > 0 {
+		if v := listResp.Models[0].Details.Family; v != "" {
+			version = v
 		}
 	}
 
 	return &OllamaStatus{
 		Available:       true,
 		Model:           modelName,
-		Version:         "detected",
+		Version:         version,
 		AvailableModels: availableModels,
 	}, nil
 }
 
-// Chat sends a chat request to the Ollama API and returns the response text.
+// Chat sends a chat request to the Ollama API using the typed SDK and returns the response text.
 func Chat(messages []ChatMessage) (string, error) {
-	client := &http.Client{Timeout: httpTimeout}
+	client := newClient()
 
-	reqBody := ollamaChatRequest{
+	// Convert our ChatMessage type to the SDK's Message type
+	apiMessages := make([]api.Message, len(messages))
+	for i, m := range messages {
+		apiMessages[i] = api.Message{
+			Role:    m.Role,
+			Content: m.Content,
+		}
+	}
+
+	stream := false
+	req := &api.ChatRequest{
 		Model:    getOllamaModel(),
-		Messages: messages,
-		Stream:   false,
+		Messages: apiMessages,
+		Stream:   &stream,
 	}
 
-	body, err := json.Marshal(reqBody)
+	var responseText string
+	err := client.Chat(context.Background(), req, func(resp api.ChatResponse) error {
+		responseText += resp.Message.Content
+		return nil
+	})
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal request: %w", err)
+		return "", fmt.Errorf("ollama chat failed: %w", err)
 	}
 
-	resp, err := client.Post(
-		getOllamaURL()+"/api/chat",
-		"application/json",
-		bytes.NewReader(body),
-	)
-	if err != nil {
-		return "", fmt.Errorf("failed to connect to Ollama: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("ollama returned status %d", resp.StatusCode)
+	if responseText == "" {
+		return "", fmt.Errorf("ollama returned empty response")
 	}
 
-	var chatResp ollamaChatResponse
-	if err := json.NewDecoder(resp.Body).Decode(&chatResp); err != nil {
-		return "", fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	return chatResp.Message.Content, nil
+	return responseText, nil
 }

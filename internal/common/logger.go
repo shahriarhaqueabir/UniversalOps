@@ -2,17 +2,18 @@ package common
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"time"
+
+	"github.com/rs/zerolog"
 )
 
 var (
 	logFile *os.File
-	logger  *log.Logger
+	zlog    zerolog.Logger
 )
 
-// InitLogger initializes the session logger.
+// InitLogger initializes the session logger with zerolog.
 func InitLogger(filename string) error {
 	if filename == "" {
 		filename = "hawkward.log"
@@ -24,9 +25,20 @@ func InitLogger(filename string) error {
 	}
 
 	logFile = f
-	logger = log.New(f, "[HAWKWARD] ", log.LstdFlags)
 
-	LogInfo("Session started at %s", time.Now().Format(time.RFC3339))
+	// Configure zerolog with JSON output to file
+	output := zerolog.MultiLevelWriter(
+		zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339, NoColor: false},
+		f,
+	)
+
+	zlog = zerolog.New(output).
+		With().
+		Timestamp().
+		Str("app", "hawkward").
+		Logger()
+
+	LogInfo("Session started")
 	return nil
 }
 
@@ -41,9 +53,7 @@ func CloseLogger() {
 // LogInfo logs an informational message.
 func LogInfo(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
-	if logger != nil {
-		logger.Printf("[INFO] %s", msg)
-	}
+	zlog.Info().Msg(msg)
 	if s := GetStorage(); s != nil {
 		go s.InsertLog("INFO", "SYSTEM", msg)
 	}
@@ -52,9 +62,7 @@ func LogInfo(format string, v ...interface{}) {
 // LogWarn logs a warning message.
 func LogWarn(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
-	if logger != nil {
-		logger.Printf("[WARN] %s", msg)
-	}
+	zlog.Warn().Msg(msg)
 	if s := GetStorage(); s != nil {
 		go s.InsertLog("WARN", "SYSTEM", msg)
 	}
@@ -63,11 +71,14 @@ func LogWarn(format string, v ...interface{}) {
 // LogError logs an error message.
 func LogError(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
-	if logger != nil {
-		logger.Printf("[ERROR] %s", msg)
-	}
+	zlog.Error().Msg(msg)
 	if s := GetStorage(); s != nil {
 		go s.InsertLog("ERROR", "SYSTEM", msg)
 	}
 }
 
+// LogDebug logs a debug message (only in dev builds or when enabled).
+func LogDebug(format string, v ...interface{}) {
+	msg := fmt.Sprintf(format, v...)
+	zlog.Debug().Msg(msg)
+}

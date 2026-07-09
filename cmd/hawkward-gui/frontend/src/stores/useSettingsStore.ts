@@ -1,0 +1,93 @@
+import { create } from 'zustand'
+import type { AlertInfo } from '@/types'
+
+// ── Settings Store ──
+
+interface SettingsState {
+  refreshInterval: number
+  pingCount: number
+  dnsTimeout: number
+  setRefreshInterval: (val: number) => void
+  setPingCount: (val: number) => void
+  setDnsTimeout: (val: number) => void
+}
+
+function loadSetting<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw !== null ? (JSON.parse(raw) as T) : fallback
+  } catch { return fallback }
+}
+
+function saveSetting<T>(key: string, value: T): void {
+  try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* ignore */ }
+}
+
+export const useSettingsStore = create<SettingsState>((set) => ({
+  refreshInterval: loadSetting('hawkward_refreshInterval', 5000),
+  pingCount: loadSetting('hawkward_pingCount', 4),
+  dnsTimeout: loadSetting('hawkward_dnsTimeout', 2000),
+
+  setRefreshInterval: (val) => {
+    saveSetting('hawkward_refreshInterval', val)
+    set({ refreshInterval: val })
+  },
+  setPingCount: (val) => {
+    saveSetting('hawkward_pingCount', val)
+    set({ pingCount: val })
+  },
+  setDnsTimeout: (val) => {
+    saveSetting('hawkward_dnsTimeout', val)
+    set({ dnsTimeout: val })
+  },
+}))
+
+// ── Alert Store ──
+
+interface AlertState {
+  alerts: AlertInfo[]
+  alertCount: number
+  setAlerts: (alerts: AlertInfo[]) => void
+  addAlert: (alert: AlertInfo) => void
+  clearAlerts: () => void
+}
+
+export const useAlertStore = create<AlertState>((set) => ({
+  alerts: [],
+  alertCount: 0,
+  setAlerts: (alerts) => set({ alerts, alertCount: alerts.length }),
+  addAlert: (alert) => set((state) => ({
+    alerts: [alert, ...state.alerts].slice(0, 100),
+    alertCount: state.alertCount + 1,
+  })),
+  clearAlerts: () => set({ alerts: [], alertCount: 0 }),
+}))
+
+// ── Theme Store ──
+
+type Theme = 'dark' | 'light'
+
+interface ThemeState {
+  theme: Theme
+  toggle: () => void
+  setTheme: (t: Theme) => void
+}
+
+const THEME_KEY = 'hawkward-theme'
+
+export const useThemeStore = create<ThemeState>((set) => ({
+  theme: (typeof window !== 'undefined' ? (localStorage.getItem(THEME_KEY) as Theme) : null) || 'dark',
+
+  toggle: () => set((state) => {
+    const next = state.theme === 'dark' ? 'light' : 'dark'
+    localStorage.setItem(THEME_KEY, next)
+    document.documentElement.setAttribute('data-theme', next)
+    return { theme: next }
+  }),
+
+  setTheme: (t) => {
+    localStorage.setItem(THEME_KEY, t)
+    document.documentElement.setAttribute('data-theme', t)
+    set({ theme: t })
+  },
+}))

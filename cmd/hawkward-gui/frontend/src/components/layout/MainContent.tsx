@@ -1,4 +1,5 @@
 import { Suspense, lazy } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import type { Page } from '../../App'
 import { ErrorBoundary } from '../ui/ErrorBoundary'
 
@@ -16,6 +17,12 @@ const Settings = lazy(() => import('../../pages/Settings').then(m => ({ default:
 interface MainContentProps {
   currentPage: Page
   onNavigate?: (page: Page) => void
+}
+
+const pageVariants = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -8 },
 }
 
 export function MainContent({ currentPage, onNavigate }: MainContentProps) {
@@ -42,7 +49,18 @@ export function MainContent({ currentPage, onNavigate }: MainContentProps) {
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
           </div>
         }>
-          {renderPage()}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentPage}
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+            >
+              {renderPage()}
+            </motion.div>
+          </AnimatePresence>
         </Suspense>
       </ErrorBoundary>
     </main>

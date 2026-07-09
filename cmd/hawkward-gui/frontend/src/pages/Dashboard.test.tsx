@@ -2,6 +2,14 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { Dashboard } from './Dashboard'
 
+// Mock react-query
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: ({ queryFn }: { queryFn: () => Promise<any> }) => {
+    queryFn?.()  // trigger to set data
+    return { data: null, isLoading: false }
+  },
+}))
+
 // Mock hooks
 vi.mock('../hooks/useBackend', () => ({
   useBackend: () => ({
@@ -38,7 +46,6 @@ describe('Dashboard Page', () => {
 
   it('shows loading state initially', async () => {
     render(<Dashboard />)
-    // Dashboard uses skeleton loader instead of text; wait for data render
     expect(await screen.findByText('OPERATIONAL INTELLIGENCE')).toBeInTheDocument()
   })
 })
