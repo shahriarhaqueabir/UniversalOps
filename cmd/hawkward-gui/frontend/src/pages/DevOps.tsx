@@ -32,6 +32,7 @@ import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
 // Strip ANSI escape sequences from terminal output
 function stripAnsi(text: string): string {
   // Matches ANSI escape sequences: ESC[<params>m, ESC[<params>K, ESC[<params>J, etc.
+  // eslint-disable-next-line no-control-regex
   return text.replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, '')
 }
 import type { CommandResult, ServiceEntry, FileEntry } from '@/types'
@@ -234,7 +235,7 @@ function TerminalTab() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Enter shell command (cmd/sh)..."
-            className="w-full bg-[#0b1120] border border-border rounded-xl pl-12 pr-4 py-4 text-lg font-[JetBrains_Mono] text-text placeholder-text-faint focus:outline-none focus:border-primary shadow-inner"
+            className="w-full bg-[var(--color-bg)] border border-border rounded-xl pl-12 pr-4 py-4 text-lg font-[JetBrains_Mono] text-text placeholder-text-faint focus:outline-none focus:border-primary shadow-inner"
             disabled={isRunning}
           />
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-success text-xl font-bold font-[JetBrains_Mono]">$</span>
@@ -259,7 +260,7 @@ function TerminalTab() {
       {/* Output */}
       <div
         ref={outputRef}
-        className="flex-1 bg-[#0b1120] border border-border rounded-2xl p-8 overflow-y-auto font-[JetBrains_Mono] text-lg leading-relaxed whitespace-pre-wrap shadow-inner"
+        className="flex-1 bg-[var(--color-bg)] border border-border rounded-2xl p-8 overflow-y-auto font-[JetBrains_Mono] text-lg leading-relaxed whitespace-pre-wrap shadow-inner"
       >
         {output.map((block, i) => (
           <div key={i} className="whitespace-pre-wrap break-all mb-2">
@@ -372,7 +373,7 @@ function PowerShellProTab() {
             </div>
           )}
         </div>
-        <div className="flex-1 bg-[#0b1120] border border-border rounded-2xl p-8 overflow-y-auto font-[JetBrains_Mono] text-lg leading-relaxed whitespace-pre shadow-inner">
+        <div className="flex-1 bg-[var(--color-bg)] border border-border rounded-2xl p-8 overflow-y-auto font-[JetBrains_Mono] text-lg leading-relaxed whitespace-pre shadow-inner">
           {stripAnsi(output) || 'Select a workflow to begin diagnostic execution.'}
         </div>
         <button

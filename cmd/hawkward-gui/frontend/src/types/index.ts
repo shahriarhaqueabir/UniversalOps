@@ -163,6 +163,7 @@ export interface ConnectionInfo {
   local_port: number
   remote_addr: string
   remote_port: number
+  protocol: string
   state: string
   pid: number
   process_name: string

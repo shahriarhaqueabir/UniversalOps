@@ -112,17 +112,17 @@ type SystemInfo struct {
 
 // PingResult holds the results of a ping operation.
 type PingResult struct {
-	Target   string `json:"target"`
-	IP       string `json:"ip"`
-	Sent     int    `json:"sent"`
-	Received int    `json:"received"`
-	Lost     int    `json:"lost"`
-	MinMs    int64  `json:"min_ms"`
-	MaxMs    int64  `json:"max_ms"`
-	AvgMs    int64  `json:"avg_ms"`
+	Target   string  `json:"target"`
+	IP       string  `json:"ip"`
+	Sent     int     `json:"sent"`
+	Received int     `json:"received"`
+	Lost     int     `json:"lost"`
+	MinMs    int64   `json:"min_ms"`
+	MaxMs    int64   `json:"max_ms"`
+	AvgMs    int64   `json:"avg_ms"`
 	JitterMs float64 `json:"jitter_ms"`
-	TTL      int    `json:"ttl"`
-	Error    string `json:"error,omitempty"`
+	TTL      int     `json:"ttl"`
+	Error    string  `json:"error,omitempty"`
 }
 
 // DNSResult holds DNS lookup results.
@@ -166,6 +166,7 @@ type ConnectionInfo struct {
 	RemoteAddr  string `json:"remote_addr"`
 	LocalPort   int    `json:"local_port"`
 	RemotePort  int    `json:"remote_port"`
+	Protocol    string `json:"protocol"`
 	State       string `json:"state"`
 	ProcessName string `json:"process_name"`
 	PID         int    `json:"pid"`

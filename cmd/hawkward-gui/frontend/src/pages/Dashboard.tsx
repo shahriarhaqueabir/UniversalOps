@@ -27,7 +27,7 @@ import {
 import { useBackend } from '@/hooks/useBackend'
 import { useEvents } from '@/hooks/useEvents'
 import { cn } from '@/lib/utils'
-import type { DashboardData, AlertInfo, TimeSeriesPoint } from '@/types'
+import type { DashboardData, TimeSeriesPoint } from '@/types'
 
 /* ───────────────────────────────────────────
    Helpers
@@ -204,8 +204,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
   const { call } = useBackend()
   const [data, setData] = useState<DashboardData | null>(null)
   const [cpuHistory, setCpuHistory] = useState<TimeSeriesPoint[]>([])
-  // Ref for accumulating alert events (no need to re-render on every alert)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // Refs for accumulating event data (no need to re-render on every alert)
   const alertCount = useRef(0);
 
   useEffect(() => {
@@ -220,9 +219,9 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
     setCpuHistory(prev => [...prev.slice(-59), { time: t, value: d.cpu.value }])
   }, []))
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Wails event payload is dynamic
-  useEvents('alert', useCallback((_payload: any) => {
+  useEvents('alert', useCallback(() => {
     alertCount.current++
+    // handler signature matches useEvents hook
   }, []))
 
   if (!data) return (

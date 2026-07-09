@@ -151,6 +151,7 @@ func (n *NetOps) GetConnections() []ConnectionInfo {
 			RemoteAddr:  c.RemoteAddr,
 			LocalPort:   c.LocalPort,
 			RemotePort:  c.RemotePort,
+			Protocol:    c.Protocol,
 			State:       c.State,
 			ProcessName: c.ProcessName,
 			PID:         c.PID,
