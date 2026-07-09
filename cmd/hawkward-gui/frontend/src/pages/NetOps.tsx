@@ -275,6 +275,9 @@ export function NetOps() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              aria-label={`${tab.label} tab`}
               className={cn(
                 'flex items-center gap-3 px-8 py-3 rounded-xl text-lg font-bold transition-all whitespace-nowrap',
                 activeTab === tab.id ? 'bg-accent text-white shadow-lg' : 'text-text-dim hover:text-text hover:bg-white/5',

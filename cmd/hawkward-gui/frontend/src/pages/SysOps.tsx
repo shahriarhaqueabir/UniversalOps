@@ -171,6 +171,9 @@ export function SysOps() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              aria-label={`${tab.label} tab`}
               className={cn(
                 'flex items-center gap-3 px-8 py-3 rounded-xl text-lg font-black transition-all',
                 activeTab === tab.id ? 'bg-accent text-white shadow-lg' : 'text-text-dim hover:text-text hover:bg-white/5',
@@ -317,7 +320,14 @@ export function SysOps() {
                         </tr>
                       </thead>
                       <tbody>
-                        {processes.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).map(p => (
+                        {processes.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="px-10 py-16 text-center">
+                              <p className="text-text-faint text-lg font-bold">No processes match your filter.</p>
+                              <p className="text-text-faint text-sm mt-2">Try a different search term or clear the filter.</p>
+                            </td>
+                          </tr>
+                        ) : processes.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).map(p => (
                           <tr key={p.pid} className="border-b border-border/20 hover:bg-white/5 transition-all group">
                             <td className="px-10 py-5">
                               <div className="flex flex-col">
@@ -333,7 +343,7 @@ export function SysOps() {
                               </span>
                             </td>
                             <td className="px-10 py-5">
-                              <button onClick={() => setKillTarget({ pid: p.pid, name: p.name })} className="p-3 text-text-faint hover:text-danger hover:bg-danger/10 rounded-xl transition-all">
+                              <button onClick={() => setKillTarget({ pid: p.pid, name: p.name })} aria-label={`Kill process ${p.name} (PID ${p.pid})`} className="p-3 text-text-faint hover:text-danger hover:bg-danger/10 rounded-xl transition-all">
                                 <Trash2 size={24} />
                               </button>
                             </td>
