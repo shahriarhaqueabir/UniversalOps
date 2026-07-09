@@ -480,7 +480,7 @@ function ServicesTab() {
         </button>
       </div>
 
-      <div className="flex-1 bg-[#0b1120] border border-border rounded-2xl overflow-hidden shadow-inner">
+      <div className="flex-1 bg-[var(--color-bg)] border border-border rounded-2xl overflow-hidden shadow-inner">
         <div className="overflow-y-auto h-full">
           <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border">
@@ -663,7 +663,7 @@ function FileBrowserTab() {
           </div>
         </div>
 
-        <div className="flex-1 bg-[#0b1120] border border-border rounded-2xl overflow-hidden shadow-inner">
+        <div className="flex-1 bg-[var(--color-bg)] border border-border rounded-2xl overflow-hidden shadow-inner">
           <div className="overflow-y-auto h-full">
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border">
@@ -725,7 +725,7 @@ function FileBrowserTab() {
               </button>
             </div>
           </div>
-          <div className="flex-1 bg-[#0b1120] border border-border rounded-2xl p-8 overflow-y-auto shadow-inner relative group">
+          <div className="flex-1 bg-[var(--color-bg)] border border-border rounded-2xl p-8 overflow-y-auto shadow-inner relative group">
             {previewFile.is_binary ? (
               <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-50">
                 <Lock size={48} className="text-warning" />

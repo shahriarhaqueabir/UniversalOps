@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { Sidebar } from './Sidebar'
 
 describe('Sidebar', () => {
@@ -7,53 +7,51 @@ describe('Sidebar', () => {
     const onNavigate = vi.fn()
     render(<Sidebar currentPage="dashboard" onNavigate={onNavigate} />)
 
-    expect(screen.getByText('Dashboard')).toBeDefined()
-    expect(screen.getByText('System Ops')).toBeDefined()
-    expect(screen.getByText('Network Ops')).toBeDefined()
-    expect(screen.getByText('Security Ops')).toBeDefined()
-    expect(screen.getByText('DevOps')).toBeDefined()
-    expect(screen.getByText('AI Ops')).toBeDefined()
+    expect(screen.getByText('HAWKWARD')).toBeInTheDocument()
+    expect(screen.getByText('Dashboard')).toBeInTheDocument()
+    expect(screen.getByText('System Ops')).toBeInTheDocument()
+    expect(screen.getByText('Network Ops')).toBeInTheDocument()
+    expect(screen.getByText('Security Ops')).toBeInTheDocument()
+    expect(screen.getByText('DevOps')).toBeInTheDocument()
+    expect(screen.getByText('AI Ops')).toBeInTheDocument()
+    expect(screen.getByText('Network Design')).toBeInTheDocument()
+    expect(screen.getByText('Logs')).toBeInTheDocument()
+    expect(screen.getByText('Settings')).toBeInTheDocument()
   })
 
-  it('renders tools section items', () => {
+  it('highlights the current page', () => {
+    const onNavigate = vi.fn()
+    render(<Sidebar currentPage="sysops" onNavigate={onNavigate} />)
+
+    const sysopsBtn = screen.getByText('System Ops').closest('button')
+    expect(sysopsBtn).toHaveClass('bg-accent')
+  })
+
+  it('calls onNavigate when clicking a nav item', () => {
     const onNavigate = vi.fn()
     render(<Sidebar currentPage="dashboard" onNavigate={onNavigate} />)
 
-    expect(screen.getByText('Network Design')).toBeDefined()
-    expect(screen.getByText('Logs')).toBeDefined()
-    expect(screen.getByText('Settings')).toBeDefined()
+    fireEvent.click(screen.getByText('Logs'))
+    expect(onNavigate).toHaveBeenCalledWith('logs')
   })
 
-  it('calls onNavigate when an item is clicked', () => {
-    const onNavigate = vi.fn()
-    render(<Sidebar currentPage="dashboard" onNavigate={onNavigate} />)
+  it('shows version footer', () => {
+    render(<Sidebar currentPage="dashboard" onNavigate={vi.fn()} />)
 
-    fireEvent.click(screen.getByText('System Ops'))
-    expect(onNavigate).toHaveBeenCalledWith('sysops')
-  })
-
-  it('has a collapse toggle button', () => {
-    const onNavigate = vi.fn()
-    render(<Sidebar currentPage="dashboard" onNavigate={onNavigate} />)
-
-    expect(screen.getByLabelText('Collapse sidebar')).toBeDefined()
+    expect(screen.getByText('Hawkward v1.1.1')).toBeInTheDocument()
   })
 
   it('collapses and expands when toggle is clicked', () => {
     const onNavigate = vi.fn()
     render(<Sidebar currentPage="dashboard" onNavigate={onNavigate} />)
 
-    // Starts expanded — collapse label visible
-    expect(screen.getByLabelText('Collapse sidebar')).toBeDefined()
-    // Brand text visible when expanded
-    expect(screen.getByText('HAWKWARD')).toBeDefined()
+    const collapseBtn = screen.getByLabelText('Collapse sidebar')
+    fireEvent.click(collapseBtn)
 
-    // Click to collapse
-    fireEvent.click(screen.getByLabelText('Collapse sidebar'))
+    // After collapse, labels should be hidden
+    expect(screen.queryByText('Dashboard')).not.toBeInTheDocument()
 
-    // Now shows expand label instead
-    expect(screen.getByLabelText('Expand sidebar')).toBeDefined()
-    // Brand text hidden when collapsed
-    expect(screen.queryByText('HAWKWARD')).toBeNull()
+    // Toggle button should now say expand
+    expect(screen.getByLabelText('Expand sidebar')).toBeInTheDocument()
   })
 })
