@@ -18,6 +18,7 @@ type ConnectionInfo struct {
 	RemoteAddr  string
 	LocalPort   int
 	RemotePort  int
+	Protocol    string
 	State       string
 	ProcessName string
 	PID         int
@@ -139,6 +140,7 @@ func parseProcNet(path string, proto string) ([]ConnectionInfo, error) {
 			RemoteAddr:  fmt.Sprintf("%s:%d", remoteIP, remotePort),
 			LocalPort:   localPort,
 			RemotePort:  remotePort,
+			Protocol:    proto,
 			State:       state,
 			PID:         pid,
 			ProcessName: procName,
@@ -358,6 +360,7 @@ func parseNetstatOutput(output string) ([]ConnectionInfo, error) {
 			RemoteAddr: remoteAddr,
 			LocalPort:  localPort,
 			RemotePort: remotePort,
+			Protocol:   proto,
 			State:      state,
 			PID:        pid,
 		}

@@ -173,33 +173,37 @@ export function NetOps() {
   useEffect(() => { fetchNetData(); const t = setInterval(fetchNetData, 2000); return () => clearInterval(t) }, [fetchNetData])
 
   const executePing = useCallback(async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Wails bridge returns dynamic type
-    const res = await call('NetOps.Ping', pingTarget, 1) as any
-    if (res?.error) {
-      setPingEntries(prev => [...prev.slice(-49), {
-        seq: prev.length + 1,
-        ip: pingTarget,
-        rtt_ms: null,
-        jitter_ms: null,
-        ttl: null,
-        status: 'timeout'
-      } as PingEntry])
-    } else if (res) {
-      setPingEntries(prev => {
-        const lastEntry = prev[prev.length - 1]
-        let currentJitter = 0
-        if (lastEntry && lastEntry.rtt_ms !== null && res.avg_ms !== undefined) {
-          currentJitter = Math.abs(res.avg_ms - lastEntry.rtt_ms)
-        }
-        return [...prev.slice(-49), {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Wails bridge returns dynamic type
+      const res = await call('NetOps.Ping', pingTarget, 1) as any
+      if (res?.error) {
+        setPingEntries(prev => [...prev.slice(-49), {
           seq: prev.length + 1,
-          ip: res.ip,
-          rtt_ms: res.avg_ms || res.min_ms,
-          jitter_ms: currentJitter,
-          ttl: res.ttl,
-          status: res.lost > 0 ? 'timeout' : 'success'
-        } as PingEntry]
-      })
+          ip: pingTarget,
+          rtt_ms: null,
+          jitter_ms: null,
+          ttl: null,
+          status: 'timeout'
+        } as PingEntry])
+      } else if (res) {
+        setPingEntries(prev => {
+          const lastEntry = prev[prev.length - 1]
+          let currentJitter = 0
+          if (lastEntry && lastEntry.rtt_ms !== null && res.avg_ms !== undefined) {
+            currentJitter = Math.abs(res.avg_ms - lastEntry.rtt_ms)
+          }
+          return [...prev.slice(-49), {
+            seq: prev.length + 1,
+            ip: res.ip,
+            rtt_ms: res.avg_ms || res.min_ms,
+            jitter_ms: currentJitter,
+            ttl: res.ttl,
+            status: res.lost > 0 ? 'timeout' : 'success'
+          } as PingEntry]
+        })
+      }
+    } catch (err) {
+      console.error('Ping failed:', err)
     }
   }, [call, pingTarget])
 
@@ -522,7 +526,7 @@ export function NetOps() {
                     <tbody>
                       {connections.map((c, i) => (
                         <tr key={i} className="border-b border-border/20 hover:bg-white/5 transition-all group">
-                          <td className="px-8 py-4 font-black text-accent">{c.state}</td>
+                          <td className="px-8 py-4 font-black text-accent">{c.protocol}</td>
                           <td className="px-8 py-4">
                             <div className="flex flex-col">
                               <span className="text-lg font-black text-text">{c.remote_addr}:{c.remote_port}</span>
@@ -869,7 +873,8 @@ export function NetOps() {
                                   backdropFilter: 'blur(8px)',
                                 }}
                                 labelStyle={{ display: 'none' }}
-                                formatter={(value: any) => [`${Number(value).toFixed(2)} Mbps`]}
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Recharts formatter type is complex generic
+                                formatter={(value: any) => [`${Number(value ?? 0).toFixed(2)} Mbps`]}
                               />
                               <Area type="monotone" dataKey="rx" stackId="1" stroke="#14b8a6" fill={`url(#${gradId}-rx)`} strokeWidth={2} dot={false} />
                               <Area type="monotone" dataKey="tx" stackId="1" stroke="#3b82f6" fill={`url(#${gradId}-tx)`} strokeWidth={2} dot={false} />

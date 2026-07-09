@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   History,
   Zap,
+  FileText,
 } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
@@ -412,30 +413,38 @@ function EventsTab({ call }: { call: BackendCall }) {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="bg-panel border border-border rounded-[24px] overflow-hidden shadow-2xl">
         <div className="max-h-[700px] overflow-y-auto">
-          <table className="w-full text-left border-collapse">
-            <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border shadow-sm">
-              <tr>
-                <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">ID</th>
-                <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Level</th>
-                <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Origin</th>
-                <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Message</th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((e, i) => (
-                <tr key={i} className={cn("border-b border-border/20 hover:bg-white/5 transition-all group", e.level === 'Error' ? "bg-danger/5" : "")}>
-                  <td className="px-8 py-5 font-bold text-lg text-text-faint tabular-nums">{e.id}</td>
-                  <td className="px-8 py-5">
-                    <span className={cn("px-4 py-1 rounded-full text-xs font-black uppercase tracking-tighter border", e.level === 'Error' ? "bg-danger text-white border-danger/30 shadow-[0_0_12px_rgba(251,93,107,0.4)]" : "bg-panel-3 text-text-dim border-border")}>
-                      {e.level}
-                    </span>
-                  </td>
-                  <td className="px-8 py-5 text-xl font-bold text-text truncate max-w-[200px]">{e.provider}</td>
-                  <td className="px-8 py-5 text-lg text-text-dim leading-relaxed">{e.message}</td>
+          {events.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-32 opacity-40">
+              <FileText size={64} className="mb-6 text-text-faint" />
+              <p className="text-2xl font-black uppercase tracking-[0.15em]">No security events recorded</p>
+              <p className="text-text-faint text-lg mt-4">Events will appear here as they occur.</p>
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse">
+              <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border shadow-sm">
+                <tr>
+                  <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">ID</th>
+                  <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Level</th>
+                  <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Origin</th>
+                  <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Message</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {events.map((e, i) => (
+                  <tr key={i} className={cn("border-b border-border/20 hover:bg-white/5 transition-all group", e.level === 'Error' ? "bg-danger/5" : "")}>
+                    <td className="px-8 py-5 font-bold text-lg text-text-faint tabular-nums">{e.id}</td>
+                    <td className="px-8 py-5">
+                      <span className={cn("px-4 py-1 rounded-full text-xs font-black uppercase tracking-tighter border", e.level === 'Error' ? "bg-danger text-white border-danger/30 shadow-[0_0_12px_rgba(251,93,107,0.4)]" : "bg-panel-3 text-text-dim border-border")}>
+                        {e.level}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5 text-xl font-bold text-text truncate max-w-[200px]">{e.provider}</td>
+                    <td className="px-8 py-5 text-lg text-text-dim leading-relaxed">{e.message}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
@@ -481,6 +490,9 @@ export function SecOps() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              aria-label={`${tab.label} tab`}
               className={cn(
                 'flex items-center gap-3 px-6 py-3 rounded-xl text-lg font-bold transition-all',
                 activeTab === tab.id ? 'bg-danger text-white shadow-lg' : 'text-text-dim hover:text-text hover:bg-white/5',
