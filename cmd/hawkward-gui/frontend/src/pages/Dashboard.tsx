@@ -224,7 +224,20 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
     setAlerts(prev => [payload, ...prev].slice(0, 50))
   }, []))
 
-  if (!data) return <div className="flex h-full items-center justify-center opacity-20 animate-pulse text-2xl font-black uppercase tracking-[0.3em]">Synching Neural Bridge...</div>
+  if (!data) return (
+    <div className="p-10 space-y-12 overflow-y-auto h-full">
+      <div className="animate-pulse space-y-6">
+        <div className="h-10 w-64 bg-panel-2 rounded-xl" />
+        <div className="h-6 w-96 bg-panel-2 rounded-lg" />
+        <div className="h-48 bg-panel-2 rounded-[28px]" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="h-48 bg-panel-2 rounded-[24px]" />
+          <div className="h-48 bg-panel-2 rounded-[24px]" />
+          <div className="h-48 bg-panel-2 rounded-[24px]" />
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div className="p-10 space-y-12 overflow-y-auto h-full scroll-smooth">

@@ -179,6 +179,7 @@ func GetGroups() ([]string, error) {
 			if len(groups) > 0 {
 				return groups, nil
 			}
+			return nil, fmt.Errorf("no groups found — check 'net localgroup' output format (non-English locale?)")
 		}
 		return nil, fmt.Errorf("failed to query Windows groups: %w", err)
 	}

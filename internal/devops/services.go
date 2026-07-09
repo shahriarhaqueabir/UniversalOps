@@ -161,6 +161,10 @@ func parseWindowsServicesJSON(jsonStr string) ([]ServiceEntry, error) {
 	// Clean malformed JSON before parsing — strip control characters
 	cleaned := common.CleanJSON(jsonStr)
 
+	// Additional cleaning for PowerShell edge cases:
+	// Replace isolated "-" (dash) values used for unset/null fields
+	cleaned = common.FixPowerShellDashes(cleaned)
+
 	var raw []map[string]interface{}
 	if strings.HasPrefix(cleaned, "{") {
 		var single map[string]interface{}

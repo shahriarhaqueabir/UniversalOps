@@ -74,6 +74,96 @@ func TestGetListeningPorts(t *testing.T) {
 	}
 }
 
+func TestGetJSONStringWithValueObject(t *testing.T) {
+	data := map[string]interface{}{
+		"Level": map[string]interface{}{"Value": "Warning"},
+		"Name":  "direct string",
+		"Empty": map[string]interface{}{"Value": ""},
+	}
+
+	tests := []struct {
+		name string
+		key  string
+		want string
+		ok   bool
+	}{
+		{"Value object extracts inner", "Level", "Warning", true},
+		{"Direct string works", "Name", "direct string", true},
+		{"Empty Value returns empty", "Empty", "", true},
+		{"Missing key returns false", "Missing", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := getJSONString(data, tt.key)
+			if ok != tt.ok {
+				t.Errorf("getJSONString(_, %q) ok = %v, want %v", tt.key, ok, tt.ok)
+			}
+			if got != tt.want {
+				t.Errorf("getJSONString(_, %q) = %q, want %q", tt.key, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetJSONIntEdgeCases(t *testing.T) {
+	data := map[string]interface{}{
+		"Count":      42,
+		"FloatCount": float64(3.14),
+		"Nested":     map[string]interface{}{"Value": float64(99)},
+		"DashValue":  "-",
+		"EmptyStr":   "",
+	}
+
+	tests := []struct {
+		name string
+		key  string
+		want int
+		ok   bool
+	}{
+		{"int value works", "Count", 42, true},
+		{"float value truncates", "FloatCount", 3, true},
+		{"nested Value object extracts", "Nested", 99, true},
+		{"dash string returns 0", "DashValue", 0, true},
+		{"empty string returns 0", "EmptyStr", 0, true},
+		{"missing key returns false", "Missing", 0, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := getJSONInt(data, tt.key)
+			if ok != tt.ok {
+				t.Errorf("getJSONInt(_, %q) ok = %v, want %v", tt.key, ok, tt.ok)
+			}
+			if got != tt.want {
+				t.Errorf("getJSONInt(_, %q) = %d, want %d", tt.key, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseFirewallRulesEmpty(t *testing.T) {
+	rules, err := parseFirewallRules("")
+	if err != nil {
+		t.Errorf("parseFirewallRules empty returned err: %v", err)
+	}
+	if len(rules) != 0 {
+		t.Errorf("parseFirewallRules empty returned %d rules, want 0", len(rules))
+	}
+}
+
+func TestParseNetUserListEmpty(t *testing.T) {
+	users := parseNetUserList("")
+	if len(users) != 0 {
+		t.Errorf("parseNetUserList empty returned %d users, want 0", len(users))
+	}
+
+	users = parseNetUserList("The command completed successfully.")
+	if len(users) != 0 {
+		t.Errorf("parseNetUserList completed returned %d users, want 0", len(users))
+	}
+}
+
 func TestGetDefenderStatus(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		t.Skip("Defender status test only for Windows")

@@ -35,7 +35,7 @@ export function MainContent({ currentPage, onNavigate }: MainContentProps) {
   }
 
   return (
-    <main className="flex-1 overflow-y-auto bg-background">
+    <main className="flex-1 overflow-y-auto bg-[var(--color-bg)]">
       <ErrorBoundary>
         <Suspense fallback={
           <div className="flex h-full items-center justify-center">

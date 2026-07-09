@@ -44,7 +44,7 @@ export function MiniSparkline({
       </div>
       {computedTrend === 'up' && <TrendingUp size={14} className="text-success shrink-0" />}
       {computedTrend === 'down' && <TrendingDown size={14} className="text-danger shrink-0" />}
-      {computedTrend === 'stable' && <Minus size={14} className="text-muted shrink-0" />}
+      {computedTrend === 'stable' && <Minus size={14} className="text-text-faint shrink-0" />}
     </div>
   )
 }

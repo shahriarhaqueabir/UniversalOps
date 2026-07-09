@@ -134,8 +134,8 @@ export function DeviceNode({
         className={cn(
           'flex flex-col items-center justify-center w-[120px] h-[90px] rounded-xl border-2 transition-all duration-150',
           isSelected
-            ? 'border-primary bg-primary/10 shadow-[0_0_16px_rgba(56,189,248,0.25)]'
-            : 'border-border bg-card hover:border-muted',
+            ? 'border-accent bg-accent/10 shadow-[0_0_16px_rgba(124,108,255,0.25)]'
+            : 'border-border bg-panel hover:border-text-faint',
           dragging && 'scale-105 shadow-lg',
           isConnectMode && 'hover:border-success cursor-pointer',
         )}
@@ -158,7 +158,7 @@ export function DeviceNode({
       {editing ? (
         <input
           autoFocus
-          className="mt-1.5 bg-card border border-border rounded px-2 py-0.5 text-xs text-text text-center w-[120px] focus:outline-none focus:ring-1 focus:ring-primary"
+          className="mt-1.5 bg-panel border border-border rounded px-2 py-0.5 text-xs text-text text-center w-[120px] focus:outline-none focus:ring-1 focus:ring-accent"
           value={editLabel}
           onChange={(e) => setEditLabel(e.target.value)}
           onBlur={handleBlur}

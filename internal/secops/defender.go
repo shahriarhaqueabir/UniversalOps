@@ -4,6 +4,8 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -27,39 +29,59 @@ type DefenderStatus struct {
 // GetDefenderStatus retrieves Windows Defender status via PowerShell.
 // On non-Windows systems it returns an error indicating the feature is unavailable.
 func GetDefenderStatus() (*DefenderStatus, error) {
-	if common.IsWindows() {
-		// Approach 1: Standard Get-MpComputerStatus
-		cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-NoProfile", "-Command",
-			"$r=Get-MpComputerStatus -ErrorAction SilentlyContinue; if($r){$r|ConvertTo-Json -Depth 2}else{echo '{}'}")
-		output, err := cmd.Output()
-		if err == nil {
-			status, parseErr := parseDefenderJSON(string(output))
-			if parseErr == nil && status != nil && (status.AMServiceEnabled || status.AntispywareEnabled) {
-				return status, nil
-			}
-		}
-
-		// Approach 2: Try Get-MpPreference as alternative
-		cmd3 := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-NoProfile", "-Command",
-			"Get-MpPreference -ErrorAction SilentlyContinue | Select-Object DisableRealtimeMonitoring,DisableIOAVProtection,DisableBehaviorMonitoring,DisableScriptScanning | ConvertTo-Json -Depth 2")
-		output3, err3 := cmd3.Output()
-		if err3 == nil {
-			status, parseErr := parseDefenderPreferenceJSON(string(output3))
-			if parseErr == nil && status != nil {
-				return status, nil
-			}
-		}
-
-		// Approach 3: Try WMIC (available in locked-down environments)
-		status, err := defenderWMICFallback()
-		if err == nil {
-			return status, nil
-		}
-
-		return nil, fmt.Errorf("failed to query Windows Defender: all approaches failed (PS: %v, MpPref: %v, WMIC: %v)", err, err3, err)
+	if !common.IsWindows() {
+		return nil, fmt.Errorf("Windows Defender is not available on this platform")
 	}
 
-	return nil, fmt.Errorf("windows Defender is not available on this platform")
+	// Pre-check: verify Defender is installed by looking for MpCmdRun.exe
+	defenderPath := filepath.Join(os.Getenv("ProgramFiles"), "Windows Defender", "MpCmdRun.exe")
+	if _, err := os.Stat(defenderPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("Windows Defender not installed on this system")
+	}
+
+	var errs []error
+
+	// Approach 1: Standard Get-MpComputerStatus
+	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-NoProfile", "-Command",
+		"$r=Get-MpComputerStatus -ErrorAction SilentlyContinue; if($r){$r|ConvertTo-Json -Depth 2}else{echo '{}'}")
+	output, err := cmd.Output()
+	if err != nil {
+		errs = append(errs, fmt.Errorf("Get-MpComputerStatus: %w", err))
+	} else {
+		status, parseErr := parseDefenderJSON(string(output))
+		if parseErr != nil {
+			errs = append(errs, fmt.Errorf("Get-MpComputerStatus parse: %w", parseErr))
+		} else if status != nil && (status.AMServiceEnabled || status.AntispywareEnabled) {
+			return status, nil
+		} else {
+			errs = append(errs, fmt.Errorf("Get-MpComputerStatus returned empty or inactive status"))
+		}
+	}
+
+	// Approach 2: Try Get-MpPreference as alternative
+	cmd3 := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-NoProfile", "-Command",
+		"Get-MpPreference -ErrorAction SilentlyContinue | Select-Object DisableRealtimeMonitoring,DisableIOAVProtection,DisableBehaviorMonitoring,DisableScriptScanning | ConvertTo-Json -Depth 2")
+	output3, err3 := cmd3.Output()
+	if err3 != nil {
+		errs = append(errs, fmt.Errorf("Get-MpPreference: %w", err3))
+	} else {
+		status, parseErr := parseDefenderPreferenceJSON(string(output3))
+		if parseErr != nil {
+			errs = append(errs, fmt.Errorf("Get-MpPreference parse: %w", parseErr))
+		} else if status != nil {
+			return status, nil
+		}
+	}
+
+	// Approach 3: Try WMIC (available in locked-down environments)
+	status, wmicErr := defenderWMICFallback()
+	if wmicErr != nil {
+		errs = append(errs, fmt.Errorf("WMIC: %w", wmicErr))
+	} else {
+		return status, nil
+	}
+
+	return nil, fmt.Errorf("failed to query Windows Defender: all approaches failed: %v", errs)
 }
 
 // defenderWMICFallback queries Windows Defender via WMIC as a fallback
@@ -239,6 +261,16 @@ func getJSONInt(data map[string]interface{}, key string) (int, bool) {
 			return int(val), true
 		case int:
 			return val, true
+		case string:
+			// Handle "-" or empty string (PowerShell edge case for unset values)
+			if val == "-" || val == "" {
+				return 0, true
+			}
+		case map[string]interface{}:
+			// Handle {"Value": N} objects from PowerShell
+			if inner, ok := val["Value"]; ok {
+				return getJSONInt(map[string]interface{}{"tmp": inner}, "tmp")
+			}
 		}
 	}
 	return 0, false
@@ -250,6 +282,11 @@ func getJSONString(data map[string]interface{}, key string) (string, bool) {
 		switch val := v.(type) {
 		case string:
 			return val, true
+		case map[string]interface{}:
+			// Handle {"Value": "something"} objects from PowerShell
+			if inner, ok := val["Value"]; ok {
+				return getJSONString(map[string]interface{}{"tmp": inner}, "tmp")
+			}
 		}
 	}
 	return "", false

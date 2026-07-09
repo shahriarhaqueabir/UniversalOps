@@ -55,69 +55,69 @@ function PropertiesPanel({
   onClose: () => void
 }) {
   return (
-    <div className="w-72 bg-card border border-border rounded-lg p-4 space-y-3 shrink-0 overflow-y-auto">
+    <div className="w-72 bg-panel border border-border rounded-lg p-4 space-y-3 shrink-0 overflow-y-auto">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-text">Device Properties</h3>
-        <button onClick={onClose} className="text-muted hover:text-text transition-colors">
+        <button onClick={onClose} className="text-text-faint hover:text-text transition-colors">
           <X size={16} />
         </button>
       </div>
 
       <div className="space-y-2.5">
         <div>
-          <label className="text-[10px] text-muted uppercase tracking-wider block mb-1">Name</label>
+          <label className="text-[10px] text-text-faint uppercase tracking-wider block mb-1">Name</label>
           <input
             type="text"
             value={device.label}
             onChange={(e) => onUpdate(device.id, { label: e.target.value })}
-            className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs text-text focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full bg-panel-2 border border-border rounded px-2.5 py-1.5 text-xs text-text placeholder:text-text-faint focus:outline-none focus:ring-1 focus:ring-accent"
           />
         </div>
 
         <div>
-          <label className="text-[10px] text-muted uppercase tracking-wider block mb-1">Type</label>
+          <label className="text-[10px] text-text-faint uppercase tracking-wider block mb-1">Type</label>
           <p className="text-xs text-text font-medium capitalize">{device.type}</p>
         </div>
 
         <div>
-          <label className="text-[10px] text-muted uppercase tracking-wider block mb-1">IP Address</label>
+          <label className="text-[10px] text-text-faint uppercase tracking-wider block mb-1">IP Address</label>
           <input
             type="text"
             value={device.ip || ''}
             onChange={(e) => onUpdate(device.id, { ip: e.target.value })}
             placeholder="e.g., 192.168.1.1"
-            className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs text-text placeholder-muted focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full bg-panel-2 border border-border rounded px-2.5 py-1.5 text-xs text-text placeholder:text-text-faint focus:outline-none focus:ring-1 focus:ring-accent"
           />
         </div>
 
         <div>
-          <label className="text-[10px] text-muted uppercase tracking-wider block mb-1">Subnet</label>
+          <label className="text-[10px] text-text-faint uppercase tracking-wider block mb-1">Subnet</label>
           <input
             type="text"
             value={device.subnet || ''}
             onChange={(e) => onUpdate(device.id, { subnet: e.target.value })}
             placeholder="e.g., 255.255.255.0"
-            className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs text-text placeholder-muted focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full bg-panel-2 border border-border rounded px-2.5 py-1.5 text-xs text-text placeholder:text-text-faint focus:outline-none focus:ring-1 focus:ring-accent"
           />
         </div>
 
         <div>
-          <label className="text-[10px] text-muted uppercase tracking-wider block mb-1">MAC Address</label>
+          <label className="text-[10px] text-text-faint uppercase tracking-wider block mb-1">MAC Address</label>
           <input
             type="text"
             value={device.mac || ''}
             onChange={(e) => onUpdate(device.id, { mac: e.target.value })}
             placeholder="e.g., 00:1A:2B:3C:4D:5E"
-            className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs text-text placeholder-muted focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full bg-panel-2 border border-border rounded px-2.5 py-1.5 text-xs text-text placeholder:text-text-faint focus:outline-none focus:ring-1 focus:ring-accent"
           />
         </div>
 
         <div>
-          <label className="text-[10px] text-muted uppercase tracking-wider block mb-1">Status</label>
+          <label className="text-[10px] text-text-faint uppercase tracking-wider block mb-1">Status</label>
           <select
             value={device.status}
             onChange={(e) => onUpdate(device.id, { status: e.target.value as TopologyStatus })}
-            className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs text-text focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full bg-panel-2 border border-border rounded px-2.5 py-1.5 text-xs text-text focus:outline-none focus:ring-1 focus:ring-accent"
           >
             <option value="healthy">Healthy</option>
             <option value="warning">Warning</option>
@@ -126,13 +126,13 @@ function PropertiesPanel({
         </div>
 
         <div>
-          <label className="text-[10px] text-muted uppercase tracking-wider block mb-1">Notes</label>
+          <label className="text-[10px] text-text-faint uppercase tracking-wider block mb-1">Notes</label>
           <textarea
             value={device.notes || ''}
             onChange={(e) => onUpdate(device.id, { notes: e.target.value })}
             placeholder="Custom notes..."
             rows={3}
-            className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs text-text placeholder-muted focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+            className="w-full bg-panel-2 border border-border rounded px-2.5 py-1.5 text-xs text-text placeholder:text-text-faint focus:outline-none focus:ring-1 focus:ring-accent resize-none"
           />
         </div>
       </div>
@@ -156,42 +156,42 @@ function ConnectionPropertiesPanel({
   const target = devices.find((d) => d.id === connection.targetId)
 
   return (
-    <div className="w-72 bg-card border border-border rounded-lg p-4 space-y-3 shrink-0 overflow-y-auto">
+    <div className="w-72 bg-panel border border-border rounded-lg p-4 space-y-3 shrink-0 overflow-y-auto">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-text">Connection Properties</h3>
-        <button onClick={onClose} className="text-muted hover:text-text transition-colors">
+        <button onClick={onClose} className="text-text-faint hover:text-text transition-colors">
           <X size={16} />
         </button>
       </div>
 
       <div className="space-y-2.5">
         <div>
-          <label className="text-[10px] text-muted uppercase tracking-wider block mb-1">Source</label>
+          <label className="text-[10px] text-text-faint uppercase tracking-wider block mb-1">Source</label>
           <p className="text-xs text-text font-medium">{source?.label || 'Unknown'}</p>
         </div>
 
         <div>
-          <label className="text-[10px] text-muted uppercase tracking-wider block mb-1">Target</label>
+          <label className="text-[10px] text-text-faint uppercase tracking-wider block mb-1">Target</label>
           <p className="text-xs text-text font-medium">{target?.label || 'Unknown'}</p>
         </div>
 
         <div>
-          <label className="text-[10px] text-muted uppercase tracking-wider block mb-1">Label / Bandwidth</label>
+          <label className="text-[10px] text-text-faint uppercase tracking-wider block mb-1">Label / Bandwidth</label>
           <input
             type="text"
             value={connection.label || ''}
             onChange={(e) => onUpdate(connection.id, { label: e.target.value })}
             placeholder="e.g., 1 Gbps"
-            className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs text-text placeholder-muted focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full bg-panel-2 border border-border rounded px-2.5 py-1.5 text-xs text-text placeholder:text-text-faint focus:outline-none focus:ring-1 focus:ring-accent"
           />
         </div>
 
         <div>
-          <label className="text-[10px] text-muted uppercase tracking-wider block mb-1">Connection Type</label>
+          <label className="text-[10px] text-text-faint uppercase tracking-wider block mb-1">Connection Type</label>
           <select
             value={connection.type}
             onChange={(e) => onUpdate(connection.id, { type: e.target.value as ConnectionType })}
-            className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs text-text focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full bg-panel-2 border border-border rounded px-2.5 py-1.5 text-xs text-text focus:outline-none focus:ring-1 focus:ring-accent"
           >
             <option value="ethernet">Ethernet</option>
             <option value="fiber">Fiber</option>
@@ -428,21 +428,21 @@ export function NetworkDesign() {
     <div className="p-6 space-y-4 overflow-y-auto h-full">
       {/* Page header */}
       <div>
-        <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-accent flex items-center gap-2">
           <GitMerge size={24} /> Network Topology Designer
         </h1>
-        <p className="text-muted text-sm mt-1">Design, visualize, and export network topologies</p>
+        <p className="text-text-faint text-sm mt-1">Design, visualize, and export network topologies</p>
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-2 flex-wrap bg-card border border-border rounded-lg p-2">
+      <div className="flex items-center gap-2 flex-wrap bg-panel border border-border rounded-lg p-2">
         {/* Add devices */}
         <div className="flex items-center gap-1 border-r border-border pr-2">
           {deviceTypes.map((dt) => (
             <button
               key={dt.type}
               onClick={() => addDevice(dt.type)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-sidebar-hover transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-text-faint hover:text-text hover:bg-sidebar-hover transition-colors"
               title={`Add ${dt.label}`}
             >
               {dt.icon}
@@ -457,7 +457,7 @@ export function NetworkDesign() {
             onClick={() => { setMode('select'); setConnectSourceId(null) }}
             className={cn(
               'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors',
-              mode === 'select' ? 'bg-primary/10 text-primary' : 'text-muted hover:text-text hover:bg-sidebar-hover',
+              mode === 'select' ? 'bg-accent/10 text-accent' : 'text-text-faint hover:text-text hover:bg-sidebar-hover',
             )}
             title="Select / Move"
           >
@@ -467,7 +467,7 @@ export function NetworkDesign() {
             onClick={() => { setMode('connect'); setSelectedDeviceId(null); setSelectedConnectionId(null) }}
             className={cn(
               'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors',
-              mode === 'connect' ? 'bg-success/10 text-success' : 'text-muted hover:text-text hover:bg-sidebar-hover',
+              mode === 'connect' ? 'bg-success/10 text-success' : 'text-text-faint hover:text-text hover:bg-sidebar-hover',
             )}
             title="Connect devices"
           >
@@ -477,7 +477,7 @@ export function NetworkDesign() {
             onClick={() => { setMode('delete'); setConnectSourceId(null) }}
             className={cn(
               'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors',
-              mode === 'delete' ? 'bg-danger/10 text-danger' : 'text-muted hover:text-text hover:bg-sidebar-hover',
+              mode === 'delete' ? 'bg-danger/10 text-danger' : 'text-text-faint hover:text-text hover:bg-sidebar-hover',
             )}
             title="Delete mode"
           >
@@ -487,27 +487,27 @@ export function NetworkDesign() {
 
         {/* Actions */}
         <div className="flex items-center gap-1 border-r border-border pr-2">
-          <button onClick={saveTopology} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-sidebar-hover transition-colors" title="Save Topology">
+          <button onClick={saveTopology} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-text-faint hover:text-text hover:bg-sidebar-hover transition-colors" title="Save Topology">
             <Save size={14} /> Save
           </button>
-          <button onClick={loadTopology} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-sidebar-hover transition-colors" title="Load Topology">
+          <button onClick={loadTopology} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-text-faint hover:text-text hover:bg-sidebar-hover transition-colors" title="Load Topology">
             <FolderOpen size={14} /> Open
           </button>
-          <button onClick={exportJSON} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-muted hover:text-text hover:bg-sidebar-hover transition-colors" title="Export JSON (Web)">
+          <button onClick={exportJSON} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-text-faint hover:text-text hover:bg-sidebar-hover transition-colors" title="Export JSON (Web)">
             <FileJson size={14} /> Web Export
           </button>
         </div>
 
         {/* Zoom */}
         <div className="flex items-center gap-1 border-r border-border pr-2">
-          <button onClick={zoomOut} className="px-2 py-1.5 rounded-md text-xs text-muted hover:text-text hover:bg-sidebar-hover transition-colors" title="Zoom Out">
+          <button onClick={zoomOut} className="px-2 py-1.5 rounded-md text-xs text-text-faint hover:text-text hover:bg-sidebar-hover transition-colors" title="Zoom Out">
             <Minus size={14} />
           </button>
-          <span className="text-xs text-muted font-mono w-10 text-center">{Math.round(zoom * 100)}%</span>
-          <button onClick={zoomIn} className="px-2 py-1.5 rounded-md text-xs text-muted hover:text-text hover:bg-sidebar-hover transition-colors" title="Zoom In">
+          <span className="text-xs text-text-faint font-mono w-10 text-center">{Math.round(zoom * 100)}%</span>
+          <button onClick={zoomIn} className="px-2 py-1.5 rounded-md text-xs text-text-faint hover:text-text hover:bg-sidebar-hover transition-colors" title="Zoom In">
             <Plus size={14} />
           </button>
-          <button onClick={zoomReset} className="px-2 py-1.5 rounded-md text-xs text-muted hover:text-text hover:bg-sidebar-hover transition-colors" title="Reset Zoom">
+          <button onClick={zoomReset} className="px-2 py-1.5 rounded-md text-xs text-text-faint hover:text-text hover:bg-sidebar-hover transition-colors" title="Reset Zoom">
             <Maximize2 size={14} />
           </button>
         </div>
@@ -515,7 +515,7 @@ export function NetworkDesign() {
         {/* Clear */}
         <button
           onClick={clearCanvas}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-text-faint hover:text-danger hover:bg-danger/10 transition-colors"
         >
           <Trash2 size={14} /> Clear
         </button>
@@ -529,14 +529,14 @@ export function NetworkDesign() {
       </div>
 
       {/* Stats bar */}
-      <div className="flex items-center gap-3 text-xs text-muted">
+      <div className="flex items-center gap-3 text-xs text-text-faint">
         <span>{devices.length} devices</span>
         <span className="text-border">|</span>
         <span>{connections.length} connections</span>
         {selectedDeviceId && (
           <>
             <span className="text-border">|</span>
-            <span className="text-primary">Selected: {devices.find((d) => d.id === selectedDeviceId)?.label}</span>
+            <span className="text-accent">Selected: {devices.find((d) => d.id === selectedDeviceId)?.label}</span>
           </>
         )}
       </div>
@@ -545,7 +545,7 @@ export function NetworkDesign() {
       <div className="flex gap-4">
         <div
           ref={canvasRef}
-          className="flex-1 bg-card border border-border rounded-lg overflow-auto relative min-h-[600px]"
+          className="flex-1 bg-panel border border-border rounded-lg overflow-auto relative min-h-[600px]"
           onClick={handleCanvasClick}
           style={{
             backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)',
@@ -607,9 +607,9 @@ export function NetworkDesign() {
             {devices.length === 0 && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
-                  <GitMerge size={48} className="text-muted/30 mx-auto mb-3" />
-                  <p className="text-sm text-muted">Canvas is empty</p>
-                  <p className="text-xs text-muted/60 mt-1">Use the toolbar above to add network devices</p>
+                  <GitMerge size={48} className="text-text-faint/30 mx-auto mb-3" />
+                  <p className="text-sm text-text-faint">Canvas is empty</p>
+                  <p className="text-xs text-text-faint/60 mt-1">Use the toolbar above to add network devices</p>
                 </div>
               </div>
             )}

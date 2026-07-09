@@ -109,16 +109,16 @@ export function ExportDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-card border border-border rounded-xl shadow-2xl w-[640px] max-h-[80vh] flex flex-col">
+      <div className="bg-panel border border-border rounded-xl shadow-2xl w-[640px] max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
-            <Download size={18} className="text-primary" />
+            <Download size={18} className="text-accent" />
             <h2 className="text-lg font-semibold text-text">{title}</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-sidebar-hover text-muted hover:text-text transition-colors"
+            className="p-1 rounded hover:bg-sidebar-hover text-text-faint hover:text-text transition-colors"
           >
             <X size={18} />
           </button>
@@ -133,8 +133,8 @@ export function ExportDialog({
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors',
                 format === f.id
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted hover:text-text hover:bg-sidebar-hover',
+                  ? 'bg-accent text-white'
+                  : 'text-text-faint hover:text-text hover:bg-sidebar-hover',
               )}
             >
               <f.icon size={14} />
@@ -145,12 +145,12 @@ export function ExportDialog({
 
         {/* Preview */}
         <div className="flex-1 overflow-y-auto p-4">
-          <div className="bg-[#0b1120] border border-border rounded-lg p-3 font-[JetBrains_Mono] text-xs leading-relaxed max-h-80 overflow-y-auto">
+          <div className="bg-panel-2 border border-border rounded-lg p-3 font-[JetBrains_Mono] text-xs leading-relaxed max-h-80 overflow-y-auto">
             {lines.length > 200
               ? [...lines.slice(0, 100), '... (truncated) ...', ...lines.slice(-100)].join('\n')
               : formatted}
           </div>
-          <div className="mt-2 text-xs text-muted">
+          <div className="mt-2 text-xs text-text-faint">
             {lines.length} lines | {new Blob([formatted]).size.toLocaleString()} bytes
           </div>
         </div>
@@ -159,20 +159,20 @@ export function ExportDialog({
         <div className="flex items-center justify-between p-4 border-t border-border">
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm text-muted hover:text-text border border-border rounded-lg hover:bg-sidebar-hover transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm text-text-faint hover:text-text border border-border rounded-lg hover:bg-sidebar-hover transition-colors"
           >
             {copied ? '✓ Copied!' : 'Copy to Clipboard'}
           </button>
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm text-muted border border-border rounded-lg hover:bg-sidebar-hover transition-colors"
+              className="px-4 py-2 text-sm text-text-faint border border-border rounded-lg hover:bg-sidebar-hover transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 text-sm bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
             >
               <Download size={14} />
               Save to File

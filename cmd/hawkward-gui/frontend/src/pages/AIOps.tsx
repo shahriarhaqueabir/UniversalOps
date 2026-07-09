@@ -32,7 +32,7 @@ function ChatBubble({ role, content }: { role: string; content: string }) {
       <div
         className={cn(
           'w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg border',
-          !isAssistant ? 'bg-primary border-primary/20' : 'bg-panel-3 border-accent/20',
+          !isAssistant ? 'bg-accent border-accent/20' : 'bg-panel-3 border-accent/20',
         )}
       >
         {!isAssistant ? (
@@ -46,7 +46,7 @@ function ChatBubble({ role, content }: { role: string; content: string }) {
           className={cn(
             'rounded-2xl px-6 py-4 text-lg shadow-xl',
             !isAssistant
-              ? 'bg-primary text-white rounded-tr-none'
+              ? 'bg-accent text-white rounded-tr-none'
               : 'bg-panel-2 border border-border text-text rounded-tl-none',
           )}
         >
@@ -65,14 +65,14 @@ function StatusBadge({ status }: { status: string }) {
     critical: 'bg-danger/20 text-danger border-danger/30',
     high: 'bg-warning/20 text-warning border-warning/30',
     medium: 'bg-warning/15 text-warning border-warning/20',
-    low: 'bg-primary/20 text-primary border-primary/30',
+    low: 'bg-accent/20 text-accent border-accent/30',
     warning: 'bg-warning/20 text-warning border-warning/30',
-    info: 'bg-primary/20 text-primary border-primary/30',
+    info: 'bg-accent/20 text-accent border-accent/30',
     healthy: 'bg-success/20 text-success border-success/30',
   }
   const key = status.toLowerCase()
   return (
-    <span className={cn('px-3 py-1 rounded-full text-xs font-bold uppercase tracking-tighter border', colors[key] || 'bg-muted/20 text-muted border-border')}>
+    <span className={cn('px-3 py-1 rounded-full text-xs font-bold uppercase tracking-tighter border', colors[key] || 'bg-text-faint/20 text-text-faint border-border')}>
       {status}
     </span>
   )
@@ -112,7 +112,7 @@ export function AIOps() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-[var(--color-bg)]">
       <div className="p-8 border-b border-border bg-panel-2 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-text flex items-center gap-3">
@@ -223,7 +223,7 @@ function ChatTab() {
       {/* Background Decor */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-accent rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-primary rounded-full blur-[150px] opacity-30" />
+        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-accent rounded-full blur-[150px] opacity-30" />
       </div>
 
       {/* Messages */}

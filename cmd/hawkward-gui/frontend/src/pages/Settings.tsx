@@ -77,8 +77,8 @@ interface AppInfo {
 
 const DEFAULT_APP_INFO: AppInfo = {
   name: 'Hawkward',
-  version: '0.1.0',
-  go_version: 'go1.26.4',
+  version: '1.1.1',
+  go_version: 'go1.26.5',
   uptime: '--',
 }
 

@@ -24,6 +24,9 @@ type FileEntry struct {
 // Absolute paths are allowed (the frontend file browser sends them),
 // but directory traversal is blocked.
 func isPathSafe(path string) error {
+	if path == "" || path == "." {
+		return nil
+	}
 	clean := filepath.Clean(path)
 	if !filepath.IsAbs(clean) {
 		// For relative paths, block traversal
@@ -36,6 +39,13 @@ func isPathSafe(path string) error {
 
 // ListDir lists the contents of a directory.
 func ListDir(path string) ([]FileEntry, error) {
+	if path == "" || path == "." {
+		var err error
+		path, err = os.UserHomeDir()
+		if err != nil {
+			path = os.TempDir()
+		}
+	}
 	if err := isPathSafe(path); err != nil {
 		return nil, err
 	}

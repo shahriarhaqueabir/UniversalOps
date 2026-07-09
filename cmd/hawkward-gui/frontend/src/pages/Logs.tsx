@@ -46,7 +46,7 @@ function LogBadge({ level }: { level: string }) {
 function DetailPanel({ entry, idx }: { entry: LogEntry; idx: number }) {
   return (
     <div className="px-10 py-6 bg-panel-3 border-b border-border/50">
-      <div className="bg-background border border-border rounded-[24px] p-8 shadow-2xl relative overflow-hidden">
+      <div className="bg-panel border border-border rounded-[24px] p-8 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-40 h-40 bg-accent/5 rounded-bl-full pointer-events-none" />
         <div className="flex items-center gap-6 mb-6">
           <LogBadge level={entry.level} />
@@ -194,7 +194,7 @@ export function Logs() {
 
   // ── Render ──
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-[var(--color-bg)]">
       {/* ── Header ── */}
       <div className="p-8 border-b border-border bg-panel-2 flex items-center justify-between">
         <div>
@@ -226,7 +226,7 @@ export function Logs() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search live stream..."
-            className="w-full bg-background border border-border rounded-xl pl-14 pr-4 py-4 text-xl text-text placeholder-text-faint focus:outline-none focus:border-accent shadow-inner"
+            className="w-full bg-panel border border-border rounded-xl pl-14 pr-4 py-4 text-xl text-text placeholder-text-faint focus:outline-none focus:border-accent shadow-inner"
           />
         </div>
 
@@ -262,7 +262,7 @@ export function Logs() {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto bg-background shadow-inner"
+        className="flex-1 overflow-y-auto bg-[var(--color-bg)] shadow-inner"
       >
         {/* ── Column headers (sticky, direct child of scroll container) ── */}
         <div

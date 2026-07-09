@@ -148,7 +148,7 @@ export function SysOps() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-[var(--color-bg)]">
       <ConfirmDialog
         open={killTarget !== null}
         title="Impactful Intervention"

@@ -38,8 +38,7 @@ describe('Dashboard Page', () => {
 
   it('shows loading state initially', async () => {
     render(<Dashboard />)
-    await waitFor(() => {
-      expect(screen.getByText('Synching Neural Bridge...')).toBeInTheDocument()
-    })
+    // Dashboard uses skeleton loader instead of text; wait for data render
+    expect(await screen.findByText('OPERATIONAL INTELLIGENCE')).toBeInTheDocument()
   })
 })

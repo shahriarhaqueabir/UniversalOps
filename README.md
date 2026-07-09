@@ -33,9 +33,9 @@ A premium native desktop operations platform — **no programming skills require
 
 1. Go to the **[Releases page](https://github.com/shahriarhaqueabir/AllOpsFull/releases)**
 2. Under **"Assets"** for the latest release, click the file named:
-   - **Windows**: `hawkward-v1.1.0-windows-amd64.exe` (~14 MB)
-   - **macOS**: `hawkward-v1.1.0-darwin-universal`
-   - **Linux**: `hawkward-v1.1.0-linux-amd64`
+   - **Windows**: `hawkward-v1.2.0-windows-amd64.exe` (~14 MB)
+   - **macOS**: `hawkward-v1.2.0-darwin-universal`
+   - **Linux**: `hawkward-v1.2.0-linux-amd64`
 3. **Double-click** the downloaded file to launch
 
 > ⚠️ **Windows SmartScreen**: The first time you run it, Windows may show "Windows protected your PC". Click **"More info"** → **"Run anyway"**. This happens because the binary is not yet code-signed (common for open-source tools).
@@ -44,7 +44,7 @@ A premium native desktop operations platform — **no programming skills require
 
 If you prefer a proper installer with Start Menu shortcuts:
 
-1. On the Releases page, download `hawkward-v1.1.0-windows-amd64.exe.nsis`
+1. On the Releases page, download `hawkward-v1.2.0-windows-amd64-installer.exe`
 2. Double-click the installer
 3. Follow the setup wizard
 4. Launch from the Start Menu or Desktop shortcut
