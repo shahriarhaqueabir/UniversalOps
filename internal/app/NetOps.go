@@ -55,16 +55,22 @@ func (n *NetOps) Ping(host string, count int) PingResult {
 		MinMs:    result.Min.Milliseconds(),
 		MaxMs:    result.Max.Milliseconds(),
 		AvgMs:    result.Avg.Milliseconds(),
+		JitterMs: float64(result.Jitter.Microseconds()) / 1000.0,
 		TTL:      result.TTL,
 	}
 }
 
 // DNSLookup performs DNS lookups for a given hostname with a 10-second timeout.
-func (n *NetOps) DNSLookup(hostname string) DNSResult {
+func (n *NetOps) DNSLookup(hostname string, server string) DNSResult {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	result, err := netops.LookupDNSWithContext(ctx, hostname)
+	var servers []string
+	if server != "" {
+		servers = []string{server}
+	}
+
+	result, err := netops.LookupDNSWithContext(ctx, hostname, servers...)
 	if err != nil {
 		common.LogWarn("DNSLookup failed: %v", err)
 		return DNSResult{Hostname: hostname, Error: err.Error()}

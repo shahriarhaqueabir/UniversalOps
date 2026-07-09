@@ -34,6 +34,7 @@ func (s *SecOps) GetFirewallRules() []FirewallRule {
 			RemoteIP:   r.RemoteIP,
 			Profile:    r.Profile,
 			Enabled:    r.Enabled,
+			IsHighRisk: r.IsHighRisk,
 		})
 	}
 	return out
@@ -75,6 +76,7 @@ func (s *SecOps) GetListeningPorts() []ListeningPort {
 			ProcessName: p.ProcessName,
 			PID:         p.PID,
 			State:       p.State,
+			IsExternal:  p.IsExternal,
 		})
 	}
 	return out

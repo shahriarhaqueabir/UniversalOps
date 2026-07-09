@@ -16,6 +16,7 @@ type ListeningPort struct {
 	ProcessName string
 	PID         int
 	State       string
+	IsExternal  bool
 }
 
 // GetListeningPorts retrieves all ports in LISTENING state.
@@ -206,11 +207,16 @@ func parseListeningPorts(output string) []ListeningPort {
 		}
 		seen[key] = true
 
+		isExternal := strings.HasPrefix(localAddr, "0.0.0.0") ||
+			strings.HasPrefix(localAddr, "[::]") ||
+			strings.HasPrefix(localAddr, "*")
+
 		ports = append(ports, ListeningPort{
-			Port:     port,
-			Protocol: proto,
-			PID:      pid,
-			State:    state,
+			Port:       port,
+			Protocol:   proto,
+			PID:        pid,
+			State:      state,
+			IsExternal: isExternal,
 		})
 	}
 

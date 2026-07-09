@@ -132,9 +132,19 @@ function FirewallTab({ call }: { call: BackendCall }) {
           />
         </div>
         <div className="flex-1" />
-        <div className="flex items-center gap-4 bg-panel border border-border px-6 py-4 rounded-xl shadow-lg">
-          <ShieldCheck size={20} className="text-success" />
-          <span className="text-lg font-black text-text uppercase tabular-nums">{rules.filter(r => r.enabled).length} ACTIVE RULES</span>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 bg-panel border border-border px-6 py-4 rounded-xl shadow-lg">
+            <ShieldCheck size={20} className="text-success" />
+            <span className="text-lg font-black text-text uppercase tabular-nums">{rules.filter(r => r.enabled).length} ACTIVE RULES</span>
+          </div>
+          {rules.some(r => r.is_high_risk) && (
+            <div className="flex items-center gap-4 bg-danger/10 border border-danger/30 px-6 py-4 rounded-xl shadow-lg animate-pulse">
+              <AlertTriangle size={20} className="text-danger" />
+              <span className="text-lg font-black text-danger uppercase tabular-nums">
+                {rules.filter(r => r.is_high_risk).length} HIGH RISK
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -153,7 +163,14 @@ function FirewallTab({ call }: { call: BackendCall }) {
             <tbody>
               {filtered.map((rule, i) => (
                 <tr key={i} className="border-b border-border/20 hover:bg-white/5 transition-all">
-                  <td className="px-8 py-5 text-xl font-black text-text truncate max-w-md">{rule.name}</td>
+                  <td className="px-8 py-5 text-xl font-black text-text truncate max-w-md">
+                    <div className="flex items-center gap-3">
+                      {rule.is_high_risk && (
+                        <AlertTriangle size={20} className="text-danger animate-pulse shrink-0" />
+                      )}
+                      <span className={cn(rule.is_high_risk ? "text-danger" : "")}>{rule.name}</span>
+                    </div>
+                  </td>
                   <td className="px-8 py-5">
                     <SecurityStatusBadge status={rule.action} />
                   </td>
@@ -356,8 +373,15 @@ function ListeningTab({ call }: { call: BackendCall }) {
               </thead>
               <tbody>
                 {ports.map((p, i) => (
-                  <tr key={i} className="border-b border-border/20 hover:bg-white/5 transition-all">
-                    <td className="px-8 py-5 text-xl font-black text-accent tabular-nums">{p.port}</td>
+                  <tr key={i} className={cn("border-b border-border/20 hover:bg-white/5 transition-all", p.is_external ? "bg-warning/5" : "")}>
+                    <td className="px-8 py-5 text-xl font-black text-accent tabular-nums">
+                      <div className="flex items-center gap-3">
+                        {p.port}
+                        {p.is_external && (
+                          <span className="px-2 py-0.5 rounded-md bg-warning/20 text-warning text-[10px] font-black uppercase tracking-widest border border-warning/30">External</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-8 py-5 font-bold text-lg text-text-faint tabular-nums uppercase">{p.protocol}</td>
                     <td className="px-8 py-5 text-xl font-bold text-text truncate max-w-md">{p.process_name}</td>
                     <td className="px-8 py-5 font-bold text-lg text-text-faint tabular-nums">{p.pid}</td>

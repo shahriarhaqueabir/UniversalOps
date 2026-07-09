@@ -118,6 +118,7 @@ type PingResult struct {
 	MinMs    int64  `json:"min_ms"`
 	MaxMs    int64  `json:"max_ms"`
 	AvgMs    int64  `json:"avg_ms"`
+	JitterMs float64 `json:"jitter_ms"`
 	TTL      int    `json:"ttl"`
 	Error    string `json:"error,omitempty"`
 }
@@ -198,6 +199,7 @@ type FirewallRule struct {
 	RemoteIP   string `json:"remote_ip"`
 	Profile    string `json:"profile"`
 	Enabled    bool   `json:"enabled"`
+	IsHighRisk bool   `json:"is_high_risk"`
 }
 
 // UserInfo holds a local user account entry.
@@ -217,6 +219,7 @@ type ListeningPort struct {
 	ProcessName string `json:"process_name"`
 	PID         int    `json:"pid"`
 	State       string `json:"state"`
+	IsExternal  bool   `json:"is_external"`
 }
 
 // DefenderStatus holds Windows Defender status.

@@ -17,6 +17,8 @@
 | C-08 | ✅ DONE | `go test ./...` — All pass |
 | C-09 | ✅ DONE | `npm test -- --run` — 4 suites, 15 tests, all pass |
 | C-10 | ✅ DONE | `wails build -skipbindings` — Builds in 23.8s, 17MB binary |
+| C-11 | ✅ DONE | NetOps Enhancement Loop 1 — T-01 complete (full tests), Ping Jitter + Chart added, DNS custom resolver support added |
+| C-12 | ✅ DONE | SecOps Enhancement Loop 2 — T-02 complete (full tests), Firewall high-risk flagging, External listener detection |
 
 ## Completed (30 Review Loops)
 
