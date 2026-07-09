@@ -10,12 +10,13 @@ const mockLogs = [
 
 // Mock react-query
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: ({ queryFn }: { queryFn: () => Promise<any> }) => {
-    const data = queryFn ? queryFn() : []
-    return { data: Promise.resolve(data) as any, isLoading: false, refetch: vi.fn() }
+  useQuery: () => {
+    return { data: [] as LogEntry[], isLoading: false, refetch: vi.fn() } as const
   },
   useQueryClient: () => ({ getQueryData: vi.fn(), setQueryData: vi.fn() }),
 }))
+
+import type { LogEntry } from '@/types'
 
 // Mock react-virtual
 vi.mock('@tanstack/react-virtual', () => ({

@@ -38,7 +38,7 @@ describe('Sidebar', () => {
   it('shows version footer', () => {
     render(<Sidebar currentPage="dashboard" onNavigate={vi.fn()} />)
 
-    expect(screen.getByText('Hawkward v1.1.1')).toBeInTheDocument()
+    expect(screen.getByText('Hawkward v1.3.0')).toBeInTheDocument()
   })
 
   it('collapses and expands when toggle is clicked', () => {

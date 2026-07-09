@@ -23,6 +23,10 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      // Wails desktop apps rely on data-fetching in useEffect — this rule is designed for RSC/SSR
+      'react-hooks/set-state-in-effect': 'off',
+      // TanStack Virtual's useVirtualizer is incompatible with React Compiler — this is expected
+      'react-hooks/incompatible-library': 'off',
     },
   },
 )

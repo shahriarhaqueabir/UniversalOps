@@ -97,7 +97,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                   collapsed ? 'justify-center p-3' : 'gap-4 px-4 py-3 text-lg',
                   currentPage === item.id
                     ? 'bg-accent text-white shadow-lg'
-                    : 'text-[var(--color-text-dim)] hover:bg-white/5 hover:text-[var(--color-text)]'
+                    : 'text-[var(--color-text-dim)] hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-text)]'
                 )}
                 title={collapsed ? item.label : undefined}
               >
@@ -121,7 +121,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                   collapsed ? 'justify-center p-3' : 'gap-4 px-4 py-3 text-lg',
                   currentPage === item.id
                     ? 'bg-accent text-white shadow-lg'
-                    : 'text-[var(--color-text-dim)] hover:bg-white/5 hover:text-[var(--color-text)]'
+                    : 'text-[var(--color-text-dim)] hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-text)]'
                 )}
                 title={collapsed ? item.label : undefined}
               >
@@ -138,7 +138,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         <button
           onClick={() => setCollapsed(!collapsed)}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="flex items-center justify-center w-full gap-2 px-4 py-3 rounded-xl text-[var(--color-text-dim)] hover:bg-white/5 hover:text-[var(--color-text)] transition-all font-bold"
+          className="flex items-center justify-center w-full gap-2 px-4 py-3 rounded-xl text-[var(--color-text-dim)] hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-text)] transition-all font-bold"
         >
           {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
           {!collapsed && <span className="text-sm">Collapse</span>}
@@ -147,7 +147,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
 
       {/* Footer */}
       <div className="px-[14px] py-3 border-t border-[var(--color-border)]">
-        <p className="text-[11px] text-[var(--color-text-faint)]">Hawkward v1.1.1</p>
+        <p className="text-[11px] text-[var(--color-text-faint)]">Hawkward v1.3.0</p>
       </div>
     </aside>
   )

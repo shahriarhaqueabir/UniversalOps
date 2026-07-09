@@ -8,8 +8,14 @@ import type { AlertInfo } from './types'
 
 export type Page = 'dashboard' | 'sysops' | 'netops' | 'secops' | 'devops' | 'aiops' | 'network-design' | 'logs' | 'settings'
 
-function getRuntime(): any {
-  return (window as any)?.runtime
+interface WailsRuntime {
+  EventsOn: (event: string, handler: (...args: unknown[]) => void) => void
+  EventsOff: (event: string, handler: (...args: unknown[]) => void) => void
+}
+
+function getRuntime(): WailsRuntime | null {
+  const w = window as { runtime?: WailsRuntime }
+  return w.runtime ?? null
 }
 
 function App() {
@@ -23,7 +29,8 @@ function App() {
   }, [theme])
 
   // Subscribe to Wails alert events → sonner toasts
-  const handleAlertEvent = useCallback((data: any) => {
+  const handleAlertEvent = useCallback((...args: unknown[]) => {
+    const data = args[0] as Record<string, unknown> | undefined
     if (!data?.alert) return
     const alert = data.alert as AlertInfo
     addAlert(alert)

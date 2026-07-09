@@ -320,7 +320,10 @@ export function NetOps() {
                   className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-5 text-2xl font-bold text-text placeholder-text-faint focus:outline-none focus:border-accent shadow-xl"
                 />
               </div>
-              <button onClick={() => setPingRunning(!pingRunning)} className={cn("flex items-center gap-3 px-10 py-5 text-xl font-black rounded-2xl transition-all shadow-xl", pingRunning ? "bg-danger text-white hover:bg-danger/90" : "bg-accent text-white hover:bg-accent/90")}>
+              <button onClick={() => {
+                if (!pingRunning) setPingEntries([])
+                setPingRunning(!pingRunning)
+              }} className={cn("flex items-center gap-3 px-10 py-5 text-xl font-black rounded-2xl transition-all shadow-xl", pingRunning ? "bg-danger text-white hover:bg-danger/90" : "bg-accent text-white hover:bg-accent/90")}>
                 {pingRunning ? <Square size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
                 {pingRunning ? 'STOP PROBE' : 'START PROBE'}
               </button>
@@ -843,11 +846,11 @@ export function NetOps() {
                           <h3 className="text-lg font-black text-text uppercase tracking-wider">{iface.name}</h3>
                           <div className="flex items-center gap-4 text-sm font-bold tabular-nums">
                             <span className="flex items-center gap-1.5">
-                              <span className="w-2.5 h-2.5 rounded-full bg-[#14b8a6]" />
+                              <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-success)]" />
                               <span className="text-text-dim">RX <span className="text-text">{(iface.rx_rate_bps / 1_000_000).toFixed(2)}</span> Mbps</span>
                             </span>
                             <span className="flex items-center gap-1.5">
-                              <span className="w-2.5 h-2.5 rounded-full bg-[#3b82f6]" />
+                              <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-accent)]" />
                               <span className="text-text-dim">TX <span className="text-text">{(iface.tx_rate_bps / 1_000_000).toFixed(2)}</span> Mbps</span>
                             </span>
                           </div>
@@ -857,12 +860,12 @@ export function NetOps() {
                             <AreaChart data={chartData}>
                               <defs>
                                 <linearGradient id={`${gradId}-rx`} x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.35} />
-                                  <stop offset="95%" stopColor="#14b8a6" stopOpacity={0} />
+                                  <stop offset="5%" stopColor="var(--color-success)" stopOpacity={0.35} />
+                                  <stop offset="95%" stopColor="var(--color-success)" stopOpacity={0} />
                                 </linearGradient>
                                 <linearGradient id={`${gradId}-tx`} x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35} />
-                                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                  <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.35} />
+                                  <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0} />
                                 </linearGradient>
                               </defs>
                               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
@@ -879,8 +882,8 @@ export function NetOps() {
                                 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Recharts formatter type is complex generic
                                 formatter={(value: any) => [`${Number(value ?? 0).toFixed(2)} Mbps`]}
                               />
-                              <Area type="monotone" dataKey="rx" stackId="1" stroke="#14b8a6" fill={`url(#${gradId}-rx)`} strokeWidth={2} dot={false} />
-                              <Area type="monotone" dataKey="tx" stackId="1" stroke="#3b82f6" fill={`url(#${gradId}-tx)`} strokeWidth={2} dot={false} />
+                              <Area type="monotone" dataKey="rx" stackId="1" stroke="var(--color-success)" fill={`url(#${gradId}-rx)`} strokeWidth={2} dot={false} />
+                              <Area type="monotone" dataKey="tx" stackId="1" stroke="var(--color-accent)" fill={`url(#${gradId}-tx)`} strokeWidth={2} dot={false} />
                             </AreaChart>
                           </ResponsiveContainer>
                         ) : (

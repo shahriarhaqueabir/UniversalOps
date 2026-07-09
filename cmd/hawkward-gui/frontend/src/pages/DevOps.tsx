@@ -614,7 +614,7 @@ function FileBrowserTab() {
           <div className="flex-1 bg-panel border border-border rounded-xl px-6 py-2.5 flex items-center gap-1 overflow-x-auto no-scrollbar shadow-inner">
             <button
               onClick={() => call('DevOps.GetDefaultPath').then(p => navigate(p as string))}
-              className="p-1.5 hover:bg-white/10 rounded-lg text-text-faint hover:text-accent transition-all shrink-0"
+              className="p-1.5 hover:bg-[var(--color-sidebar-hover)] rounded-lg text-text-faint hover:text-accent transition-all shrink-0"
             >
               <Home size={18} />
             </button>
@@ -628,7 +628,7 @@ function FileBrowserTab() {
                     onClick={() => !isLast && navigate(fullPath)}
                     className={cn(
                       "px-2 py-1 rounded-lg text-sm font-bold transition-all",
-                      isLast ? "text-text cursor-default" : "text-text-dim hover:text-accent hover:bg-white/5"
+                      isLast ? "text-text cursor-default" : "text-text-dim hover:text-accent hover:bg-[var(--color-sidebar-hover)]"
                     )}
                   >
                     {part}
