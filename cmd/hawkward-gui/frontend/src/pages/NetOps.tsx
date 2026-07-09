@@ -365,7 +365,7 @@ export function NetOps() {
                       fontSize={12}
                       tickLine={false}
                       axisLine={false}
-                      tickFormatter={(v) => `${v}ms`}
+                      tickFormatter={(v: number) => `${v}ms`}
                     />
                     <Tooltip
                       contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
@@ -864,7 +864,7 @@ export function NetOps() {
                               </defs>
                               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
                               <XAxis dataKey="point" tick={false} axisLine={false} />
-                              <YAxis tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }} tickFormatter={(v) => `${v}`} width={40} axisLine={false} />
+                              <YAxis tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }} tickFormatter={(v: number) => `${v}`} width={40} axisLine={false} />
                               <Tooltip
                                 contentStyle={{
                                   background: 'rgba(0,0,0,0.85)',

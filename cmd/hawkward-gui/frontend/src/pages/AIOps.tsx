@@ -219,7 +219,7 @@ function ChatTab() {
   }, [messages, isTyping])
 
   return (
-    <div className="flex flex-col h-full bg-[#0b1120] relative">
+    <div className="flex flex-col h-full bg-[var(--color-bg)] relative">
       {/* Background Decor */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-accent rounded-full blur-[120px]" />
@@ -381,7 +381,7 @@ function ReportsTab() {
             </div>
           )}
         </div>
-        <div className="flex-1 bg-[#0b1120] border border-border rounded-2xl p-10 overflow-y-auto font-[JetBrains_Mono] text-lg leading-relaxed whitespace-pre shadow-inner">
+        <div className="flex-1 bg-[var(--color-bg)] border border-border rounded-2xl p-10 overflow-y-auto font-[JetBrains_Mono] text-lg leading-relaxed whitespace-pre shadow-inner">
           {reportContent || (isGenerating ? 'Collecting system metrics and performing heuristic analysis...' : 'Select a template to generate a professional intelligence report.')}
         </div>
       </div>
@@ -442,7 +442,7 @@ function AnomaliesTab() {
         </button>
       </div>
 
-      <div className="flex-1 bg-[#0b1120] border border-border rounded-2xl overflow-hidden shadow-inner">
+      <div className="flex-1 bg-[var(--color-bg)] border border-border rounded-2xl overflow-hidden shadow-inner">
         <div className="overflow-y-auto h-full">
           <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border">

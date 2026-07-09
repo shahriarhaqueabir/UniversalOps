@@ -99,17 +99,22 @@ export function Settings() {
   const [appInfo, setAppInfo] = useState<AppInfo>(DEFAULT_APP_INFO)
 
   useEffect(() => {
-    call('App.GetAppInfo').then((result: unknown) => {
-      if (result) {
-        const info = result as Partial<AppInfo>
-        setAppInfo({
-          name: info.name || DEFAULT_APP_INFO.name,
-          version: info.version || DEFAULT_APP_INFO.version,
-          go_version: info.go_version || DEFAULT_APP_INFO.go_version,
-          uptime: info.uptime || DEFAULT_APP_INFO.uptime,
-        })
-      }
-    })
+    call('App.GetAppInfo')
+      .then((result: unknown) => {
+        if (result) {
+          const info = result as Partial<AppInfo>
+          setAppInfo({
+            name: info.name || DEFAULT_APP_INFO.name,
+            version: info.version || DEFAULT_APP_INFO.version,
+            go_version: info.go_version || DEFAULT_APP_INFO.go_version,
+            uptime: info.uptime || DEFAULT_APP_INFO.uptime,
+          })
+        }
+      })
+      .catch(() => {
+        // Backend unavailable — keep defaults; not user-facing critical
+        console.warn('[Settings] Failed to fetch AppInfo, using defaults')
+      })
   }, [call])
 
   const isDark = theme === 'dark'
@@ -189,7 +194,7 @@ export function Settings() {
           <div className="flex items-center gap-3 w-44">
             <Slider.Root
               value={[pingCount]}
-              onValueChange={([v]) => { setPingCount(v); saveSetting('hawkward_pingCount', v) }}
+              onValueChange={([v]: number[]) => { setPingCount(v); saveSetting('hawkward_pingCount', v) }}
               min={1}
               max={20}
               step={1}
@@ -211,7 +216,7 @@ export function Settings() {
           <div className="flex items-center gap-3 w-44">
             <Slider.Root
               value={[dnsTimeout]}
-              onValueChange={([v]) => { setDnsTimeout(v); saveSetting('hawkward_dnsTimeout', v) }}
+              onValueChange={([v]: number[]) => { setDnsTimeout(v); saveSetting('hawkward_dnsTimeout', v) }}
               min={500}
               max={10000}
               step={100}
