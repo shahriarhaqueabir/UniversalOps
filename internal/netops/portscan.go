@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"sort"
+	"sync"
 	"time"
 )
 
@@ -51,32 +52,36 @@ func serviceFromPort(port int) string {
 	return "unknown"
 }
 
-// ScanPorts scans specific ports on a host using TCP dial with timeout.
+// ScanPorts scans specific ports on a host using concurrent TCP dial with timeout.
 func ScanPorts(host string, ports []int) ([]PortResult, error) {
 	if host == "" {
 		return nil, fmt.Errorf("host is required")
 	}
 
-	var results []PortResult
+	results := make([]PortResult, len(ports))
+	var wg sync.WaitGroup
 
-	for _, port := range ports {
-		result := PortResult{
-			Port:    port,
-			Service: serviceFromPort(port),
-		}
-
-		address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
-		conn, err := net.DialTimeout("tcp", address, 500*time.Millisecond)
-		if err != nil {
-			result.Open = false
-		} else {
-			result.Open = true
-			conn.Close()
-		}
-
-		results = append(results, result)
+	for i, port := range ports {
+		wg.Add(1)
+		go func(idx int, p int) {
+			defer wg.Done()
+			result := PortResult{
+				Port:    p,
+				Service: serviceFromPort(p),
+			}
+			address := net.JoinHostPort(host, fmt.Sprintf("%d", p))
+			conn, err := net.DialTimeout("tcp", address, 200*time.Millisecond)
+			if err != nil {
+				result.Open = false
+			} else {
+				result.Open = true
+				conn.Close()
+			}
+			results[idx] = result
+		}(i, port)
 	}
 
+	wg.Wait()
 	return results, nil
 }
 

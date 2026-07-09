@@ -7,6 +7,7 @@ import (
 )
 
 // applyPlatformSandbox is a no-op on platforms where sandboxing is not yet implemented.
-func applyPlatformSandbox(cmd *exec.Cmd, cfg SandboxConfig) {
-	// Not implemented for this platform yet.
+func applyPlatformSandbox(cmd *exec.Cmd, cfg SandboxConfig) *SandboxedCmd {
+	sc := &SandboxedCmd{Cmd: cmd, cfg: cfg}
+	return sc
 }

@@ -174,7 +174,15 @@ export function NetOps() {
   const executePing = useCallback(async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Wails bridge returns dynamic type
     const res = await call('NetOps.Ping', pingTarget, 1) as any
-    if (res) {
+    if (res?.error) {
+      setPingEntries(prev => [...prev.slice(-49), {
+        seq: prev.length + 1,
+        ip: pingTarget,
+        rtt_ms: null,
+        ttl: null,
+        status: 'timeout'
+      } as PingEntry])
+    } else if (res) {
       setPingEntries(prev => [...prev.slice(-49), {
         seq: prev.length + 1,
         ip: res.ip,

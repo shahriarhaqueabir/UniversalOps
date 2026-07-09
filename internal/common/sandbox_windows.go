@@ -1,6 +1,9 @@
+//go:build windows
+
 package common
 
 import (
+	"bytes"
 	"os/exec"
 	"sync"
 	"syscall"
@@ -14,12 +17,6 @@ import (
 const (
 	// sandboxMemoryLimit is the maximum memory (100 MB) a sandboxed process can commit.
 	sandboxMemoryLimit = 100 * 1024 * 1024
-
-	// sandboxPollInterval is how often the job assigner polls for new processes.
-	sandboxPollInterval = 25 * time.Millisecond
-
-	// sandboxMaxWait is the maximum time the assigner waits for a process to start.
-	sandboxMaxWait = 2 * time.Second
 
 	// sandboxProcessWaitTimeout is how long the cleanup goroutine waits for
 	// a sandboxed process to exit before closing the job handle (killing it).
@@ -71,97 +68,121 @@ var dangerousPrivilegeNames = []string{
 type activeJob struct {
 	job windows.Handle
 	cfg SandboxConfig
-	cmd *exec.Cmd
-	age time.Time
 }
 
-// Global state for background job assignment and cleanup.
+// jobTrackers holds a map from *exec.Cmd to its assigned job object.
+// This is used by the SandboxedCmd wrapper to find and assign the job
+// object synchronously after cmd.Start() returns.
 var (
-	pendingJobs   []*activeJob
-	pendingJobsMu sync.Mutex
-	assignerOnce  sync.Once
+	jobTrackers   map[*exec.Cmd]*activeJob
+	jobTrackersMu sync.Mutex
 )
 
-// startJobAssigner launches the background goroutine that assigns job objects
-// to processes after they are started by cmd.Start().
-func startJobAssigner() {
-	assignerOnce.Do(func() {
-		go jobAssignerLoop()
-	})
+func init() {
+	jobTrackers = make(map[*exec.Cmd]*activeJob)
 }
 
-// jobAssignerLoop runs in a background goroutine. It polls the pendingJobs
-// list, assigns processes to their job objects once they start, and removes
-// them from the pending list.
-func jobAssignerLoop() {
-	for {
-		time.Sleep(sandboxPollInterval)
-
-		pendingJobsMu.Lock()
-		if len(pendingJobs) == 0 {
-			pendingJobsMu.Unlock()
-			continue
-		}
-
-		var remaining []*activeJob
-
-		for _, aj := range pendingJobs {
-			// Skip if process hasn't started yet.
-			if aj.cmd.Process == nil {
-				// If we've waited too long, give up and clean up.
-				if time.Since(aj.age) > sandboxMaxWait {
-					windows.CloseHandle(aj.job)
-					LogWarn("sandbox: process never started within %v, closing job handle", sandboxMaxWait)
-				} else {
-					remaining = append(remaining, aj)
-				}
-				continue
-			}
-
-			pid := aj.cmd.Process.Pid
-			if pid == 0 {
-				windows.CloseHandle(aj.job)
-				continue
-			}
-
-			// Open a handle to the child process with the required access rights.
-			ph, err := windows.OpenProcess(
-				windows.PROCESS_QUERY_INFORMATION|windows.PROCESS_SET_QUOTA|windows.PROCESS_TERMINATE|windows.SYNCHRONIZE,
-				false,
-				uint32(pid),
-			)
-			if err != nil {
-				// Process may have already exited. Close the job handle and move on.
-				windows.CloseHandle(aj.job)
-				continue
-			}
-
-			// Check if the process has already exited before we can assign the job.
-			var exitCode uint32
-			if err := windows.GetExitCodeProcess(ph, &exitCode); err != nil || exitCode != stillActive {
-				windows.CloseHandle(ph)
-				windows.CloseHandle(aj.job)
-				continue
-			}
-
-			// Assign the process to the job object.
-			if err := windows.AssignProcessToJobObject(aj.job, ph); err != nil {
-				LogWarn("sandbox: failed to assign process %d to job: %v", pid, err)
-				windows.CloseHandle(ph)
-				windows.CloseHandle(aj.job)
-				continue
-			}
-
-			// Configure job limits.
-			configureJobLimits(aj.job, aj.cfg)
-
-			// Start cleanup goroutine that closes the job handle when the process exits.
-			go cleanupJobHandle(aj.job, ph)
-		}
-
-		pendingJobs = remaining
-		pendingJobsMu.Unlock()
+// CombinedOutput runs the command and returns its combined stdout+stderr.
+// It calls Start() first, assigns the job object synchronously, then calls Wait().
+func (sc *SandboxedCmd) CombinedOutput() ([]byte, error) {
+	if sc.Cmd.Stdout != nil {
+		return nil, errStdoutSet
 	}
+	if sc.Cmd.Stderr != nil {
+		return nil, errStderrSet
+	}
+	var b bytes.Buffer
+	sc.Cmd.Stdout = &b
+	sc.Cmd.Stderr = &b
+	err := sc.Cmd.Start()
+	if err != nil {
+		return nil, err
+	}
+	assignJobForCmd(sc.Cmd)
+	err = sc.Cmd.Wait()
+	return b.Bytes(), err
+}
+
+// Output runs the command and returns its stdout.
+// It calls Start() first, assigns the job object synchronously, then calls Wait().
+func (sc *SandboxedCmd) Output() ([]byte, error) {
+	if sc.Cmd.Stdout != nil {
+		return nil, errStdoutSet
+	}
+	var b bytes.Buffer
+	sc.Cmd.Stdout = &b
+	err := sc.Cmd.Start()
+	if err != nil {
+		return nil, err
+	}
+	assignJobForCmd(sc.Cmd)
+	err = sc.Cmd.Wait()
+	return b.Bytes(), err
+}
+
+// Run starts the command and waits for it to complete.
+// It calls Start() first, assigns the job object synchronously, then calls Wait().
+func (sc *SandboxedCmd) Run() error {
+	err := sc.Cmd.Start()
+	if err != nil {
+		return err
+	}
+	assignJobForCmd(sc.Cmd)
+	return sc.Cmd.Wait()
+}
+
+// assignJobForCmd looks up the job object for the given cmd and assigns
+// the process to it. This is called synchronously after cmd.Start() returns,
+// so cmd.Process is guaranteed to be set and there is no data race.
+func assignJobForCmd(cmd *exec.Cmd) {
+	jobTrackersMu.Lock()
+	aj, ok := jobTrackers[cmd]
+	delete(jobTrackers, cmd)
+	jobTrackersMu.Unlock()
+
+	if !ok || aj.job == 0 {
+		return
+	}
+
+	pid := cmd.Process.Pid
+	if pid == 0 {
+		windows.CloseHandle(aj.job)
+		return
+	}
+
+	// Open a handle to the child process with the required access rights.
+	ph, err := windows.OpenProcess(
+		windows.PROCESS_QUERY_INFORMATION|windows.PROCESS_SET_QUOTA|windows.PROCESS_TERMINATE|windows.SYNCHRONIZE,
+		false,
+		uint32(pid),
+	)
+	if err != nil {
+		// Process may have already exited. Close the job handle and move on.
+		windows.CloseHandle(aj.job)
+		return
+	}
+
+	// Check if the process has already exited before we can assign the job.
+	var exitCode uint32
+	if err := windows.GetExitCodeProcess(ph, &exitCode); err != nil || exitCode != stillActive {
+		windows.CloseHandle(ph)
+		windows.CloseHandle(aj.job)
+		return
+	}
+
+	// Assign the process to the job object.
+	if err := windows.AssignProcessToJobObject(aj.job, ph); err != nil {
+		LogWarn("sandbox: failed to assign process %d to job: %v", pid, err)
+		windows.CloseHandle(ph)
+		windows.CloseHandle(aj.job)
+		return
+	}
+
+	// Configure job limits.
+	configureJobLimits(aj.job, aj.cfg)
+
+	// Start cleanup goroutine that closes the job handle when the process exits.
+	go cleanupJobHandle(aj.job, ph)
 }
 
 // configureJobLimits sets the restrictions on a job object based on the config.
@@ -309,10 +330,13 @@ func createRestrictedToken() (syscall.Token, error) {
 //   - Job Object (when DenyProcessSpawn is true) to prevent child process creation
 //     and limit memory usage
 //
-// Job Object assignment happens asynchronously after cmd.Start() is called
-// (via a background goroutine). If sandboxing fails, a warning is logged but
-// the command still runs — this is defense-in-depth, not a security boundary.
-func applyPlatformSandbox(cmd *exec.Cmd, cfg SandboxConfig) {
+// Job Object assignment happens synchronously after the caller calls Start()
+// on the returned SandboxedCmd, via the assignJobForCmd function. If sandboxing
+// fails, a warning is logged but the command still runs — this is defense-in-depth,
+// not a security boundary.
+func applyPlatformSandbox(cmd *exec.Cmd, cfg SandboxConfig) *SandboxedCmd {
+	sc := &SandboxedCmd{Cmd: cmd, cfg: cfg}
+
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
@@ -340,23 +364,16 @@ func applyPlatformSandbox(cmd *exec.Cmd, cfg SandboxConfig) {
 
 	// Create a Job Object for process isolation.
 	if cfg.DenyProcessSpawn {
-		startJobAssigner()
-
 		job, err := windows.CreateJobObject(nil, nil)
 		if err != nil {
 			LogWarn("sandbox: failed to create job object: %v (running without process isolation)", err)
-			return
+			return sc
 		}
 
-		entry := &activeJob{
-			job: job,
-			cfg: cfg,
-			cmd: cmd,
-			age: time.Now(),
-		}
-
-		pendingJobsMu.Lock()
-		pendingJobs = append(pendingJobs, entry)
-		pendingJobsMu.Unlock()
+		jobTrackersMu.Lock()
+		jobTrackers[cmd] = &activeJob{job: job, cfg: cfg}
+		jobTrackersMu.Unlock()
 	}
+
+	return sc
 }

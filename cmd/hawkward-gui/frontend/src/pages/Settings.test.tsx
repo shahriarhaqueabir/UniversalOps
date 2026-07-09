@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { Settings } from './Settings'
 
 // Mock hooks
@@ -13,18 +13,25 @@ vi.mock('../hooks/useBackend', () => ({
 }))
 
 describe('Settings Page', () => {
-  it('renders settings heading', () => {
+  it('renders settings heading', async () => {
     render(<Settings />)
-    expect(screen.getByText('Settings')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Settings')).toBeInTheDocument()
+    })
   })
 
-  it('renders appearance section', () => {
+  it('renders appearance section', async () => {
     render(<Settings />)
-    expect(screen.getByText('Appearance')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Appearance')).toBeInTheDocument()
+    })
   })
 
-  it('theme toggle triggers useTheme toggle', () => {
+  it('theme toggle triggers useTheme toggle', async () => {
     render(<Settings />)
+    await waitFor(() => {
+      expect(screen.getByText('Light')).toBeInTheDocument()
+    })
     const lightBtn = screen.getByText('Light')
     fireEvent.click(lightBtn)
     expect(mockToggle).toHaveBeenCalledTimes(1)

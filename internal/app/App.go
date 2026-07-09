@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"sync"
@@ -76,7 +75,7 @@ func (a *App) Startup(ctx context.Context) {
 
 	// Initialize persistent storage
 	if err := common.InitStorage("hawkward.db"); err != nil {
-		fmt.Printf("Failed to init storage: %v\n", err)
+		common.LogWarn("Failed to init storage: %v", err)
 	}
 
 	// Initialize the common logger
