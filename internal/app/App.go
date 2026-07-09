@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	goruntime "runtime"
+
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -107,9 +109,10 @@ func (a *App) Shutdown(ctx context.Context) {
 // GetAppInfo returns metadata about the application.
 func (a *App) GetAppInfo() AppInfo {
 	return AppInfo{
-		Name:    "Hawkward Operations Platform",
-		Version: "1.0.0",
-		Uptime:  common.FormatUptime(uint64(time.Since(a.startedAt).Seconds())),
+		Name:      "Hawkward Operations Platform",
+		Version:   "1.1.0",
+		GoVersion: goruntime.Version(),
+		Uptime:    common.FormatUptime(uint64(time.Since(a.startedAt).Seconds())),
 	}
 }
 

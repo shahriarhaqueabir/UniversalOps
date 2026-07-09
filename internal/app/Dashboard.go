@@ -53,7 +53,7 @@ func (d *Dashboard) GetDashboardData() DashboardData {
 			Unit:   "bps",
 		},
 		Processes:   int(procMF.LastValue),
-		Connections: 0, // fetched on-demand via NetOps
+		Connections: len(d.app.NetOps.GetConnections()),
 		Alerts:      d.app.alerts.AlertCount(),
 		Uptime:      d.app.GetAppInfo().Uptime,
 	}

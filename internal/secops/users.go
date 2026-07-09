@@ -30,6 +30,7 @@ func GetUsers() ([]UserInfo, error) {
 			if len(usernames) > 0 {
 				return collectUserDetails(usernames)
 			}
+			return nil, fmt.Errorf("no users found — check 'net user' output format (non-English locale?)")
 		}
 		return nil, fmt.Errorf("failed to query Windows users: %w", err)
 	}

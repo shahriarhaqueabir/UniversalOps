@@ -19,7 +19,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import * as Tabs from '@radix-ui/react-tabs'
-import type { ChatMessage, AnomalyInfo } from '@/types'
+import type { ChatMessage, AnomalyInfo, OllamaStatus } from '@/types'
 
 type TabId = 'ai-chat' | 'reports' | 'anomalies'
 
@@ -83,13 +83,21 @@ function StatusBadge({ status }: { status: string }) {
 // ══════════════════════════════════════════════
 
 export function AIOps() {
+  const { call } = useBackend()
   const [activeTab, setActiveTab] = useState<TabId>('ai-chat')
   const [loading, setLoading] = useState(true)
+  const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus>({ available: false, model: '', version: '' })
 
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), 50)
     return () => clearTimeout(t)
   }, [])
+
+  useEffect(() => {
+    call('AIOps.GetOllamaStatus')
+      .then((res) => setOllamaStatus(res as OllamaStatus))
+      .catch(() => setOllamaStatus({ available: false, model: '', version: '', error: 'Connection failed' }))
+  }, [call])
 
   if (loading) {
     return (
@@ -117,11 +125,15 @@ export function AIOps() {
         </div>
         <div className="flex items-center gap-4 bg-panel border border-border px-6 py-3 rounded-2xl shadow-inner">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-success animate-pulse shadow-[0_0_8px_var(--color-success)]" />
-            <span className="text-sm font-bold text-text-dim uppercase tracking-widest">Ollama Online</span>
+            <div className={cn("w-2 h-2 rounded-full", ollamaStatus.available ? "bg-success animate-pulse shadow-[0_0_8px_var(--color-success)]" : "bg-danger")} />
+            <span className="text-sm font-bold text-text-dim uppercase tracking-widest">
+              {ollamaStatus.available ? 'Ollama Online' : 'Ollama Offline'}
+            </span>
           </div>
           <div className="w-px h-4 bg-border" />
-          <span className="text-sm font-bold text-accent">llama3.2:latest</span>
+          <span className="text-sm font-bold text-accent">
+            {ollamaStatus.available ? ollamaStatus.model : (ollamaStatus.error || '—')}
+          </span>
         </div>
       </div>
 

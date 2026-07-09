@@ -55,3 +55,19 @@ func TruncateString(s string, maxLen int) string {
 	}
 	return s[:maxLen-3] + "..."
 }
+
+// CleanJSON removes control characters and BOM from JSON strings
+// that can cause json.Unmarshal to fail on PowerShell output.
+func CleanJSON(s string) string {
+	// Remove BOM
+	s = strings.TrimLeft(s, "\ufeff\u00ef\u00bb\u00bf")
+	// Remove ASCII control characters except \t, \n, \r
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		if r >= 32 || r == '\t' || r == '\n' || r == '\r' {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}

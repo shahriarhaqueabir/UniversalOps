@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"os"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -235,6 +236,15 @@ func (d *DevOps) RunPowerShell(cmd string) CommandResult {
 		ExitCode: result.ExitCode,
 		Duration: dur,
 	}
+}
+
+// GetDefaultPath returns a safe default directory for file browsing.
+func (d *DevOps) GetDefaultPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return os.TempDir()
+	}
+	return home
 }
 
 // GetPowerShellWorkflows returns a list of available PowerShell diagnostic workflows.

@@ -51,6 +51,7 @@ export namespace app {
 	export class AppInfo {
 	    name: string;
 	    version: string;
+	    go_version: string;
 	    uptime: string;
 	
 	    static createFrom(source: any = {}) {
@@ -61,6 +62,7 @@ export namespace app {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
 	        this.version = source["version"];
+	        this.go_version = source["go_version"];
 	        this.uptime = source["uptime"];
 	    }
 	}

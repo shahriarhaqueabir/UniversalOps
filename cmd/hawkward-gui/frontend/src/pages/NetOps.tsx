@@ -18,21 +18,35 @@ import {
   Info,
   ChevronRight,
   BookOpen,
+  Map,
 } from 'lucide-react'
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from 'recharts'
 import type {
   PingEntry,
   DNSResult,
   ConnectionInfo,
   InterfaceInfo,
+  TraceResult,
+  PortResult,
 } from '@/types'
 
-type NetOpsTab = 'ping' | 'dns' | 'connections' | 'interfaces' | 'bandwidth'
+type NetOpsTab = 'ping' | 'dns' | 'connections' | 'interfaces' | 'traceroute' | 'portscan' | 'bandwidth'
 
 const tabs: { id: NetOpsTab; label: string; icon: React.ReactNode }[] = [
   { id: 'ping', label: 'Probes', icon: <Activity size={20} /> },
   { id: 'dns', label: 'Resolution', icon: <Globe size={20} /> },
   { id: 'connections', label: 'Endpoints', icon: <Cable size={20} /> },
   { id: 'interfaces', label: 'Hardware', icon: <Wifi size={20} /> },
+  { id: 'traceroute', label: 'Route Trace', icon: <Map size={20} /> },
+  { id: 'portscan', label: 'Port Scan', icon: <Search size={20} /> },
   { id: 'bandwidth', label: 'Traffic', icon: <Signal size={20} /> },
 ]
 
@@ -131,9 +145,13 @@ export function NetOps() {
   const [dnsHost, setDnsHost] = useState('google.com')
   const [dnsResult, setDnsResult] = useState<DNSResult | null>(null)
   const [dnsLoading, setDnsLoading] = useState(false)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- bandwidth history items are mixed-type tuples
-  const [_bandwidthHistory, setBandwidthHistory] = useState<any[]>([])
-  void _bandwidthHistory;
+  const [traceTarget, setTraceTarget] = useState('8.8.8.8')
+  const [traceResult, setTraceResult] = useState<TraceResult | null>(null)
+  const [traceRunning, setTraceRunning] = useState(false)
+  const [portScanTarget, setPortScanTarget] = useState('127.0.0.1')
+  const [portScanPorts, setPortScanPorts] = useState('21,22,23,25,53,80,110,143,443,445,993,1433,1521,3306,3389,5432,6379,8080,8443,27017')
+  const [portScanResults, setPortScanResults] = useState<PortResult[]>([])
+  const [portScanLoading, setPortScanLoading] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
 
   // Data Fetching
@@ -145,14 +163,7 @@ export function NetOps() {
       }
       if (activeTab === 'interfaces' || activeTab === 'bandwidth') {
         const res = await call('NetOps.GetInterfaces') as InterfaceInfo[]
-        if (res) {
-          setInterfaces(res)
-          if (activeTab === 'bandwidth') {
-            const totalRx = res.reduce((acc, i) => acc + i.rx_rate_bps, 0) / 1024 / 1024
-            const totalTx = res.reduce((acc, i) => acc + i.tx_rate_bps, 0) / 1024 / 1024
-            setBandwidthHistory(prev => [...prev.slice(-59), { time: new Date().toLocaleTimeString(), rx: totalRx, tx: totalTx }])
-          }
-        }
+        if (res) { setInterfaces(res) }
       }
     } catch (err) { console.error(err) }
     finally { setInitialLoading(false) }
@@ -193,6 +204,32 @@ export function NetOps() {
       setDnsLoading(false)
     }
   }
+
+  const executeTrace = useCallback(async () => {
+    setTraceRunning(true); setTraceResult(null)
+    try {
+      const res = await call('NetOps.Traceroute', traceTarget) as TraceResult
+      setTraceResult(res)
+    } catch (err) {
+      console.error('Traceroute failed:', err)
+      setTraceResult({ target: traceTarget, hops: [], error: String(err) })
+    } finally {
+      setTraceRunning(false)
+    }
+  }, [call, traceTarget])
+
+  const handlePortScan = useCallback(async () => {
+    setPortScanLoading(true); setPortScanResults([])
+    try {
+      const ports = portScanPorts.split(',').map(p => parseInt(p.trim(), 10)).filter(p => !isNaN(p))
+      const res = await call('NetOps.PortScan', portScanTarget, ports) as PortResult[]
+      setPortScanResults(res || [])
+    } catch (err) {
+      console.error('Port scan failed:', err)
+    } finally {
+      setPortScanLoading(false)
+    }
+  }, [call, portScanTarget, portScanPorts])
 
   if (initialLoading) {
     return (
@@ -395,7 +432,7 @@ export function NetOps() {
                     <tbody>
                       {connections.map((c, i) => (
                         <tr key={i} className="border-b border-border/20 hover:bg-white/5 transition-all group">
-                          <td className="px-8 py-4 font-black text-accent">{c.proto}</td>
+                          <td className="px-8 py-4 font-black text-accent">{c.state}</td>
                           <td className="px-8 py-4">
                             <div className="flex flex-col">
                               <span className="text-lg font-black text-text">{c.remote_addr}:{c.remote_port}</span>
@@ -457,6 +494,308 @@ export function NetOps() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {activeTab === 'traceroute' && (
+          <div className="space-y-8 animate-in fade-in duration-500">
+            <SectionBriefing
+              title="Route Trace Analysis"
+              objective="Map the network path to identify routing loops, high-latency hops, or packet loss between the local node and the target."
+              checklist={[
+                "Each hop represents a router along the path.",
+                "High RTT at a single hop may indicate congestion.",
+                "Multiple timeouts in sequence suggests a routing blackhole.",
+                "Consistent latency gradient across hops is expected."
+              ]}
+            />
+
+            {/* Input + Execute */}
+            <div className="flex items-center gap-6 bg-panel-2 border border-border p-6 rounded-[24px] shadow-inner">
+              <div className="relative group flex-1">
+                <Globe size={24} className="absolute left-5 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-accent transition-colors" />
+                <input
+                  type="text"
+                  value={traceTarget}
+                  onChange={(e) => setTraceTarget(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && executeTrace()}
+                  placeholder="Target hostname or IP"
+                  className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-5 text-2xl font-bold text-text placeholder-text-faint focus:outline-none focus:border-accent shadow-xl"
+                />
+              </div>
+              <button onClick={executeTrace} disabled={traceRunning} className="flex items-center gap-3 px-10 py-5 bg-accent text-white text-xl font-black rounded-2xl hover:bg-accent/90 shadow-xl transition-all disabled:opacity-50">
+                {traceRunning ? <RefreshCw size={24} className="animate-spin" /> : <Map size={24} />}
+                {traceRunning ? 'TRACING...' : 'TRACE ROUTE'}
+              </button>
+            </div>
+
+            {/* Results Table */}
+            {traceResult && !traceRunning && (
+              <div className="bg-panel border border-border rounded-[28px] overflow-hidden shadow-2xl">
+                <div className="px-8 py-6 bg-panel-2 border-b border-border flex items-center justify-between">
+                  <h3 className="text-xl font-black text-text uppercase tracking-widest flex items-center gap-3">
+                    <Globe size={20} className="text-accent" /> {traceResult.target}
+                  </h3>
+                  {traceResult.error && (
+                    <span className="px-4 py-1.5 text-sm font-black text-danger bg-danger/10 rounded-full border border-danger/30 uppercase tracking-widest">
+                      FAILED
+                    </span>
+                  )}
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border">
+                      <tr>
+                        <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest w-24">Hop</th>
+                        <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Host / IP</th>
+                        <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest text-right">RTT (ms)</th>
+                        <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest text-right w-28">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {traceResult.hops.map((hop) => (
+                        <tr key={hop.number} className="border-b border-border/20 hover:bg-white/5 transition-all group">
+                          <td className="px-8 py-5 text-2xl font-black text-accent tabular-nums">{hop.number}</td>
+                          <td className="px-8 py-5">
+                            <div className="flex flex-col">
+                              <span className="text-xl font-black text-text">{hop.host || 'Unknown'}</span>
+                              <span className="text-sm font-bold text-text-faint uppercase">{hop.ip || '—'}</span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-5 text-right">
+                            <span className="text-xl font-black text-text tabular-nums">
+                              {hop.rtts_ms.length > 0 ? hop.rtts_ms.join(', ') : '—'}
+                            </span>
+                          </td>
+                          <td className="px-8 py-5 text-right">
+                            <span className={cn(
+                              "px-4 py-1.5 rounded-full text-sm font-black uppercase tracking-widest",
+                              hop.timed ? "bg-warning/10 text-warning border border-warning/30" : "bg-success/10 text-success border border-success/30"
+                            )}>
+                              {hop.timed ? 'TIMED' : 'REACHED'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'portscan' && (
+          <div className="space-y-8 animate-in fade-in duration-500">
+            <SectionBriefing
+              title="Port Scan"
+              objective="Scan a target host for open ports to identify running services, exposed attack surfaces, or unauthorized listeners."
+              checklist={[
+                "Open ports indicate services accepting connections.",
+                "Common ports (21,22,23,25,53,80,110,143,443,445,993,1433,1521,3306,3389,5432,6379,8080,8443,27017) are pre-configured.",
+                "Unrecognized open ports may signal unauthorized services or malware.",
+                "Closed or filtered ports are typically invisible to scanners."
+              ]}
+            />
+
+            {/* Input + Scan Button */}
+            <div className="flex items-center gap-6 bg-panel-2 border border-border p-6 rounded-[24px] shadow-inner">
+              <div className="relative group flex-1">
+                <Globe size={24} className="absolute left-5 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-accent transition-colors" />
+                <input
+                  type="text"
+                  value={portScanTarget}
+                  onChange={(e) => setPortScanTarget(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handlePortScan()}
+                  placeholder="Target hostname or IP"
+                  className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-5 text-2xl font-bold text-text placeholder-text-faint focus:outline-none focus:border-accent shadow-xl"
+                />
+              </div>
+              <div className="relative group w-96">
+                <Network size={24} className="absolute left-5 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-accent transition-colors" />
+                <input
+                  type="text"
+                  value={portScanPorts}
+                  onChange={(e) => setPortScanPorts(e.target.value)}
+                  placeholder="Ports (e.g. 80,443,8080 or comma-separated)"
+                  className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-5 text-lg font-bold text-text placeholder-text-faint focus:outline-none focus:border-accent shadow-xl"
+                />
+              </div>
+              <button onClick={handlePortScan} disabled={portScanLoading} className="flex items-center gap-3 px-10 py-5 bg-accent text-white text-xl font-black rounded-2xl hover:bg-accent/90 shadow-xl transition-all disabled:opacity-50">
+                {portScanLoading ? <RefreshCw size={24} className="animate-spin" /> : <Search size={24} />}
+                {portScanLoading ? 'SCANNING...' : 'SCAN'}
+              </button>
+            </div>
+
+            {/* Results Table */}
+            {portScanResults.length > 0 && !portScanLoading && (
+              <div className="bg-panel border border-border rounded-[28px] overflow-hidden shadow-2xl">
+                <div className="px-8 py-6 bg-panel-2 border-b border-border flex items-center justify-between">
+                  <h3 className="text-xl font-black text-text uppercase tracking-widest flex items-center gap-3">
+                    <Globe size={20} className="text-accent" /> {portScanTarget}
+                  </h3>
+                  <span className="px-4 py-1.5 text-sm font-black text-text-dim bg-panel-3 rounded-full border border-border/30 uppercase tracking-widest">
+                    {portScanResults.filter(p => p.open).length}/{portScanResults.length} OPEN
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border">
+                      <tr>
+                        <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Port</th>
+                        <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Service</th>
+                        <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest text-right">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {portScanResults.map((p, i) => (
+                        <tr key={i} className="border-b border-border/20 hover:bg-white/5 transition-all group">
+                          <td className="px-8 py-5">
+                            <span className="text-2xl font-black text-accent tabular-nums">{p.port}</span>
+                          </td>
+                          <td className="px-8 py-5">
+                            <span className="text-xl font-black text-text">{p.service || 'Unknown'}</span>
+                          </td>
+                          <td className="px-8 py-5 text-right">
+                            <span className={cn(
+                              "px-4 py-1.5 rounded-full text-sm font-black uppercase tracking-widest",
+                              p.open
+                                ? "bg-success/10 text-success border border-success/30"
+                                : "bg-danger/10 text-danger border border-danger/30"
+                            )}>
+                              {p.open ? 'OPEN' : 'CLOSED'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Empty state */}
+            {portScanResults.length === 0 && !portScanLoading && (
+              <div className="bg-panel border border-border rounded-[24px] p-12 shadow-xl text-center">
+                <Search size={48} className="mx-auto mb-4 text-text-faint" />
+                <p className="text-xl font-bold text-text-dim">
+                  Enter a target host and click SCAN to begin.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'bandwidth' && (
+          <div className="space-y-8 animate-in fade-in duration-500">
+            <SectionBriefing
+              title="Traffic Analysis"
+              objective="Monitor bandwidth utilization across all network interfaces. Track real-time throughput and historical traffic patterns to identify congestion and plan capacity."
+              checklist={[
+                "Combined throughput shows aggregate bandwidth demand across all links.",
+                "RX/TX balance indicates asymmetric link usage or duplex mismatches.",
+                "Sustained saturation suggests capacity planning is needed.",
+                "Spike patterns may correlate with large transfers or anomalies."
+              ]}
+            />
+
+            {interfaces.length === 0 ? (
+              <div className="bg-panel border border-border rounded-[24px] p-12 shadow-xl text-center">
+                <Signal size={48} className="mx-auto mb-4 text-text-faint" />
+                <p className="text-xl font-bold text-text-dim">
+                  No interface data available. Visit the Hardware tab first.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <MiniStat
+                    label="Total Interfaces"
+                    value={interfaces.length}
+                    icon={<Wifi size={24} />}
+                  />
+                  <MiniStat
+                    label="Combined RX"
+                    value={(interfaces.reduce((sum, i) => sum + i.rx_rate_bps, 0) / 1_000_000).toFixed(2)}
+                    unit="Mbps"
+                    icon={<Signal size={24} />}
+                  />
+                  <MiniStat
+                    label="Combined TX"
+                    value={(interfaces.reduce((sum, i) => sum + i.tx_rate_bps, 0) / 1_000_000).toFixed(2)}
+                    unit="Mbps"
+                    icon={<Signal size={24} />}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {interfaces.map((iface) => {
+                    const hasHistory = iface.rx_history?.length > 0
+                    const chartData = hasHistory
+                      ? iface.rx_history.map((_, idx) => ({
+                        point: idx,
+                        rx: +(iface.rx_history[idx] / 1_000_000).toFixed(4),
+                        tx: +(iface.tx_history[idx] / 1_000_000).toFixed(4),
+                      }))
+                      : []
+                    const gradId = `bw-${iface.name.replace(/[^a-zA-Z0-9]/g, '')}`
+
+                    return (
+                      <div key={iface.name} className="bg-panel border border-border rounded-[24px] p-6 md:p-8 shadow-xl">
+                        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                          <h3 className="text-lg font-black text-text uppercase tracking-wider">{iface.name}</h3>
+                          <div className="flex items-center gap-4 text-sm font-bold tabular-nums">
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-2.5 h-2.5 rounded-full bg-[#14b8a6]" />
+                              <span className="text-text-dim">RX <span className="text-text">{(iface.rx_rate_bps / 1_000_000).toFixed(2)}</span> Mbps</span>
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-2.5 h-2.5 rounded-full bg-[#3b82f6]" />
+                              <span className="text-text-dim">TX <span className="text-text">{(iface.tx_rate_bps / 1_000_000).toFixed(2)}</span> Mbps</span>
+                            </span>
+                          </div>
+                        </div>
+                        {hasHistory ? (
+                          <ResponsiveContainer width="100%" height={200}>
+                            <AreaChart data={chartData}>
+                              <defs>
+                                <linearGradient id={`${gradId}-rx`} x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.35} />
+                                  <stop offset="95%" stopColor="#14b8a6" stopOpacity={0} />
+                                </linearGradient>
+                                <linearGradient id={`${gradId}-tx`} x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35} />
+                                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                              <XAxis dataKey="point" tick={false} axisLine={false} />
+                              <YAxis tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }} tickFormatter={(v) => `${v}`} width={40} axisLine={false} />
+                              <Tooltip
+                                contentStyle={{
+                                  background: 'rgba(0,0,0,0.85)',
+                                  border: '1px solid rgba(255,255,255,0.1)',
+                                  borderRadius: '12px',
+                                  backdropFilter: 'blur(8px)',
+                                }}
+                                labelStyle={{ display: 'none' }}
+                                formatter={(value: any) => [`${Number(value).toFixed(2)} Mbps`]}
+                              />
+                              <Area type="monotone" dataKey="rx" stackId="1" stroke="#14b8a6" fill={`url(#${gradId}-rx)`} strokeWidth={2} dot={false} />
+                              <Area type="monotone" dataKey="tx" stackId="1" stroke="#3b82f6" fill={`url(#${gradId}-tx)`} strokeWidth={2} dot={false} />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div className="h-[200px] flex items-center justify-center">
+                            <p className="text-sm font-bold text-text-faint">No traffic history available</p>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

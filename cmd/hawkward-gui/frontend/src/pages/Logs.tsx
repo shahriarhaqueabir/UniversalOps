@@ -264,8 +264,20 @@ export function Logs() {
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto bg-background shadow-inner"
       >
+        {/* ── Column headers (sticky, direct child of scroll container) ── */}
+        <div
+          className="sticky top-0 z-10 grid grid-cols-[160px_130px_1fr_160px_40px] bg-panel-2 border-b border-border shadow-md"
+          style={{ height: ROW_HEIGHT }}
+        >
+          <div className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Timestamp</div>
+          <div className="px-4 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Level</div>
+          <div className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Event Message</div>
+          <div className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest text-right">Module</div>
+          <div />
+        </div>
+
         {totalItems === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-text-faint opacity-20 py-40">
+          <div className="flex flex-col items-center justify-center text-text-faint opacity-20 py-40">
             <LayoutList size={120} className="mb-8" />
             <p className="text-4xl font-black uppercase tracking-[0.2em]">Idle Stream</p>
           </div>
@@ -274,18 +286,6 @@ export function Logs() {
             className="relative w-full"
             style={{ height: totalHeight }}
           >
-            {/* ── Column headers (sticky) ── */}
-            <div
-              className="sticky top-0 z-10 grid grid-cols-[160px_130px_1fr_160px_40px] bg-panel-2 border-b border-border shadow-md"
-              style={{ height: ROW_HEIGHT }}
-            >
-              <div className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Timestamp</div>
-              <div className="px-4 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Level</div>
-              <div className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Event Message</div>
-              <div className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest text-right">Module</div>
-              <div />
-            </div>
-
             {/* ── Visible rows ── */}
             {visibleLogs.map((entry, visIdx) => {
               const globalIdx = visibleRange.start + visIdx

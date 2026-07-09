@@ -2,6 +2,7 @@ package netops
 
 import (
 	"bufio"
+	"encoding/csv"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -43,7 +44,17 @@ func getConnectionsWindows() ([]ConnectionInfo, error) {
 		return nil, fmt.Errorf("netstat failed: %w", err)
 	}
 
-	return parseNetstatOutput(string(output))
+	connections, err := parseNetstatOutput(string(output))
+	if err != nil {
+		return nil, err
+	}
+
+	if err := resolveProcessNames(connections); err != nil {
+		// Non-fatal: we still return connections with empty process names
+		common.LogInfo("failed to resolve process names: %v", err)
+	}
+
+	return connections, nil
 }
 
 // getConnectionsLinux parses /proc/net/tcp and /proc/net/udp.
@@ -355,6 +366,50 @@ func parseNetstatOutput(output string) ([]ConnectionInfo, error) {
 	}
 
 	return connections, nil
+}
+
+// resolveProcessNames enriches connection entries with process names
+// by running tasklist to build a PID → process name mapping.
+func resolveProcessNames(connections []ConnectionInfo) error {
+	cfg := common.SystemQuerySandbox()
+	cfg.DenyNetworkAccess = false // tasklist queries the OS process table
+	cmd := common.SandboxedCommandWithConfig(cfg, "tasklist", "/FO", "CSV", "/NH")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("tasklist failed: %w", err)
+	}
+
+	// Build PID → process name map from tasklist CSV output.
+	// Format: "image.exe","PID","SessionName","Session#","MemUsage"
+	pidMap := make(map[int]string)
+	reader := csv.NewReader(strings.NewReader(string(output)))
+	for {
+		record, err := reader.Read()
+		if err != nil {
+			break
+		}
+		if len(record) < 2 {
+			continue
+		}
+		imageName := record[0]
+		pidStr := strings.TrimSpace(record[1])
+		pid, err := strconv.Atoi(pidStr)
+		if err != nil {
+			continue
+		}
+		// Strip .exe extension for cleaner display
+		name := strings.TrimSuffix(imageName, ".exe")
+		pidMap[pid] = name
+	}
+
+	// Enrich connections with process names
+	for i := range connections {
+		if name, ok := pidMap[connections[i].PID]; ok {
+			connections[i].ProcessName = name
+		}
+	}
+
+	return nil
 }
 
 // splitNetstatLine splits a netstat output line by whitespace.

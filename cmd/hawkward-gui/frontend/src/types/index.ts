@@ -156,7 +156,6 @@ export interface TraceResult {
 }
 
 export interface ConnectionInfo {
-  proto: string
   local_addr: string
   local_port: number
   remote_addr: string

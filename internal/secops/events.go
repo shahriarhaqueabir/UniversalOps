@@ -23,13 +23,13 @@ func GetSecurityEvents() ([]SecurityEvent, error) {
 	if common.IsWindows() {
 		// Try Security log first (requires Admin)
 		cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-Command",
-			"Get-WinEvent -LogName Security -MaxEvents 25 -ErrorAction Stop | Select-Object Id,LevelDisplayName,ProviderName,TimeCreated,Message | ConvertTo-Json -Compress")
+			"Get-WinEvent -LogName Security -MaxEvents 25 -ErrorAction Stop | Select-Object Id,LevelDisplayName,ProviderName,TimeCreated,Message | ConvertTo-Json -As Array -Depth 2")
 		output, err := cmd.Output()
 		if err != nil {
 			// Fallback: Try System log (usually accessible by non-admins)
-			common.LogWarn("Security log inaccessible, falling back to System log: %v", err)
+			common.LogInfo("Security log inaccessible, falling back to System log: %v", err)
 			cmd = common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-Command",
-				"Get-WinEvent -LogName System -MaxEvents 25 -ErrorAction SilentlyContinue | Select-Object Id,LevelDisplayName,ProviderName,TimeCreated,Message | ConvertTo-Json -Compress")
+				"Get-WinEvent -LogName System -MaxEvents 25 -ErrorAction SilentlyContinue | Select-Object Id,LevelDisplayName,ProviderName,TimeCreated,Message | ConvertTo-Json -As Array -Depth 2")
 			output, err = cmd.Output()
 			if err != nil {
 				return nil, fmt.Errorf("failed to query Windows security/system event logs: %w", err)
@@ -41,21 +41,23 @@ func GetSecurityEvents() ([]SecurityEvent, error) {
 	return nil, fmt.Errorf("security event log query not supported on this platform")
 }
 
-
 func parseSecurityEventsJSON(jsonStr string) ([]SecurityEvent, error) {
 	jsonStr = strings.TrimSpace(jsonStr)
 	if jsonStr == "" {
 		return nil, fmt.Errorf("empty security event log output")
 	}
 
+	// Clean malformed JSON before parsing
+	cleaned := common.CleanJSON(jsonStr)
+
 	var raw []map[string]interface{}
-	if strings.HasPrefix(jsonStr, "{") {
+	if strings.HasPrefix(cleaned, "{") {
 		var single map[string]interface{}
-		if err := json.Unmarshal([]byte(jsonStr), &single); err != nil {
+		if err := json.Unmarshal([]byte(cleaned), &single); err != nil {
 			return nil, fmt.Errorf("failed to parse security events JSON: %w", err)
 		}
 		raw = []map[string]interface{}{single}
-	} else if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
+	} else if err := json.Unmarshal([]byte(cleaned), &raw); err != nil {
 		return nil, fmt.Errorf("failed to parse security events JSON: %w", err)
 	}
 

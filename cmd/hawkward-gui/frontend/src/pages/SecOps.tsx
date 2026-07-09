@@ -9,11 +9,10 @@ import {
   AlertTriangle,
   Lightbulb,
   ShieldCheck,
-  Zap,
-  Lock,
   UserCheck,
   ShieldAlert,
   History,
+  Zap,
 } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
@@ -22,6 +21,7 @@ import type {
   UserInfo,
   DefenderStatus,
   SecurityEvent,
+  ListeningPort,
 } from '@/types'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Wails bridge type
@@ -216,9 +216,7 @@ function UsersTab({ call }: { call: BackendCall }) {
                 <div className={cn("w-3 h-3 rounded-full shadow-lg", user.is_enabled ? "bg-success" : "bg-danger")} />
               </div>
             </div>
-            <button className="h-14 w-14 rounded-2xl bg-panel-3 border border-border flex items-center justify-center text-text-faint hover:text-accent hover:border-accent transition-all">
-              <Lock size={24} />
-            </button>
+
           </div>
         ))}
       </div>
@@ -284,6 +282,95 @@ function DefenderTab({ call }: { call: BackendCall }) {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── Listening Tab ──
+
+function ListeningTab({ call }: { call: BackendCall }) {
+  const [ports, setPorts] = useState<ListeningPort[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    call('SecOps.GetListeningPorts')
+      .then(res => {
+        setPorts((res as ListeningPort[]) || [])
+        setLoading(false)
+      })
+      .catch((err: unknown) => {
+        console.error(err)
+        setError('Failed to retrieve listening ports.')
+        setLoading(false)
+      })
+  }, [call])
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <ExpertInsight
+        title="Network Surveillance"
+        content="Every open port is a potential vector for unauthorized access. Processes listed here are actively listening for inbound connections. Scrutinize unfamiliar process names, unexpected protocols, or ports outside the well-known range (0-1023)."
+      />
+
+      {loading && (
+        <div className="flex flex-col items-center justify-center py-32 opacity-40">
+          <Radio size={64} className="animate-pulse mb-6 text-accent" />
+          <p className="text-2xl font-black uppercase tracking-[0.15em]">Scanning ports...</p>
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="bg-panel border border-danger/30 rounded-[24px] p-10 shadow-2xl">
+          <div className="flex items-center gap-6">
+            <div className="w-16 h-16 rounded-2xl bg-danger/20 flex items-center justify-center shrink-0">
+              <ShieldAlert size={36} className="text-danger" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-black text-danger mb-2">Scan Failed</h3>
+              <p className="text-xl text-text-dim">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && ports.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-32 opacity-40">
+          <ShieldCheck size={64} className="mb-6 text-success" />
+          <p className="text-2xl font-black uppercase tracking-[0.15em]">No listening ports found</p>
+        </div>
+      )}
+
+      {!loading && !error && ports.length > 0 && (
+        <div className="bg-panel border border-border rounded-[24px] overflow-hidden shadow-2xl">
+          <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+            <table className="w-full text-left border-collapse">
+              <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border shadow-sm">
+                <tr>
+                  <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Port</th>
+                  <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Protocol</th>
+                  <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Process</th>
+                  <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">PID</th>
+                  <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">State</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ports.map((p, i) => (
+                  <tr key={i} className="border-b border-border/20 hover:bg-white/5 transition-all">
+                    <td className="px-8 py-5 text-xl font-black text-accent tabular-nums">{p.port}</td>
+                    <td className="px-8 py-5 font-bold text-lg text-text-faint tabular-nums uppercase">{p.protocol}</td>
+                    <td className="px-8 py-5 text-xl font-bold text-text truncate max-w-md">{p.process_name}</td>
+                    <td className="px-8 py-5 font-bold text-lg text-text-faint tabular-nums">{p.pid}</td>
+                    <td className="px-8 py-5">
+                      <SecurityStatusBadge status={p.state} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -387,12 +474,7 @@ export function SecOps() {
         {activeTab === 'users' && <UsersTab call={call} />}
         {activeTab === 'defender' && <DefenderTab call={call} />}
         {activeTab === 'events' && <EventsTab call={call} />}
-        {activeTab === 'listening' && (
-          <div className="flex flex-col items-center justify-center py-40 opacity-20">
-            <Zap size={80} className="animate-pulse mb-8 text-warning" />
-            <p className="text-4xl font-black uppercase tracking-[0.2em]">Heuristic Scan Loading...</p>
-          </div>
-        )}
+        {activeTab === 'listening' && <ListeningTab call={call} />}
       </div>
     </div>
   )

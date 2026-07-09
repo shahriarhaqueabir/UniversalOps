@@ -4,9 +4,10 @@ package app
 
 // AppInfo holds metadata about the application.
 type AppInfo struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-	Uptime  string `json:"uptime"`
+	Name      string `json:"name"`
+	Version   string `json:"version"`
+	GoVersion string `json:"go_version"`
+	Uptime    string `json:"uptime"`
 }
 
 // ── Dashboard Types ──────────────────────────────────────────────────────────
@@ -273,7 +274,6 @@ type LogEntry struct {
 	Line      string `json:"line"`
 	Source    string `json:"source"`
 }
-
 
 // FileEntry holds a file or directory entry.
 type FileEntry struct {
