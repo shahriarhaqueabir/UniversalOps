@@ -12,7 +12,10 @@ type Runtime = any
 
 export function useEvents(eventName: string, handler: (data: EventPayload) => void) {
   const handlerRef = useRef(handler)
-  handlerRef.current = handler
+
+  useEffect(() => {
+    handlerRef.current = handler
+  }, [handler])
 
   useEffect(() => {
     // Wails v2 runtime events

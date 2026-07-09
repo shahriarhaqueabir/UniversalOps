@@ -10,11 +10,11 @@ const mockSetPingCount = vi.fn()
 const mockSetDnsTimeout = vi.fn()
 
 vi.mock('../stores/useSettingsStore', () => ({
-  useThemeStore: (selector: any) => {
-    const state = { theme: 'dark', toggle: mockToggle }
+  useThemeStore: (selector: ((s: { theme: string; toggle: typeof mockToggle }) => unknown) | undefined) => {
+    const state = { theme: 'dark' as const, toggle: mockToggle }
     return selector ? selector(state) : state
   },
-  useSettingsStore: (selector: any) => {
+  useSettingsStore: (selector: ((s: { refreshInterval: number; pingCount: number; dnsTimeout: number; setRefreshInterval: typeof mockSetRefreshInterval; setPingCount: typeof mockSetPingCount; setDnsTimeout: typeof mockSetDnsTimeout }) => unknown) | undefined) => {
     const state = {
       refreshInterval: 5000,
       pingCount: 4,

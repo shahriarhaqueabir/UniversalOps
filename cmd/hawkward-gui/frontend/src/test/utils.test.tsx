@@ -8,7 +8,8 @@ describe('cn utility', () => {
   })
 
   it('handles conditional classes', () => {
-    expect(cn('base', false && 'hidden', 'visible')).toBe('base visible')
+    const falsy = false as boolean
+    expect(cn('base', falsy && 'hidden', 'visible')).toBe('base visible')
   })
 
   it('merges Tailwind classes (later wins)', () => {

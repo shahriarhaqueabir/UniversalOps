@@ -30,6 +30,7 @@ import { useBackend } from '@/hooks/useBackend'
 import { useEvents } from '@/hooks/useEvents'
 import { cn } from '@/lib/utils'
 import type { DashboardData, TimeSeriesPoint } from '@/types'
+import type { Page } from '@/App'
 
 /* ───────────────────────────────────────────
    Helpers
@@ -199,8 +200,6 @@ function KpiCard({ icon, label, value, unit, status, description, onClick }: { i
 /* ───────────────────────────────────────────
    Main Dashboard
    ─────────────────────────────────────────── */
-
-import type { Page } from '@/App'
 
 export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void }) {
   const { call } = useBackend()

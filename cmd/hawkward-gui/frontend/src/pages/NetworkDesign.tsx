@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from 'react'
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { nanoid } from 'nanoid'
 import { cn } from '@/lib/utils'
 import { DeviceNode } from '@/components/network/DeviceNode'
@@ -234,10 +234,31 @@ function initialConnections(devices: TopologyDevice[]): TopologyConnection[] {
   ]
 }
 
+// ── Persistence helpers ──
+const STORAGE_KEY = 'hawkward-topology'
+
+function loadSavedTopology(): { devices: TopologyDevice[]; connections: TopologyConnection[] } | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    return JSON.parse(raw) as { devices: TopologyDevice[]; connections: TopologyConnection[] }
+  } catch { return null }
+}
+
+function saveTopologyState(devices: TopologyDevice[], connections: TopologyConnection[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ devices, connections }))
+  } catch { /* quota exceeded, ignore */ }
+}
+
 // ── NetworkDesign Page ──
 export function NetworkDesign() {
-  const [devices, setDevices] = useState<TopologyDevice[]>(() => initialDevices())
-  const [connections, setConnections] = useState<TopologyConnection[]>(() => initialConnections(devices))
+  const [devices, setDevices] = useState<TopologyDevice[]>(() => loadSavedTopology()?.devices ?? initialDevices())
+  const [connections, setConnections] = useState<TopologyConnection[]>(() => {
+    const saved = loadSavedTopology()
+    if (saved?.connections) return saved.connections
+    return initialConnections(devices)
+  })
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null)
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null)
   const [mode, setMode] = useState<CanvasMode>('select')
@@ -258,6 +279,12 @@ export function NetworkDesign() {
   const updateConnection = useCallback((id: string, updates: Partial<TopologyConnection>) => {
     setConnections((prev) => prev.map((c) => (c.id === id ? { ...c, ...updates } : c)))
   }, [])
+
+  // ── Auto-save to localStorage (debounced) ──
+  useEffect(() => {
+    const timer = setTimeout(() => saveTopologyState(devices, connections), 500)
+    return () => clearTimeout(timer)
+  }, [devices, connections])
 
   // ── Device actions ──
   const addDevice = useCallback((type: DeviceType) => {

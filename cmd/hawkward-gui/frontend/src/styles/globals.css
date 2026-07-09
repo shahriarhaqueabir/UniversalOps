@@ -96,7 +96,7 @@ body {
   --color-danger: #dc2626;
   --color-sidebar: #eef0f6;
   --color-sidebar-hover: rgba(124, 108, 255, 0.06);
-  --color-border: rgba(0, 0, 0, 0.07);
+  --color-border: rgba(0, 0, 0, 0.12);
 }
 
 /* ── Animation utilities (replaces tailwindcss-animate) ── */

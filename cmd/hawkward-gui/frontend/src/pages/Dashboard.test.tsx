@@ -4,7 +4,7 @@ import { Dashboard } from './Dashboard'
 
 // Mock react-query
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: ({ queryFn }: { queryFn: () => Promise<any> }) => {
+  useQuery: <T,>({ queryFn }: { queryFn?: () => Promise<T> }) => {
     queryFn?.()  // trigger to set data
     return { data: null, isLoading: false }
   },

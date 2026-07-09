@@ -1,11 +1,21 @@
 package netops
 
 import (
+	"os/exec"
+	"runtime"
 	"testing"
 )
 
 func TestPing(t *testing.T) {
-	// Skip in CI if network is restricted, but for local development this is fine
+	// On Linux CI (GitHub Actions, etc.), ping often requires CAP_NET_RAW or root.
+	// Skip if the ping binary itself won't work without elevated privileges.
+	if runtime.GOOS == "linux" {
+		// Check if we can execute a simple ping to localhost without error
+		if err := exec.Command("ping", "-c", "1", "-w", "1", "127.0.0.1").Run(); err != nil {
+			t.Skipf("Skipping ping test: ping requires elevated privileges on this system: %v", err)
+		}
+	}
+
 	target := "127.0.0.1"
 	count := 1
 

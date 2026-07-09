@@ -1,9 +1,8 @@
 # Hawkward Operations Platform
 
-![GitHub release](https://img.shields.io/github/v/release/shahriarhaqueabir/AllOpsFull)
-![Go version](https://img.shields.io/github/go-mod/go-version/shahriarhaqueabir/AllOpsFull)
-![License](https://img.shields.io/github/license/shahriarhaqueabir/AllOpsFull)
-![Downloads](https://img.shields.io/github/downloads/shahriarhaqueabir/AllOpsFull/total)
+![Version](https://img.shields.io/badge/version-v1.3.0-7c6cff)
+![Go](https://img.shields.io/badge/Go-1.26.5-00ADD8)
+![License](https://img.shields.io/badge/license-MIT-2ea44f)
 
 A premium native desktop operations platform — **no programming skills required**.
 
@@ -33,9 +32,9 @@ A premium native desktop operations platform — **no programming skills require
 
 1. Go to the **[Releases page](https://github.com/shahriarhaqueabir/AllOpsFull/releases)**
 2. Under **"Assets"** for the latest release, click the file named:
-   - **Windows**: `hawkward-v1.2.0-windows-amd64.exe` (~14 MB)
-   - **macOS**: `hawkward-v1.2.0-darwin-universal`
-   - **Linux**: `hawkward-v1.2.0-linux-amd64`
+   - **Windows**: `hawkward-v1.3.0-windows-amd64.exe` (~14 MB)
+   - **macOS**: `hawkward-v1.3.0-darwin-universal`
+   - **Linux**: `hawkward-v1.3.0-linux-amd64`
 3. **Double-click** the downloaded file to launch
 
 > ⚠️ **Windows SmartScreen**: The first time you run it, Windows may show "Windows protected your PC". Click **"More info"** → **"Run anyway"**. This happens because the binary is not yet code-signed (common for open-source tools).
@@ -44,10 +43,9 @@ A premium native desktop operations platform — **no programming skills require
 
 If you prefer a proper installer with Start Menu shortcuts:
 
-1. On the Releases page, download `hawkward-v1.2.0-windows-amd64-installer.exe`
+1. On the Releases page, download `hawkward-v1.3.0-windows-amd64-installer.exe`
 2. Double-click the installer
 3. Follow the setup wizard
-4. Launch from the Start Menu or Desktop shortcut
 
 ### System Requirements
 

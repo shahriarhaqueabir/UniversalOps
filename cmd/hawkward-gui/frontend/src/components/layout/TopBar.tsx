@@ -24,9 +24,8 @@ export function TopBar({ currentPage }: TopBarProps) {
 
   return (
     <header
-      className="h-[60px] flex items-center justify-between px-6 flex-shrink-0 border-b border-[var(--color-border)]"
+      className="h-[60px] flex items-center justify-between px-6 flex-shrink-0 border-b border-[var(--color-border)] bg-[var(--color-bg)]"
       style={{
-        background: 'var(--color-bg)',
         backdropFilter: 'blur(14px)',
         WebkitBackdropFilter: 'blur(14px)',
       }}
