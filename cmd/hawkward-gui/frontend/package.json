@@ -22,14 +22,21 @@
     "@radix-ui/react-tabs": "^1.1.17",
     "@radix-ui/react-tooltip": "^1.2.12",
     "@tailwindcss/vite": "^4.3.2",
+    "@tanstack/react-query": "^5.101.2",
+    "@tanstack/react-virtual": "^3.14.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
     "lucide-react": "^1.23.0",
+    "motion": "^12.42.2",
+    "nanoid": "^5.1.16",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "recharts": "^3.9.2",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
-    "tailwindcss": "^4.3.2"
+    "tailwindcss": "^4.3.2",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.1",

@@ -4,16 +4,18 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"testing"
+
+	"github.com/ollama/ollama/api"
 )
 
 func TestCheckOllama_Mock(t *testing.T) {
-	// Create a mock server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/api/tags" {
-			resp := ollamaTagsResponse{
-				Models: []ollamaModel{
+			resp := api.ListResponse{
+				Models: []api.ListModelResponse{
 					{Name: "llama3.2"},
 					{Name: "mistral"},
 				},
@@ -23,7 +25,6 @@ func TestCheckOllama_Mock(t *testing.T) {
 	}))
 	defer server.Close()
 
-	// Set env var to point to mock server
 	os.Setenv("OLLAMA_HOST", server.URL)
 	defer os.Unsetenv("OLLAMA_HOST")
 
@@ -44,8 +45,8 @@ func TestCheckOllama_Mock(t *testing.T) {
 func TestChat_Mock(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/api/chat" {
-			resp := ollamaChatResponse{
-				Message: ChatMessage{Role: "assistant", Content: "Mock response"},
+			resp := api.ChatResponse{
+				Message: api.Message{Role: "assistant", Content: "Mock response"},
 				Done:    true,
 			}
 			json.NewEncoder(w).Encode(resp)
@@ -63,5 +64,13 @@ func TestChat_Mock(t *testing.T) {
 
 	if resp != "Mock response" {
 		t.Errorf("Expected 'Mock response', got %q", resp)
+	}
+}
+
+func TestNewClient(t *testing.T) {
+	u, _ := url.Parse("http://localhost:11434")
+	client := api.NewClient(u, http.DefaultClient)
+	if client == nil {
+		t.Fatal("Expected non-nil client")
 	}
 }

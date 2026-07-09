@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Monitor,
   LayoutList,
@@ -105,33 +106,44 @@ function InfoRow({ label, value, copyable = false }: { label: string, value: str
 
 export function SysOps() {
   const { call } = useBackend()
+  const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<SysOpsTab>('overview')
-  const [cpuInfo, setCpuInfo] = useState<CPUInfo | null>(null)
-  const [memInfo, setMemInfo] = useState<MemoryInfo | null>(null)
-  const [sysInfo, setSysInfo] = useState<SystemInfo | null>(null)
-  const [diskInfo, setDiskInfo] = useState<DiskInfo | null>(null)
-  const [processes, setProcesses] = useState<ProcessInfo[]>([])
   const [search, setSearch] = useState('')
   const [killTarget, setKillTarget] = useState<{ pid: number, name: string } | null>(null)
 
-  const loadData = useCallback(async () => {
-    try {
-      const [c, m, s, p, d] = await Promise.all([
-        call('SysOps.GetCPUInfo'),
-        call('SysOps.GetMemoryInfo'),
-        call('SysOps.GetSystemInfo'),
-        call('SysOps.ListAllProcesses', 100),
-        call('SysOps.GetDiskInfo'),
-      ])
-      setCpuInfo(c as CPUInfo); setMemInfo(m as MemoryInfo); setSysInfo(s as SystemInfo); setProcesses(p as ProcessInfo[]); setDiskInfo(d as DiskInfo)
-    } catch (err) { console.error(err) }
-  }, [call])
+  const { data: cpuInfo } = useQuery<CPUInfo>({
+    queryKey: ['sysops-cpu'],
+    queryFn: async () => { const r = await call('SysOps.GetCPUInfo'); return r as CPUInfo },
+    refetchInterval: 5000,
+  })
 
-  useEffect(() => { loadData(); const t = setInterval(loadData, 5000); return () => clearInterval(t) }, [loadData])
+  const { data: memInfo } = useQuery<MemoryInfo>({
+    queryKey: ['sysops-mem'],
+    queryFn: async () => { const r = await call('SysOps.GetMemoryInfo'); return r as MemoryInfo },
+    refetchInterval: 5000,
+  })
+
+  const { data: sysInfo } = useQuery<SystemInfo>({
+    queryKey: ['sysops-sys'],
+    queryFn: async () => { const r = await call('SysOps.GetSystemInfo'); return r as SystemInfo },
+    refetchInterval: 5000,
+  })
+
+  const { data: diskInfo } = useQuery<DiskInfo>({
+    queryKey: ['sysops-disk'],
+    queryFn: async () => { const r = await call('SysOps.GetDiskInfo'); return r as DiskInfo },
+    refetchInterval: 5000,
+  })
+
+  const { data: processes = [] } = useQuery<ProcessInfo[]>({
+    queryKey: ['sysops-processes'],
+    queryFn: async () => { const r = await call('SysOps.ListAllProcesses', 100); return (r as ProcessInfo[]) || [] },
+    refetchInterval: 5000,
+  })
 
   const killProcess = async (pid: number) => {
     await call('DevOps.KillProcess', pid)
-    loadData()
+    queryClient.invalidateQueries({ queryKey: ['sysops-processes'] })
     setKillTarget(null)
   }
 

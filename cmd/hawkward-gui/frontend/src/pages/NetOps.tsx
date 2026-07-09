@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import {
@@ -140,8 +141,6 @@ export function NetOps() {
   const [pingTarget, setPingTarget] = useState('8.8.8.8')
   const [pingRunning, setPingRunning] = useState(false)
   const [pingEntries, setPingEntries] = useState<PingEntry[]>([])
-  const [connections, setConnections] = useState<ConnectionInfo[]>([])
-  const [interfaces, setInterfaces] = useState<InterfaceInfo[]>([])
   const [dnsHost, setDnsHost] = useState('google.com')
   const [dnsServer, setDnsServer] = useState('')
   const [dnsResult, setDnsResult] = useState<DNSResult | null>(null)
@@ -153,24 +152,28 @@ export function NetOps() {
   const [portScanPorts, setPortScanPorts] = useState('21,22,23,25,53,80,110,143,443,445,993,1433,1521,3306,3389,5432,6379,8080,8443,27017')
   const [portScanResults, setPortScanResults] = useState<PortResult[]>([])
   const [portScanLoading, setPortScanLoading] = useState(false)
-  const [initialLoading, setInitialLoading] = useState(true)
 
-  // Data Fetching
-  const fetchNetData = useCallback(async () => {
-    try {
-      if (activeTab === 'connections') {
-        const res = await call('NetOps.GetConnections')
-        setConnections((res as ConnectionInfo[]) || [])
-      }
-      if (activeTab === 'interfaces' || activeTab === 'bandwidth') {
-        const res = await call('NetOps.GetInterfaces') as InterfaceInfo[]
-        if (res) { setInterfaces(res) }
-      }
-    } catch (err) { console.error(err) }
-    finally { setInitialLoading(false) }
-  }, [call, activeTab])
+  // Connections — polled via react-query
+  const { data: connections = [], isLoading: connectionsLoading } = useQuery<ConnectionInfo[]>({
+    queryKey: ['netops-connections'],
+    queryFn: async () => {
+      const res = await call('NetOps.GetConnections')
+      return (res as ConnectionInfo[]) || []
+    },
+    refetchInterval: activeTab === 'connections' ? 2000 : false,
+  })
 
-  useEffect(() => { fetchNetData(); const t = setInterval(fetchNetData, 2000); return () => clearInterval(t) }, [fetchNetData])
+  // Interfaces — polled via react-query
+  const { data: interfaces = [], isLoading: interfacesLoading } = useQuery<InterfaceInfo[]>({
+    queryKey: ['netops-interfaces'],
+    queryFn: async () => {
+      const res = await call('NetOps.GetInterfaces') as InterfaceInfo[]
+      return res || []
+    },
+    refetchInterval: (activeTab === 'interfaces' || activeTab === 'bandwidth') ? 2000 : false,
+  })
+
+  const initialLoading = connectionsLoading && interfacesLoading
 
   const executePing = useCallback(async () => {
     try {
@@ -867,8 +870,8 @@ export function NetOps() {
                               <YAxis tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }} tickFormatter={(v: number) => `${v}`} width={40} axisLine={false} />
                               <Tooltip
                                 contentStyle={{
-                                  background: 'rgba(0,0,0,0.85)',
-                                  border: '1px solid rgba(255,255,255,0.1)',
+                                  background: 'var(--color-panel)',
+                                  border: '1px solid var(--color-border)',
                                   borderRadius: '12px',
                                   backdropFilter: 'blur(8px)',
                                 }}

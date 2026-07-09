@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Terminal,
   Server,
@@ -62,24 +63,6 @@ function StatusBadge({ status }: { status: string }) {
 
 export function DevOps() {
   const [activeTab, setActiveTab] = useState<TabId>('terminal')
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 50)
-    return () => clearTimeout(t)
-  }, [])
-
-  if (loading) {
-    return (
-      <div className="p-6 space-y-4 animate-pulse">
-        <div className="h-8 w-48 bg-panel-2 rounded" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="h-32 bg-panel-2 rounded" />
-          <div className="h-32 bg-panel-2 rounded" />
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="flex flex-col h-full bg-[var(--color-bg)]">
@@ -284,15 +267,18 @@ function TerminalTab() {
 
 function PowerShellProTab() {
   const { call } = useBackend()
-  const [workflows, setWorkflows] = useState<string[]>([])
   const [isRunning, setIsRunning] = useState(false)
   const [output, setOutput] = useState('')
   const [selectedWorkflow, setSelectedWorkflow] = useState('')
   const [confirmOpen, setConfirmOpen] = useState(false)
 
-  useEffect(() => {
-    call('DevOps.GetPowerShellWorkflows').then(res => setWorkflows(res as string[]))
-  }, [call])
+  const { data: workflows = [] } = useQuery<string[]>({
+    queryKey: ['devops-workflows'],
+    queryFn: async () => {
+      const res = await call('DevOps.GetPowerShellWorkflows')
+      return (res as string[]) || []
+    },
+  })
 
   const runWorkflow = async (name: string) => {
     setIsRunning(true)
@@ -393,36 +379,26 @@ function PowerShellProTab() {
 
 function ServicesTab() {
   const { call } = useBackend()
-  const [services, setServices] = useState<ServiceEntry[]>([])
   const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState<{ name: string; action: string } | null>(null)
+  const queryClient = useQueryClient()
 
-  const fetchServices = useCallback(async () => {
-    setLoading(true)
-    try {
+  const { data: services = [], isLoading: loading, refetch: refetchServices } = useQuery<ServiceEntry[]>({
+    queryKey: ['devops-services'],
+    queryFn: async () => {
       const res = await call('DevOps.GetServices')
-      setServices((res as ServiceEntry[]) || [])
-    } catch (err) {
-      console.error(err)
-      setServices([])
-    } finally {
-      setLoading(false)
-    }
-  }, [call])
+      return (res as ServiceEntry[]) || []
+    },
+  })
 
   const controlService = async (name: string, action: string) => {
     const success = await call('DevOps.ControlService', name, action)
     if (success) {
-      fetchServices()
+      queryClient.invalidateQueries({ queryKey: ['devops-services'] })
     }
     setPendingAction(null)
   }
-
-  useEffect(() => {
-    fetchServices()
-  }, [fetchServices])
 
   const filtered = services.filter(s =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -473,7 +449,7 @@ function ServicesTab() {
         </div>
 
         <button
-          onClick={fetchServices}
+          onClick={() => refetchServices()}
           className="p-3.5 bg-panel border border-border rounded-xl hover:bg-panel-3 text-text-dim hover:text-text transition-all shadow-md active:rotate-180 duration-500"
         >
           <RefreshCw size={24} />

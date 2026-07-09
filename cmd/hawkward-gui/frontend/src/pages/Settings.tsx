@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   Monitor,
   Activity,
@@ -11,7 +11,7 @@ import {
 import { cn } from '@/lib/utils'
 import * as Slider from '@radix-ui/react-slider'
 import { useBackend } from '@/hooks/useBackend'
-import { useTheme } from '@/hooks/useTheme'
+import { useThemeStore, useSettingsStore } from '@/stores/useSettingsStore'
 
 // ── Section Card (aligned with Squib design system) ──
 
@@ -43,19 +43,6 @@ function SettingRow({ label, description, children }: { label: string; descripti
   )
 }
 
-// ── localStorage helpers ──
-
-function loadSetting<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key)
-    return raw !== null ? (JSON.parse(raw) as T) : fallback
-  } catch { return fallback }
-}
-
-function saveSetting<T>(key: string, value: T): void {
-  try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* ignore quota errors */ }
-}
-
 // ══════════════════════════════════
 //  Settings Page
 // ══════════════════════════════════
@@ -85,37 +72,33 @@ const DEFAULT_APP_INFO: AppInfo = {
 export function Settings() {
   const { call } = useBackend()
 
-  // Theme — use the shared hook instead of local state
-  const { theme, toggle } = useTheme()
+  // Theme — from zustand store
+  const { theme, toggle } = useThemeStore()
 
-  // Collection / Refresh
-  const [refreshInterval, setRefreshInterval] = useState(() => loadSetting('hawkward_refreshInterval', 5000))
+  // Settings — from zustand store (auto-persisted to localStorage)
+  const { refreshInterval, pingCount, dnsTimeout, setRefreshInterval, setPingCount, setDnsTimeout } = useSettingsStore()
 
-  // Network
-  const [pingCount, setPingCount] = useState(() => loadSetting('hawkward_pingCount', 4))
-  const [dnsTimeout, setDnsTimeout] = useState(() => loadSetting('hawkward_dnsTimeout', 2000))
-
-  // About
-  const [appInfo, setAppInfo] = useState<AppInfo>(DEFAULT_APP_INFO)
-
-  useEffect(() => {
-    call('App.GetAppInfo')
-      .then((result: unknown) => {
+  // About — via react-query
+  const { data: appInfo = DEFAULT_APP_INFO } = useQuery<AppInfo>({
+    queryKey: ['app-info'],
+    queryFn: async () => {
+      try {
+        const result = await call('App.GetAppInfo') as Partial<AppInfo>
         if (result) {
-          const info = result as Partial<AppInfo>
-          setAppInfo({
-            name: info.name || DEFAULT_APP_INFO.name,
-            version: info.version || DEFAULT_APP_INFO.version,
-            go_version: info.go_version || DEFAULT_APP_INFO.go_version,
-            uptime: info.uptime || DEFAULT_APP_INFO.uptime,
-          })
+          return {
+            name: result.name || DEFAULT_APP_INFO.name,
+            version: result.version || DEFAULT_APP_INFO.version,
+            go_version: result.go_version || DEFAULT_APP_INFO.go_version,
+            uptime: result.uptime || DEFAULT_APP_INFO.uptime,
+          }
         }
-      })
-      .catch(() => {
-        // Backend unavailable — keep defaults; not user-facing critical
+      } catch {
         console.warn('[Settings] Failed to fetch AppInfo, using defaults')
-      })
-  }, [call])
+      }
+      return DEFAULT_APP_INFO
+    },
+    staleTime: 60000,
+  })
 
   const isDark = theme === 'dark'
 
@@ -171,7 +154,6 @@ export function Settings() {
             onChange={(e) => {
               const val = Number(e.target.value)
               setRefreshInterval(val)
-              saveSetting('hawkward_refreshInterval', val)
               call('PipelineAPI.UpdateSettings', val, 0)
             }}
             className="bg-panel-2 border border-border rounded-xl px-4 py-2.5 text-base font-bold text-text focus:outline-none focus:border-accent transition-colors"
@@ -194,7 +176,7 @@ export function Settings() {
           <div className="flex items-center gap-3 w-44">
             <Slider.Root
               value={[pingCount]}
-              onValueChange={([v]: number[]) => { setPingCount(v); saveSetting('hawkward_pingCount', v) }}
+              onValueChange={([v]: number[]) => { setPingCount(v) }}
               min={1}
               max={20}
               step={1}
@@ -216,7 +198,7 @@ export function Settings() {
           <div className="flex items-center gap-3 w-44">
             <Slider.Root
               value={[dnsTimeout]}
-              onValueChange={([v]: number[]) => { setDnsTimeout(v); saveSetting('hawkward_dnsTimeout', v) }}
+              onValueChange={([v]: number[]) => { setDnsTimeout(v) }}
               min={500}
               max={10000}
               step={100}
