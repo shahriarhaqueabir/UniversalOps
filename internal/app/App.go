@@ -109,7 +109,7 @@ func (a *App) Shutdown(ctx context.Context) {
 func (a *App) GetAppInfo() AppInfo {
 	return AppInfo{
 		Name:      "Hawkward Operations Platform",
-		Version:   "1.1.0",
+		Version:   "1.1.1",
 		GoVersion: goruntime.Version(),
 		Uptime:    common.FormatUptime(uint64(time.Since(a.startedAt).Seconds())),
 	}
