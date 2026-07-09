@@ -151,13 +151,14 @@ export function Logs() {
     return expandedIdx === i ? ROW_HEIGHT + EXPANDED_HEIGHT : ROW_HEIGHT
   }, [expandedIdx])
 
-  // Compute total height by summing each row's height
+  // Compute total height — single expanded row at a time
+  // When no row is expanded: all rows are ROW_HEIGHT
+  // When a row is expanded: add extra EXPANDED_HEIGHT on top of its ROW_HEIGHT
   const totalHeight = useMemo(() => {
-    if (!expandedIdx) {
-      return totalItems * ROW_HEIGHT
-    }
-    // If something is expanded, sum individually (simpler: use expanded avg)
-    return totalItems * ROW_HEIGHT + EXPANDED_HEIGHT
+    const base = totalItems * ROW_HEIGHT
+    if (expandedIdx === null) return base
+    // The expanded row already has ROW_HEIGHT in 'base'; we add the extra detail height
+    return base + EXPANDED_HEIGHT
   }, [totalItems, expandedIdx])
 
   // Compute row offsets for positioning

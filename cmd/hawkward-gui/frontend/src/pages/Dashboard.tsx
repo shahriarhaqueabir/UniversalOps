@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   Cpu,
   MemoryStick,
@@ -204,8 +204,9 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
   const { call } = useBackend()
   const [data, setData] = useState<DashboardData | null>(null)
   const [cpuHistory, setCpuHistory] = useState<TimeSeriesPoint[]>([])
-  // Only need setAlerts for the event callback; alerts value is unused
-  const setAlerts = useState<AlertInfo[]>([])[1];
+  // Ref for accumulating alert events (no need to re-render on every alert)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const alertCount = useRef(0);
 
   useEffect(() => {
     call('Dashboard.GetDashboardData').then(res => setData(res as DashboardData))
@@ -220,8 +221,8 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
   }, []))
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Wails event payload is dynamic
-  useEvents('alert', useCallback((payload: any) => {
-    setAlerts(prev => [payload, ...prev].slice(0, 50))
+  useEvents('alert', useCallback((_payload: any) => {
+    alertCount.current++
   }, []))
 
   if (!data) return (

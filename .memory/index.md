@@ -18,6 +18,8 @@
 | T-09 | 🔲 TODO | Write no-programmer launch guide in README |
 | T-10 | 🔲 TODO | Build, tag & push v1.2.0 |
 | T-11 | ✅ DONE | UI/UX Review & CSS Theming Fixes |
+| T-12 | ✅ DONE | Library Research & Open-Source Report |
+| T-13 | ✅ DONE | Phase 2 Bugfixes — Dashboard state, Logs scrolling, empty states, accessibility |
 
 ## Completed
 
@@ -25,42 +27,54 @@
 |----|--------|-------------|
 | Sprint 18 | ✅ DONE | Release Hardening — tests, race detector, v1.1.1 tagged |
 | T-11 | ✅ DONE | UI/UX Review & CSS Theming Fixes |
+| T-12 | ✅ DONE | Library Research & Open-Source Report — saved to `.memory/topics/library-research.md` |
+| T-13 | ✅ DONE | Phase 2 Bugfixes — code review and fixes applied |
 
 ## T-11: UI/UX Review & CSS Theming Fixes
 
 ### Changes Made
 1. **Fixed version strings**: Sidebar `v0.1.0` → `v1.1.1`, Settings `0.1.0` → `1.1.1`
-2. **Fixed CSS theme references across all files**: Replaced undefined Tailwind color utilities (`bg-card`, `text-primary`, `text-muted`, `bg-primary`, `text-primary-foreground`, `bg-background`, `border-primary`, `placeholder-muted`) with project-defined CSS variables
-3. **Dashboard loading state**: Replaced plain text "Synching Neural Bridge..." with proper skeleton loader
-4. **Replaced hardcoded hex colors**: In AreaChart, Gauge, ConnectionLine with CSS variable references
-5. **Added CSS animation fallbacks**: For `animate-in`, `fade-in`, `zoom-in-95`, `slide-in-from-*` classes (since `tailwindcss-animate` not in dependencies)
-6. **Added global focus-visible styles**: Keyboard accessibility with accent-colored focus rings
-7. **Fixed color mappings**: In DevOps StatusBadge, SecOps SecurityStatusBadge, AIOps StatusBadge, and many other components
+2. **Fixed CSS theme references across all files**: Replaced undefined Tailwind color utilities with project-defined CSS variables
+3. **Dashboard loading state**: Proper skeleton loader replacing plain text
+4. **Replaced hardcoded hex colors**: In chart components with CSS variable references
+5. **Added CSS animation fallbacks**: For `animate-in`, `fade-in`, `zoom-in-95`, `slide-in-from-*` classes
+6. **Added global focus-visible styles**: Keyboard accessibility
 
-### Files Changed (18 TSX files + 1 CSS file)
-- `Sidebar.tsx`, `Settings.tsx` — version strings
-- `ExportDialog.tsx`, `SettingsDialog.tsx` — full CSS theme refactor
-- `AlertBadge.tsx`, `HealthCard.tsx` — CSS variable replacements
-- `ConfirmDialog.tsx` — CSS variable replacements
-- `DevOps.tsx`, `SecOps.tsx`, `NetOps.tsx` — StatusBadge + all broken classes
-- `AIOps.tsx` — ChatBubble, StatusBadge, decorative elements
-- `Logs.tsx` — bg-background → bg-[var(--color-bg)]
-- `MainContent.tsx`, `SysOps.tsx` — bg-background → bg-[var(--color-bg)]
-- `NetworkDesign.tsx` — full CSS theme refactor (toolbar, panels, canvas)
-- `DeviceNode.tsx`, `ConnectionLine.tsx` — CSS vars
-- `AreaChart.tsx`, `Gauge.tsx`, `MiniSparkline.tsx` — hardcoded hex → CSS vars
-- `Dashboard.tsx` — skeleton loading state
-- `globals.css` — animation keyframes + focus-visible styles
+## T-12: Library Research & Open-Source Report
 
-### Known Risks
-- `tailwindcss-animate` package not added (avoided npm install without approval). Manual CSS animations used instead — behavior is equivalent
-- Setting `appInfo.version` hardcoded to `1.1.1` — the `App.GetAppInfo()` Go binding will override this at runtime
+Saved to `.memory/topics/library-research.md` — full report with 12+ library evaluations across three effort tiers.
+
+Key recommendations:
+- **P0**: `tailwindcss-animate` (remove manual CSS), `@tanstack/react-virtual` (fix scrolling)
+- **P1**: `zustand` (shared state), `sonner` (toasts), `@tanstack/react-query` (data fetching)
+- **P2**: `date-fns` (formatting), `motion` (animations)
+
+## T-13: Phase 2 Bugfixes
+
+### Changes Made
+1. **Dashboard alert state**: Fixed `useState` that only extracted setter (`[1]`) — refactored to use `useRef` for alert accumulation
+2. **Logs virtual scrolling**: Fixed `totalHeight` calculation to properly account for expanded rows
+3. **Empty states**: Improved empty-state rendering across SysOps (processes), DevOps (services, files), SecOps (events, rules, ports)
+4. **Accessibility**: Added ARIA labels to tab buttons, close buttons, interactive elements across all pages
+5. **Settings Radix slider focus**: Added `@starting-style` equivalent for slider thumbs
+6. **Added frontend test**: Basic unit test for `cn()` utility and initial ErrorBoundary smoke test
+
+### Files Changed
+- `src/pages/Dashboard.tsx` — refactored alert state to useRef
+- `src/pages/SysOps.tsx` — improved empty/skeleton states
+- `src/pages/DevOps.tsx` — aria labels, empty state improvements
+- `src/pages/SecOps.tsx` — aria labels, empty states
+- `src/pages/Logs.tsx` — fixed virtual scroll height calculation
+- `src/test/` — added basic frontend test file
 
 ## Known Issues
 - TUI fully removed — no remnants ✅
 - SQLite DB at `hawkward.db` in app working directory
 - Build: `wails build` (NOT `go build`)
+- Dead components (identified, not removed): HealthCard, AlertBadge, AreaChart, Gauge, MiniSparkline, ExportDialog, SettingsDialog
 
 ## Topics
-- [[sprint-19-production-stabilization]] — Sprint 19 tickets and detail
-- [[ui-ux-review]] — CSS theming fixes and UI audit results
+- [[sprint-19-production-stabilization]] — Sprint 19 tickets
+- [[ui-ux-review]] — CSS theming fixes
+- [[codebase-research]] — Architecture overview
+- [[library-research]] — Library recommendations
