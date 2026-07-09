@@ -44,13 +44,15 @@ type NetworkMetric struct {
 
 // CPUInfo holds CPU details and usage.
 type CPUInfo struct {
-	Percent   float64   `json:"percent"`
-	PerCPU    []float64 `json:"per_cpu"`
-	ModelName string    `json:"model_name"`
-	CoreCount int       `json:"core_count"`
-	LoadAvg1  float64   `json:"load_avg_1"`
-	LoadAvg5  float64   `json:"load_avg_5"`
-	LoadAvg15 float64   `json:"load_avg_15"`
+	Percent       float64   `json:"percent"`
+	PerCPU        []float64 `json:"per_cpu"`
+	ModelName     string    `json:"model_name"`
+	LogicalCores  int       `json:"logical_cores"`
+	PhysicalCores int       `json:"physical_cores"`
+	CoreCount     int       `json:"core_count"`
+	LoadAvg1      float64   `json:"load_avg_1"`
+	LoadAvg5      float64   `json:"load_avg_5"`
+	LoadAvg15     float64   `json:"load_avg_15"`
 }
 
 // MemoryInfo holds RAM and swap details.
@@ -280,12 +282,14 @@ type LogEntry struct {
 
 // FileEntry holds a file or directory entry.
 type FileEntry struct {
-	Name    string `json:"name"`
-	Path    string `json:"path"`
-	Size    string `json:"size"`
-	IsDir   bool   `json:"is_dir"`
-	Mode    string `json:"mode"`
-	ModTime string `json:"mod_time"`
+	Name     string `json:"name"`
+	Path     string `json:"path"`
+	Size     string `json:"size"`
+	RawSize  int64  `json:"raw_size"`
+	IsDir    bool   `json:"is_dir"`
+	IsBinary bool   `json:"is_binary"`
+	Mode     string `json:"mode"`
+	ModTime  string `json:"mod_time"`
 }
 
 // ServiceEntry holds a system service entry.
@@ -306,10 +310,11 @@ type ChatMessage struct {
 
 // OllamaStatus holds Ollama service status.
 type OllamaStatus struct {
-	Available bool   `json:"available"`
-	Model     string `json:"model"`
-	Version   string `json:"version"`
-	Error     string `json:"error,omitempty"`
+	Available       bool     `json:"available"`
+	Model           string   `json:"model"`
+	Version         string   `json:"version"`
+	AvailableModels []string `json:"available_models"`
+	Error           string   `json:"error,omitempty"`
 }
 
 // AnomalyInfo holds a detected anomaly.

@@ -17,9 +17,10 @@ type ChatMessage struct {
 
 // OllamaStatus represents the availability and configuration of Ollama.
 type OllamaStatus struct {
-	Available bool
-	Model     string
-	Version   string
+	Available       bool
+	Model           string
+	Version         string
+	AvailableModels []string
 }
 
 // ollamaChatRequest is the request body for /api/chat.
@@ -80,13 +81,14 @@ func CheckOllama() (*OllamaStatus, error) {
 	}
 
 	modelName := getOllamaModel()
+	availableModels := make([]string, 0, len(tagsResp.Models))
 	if len(tagsResp.Models) > 0 {
 		// Verify if the requested model exists, otherwise fallback to the first available
 		found := false
 		for _, m := range tagsResp.Models {
+			availableModels = append(availableModels, m.Name)
 			if m.Name == modelName {
 				found = true
-				break
 			}
 		}
 		if !found {
@@ -95,9 +97,10 @@ func CheckOllama() (*OllamaStatus, error) {
 	}
 
 	return &OllamaStatus{
-		Available: true,
-		Model:     modelName,
-		Version:   "detected",
+		Available:       true,
+		Model:           modelName,
+		Version:         "detected",
+		AvailableModels: availableModels,
 	}, nil
 }
 

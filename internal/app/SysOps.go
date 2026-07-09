@@ -31,13 +31,15 @@ func (s *SysOps) GetCPUInfo() CPUInfo {
 		return CPUInfo{}
 	}
 	return CPUInfo{
-		Percent:   stats.Percent,
-		PerCPU:    stats.PerCPU,
-		ModelName: stats.ModelName,
-		CoreCount: stats.CoreCount,
-		LoadAvg1:  stats.LoadAvg1,
-		LoadAvg5:  stats.LoadAvg5,
-		LoadAvg15: stats.LoadAvg15,
+		Percent:       stats.Percent,
+		PerCPU:        stats.PerCPU,
+		ModelName:     stats.ModelName,
+		LogicalCores:  stats.LogicalCores,
+		PhysicalCores: stats.PhysicalCores,
+		CoreCount:     stats.CoreCount,
+		LoadAvg1:      stats.LoadAvg1,
+		LoadAvg5:      stats.LoadAvg5,
+		LoadAvg15:     stats.LoadAvg15,
 	}
 }
 

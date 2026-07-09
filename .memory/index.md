@@ -19,6 +19,10 @@
 | C-10 | ✅ DONE | `wails build -skipbindings` — Builds in 23.8s, 17MB binary |
 | C-11 | ✅ DONE | NetOps Enhancement Loop 1 — T-01 complete (full tests), Ping Jitter + Chart added, DNS custom resolver support added |
 | C-12 | ✅ DONE | SecOps Enhancement Loop 2 — T-02 complete (full tests), Firewall high-risk flagging, External listener detection |
+| C-13 | ✅ DONE | DevOps Enhancement Loop 3 — FileBrowser breadcrumbs + binary safety, Service sc-fallback, DevOps tests added |
+| C-14 | ✅ DONE | SysOps Enhancement Loop 4 — Physical/Logical core detection, Load Saturation Index, Memory/Disk/System tests added |
+| C-15 | ✅ DONE | AIOps Enhancement Loop 5 — Ollama model discovery, Chat suggested prompts, AIOps mock tests added |
+| C-16 | ✅ DONE | T-03 complete — MinGW installed, `go test -race ./...` passed across all modules |
 
 ## Completed (30 Review Loops)
 

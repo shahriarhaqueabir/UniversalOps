@@ -250,37 +250,59 @@ function ChatTab() {
 
       {/* Input Area */}
       <div className="p-8 bg-panel-2 border-t border-border relative z-20">
-        <div className="max-w-5xl mx-auto flex items-end gap-4">
-          <div className="relative flex-1 group">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask about system health, anomalies, or network state..."
-              rows={1}
-              className="w-full bg-[#0f172a] border border-border rounded-2xl px-6 py-5 text-xl text-text placeholder-text-faint focus:outline-none focus:border-accent transition-all shadow-inner resize-none min-h-[64px] max-h-40"
-              style={{ height: 'auto' }}
-            />
-            <div className="absolute right-4 bottom-4 flex items-center gap-3 text-text-faint">
-              <span className="text-xs font-bold uppercase tracking-tighter group-focus-within:text-accent transition-colors">Shift+Enter for newline</span>
-              <div className="w-px h-3 bg-border" />
-              <Zap size={14} className="group-focus-within:text-warning transition-colors" />
+        <div className="max-w-5xl mx-auto space-y-6">
+          {/* Suggested Prompts */}
+          {messages.length < 3 && (
+            <div className="flex flex-wrap gap-3">
+              {[
+                "Analyze recent system health",
+                "Check for security anomalies",
+                "Review network connection density",
+                "Summarize resource usage trends"
+              ].map(prompt => (
+                <button
+                  key={prompt}
+                  onClick={() => { setInput(prompt); }}
+                  className="px-4 py-2 bg-panel border border-border rounded-full text-sm font-bold text-text-dim hover:text-accent hover:border-accent/40 transition-all"
+                >
+                  {prompt}
+                </button>
+              ))}
             </div>
+          )}
+
+          <div className="flex items-end gap-4">
+            <div className="relative flex-1 group">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask about system health, anomalies, or network state..."
+                rows={1}
+                className="w-full bg-[#0f172a] border border-border rounded-2xl px-6 py-5 text-xl text-text placeholder-text-faint focus:outline-none focus:border-accent transition-all shadow-inner resize-none min-h-[64px] max-h-40"
+                style={{ height: 'auto' }}
+              />
+              <div className="absolute right-4 bottom-4 flex items-center gap-3 text-text-faint">
+                <span className="text-xs font-bold uppercase tracking-tighter group-focus-within:text-accent transition-colors">Shift+Enter for newline</span>
+                <div className="w-px h-3 bg-border" />
+                <Zap size={14} className="group-focus-within:text-warning transition-colors" />
+              </div>
+            </div>
+            <button
+              onClick={handleSend}
+              disabled={!input.trim() || isTyping}
+              className="h-16 w-16 flex items-center justify-center bg-accent text-white rounded-2xl hover:bg-accent/90 disabled:opacity-30 disabled:scale-95 transition-all shadow-lg active:scale-90"
+            >
+              <Send size={28} />
+            </button>
+            <button
+              onClick={() => setMessages([])}
+              className="h-16 w-16 flex items-center justify-center text-text-faint border border-border rounded-2xl hover:bg-danger/10 hover:text-danger transition-all"
+              title="Clear History"
+            >
+              <Trash2 size={24} />
+            </button>
           </div>
-          <button
-            onClick={handleSend}
-            disabled={!input.trim() || isTyping}
-            className="h-16 w-16 flex items-center justify-center bg-accent text-white rounded-2xl hover:bg-accent/90 disabled:opacity-30 disabled:scale-95 transition-all shadow-lg active:scale-90"
-          >
-            <Send size={28} />
-          </button>
-          <button
-            onClick={() => setMessages([])}
-            className="h-16 w-16 flex items-center justify-center text-text-faint border border-border rounded-2xl hover:bg-danger/10 hover:text-danger transition-all"
-            title="Clear History"
-          >
-            <Trash2 size={24} />
-          </button>
         </div>
       </div>
     </div>

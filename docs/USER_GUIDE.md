@@ -62,11 +62,10 @@ Currently, Hawkward focuses on local AI for privacy and offline capability. Inte
 ## 3. Features Deep Dive
 
 ### SysOps (System Operations)
-- **Mechanism**: Uses the `gopsutil` library to poll system metrics directly from the OS kernel/WMI.
-- **Commands**: 
-  - `1`: Overview dashboard (CPU/RAM/Disk).
-  - `2`: Process table (sorted by CPU).
-  - `3`: Detailed host info.
+- **Mechanism**: Uses `gopsutil` to poll system metrics from the OS kernel.
+- **Compute Audit**: Distinguishes between **Physical Cores** and **Logical Threads** (SMT).
+- **Load Saturation**: Calculates a real-time **Saturation Index** (Load Avg relative to core count) to identify system bottlenecks.
+- **Process Management**: Features a runtime audit with PID tracking and resource impact assessment.
 
 ### NetOps (Network Operations)
 - **Mechanism**: 
@@ -84,11 +83,15 @@ Currently, Hawkward focuses on local AI for privacy and offline capability. Inte
 
 ### DevOps (Development Operations)
 - **Mechanism**: A safe wrapper around shell execution and file system APIs.
-- **Log Tailer**: Uses a sliding window buffer to follow file updates in real-time.
+- **Interactive Terminal**: Destructive commands (rm, del) are intercepted and require explicit confirmation.
+- **File Explorer**: Features **Breadcrumb Navigation** and **Binary Safety** (prevents viewing corrupted/binary data as text).
+- **Service Control**: Orchestrates system services with an `sc query` fallback for non-admin environments.
 
 ### AI Ops (AI Operations)
-- **Natural Language Queries**: You can ask "What is my CPU usage?" and Hawkward will parse your local system state to answer without needing an LLM if the query is deterministic. For complex questions, it routes to Ollama.
-- **Anomaly Detection**: Hawkward maintains a short history of metrics. It triggers a warning in the status bar if it detects sustained high usage or sudden spikes.
+- **Local Intelligence**: Uses **Ollama** for private, offline system analysis.
+- **Model Discovery**: Automatically detects and lists all available local models (Llama, Mistral, etc.).
+- **Interactive Analyst**: Features **Suggested Prompts** for common operational tasks like health reviews and anomaly analysis.
+- **Anomaly Detection**: Compares live metrics against a rolling window of history to identify statistical deviations.
 
 ---
 

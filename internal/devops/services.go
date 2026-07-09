@@ -87,13 +87,60 @@ func ControlService(name, action string) error {
 }
 
 func listWindowsServices() ([]ServiceEntry, error) {
+	// Try PowerShell first (best detail)
 	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-Command",
 		"Get-Service -ErrorAction SilentlyContinue | Sort-Object Status,Name | Select-Object Name,DisplayName,Status,StartType | ConvertTo-Json -As Array -Depth 2")
 	output, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("query Windows services: %w", err)
+	if err == nil {
+		services, parseErr := parseWindowsServicesJSON(string(output))
+		if parseErr == nil && len(services) > 0 {
+			return services, nil
+		}
 	}
-	return parseWindowsServicesJSON(string(output))
+
+	// Fallback to sc query type= service (legacy but works with lower permissions)
+	cmd = common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "cmd", "/c", "sc query type= service state= all bufsize= 262144")
+	output, err = cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("query Windows services (sc fallback): %w", err)
+	}
+
+	return parseSCQuery(string(output)), nil
+}
+
+// parseSCQuery parses the output of "sc query".
+func parseSCQuery(output string) []ServiceEntry {
+	var services []ServiceEntry
+	blocks := strings.Split(output, "\n\n")
+
+	for _, block := range blocks {
+		lines := strings.Split(block, "\n")
+		var s ServiceEntry
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "SERVICE_NAME:") {
+				s.Name = strings.TrimSpace(strings.TrimPrefix(line, "SERVICE_NAME:"))
+			} else if strings.HasPrefix(line, "DISPLAY_NAME:") {
+				s.DisplayName = strings.TrimSpace(strings.TrimPrefix(line, "DISPLAY_NAME:"))
+			} else if strings.HasPrefix(line, "STATE") {
+				stateParts := strings.Fields(line)
+				if len(stateParts) >= 4 {
+					s.Status = stateParts[3] // e.g., RUNNING, STOPPED
+				}
+			}
+		}
+		if s.Name != "" {
+			// Normalize status to match PowerShell
+			switch s.Status {
+			case "RUNNING":
+				s.Status = "Running"
+			case "STOPPED":
+				s.Status = "Stopped"
+			}
+			services = append(services, s)
+		}
+	}
+	return services
 }
 
 func listLinuxServices() ([]ServiceEntry, error) {
