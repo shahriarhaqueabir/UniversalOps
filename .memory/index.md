@@ -119,3 +119,17 @@ cmd/hawkward-gui/frontend/src/styles/globals.css
 - Missing frontend test coverage: TopBar, NetOps, SecOps, DevOps, AIOps, NetworkDesign pages — P3
 - Prometheus (`client_golang`) and gopacket not installed — P4 feature additions (requires new HTTP endpoint / Npcap runtime)
 - Recharts `ResponsiveContainer` stderr warnings in Dashboard tests — cosmetic (jsdom has no layout)
+
+## Sprint 20 Finalized (2026-07-10)
+
+### Git Operations ✅
+- **Commit**: `06ed2f2` — pushed to `origin/main`
+- **Tag**: `v1.3.0` — pushed, should trigger release pipeline
+
+### Additional Fixes in Final Pass
+| # | Fix | File |
+|---|-----|------|
+| 1 | TestPing skips on Linux CI when `ping -c 1` fails without root | `internal/netops/netops_test.go` |
+| 2 | Bump version to v1.3.0 (was v1.1.1 / v1.2.0) | `package.json`, `Sidebar.tsx`, `README.md` |
+| 3 | Fixed Sidebar.test.tsx to expect v1.3.0 instead of v1.1.1 | `Sidebar.test.tsx` |
+| 4 | README badges changed from dynamic shields.io to static | `README.md` |
