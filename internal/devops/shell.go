@@ -58,7 +58,7 @@ func RunCommand(cmd string) (*ShellResult, error) {
 
 	start := time.Now()
 
-	var c *exec.Cmd
+	var c *common.SandboxedCmd
 	if runtime.GOOS == "windows" {
 		c = common.SandboxedCommand("cmd", "/c", cmd)
 	} else {
@@ -91,7 +91,7 @@ func RunCommandWithLiveOutput(cmd string, output chan string) (*ShellResult, err
 	start := time.Now()
 	var stdoutBuf, stderrBuf strings.Builder
 
-	var c *exec.Cmd
+	var c *common.SandboxedCmd
 	if runtime.GOOS == "windows" {
 		c = common.SandboxedCommand("cmd", "/c", cmd)
 	} else {

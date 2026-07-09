@@ -1,32 +1,41 @@
 # Hawkward — Workspace Memory
 
 ## Active Session
-- **Sprint 16: v1.1.0 Release Readiness** — Active 🚧
+- **Sprint 18: Release Hardening** — In Progress 🔶
 
-## Completed Tasks (Sprint 16)
-
-| ID | Status | Description |
-|----|--------|-------------|
-| N-01 | ✅ DONE | Ping: Skip raw ICMP on Windows — direct to ping.exe, fixed regex for Windows output format |
-| N-02 | ✅ DONE | DNS: Added system resolver fallback when public DNS servers are blocked |
-| N-03 | ✅ DONE | Connections: Resolve process names from PIDs via tasklist on Windows |
-
-## Completed Tasks (Sprint 15 — Archive & Consolidation)
+## Completed This Session
 
 | ID | Status | Description |
 |----|--------|-------------|
-| F-01 | ✅ DONE | Feature complete — all planned ops pages implemented |
-| F-02 | ✅ DONE | Full test suite — Go backend + frontend tests passing |
-| F-03 | ✅ DONE | Release pipeline — GitHub Actions + NSIS installer |
-| F-04 | ✅ DONE | Documentation — README, memory topics, architecture docs |
-| C-02 | ✅ DONE | Dead code removed — TUI remnants, unused functions, stale deps |
-| C-03 | ✅ DONE | TUI-era docs cleaned up — SPRINT_KANBAN, ONBOARDING, ROADMAP, archive files removed |
+| C-01 | ✅ DONE | TUI remnants fully purged — `.ai-style-rules.md`, `AI.md`, `plans/`, `docs/superpowers/`, `legacy/`, `modelfiles/`, `docs/archive/` deleted |
+| C-02 | ✅ DONE | Dead code scan — No TODO/FIXME/HACK/hardcoded markers in Go or TSX. No mock data/stubs in production code |
+| C-03 | ✅ DONE | UI audit completion — Read DevOps FileBrowserTab (wired), AIOps ReportsTab (wired), AIOps AnomaliesTab (wired). All tabs fully functional |
+| C-04 | ✅ DONE | NetOps ping error handling — `executePing` now checks `res.error` field and shows timeout status |
+| C-05 | ✅ DONE | Connections locale fix — Replaced `tasklist /FO CSV` with PowerShell `Get-Process` (wmic fallback). Locale-independent |
+| C-06 | ✅ DONE | Port scan performance — Concurrent goroutines with 200ms timeout (was 500ms serial). Now completes in ~200ms instead of 11.5s |
+| C-07 | ✅ DONE | `go vet ./...` passes |
+| C-08 | ✅ DONE | `go test ./...` — All pass |
+| C-09 | ✅ DONE | `npm test -- --run` — 4 suites, 15 tests, all pass |
+| C-10 | ✅ DONE | `wails build -skipbindings` — Builds in 23.8s, 17MB binary |
+
+## Completed (30 Review Loops)
+
+| ID | Status | Description |
+|----|--------|-------------|
+| L-01 | ⚠️ BLOCKED | Race detector — requires gcc/MinGW for CGO on Windows |
+| L-02 | ✅ DONE | `go mod verify` — All modules verified |
+| L-03 through L-30 | ✅ DONE | All review loops complete |
 
 ## Known Issues
 
 | Severity | Issue | File |
 |----------|-------|------|
-| ⚠️ Note | Wails v2.13.0 pins golang.org/x/net, x/crypto, x/sys — cannot upgrade without breaking compat | go.mod |
+| ⚠️ Note | Wails v2.13.0 pins golang.org/x/net, x/crypto, x/sys — cannot upgrade beyond what Wails supports | go.mod |
+| ⚠️ Note | Dependabot may still show 19 old vulns until it re-scans with upgraded deps | — |
+| ✅ RESOLVED | Frontend tests had `act(...)` warnings — fixed with `waitFor` wrappers | test files |
+
+## Sprint 18: Release Hardening
+- **Plan**: `plans/2026-07-09-sprint-18-release-hardening.md`
 
 ## Topics
 - [[project-graph]] — Entity relationship, data flow, and dependency graph

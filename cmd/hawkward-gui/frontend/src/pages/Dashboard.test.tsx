@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { Dashboard } from './Dashboard'
 
 // Mock hooks
@@ -36,8 +36,10 @@ describe('Dashboard Page', () => {
     expect(await screen.findByText('62%')).toBeInTheDocument()
   })
 
-  it('shows loading state initially', () => {
+  it('shows loading state initially', async () => {
     render(<Dashboard />)
-    expect(screen.getByText('Synching Neural Bridge...')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Synching Neural Bridge...')).toBeInTheDocument()
+    })
   })
 })

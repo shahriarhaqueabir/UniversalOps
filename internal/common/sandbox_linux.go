@@ -6,7 +6,7 @@ import (
 )
 
 // applyPlatformSandbox applies Linux sandbox restrictions using namespaces.
-func applyPlatformSandbox(cmd *exec.Cmd, cfg SandboxConfig) {
+func applyPlatformSandbox(cmd *exec.Cmd, cfg SandboxConfig) *SandboxedCmd {
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
@@ -24,4 +24,6 @@ func applyPlatformSandbox(cmd *exec.Cmd, cfg SandboxConfig) {
 	if cfg.DropPrivileges {
 		sa.Cloneflags |= syscall.CLONE_NEWUSER
 	}
+	sc := &SandboxedCmd{Cmd: cmd, cfg: cfg}
+	return sc
 }

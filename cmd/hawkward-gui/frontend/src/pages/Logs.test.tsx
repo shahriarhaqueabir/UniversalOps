@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { Logs } from './Logs'
 
 vi.mock('../hooks/useBackend', () => ({
@@ -13,9 +13,11 @@ vi.mock('../hooks/useBackend', () => ({
 }))
 
 describe('Logs Page', () => {
-  it('renders without crashing', () => {
+  it('renders without crashing', async () => {
     render(<Logs />)
-    expect(screen.getByText('Live Event Aggregator')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Live Event Aggregator')).toBeInTheDocument()
+    })
   })
 
   it('displays log entries after loading', async () => {
@@ -25,11 +27,13 @@ describe('Logs Page', () => {
     expect(await screen.findByText('Disk space low')).toBeInTheDocument()
   })
 
-  it('shows level filter badges', () => {
+  it('shows level filter badges', async () => {
     render(<Logs />)
-    expect(screen.getByText('INFO')).toBeInTheDocument()
-    expect(screen.getByText('WARN')).toBeInTheDocument()
-    expect(screen.getByText('ERROR')).toBeInTheDocument()
-    expect(screen.getByText('DEBUG')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('INFO')).toBeInTheDocument()
+      expect(screen.getByText('WARN')).toBeInTheDocument()
+      expect(screen.getByText('ERROR')).toBeInTheDocument()
+      expect(screen.getByText('DEBUG')).toBeInTheDocument()
+    })
   })
 })

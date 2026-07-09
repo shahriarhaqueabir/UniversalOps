@@ -369,40 +369,18 @@ func parseNetstatOutput(output string) ([]ConnectionInfo, error) {
 }
 
 // resolveProcessNames enriches connection entries with process names
-// by running tasklist to build a PID → process name mapping.
+// using PowerShell Get-Process (locale-independent) instead of tasklist CSV.
 func resolveProcessNames(connections []ConnectionInfo) error {
-	cfg := common.SystemQuerySandbox()
-	cfg.DenyNetworkAccess = false // tasklist queries the OS process table
-	cmd := common.SandboxedCommandWithConfig(cfg, "tasklist", "/FO", "CSV", "/NH")
-	output, err := cmd.CombinedOutput()
+	pidMap, err := getPidMapViaPowerShell()
 	if err != nil {
-		return fmt.Errorf("tasklist failed: %w", err)
+		common.LogInfo("Get-Process failed, trying wmic fallback: %v", err)
+		pidMap, err = getPidMapViaWmic()
+		if err != nil {
+			common.LogInfo("wmic fallback also failed: %v", err)
+			return nil // non-fatal — connections still work without process names
+		}
 	}
 
-	// Build PID → process name map from tasklist CSV output.
-	// Format: "image.exe","PID","SessionName","Session#","MemUsage"
-	pidMap := make(map[int]string)
-	reader := csv.NewReader(strings.NewReader(string(output)))
-	for {
-		record, err := reader.Read()
-		if err != nil {
-			break
-		}
-		if len(record) < 2 {
-			continue
-		}
-		imageName := record[0]
-		pidStr := strings.TrimSpace(record[1])
-		pid, err := strconv.Atoi(pidStr)
-		if err != nil {
-			continue
-		}
-		// Strip .exe extension for cleaner display
-		name := strings.TrimSuffix(imageName, ".exe")
-		pidMap[pid] = name
-	}
-
-	// Enrich connections with process names
 	for i := range connections {
 		if name, ok := pidMap[connections[i].PID]; ok {
 			connections[i].ProcessName = name
@@ -410,6 +388,80 @@ func resolveProcessNames(connections []ConnectionInfo) error {
 	}
 
 	return nil
+}
+
+// getPidMapViaPowerShell uses Get-Process (locale-independent).
+func getPidMapViaPowerShell() (map[int]string, error) {
+	cfg := common.SystemQuerySandbox()
+	cfg.DenyNetworkAccess = false
+	// #nosec G204 - only querying process list, user input is not involved
+	cmd := common.SandboxedCommandWithConfig(cfg, "powershell", "-NoProfile", "-NonInteractive",
+		"-Command", "Get-Process | Select-Object Id,ProcessName | ConvertTo-Csv -NoTypeInformation")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("Get-Process failed: %w", err)
+	}
+
+	pidMap := make(map[int]string)
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "\"Id\"") {
+			continue
+		}
+		// CSV format: "Id","ProcessName"
+		parts := strings.Split(line, ",\"")
+		if len(parts) < 2 {
+			continue
+		}
+		idStr := strings.Trim(parts[0], "\"")
+		nameStr := strings.Trim(parts[len(parts)-1], "\"\r\n")
+		pid, err := strconv.Atoi(idStr)
+		if err != nil {
+			continue
+		}
+		nameStr = strings.TrimSuffix(nameStr, ".exe")
+		pidMap[pid] = nameStr
+	}
+
+	return pidMap, nil
+}
+
+// getPidMapViaWmic uses wmic as a fallback (locale-independent field selection).
+func getPidMapViaWmic() (map[int]string, error) {
+	cfg := common.SystemQuerySandbox()
+	cfg.DenyNetworkAccess = false
+	// #nosec G204 - only querying process list, user input is not involved
+	cmd := common.SandboxedCommandWithConfig(cfg, "wmic", "process", "get", "ProcessId,Name", "/FORMAT:CSV")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("wmic failed: %w", err)
+	}
+
+	pidMap := make(map[int]string)
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.Contains(line, "Node") || strings.Contains(line, "ProcessId") {
+			continue
+		}
+		// CSV format: "Computer","Name","ProcessId"
+		reader := csv.NewReader(strings.NewReader(line))
+		record, err := reader.Read()
+		if err != nil || len(record) < 3 {
+			continue
+		}
+		nameStr := strings.TrimSpace(record[1])
+		pidStr := strings.TrimSpace(record[2])
+		pid, err := strconv.Atoi(pidStr)
+		if err != nil {
+			continue
+		}
+		nameStr = strings.TrimSuffix(nameStr, ".exe")
+		pidMap[pid] = nameStr
+	}
+
+	return pidMap, nil
 }
 
 // splitNetstatLine splits a netstat output line by whitespace.

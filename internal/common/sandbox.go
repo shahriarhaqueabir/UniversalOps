@@ -2,8 +2,15 @@ package common
 
 import (
 	"context"
+	"errors"
 	"os/exec"
 )
+
+// errStdoutSet is returned when Stdout is already set before calling CombinedOutput/Output.
+var errStdoutSet = errors.New("exec: Stdout already set")
+
+// errStderrSet is returned when Stderr is already set before calling CombinedOutput.
+var errStderrSet = errors.New("exec: Stderr already set")
 
 // SandboxConfig controls the sandbox restrictions on a command execution.
 type SandboxConfig struct {
@@ -12,6 +19,12 @@ type SandboxConfig struct {
 	DenyProcessSpawn  bool
 	WorkingDir        string
 	DropPrivileges    bool
+}
+
+// SandboxedCmd wraps exec.Cmd with platform sandbox restrictions.
+type SandboxedCmd struct {
+	*exec.Cmd
+	cfg SandboxConfig
 }
 
 // DefaultSandbox returns a SandboxConfig with standard restrictions.
@@ -39,31 +52,28 @@ func SystemQuerySandbox() SandboxConfig {
 	}
 }
 
-// SandboxedCommand creates an exec.Cmd with sandbox restrictions.
-func SandboxedCommand(name string, args ...string) *exec.Cmd {
+// SandboxedCommand creates a sandboxed command with default restrictions.
+func SandboxedCommand(name string, args ...string) *SandboxedCmd {
 	cmd := exec.Command(name, args...)
-	applySandbox(cmd, DefaultSandbox())
-	return cmd
+	return applySandbox(cmd, DefaultSandbox())
 }
 
-// SandboxedCommandWithConfig creates an exec.Cmd with custom sandbox config.
-func SandboxedCommandWithConfig(cfg SandboxConfig, name string, args ...string) *exec.Cmd {
+// SandboxedCommandWithConfig creates a sandboxed command with custom config.
+func SandboxedCommandWithConfig(cfg SandboxConfig, name string, args ...string) *SandboxedCmd {
 	cmd := exec.Command(name, args...)
-	applySandbox(cmd, cfg)
-	return cmd
+	return applySandbox(cmd, cfg)
 }
 
-// SandboxedCommandWithConfigContext creates an exec.Cmd with sandbox restrictions
+// SandboxedCommandWithConfigContext creates a sandboxed command with custom config
 // that respects the given context for cancellation/deadlines.
-func SandboxedCommandWithConfigContext(ctx context.Context, cfg SandboxConfig, name string, args ...string) *exec.Cmd {
+func SandboxedCommandWithConfigContext(ctx context.Context, cfg SandboxConfig, name string, args ...string) *SandboxedCmd {
 	cmd := exec.CommandContext(ctx, name, args...)
-	applySandbox(cmd, cfg)
-	return cmd
+	return applySandbox(cmd, cfg)
 }
 
-func applySandbox(cmd *exec.Cmd, cfg SandboxConfig) {
+func applySandbox(cmd *exec.Cmd, cfg SandboxConfig) *SandboxedCmd {
 	if cfg.WorkingDir != "" {
 		cmd.Dir = cfg.WorkingDir
 	}
-	applyPlatformSandbox(cmd, cfg)
+	return applyPlatformSandbox(cmd, cfg)
 }
