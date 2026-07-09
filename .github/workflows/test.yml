@@ -27,6 +27,9 @@ jobs:
       - name: Install frontend dependencies
         run: cd cmd/hawkward-gui/frontend && npm ci
 
+      - name: Build frontend (needed for go vet //go:embed)
+        run: cd cmd/hawkward-gui/frontend && npm run build
+
       - name: Vet
         run: go vet ./...
 
