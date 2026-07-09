@@ -165,9 +165,15 @@ function HeroSection({ stats }: { stats: DashboardData }) {
   )
 }
 
-function KpiCard({ icon, label, value, unit, status, description }: { icon: React.ReactNode, label: string, value: string, unit?: string, status: string, description: string }) {
+function KpiCard({ icon, label, value, unit, status, description, onClick }: { icon: React.ReactNode, label: string, value: string, unit?: string, status: string, description: string, onClick?: () => void }) {
   return (
-    <div className="bg-panel border border-border rounded-[24px] p-8 transition-all hover:border-accent/40 hover:shadow-xl group">
+    <div
+      onClick={onClick}
+      className={cn(
+        "bg-panel border border-border rounded-[24px] p-8 transition-all hover:border-accent/40 hover:shadow-xl group",
+        onClick ? "cursor-pointer active:scale-95" : ""
+      )}
+    >
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-panel-3 flex items-center justify-center text-text-faint group-hover:text-accent transition-colors border border-border shadow-inner">
@@ -258,6 +264,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
             unit="%"
             status={data.cpu.value > 80 ? 'warning' : 'healthy'}
             description="Measures aggregate clock-cycle pressure. Sustained high usage indicates thread-pool exhaustion."
+            onClick={() => onNavigate?.('sysops')}
           />
           <KpiCard
             icon={<MemoryStick size={24} />}
@@ -266,6 +273,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
             unit="%"
             status={data.memory.value > 85 ? 'warning' : 'healthy'}
             description="Percentage of volatile allocation. High occupancy forces the system to rely on disk-based swap files."
+            onClick={() => onNavigate?.('sysops')}
           />
           <KpiCard
             icon={<HardDrive size={24} />}
@@ -274,6 +282,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
             unit="%"
             status={data.disk.value > 90 ? 'warning' : 'healthy'}
             description="Local disk occupancy. Low headroom impacts filesystem performance and paging efficiency."
+            onClick={() => onNavigate?.('sysops')}
           />
         </div>
       </div>
