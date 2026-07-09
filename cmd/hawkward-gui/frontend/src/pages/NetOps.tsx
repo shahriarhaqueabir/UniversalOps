@@ -111,7 +111,7 @@ function StatusBadge({ status }: { status: string }) {
     established: 'bg-accent/15 text-accent border-accent/30',
   }
   return (
-    <span className={cn('inline-block px-3 py-1 text-xs font-black uppercase tracking-widest rounded-full border shadow-sm', colorMap[status.toLowerCase()] || 'bg-muted/20 text-muted border-border')}>
+    <span className={cn('inline-block px-3 py-1 text-xs font-black uppercase tracking-widest rounded-full border shadow-sm', colorMap[status.toLowerCase()] || 'bg-text-faint/20 text-text-faint border-border')}>
       {status.replace('_', ' ')}
     </span>
   )
@@ -262,7 +262,7 @@ export function NetOps() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-[var(--color-bg)]">
       <div className="p-8 border-b border-border bg-panel-2 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-black text-text flex items-center gap-4">
@@ -320,8 +320,8 @@ export function NetOps() {
               <MiniStat
                 label="Jitter"
                 value={pingEntries.length > 1 ? (pingEntries.slice(-10).reduce((acc, curr, i, arr) => {
-                  if (i === 0 || curr.rtt_ms === null || arr[i-1].rtt_ms === null) return acc
-                  return acc + Math.abs(curr.rtt_ms - arr[i-1].rtt_ms!)
+                  if (i === 0 || curr.rtt_ms === null || arr[i - 1].rtt_ms === null) return acc
+                  return acc + Math.abs(curr.rtt_ms - arr[i - 1].rtt_ms!)
                 }, 0) / (pingEntries.slice(-10).filter(e => e.rtt_ms !== null).length - 1 || 1)).toFixed(2) : '0.00'}
                 unit="ms"
                 icon={<Activity size={24} />}
@@ -347,8 +347,8 @@ export function NetOps() {
                   <AreaChart data={pingEntries.map(e => ({ seq: e.seq, rtt: e.rtt_ms || 0 }))}>
                     <defs>
                       <linearGradient id="colorRtt" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />

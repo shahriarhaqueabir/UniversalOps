@@ -31,7 +31,7 @@ export function AreaChart({
 
   return (
     <div className="w-full">
-      {title && <h4 className="text-sm font-medium text-muted mb-2">{title}</h4>}
+      {title && <h4 className="text-sm font-medium text-text-faint mb-2">{title}</h4>}
       <ResponsiveContainer width="100%" height={height}>
         <RechartsAreaChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
           <defs>
@@ -40,30 +40,30 @@ export function AreaChart({
               <stop offset="100%" stopColor={color} stopOpacity={0.05} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#334155" strokeOpacity={0.3} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" strokeOpacity={0.3} />
           <XAxis
             dataKey="time"
-            tick={{ fill: '#94a3b8', fontSize: 10 }}
-            axisLine={{ stroke: '#334155' }}
+            tick={{ fill: 'var(--color-text-faint)', fontSize: 10 }}
+            axisLine={{ stroke: 'var(--color-border)' }}
             tickLine={false}
             interval="preserveStartEnd"
           />
           <YAxis
-            tick={{ fill: '#94a3b8', fontSize: 10 }}
+            tick={{ fill: 'var(--color-text-faint)', fontSize: 10 }}
             axisLine={false}
             tickLine={false}
             domain={[0, 'auto']}
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: '#1e293b',
-              border: '1px solid #334155',
+              backgroundColor: 'var(--color-panel-3)',
+              border: '1px solid var(--color-border)',
               borderRadius: '8px',
-              color: '#f8fafc',
+              color: 'var(--color-text)',
               fontSize: '12px',
             }}
             formatter={(value) => [`${Number(value).toFixed(1)}${unit}`, title || 'Value']}
-            labelStyle={{ color: '#94a3b8' }}
+            labelStyle={{ color: 'var(--color-text-faint)' }}
           />
           {threshold !== undefined && (
             <ReferenceLine
@@ -85,7 +85,7 @@ export function AreaChart({
             strokeWidth={2}
             fill={`url(#${gradientId})`}
             dot={false}
-            activeDot={{ r: 4, fill: color, stroke: '#1e293b', strokeWidth: 2 }}
+            activeDot={{ r: 4, fill: color, stroke: 'var(--color-panel-3)', strokeWidth: 2 }}
           />
         </RechartsAreaChart>
       </ResponsiveContainer>

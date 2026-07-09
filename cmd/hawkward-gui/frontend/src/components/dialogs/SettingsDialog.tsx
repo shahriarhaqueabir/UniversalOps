@@ -11,13 +11,13 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-card border border-border rounded-xl shadow-2xl w-[480px] max-h-[80vh] flex flex-col">
+      <div className="bg-panel border border-border rounded-xl shadow-2xl w-[480px] max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h2 className="text-lg font-semibold text-text">Quick Settings</h2>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-sidebar-hover text-muted hover:text-text transition-colors"
+            className="p-1 rounded hover:bg-sidebar-hover text-text-faint hover:text-text transition-colors"
           >
             <X size={18} />
           </button>
@@ -33,13 +33,13 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
               </div>
               <div>
                 <p className="text-sm text-text font-medium">Dark Mode</p>
-                <p className="text-xs text-muted">Toggle dark/light theme</p>
+                <p className="text-xs text-text-faint">Toggle dark/light theme</p>
               </div>
             </div>
             <Switch
               checked={true}
               onCheckedChange={() => { }}
-              className="w-10 h-6 bg-[#0f172a] border border-border rounded-full relative data-[state=checked]:bg-primary cursor-pointer"
+              className="w-10 h-6 bg-panel-2 border border-border rounded-full relative data-[state=checked]:bg-accent cursor-pointer"
             >
               <span className="block w-4 h-4 bg-text rounded-full transition-transform translate-x-1 data-[state=checked]:translate-x-5" />
             </Switch>
@@ -49,17 +49,17 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
           <div className="flex items-center justify-between py-2">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-sidebar-hover flex items-center justify-center">
-                <RefreshCw size={16} className="text-primary" />
+                <RefreshCw size={16} className="text-accent" />
               </div>
               <div>
                 <p className="text-sm text-text font-medium">Auto-refresh</p>
-                <p className="text-xs text-muted">Automatically refresh data</p>
+                <p className="text-xs text-text-faint">Automatically refresh data</p>
               </div>
             </div>
             <Switch
               checked={true}
               onCheckedChange={() => { }}
-              className="w-10 h-6 bg-[#0f172a] border border-border rounded-full relative data-[state=checked]:bg-primary cursor-pointer"
+              className="w-10 h-6 bg-panel-2 border border-border rounded-full relative data-[state=checked]:bg-accent cursor-pointer"
             >
               <span className="block w-4 h-4 bg-text rounded-full transition-transform translate-x-1 data-[state=checked]:translate-x-5" />
             </Switch>
@@ -69,24 +69,24 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
           <div className="flex items-center justify-between py-2">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-sidebar-hover flex items-center justify-center">
-                <Brain size={16} className="text-[#a78bfa]" />
+                <Brain size={16} className="text-[#a78bff]" />
               </div>
               <div>
                 <p className="text-sm text-text font-medium">AI Auto-report</p>
-                <p className="text-xs text-muted">Auto-generate AI reports</p>
+                <p className="text-xs text-text-faint">Auto-generate AI reports</p>
               </div>
             </div>
             <Switch
               checked={false}
               onCheckedChange={() => { }}
-              className="w-10 h-6 bg-[#0f172a] border border-border rounded-full relative data-[state=checked]:bg-primary cursor-pointer"
+              className="w-10 h-6 bg-panel-2 border border-border rounded-full relative data-[state=checked]:bg-accent cursor-pointer"
             >
               <span className="block w-4 h-4 bg-text rounded-full transition-transform translate-x-1 data-[state=checked]:translate-x-5" />
             </Switch>
           </div>
 
           <div className="border-t border-border pt-4">
-            <p className="text-xs text-muted text-center">
+            <p className="text-xs text-text-faint text-center">
               Extended settings available on the Settings page
             </p>
           </div>

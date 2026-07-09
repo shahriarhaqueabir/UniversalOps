@@ -49,6 +49,8 @@ func parseSecurityEventsJSON(jsonStr string) ([]SecurityEvent, error) {
 
 	// Clean malformed JSON before parsing
 	cleaned := common.CleanJSON(jsonStr)
+	// Fix PowerShell dash values for numeric fields
+	cleaned = common.FixPowerShellDashes(cleaned)
 
 	var raw []map[string]interface{}
 	if strings.HasPrefix(cleaned, "{") {

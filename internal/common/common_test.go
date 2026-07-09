@@ -114,6 +114,34 @@ func TestTruncateString(t *testing.T) {
 	}
 }
 
+func TestFixPowerShellDashes(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"no change: normal json", `{"a": "b"}`, `{"a": "b"}`},
+		{"dash value for unset field", `{"StartType": -}`, `{"StartType": ""}`},
+		{"dash value with comma", `{"StartType": -, "Name": "svc"}`, `{"StartType": "", "Name": "svc"}`},
+		{"dash value with newline", "{\"Id\": -\n}", "{\"Id\": \"\"\n}"},
+		{"dash value with spaces", `{"Val":  - }`, `{"Val":  "" }`},
+		{"dash value with spaces and comma", `{"Val":  - , "Next": 1}`, `{"Val":  "" , "Next": 1}`},
+		{"negative number not affected", `{"val": -1}`, `{"val": -1}`},
+		{"negative float not affected", `{"val": -1.5}`, `{"val": -1.5}`},
+		{"string with dash not affected", `{"val": "-"}`, `{"val": "-"}`},
+		{"empty string input", "", ""},
+		{"dash in middle of array", `[-]`, `[-]`}, // unchanged, not after colon
+		{"multiple dashes", `{"a": -, "b": -, "c": 3}`, `{"a": "", "b": "", "c": 3}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := FixPowerShellDashes(tt.input); got != tt.want {
+				t.Errorf("FixPowerShellDashes(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestDetectPlatform(t *testing.T) {
 	info := DetectPlatform()
 	if info.OS == "" {

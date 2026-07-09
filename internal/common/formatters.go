@@ -71,3 +71,46 @@ func CleanJSON(s string) string {
 	}
 	return b.String()
 }
+
+// FixPowerShellDashes replaces standalone "-" values with "\"\"" (empty string in JSON)
+// to handle PowerShell's use of dash for unset/empty fields.
+// This is needed because PowerShell may output "FieldName": -  as a null placeholder.
+func FixPowerShellDashes(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	i := 0
+	for i < len(s) {
+		if s[i] == ':' {
+			b.WriteByte(':')
+			i++
+			// Skip spaces after colon
+			j := i
+			for j < len(s) && (s[j] == ' ' || s[j] == '\t') {
+				j++
+			}
+			// Check if followed by a dash then comma, space, brace, or newline
+			if j < len(s) && s[j] == '-' {
+				k := j + 1
+				// Skip spaces after dash
+				for k < len(s) && (s[k] == ' ' || s[k] == '\t') {
+					k++
+				}
+				// Dash is a null placeholder if followed by comma, brace, or newline
+				if k >= len(s) || s[k] == ',' || s[k] == '}' || s[k] == '\n' || s[k] == '\r' {
+					// Write the spaces between colon and dash
+					b.WriteString(s[i:j])
+					b.WriteString("\"\"")
+					i = j + 1
+					continue
+				}
+			}
+			// Not a dash value, write the spaces we skipped
+			b.WriteString(s[i:j])
+			i = j
+		} else {
+			b.WriteByte(s[i])
+			i++
+		}
+	}
+	return b.String()
+}

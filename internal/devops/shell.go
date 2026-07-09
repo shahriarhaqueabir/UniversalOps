@@ -162,14 +162,38 @@ var AllowedPowerShellWorkflows = []string{
 }
 
 // PowerShellProfilePath is the path to the PowerShell profile script.
-// It is resolved relative to the executable's directory at runtime.
+// It tries multiple locations in order of preference:
+//  1. Relative to the executable's directory (production build)
+//  2. Relative to the current working directory (dev mode, run from project root)
+//  3. Parent of CWD (dev mode, run from cmd/hawkward-gui)
+//  4. Plain "profiles" relative path
+//
 // Override for testing.
 var PowerShellProfilePath = func() string {
-	exe, err := os.Executable()
-	if err == nil {
-		return filepath.Join(filepath.Dir(exe), "profiles", "powershell_profile.ps1")
+	candidates := []string{}
+
+	if exe, err := os.Executable(); err == nil {
+		candidates = append(candidates, filepath.Join(filepath.Dir(exe), "profiles", "powershell_profile.ps1"))
 	}
-	return filepath.Join("profiles", "powershell_profile.ps1")
+
+	if cwd, err := os.Getwd(); err == nil {
+		candidates = append(candidates, filepath.Join(cwd, "profiles", "powershell_profile.ps1"))
+		candidates = append(candidates, filepath.Join(cwd, "..", "profiles", "powershell_profile.ps1"))
+	}
+
+	candidates = append(candidates, filepath.Join("profiles", "powershell_profile.ps1"))
+
+	for _, p := range candidates {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+
+	// Fallback: return the first candidate (exe-relative) even if it doesn't exist
+	if len(candidates) > 0 {
+		return candidates[0]
+	}
+	return "profiles/powershell_profile.ps1"
 }()
 
 // isAllowedWorkflow checks whether cmd is one of the approved PowerShell workflow names.
@@ -199,7 +223,7 @@ func RunPowerShell(cmd string) (*ShellResult, error) {
 	if _, err := os.Stat(profilePath); err == nil {
 		psCmd = fmt.Sprintf(". '%s'; %s", profilePath, cmd)
 	} else {
-		common.LogWarn("RunPowerShell: PowerShell profile not found at %s, running without profile: %v", PowerShellProfilePath, err)
+		common.LogInfo("RunPowerShell: PowerShell profile not found at %s, running without profile: %v", PowerShellProfilePath, err)
 	}
 
 	// 3. Use 'pwsh' (PowerShell 7) if available, otherwise 'powershell'

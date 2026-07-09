@@ -44,12 +44,12 @@ function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
     running: 'bg-success/20 text-success',
     stopped: 'bg-danger/20 text-danger',
-    auto: 'bg-primary/20 text-primary',
+    auto: 'bg-accent/20 text-accent',
     manual: 'bg-warning/20 text-warning',
-    disabled: 'bg-muted/20 text-muted',
+    disabled: 'bg-text-faint/20 text-text-faint',
   }
   return (
-    <span className={cn('px-2 py-0.5 rounded text-xs font-medium border border-current opacity-80', colors[status.toLowerCase()] || 'bg-muted/20 text-muted')}>
+    <span className={cn('px-2 py-0.5 rounded text-xs font-medium border border-current opacity-80', colors[status.toLowerCase()] || 'bg-text-faint/20 text-text-faint')}>
       {status}
     </span>
   )
@@ -81,10 +81,10 @@ export function DevOps() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-[var(--color-bg)]">
       <div className="p-8 border-b border-border bg-panel-2">
         <h1 className="text-3xl font-bold text-text flex items-center gap-3">
-          <TerminalSquare size={32} className="text-primary" />
+          <TerminalSquare size={32} className="text-accent" />
           DevOps Console
         </h1>
         <p className="text-text-dim text-lg mt-2">
@@ -105,7 +105,7 @@ export function DevOps() {
               value={tab.id}
               className={cn(
                 'flex items-center gap-3 px-6 py-4 text-base font-bold transition-all border-b-2 border-transparent',
-                activeTab === tab.id ? 'border-primary text-text bg-primary/5' : 'text-text-faint hover:text-text hover:bg-white/5',
+                activeTab === tab.id ? 'border-accent text-text bg-accent/5' : 'text-text-faint hover:text-text hover:bg-white/5',
               )}
             >
               {tab.icon}
@@ -242,7 +242,7 @@ function TerminalTab() {
         <button
           onClick={() => { if (input.trim()) runCommand(input) }}
           disabled={isRunning || !input.trim()}
-          className="flex items-center gap-2 px-8 py-4 text-lg font-bold bg-primary text-white rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg active:scale-95"
+          className="flex items-center gap-2 px-8 py-4 text-lg font-bold bg-accent text-white rounded-xl hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg active:scale-95"
         >
           <Play size={20} />
           Execute
@@ -348,13 +348,13 @@ function PowerShellProTab() {
               setConfirmOpen(true)
             }}
             disabled={isRunning}
-            className="w-full text-left bg-panel border border-border rounded-2xl p-6 transition-all hover:border-primary/50 hover:bg-primary/5 group disabled:opacity-50"
+            className="w-full text-left bg-panel border border-border rounded-2xl p-6 transition-all hover:border-accent/50 hover:bg-accent/5 group disabled:opacity-50"
           >
             <div className="flex items-center gap-4 mb-3">
-              <div className="w-12 h-12 rounded-xl bg-panel-3 flex items-center justify-center text-text-dim group-hover:text-primary transition-colors border border-border">
+              <div className="w-12 h-12 rounded-xl bg-panel-3 flex items-center justify-center text-text-dim group-hover:text-accent transition-colors border border-border">
                 {workflowIcons[wf] || <Zap size={24} />}
               </div>
-              <span className="text-xl font-bold text-text group-hover:text-primary transition-colors">{wf.replace('Invoke-Hawk', '')}</span>
+              <span className="text-xl font-bold text-text group-hover:text-accent transition-colors">{wf.replace('Invoke-Hawk', '')}</span>
             </div>
             <p className="text-text-dim text-base leading-relaxed">{workflowDescs[wf]}</p>
           </button>
@@ -461,13 +461,13 @@ function ServicesTab() {
         <div className="flex-1" />
 
         <div className="relative group w-80">
-          <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-primary transition-colors" />
+          <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-accent transition-colors" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search services..."
-            className="w-full bg-panel border border-border rounded-xl pl-12 pr-4 py-3 text-lg text-text placeholder-text-faint focus:outline-none focus:border-primary transition-all shadow-inner"
+            className="w-full bg-panel border border-border rounded-xl pl-12 pr-4 py-3 text-lg text-text placeholder-text-faint focus:outline-none focus:border-accent transition-all shadow-inner"
           />
         </div>
 
@@ -508,7 +508,7 @@ function ServicesTab() {
               ) : (
                 filtered.map((svc) => (
                   <tr key={svc.name} className="border-b border-border/20 hover:bg-white/5 transition-colors group">
-                    <td className="px-8 py-4 font-[JetBrains_Mono] text-base text-primary font-medium">{svc.name}</td>
+                    <td className="px-8 py-4 font-[JetBrains_Mono] text-base text-accent font-medium">{svc.name}</td>
                     <td className="px-8 py-4 text-lg text-text">{svc.display_name}</td>
                     <td className="px-8 py-4"><StatusBadge status={svc.status} /></td>
                     <td className="px-8 py-4"><StatusBadge status={svc.start_type} /></td>
@@ -637,7 +637,7 @@ function FileBrowserTab() {
           <div className="flex-1 bg-panel border border-border rounded-xl px-6 py-2.5 flex items-center gap-1 overflow-x-auto no-scrollbar shadow-inner">
             <button
               onClick={() => call('DevOps.GetDefaultPath').then(p => navigate(p as string))}
-              className="p-1.5 hover:bg-white/10 rounded-lg text-text-faint hover:text-primary transition-all shrink-0"
+              className="p-1.5 hover:bg-white/10 rounded-lg text-text-faint hover:text-accent transition-all shrink-0"
             >
               <Home size={18} />
             </button>
@@ -651,7 +651,7 @@ function FileBrowserTab() {
                     onClick={() => !isLast && navigate(fullPath)}
                     className={cn(
                       "px-2 py-1 rounded-lg text-sm font-bold transition-all",
-                      isLast ? "text-text cursor-default" : "text-text-dim hover:text-primary hover:bg-white/5"
+                      isLast ? "text-text cursor-default" : "text-text-dim hover:text-accent hover:bg-white/5"
                     )}
                   >
                     {part}
@@ -683,8 +683,8 @@ function FileBrowserTab() {
                       className="border-b border-border/20 hover:bg-white/5 cursor-pointer transition-colors group"
                     >
                       <td className="px-8 py-4 flex items-center gap-4">
-                        {file.is_dir ? <Folder size={24} className="text-primary" /> : <FileText size={24} className="text-text-faint" />}
-                        <span className="text-lg text-text group-hover:text-primary transition-colors">{file.name}</span>
+                        {file.is_dir ? <Folder size={24} className="text-accent" /> : <FileText size={24} className="text-text-faint" />}
+                        <span className="text-lg text-text group-hover:text-accent transition-colors">{file.name}</span>
                       </td>
                       <td className="px-8 py-4 text-right font-[JetBrains_Mono] text-base text-text-dim">{file.size}</td>
                       <td className="px-8 py-4 text-base text-text-faint">{new Date(file.mod_time).toLocaleString()}</td>
@@ -702,7 +702,7 @@ function FileBrowserTab() {
         <div className="w-1/2 flex flex-col space-y-4 animate-in slide-in-from-right-8 duration-300">
           <div className="flex items-center justify-between p-2">
             <h3 className="text-xl font-bold text-text flex items-center gap-3 min-w-0">
-              <FileText size={24} className="text-primary shrink-0" />
+              <FileText size={24} className="text-accent shrink-0" />
               <span className="truncate">{previewFile.name}</span>
             </h3>
             <div className="flex items-center gap-2">

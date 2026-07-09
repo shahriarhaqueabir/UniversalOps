@@ -78,7 +78,7 @@ export function ConnectionLine({
             width={60}
             height={18}
             rx={4}
-            fill="#1e293b"
+            fill="var(--color-panel-3)"
             stroke={color}
             strokeWidth={1}
             opacity={0.9}
@@ -87,7 +87,7 @@ export function ConnectionLine({
             x={mx}
             y={my + 4}
             textAnchor="middle"
-            fill="#f8fafc"
+            fill="var(--color-text)"
             fontSize={9}
             fontFamily="monospace"
           >

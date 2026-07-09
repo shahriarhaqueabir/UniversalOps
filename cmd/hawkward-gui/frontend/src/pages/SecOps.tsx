@@ -60,14 +60,14 @@ function SecurityStatusBadge({ status }: { status: string }) {
     allow: 'bg-success/20 text-success border-success/30',
     block: 'bg-danger/20 text-danger border-danger/30',
     enabled: 'bg-success/20 text-success border-success/30',
-    disabled: 'bg-muted/20 text-muted border-border',
+    disabled: 'bg-text-faint/20 text-text-faint border-border',
     listening: 'bg-accent/15 text-accent border-accent/30',
     error: 'bg-danger/20 text-danger border-danger/30',
     warning: 'bg-warning/20 text-warning border-warning/30',
   }
   const s = status.toLowerCase()
   return (
-    <span className={cn('inline-block px-3 py-1 text-xs font-black uppercase tracking-widest rounded-full border shadow-sm', colorMap[s] || 'bg-muted/20 text-muted border-border')}>
+    <span className={cn('inline-block px-3 py-1 text-xs font-black uppercase tracking-widest rounded-full border shadow-sm', colorMap[s] || 'bg-text-faint/20 text-text-faint border-border')}>
       {status}
     </span>
   )
@@ -219,7 +219,7 @@ function UsersTab({ call }: { call: BackendCall }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {users.map(user => (
           <div key={user.username} className="bg-panel border border-border rounded-[24px] p-8 shadow-xl flex items-center gap-8">
-            <div className={cn("w-20 h-20 rounded-2xl flex items-center justify-center shrink-0 border shadow-inner", user.is_admin ? "bg-warning/10 border-warning/30 text-warning" : "bg-primary/10 border-primary/30 text-primary")}>
+            <div className={cn("w-20 h-20 rounded-2xl flex items-center justify-center shrink-0 border shadow-inner", user.is_admin ? "bg-warning/10 border-warning/30 text-warning" : "bg-accent/10 border-accent/30 text-accent")}>
               {user.is_admin ? <ShieldAlert size={40} /> : <UserCheck size={40} />}
             </div>
             <div className="flex-1 min-w-0">
@@ -468,7 +468,7 @@ export function SecOps() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-[var(--color-bg)]">
       <div className="p-8 border-b border-border bg-panel-2 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-text flex items-center gap-4">

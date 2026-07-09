@@ -2,6 +2,7 @@ package secops
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -25,6 +26,7 @@ type FirewallRule struct {
 // GetFirewallRules retrieves firewall rules from the current platform.
 func GetFirewallRules() ([]FirewallRule, error) {
 	if common.IsWindows() {
+		// Approach 1: netsh verbose (English locale)
 		cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "cmd", "/c", "netsh advfirewall firewall show rule name=all verbose")
 		output, err := cmd.Output()
 		if err == nil {
@@ -33,7 +35,17 @@ func GetFirewallRules() ([]FirewallRule, error) {
 				return rules, nil
 			}
 		}
-		return nil, fmt.Errorf("no firewall rules parsed — check netsh output format (non-English locale?): %w", err)
+
+		// Approach 2: PowerShell Get-NetFirewallRule (locale-independent)
+		if rules, fallbackErr := getFirewallRulesPowerShell(); fallbackErr == nil && len(rules) > 0 {
+			return rules, nil
+		}
+
+		// Both approaches failed; don't wrap nil err
+		if err != nil {
+			return nil, fmt.Errorf("netsh failed: %w", err)
+		}
+		return nil, fmt.Errorf("no firewall rules parsed — check netsh output format (non-English locale?)")
 	}
 
 	if common.IsLinux() {
@@ -56,6 +68,75 @@ func SetFirewallRuleState(name string, enable bool) error {
 	}
 
 	return fmt.Errorf("firewall state modification not supported on this platform")
+}
+
+// getFirewallRulesPowerShell retrieves firewall rules via PowerShell Get-NetFirewallRule.
+// This is locale-independent and serves as a fallback when netsh verbose parsing fails.
+func getFirewallRulesPowerShell() ([]FirewallRule, error) {
+	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-NoProfile", "-Command",
+		"Get-NetFirewallRule -All | Select-Object Name,Direction,Action,Enabled,Profile | ConvertTo-Json -As Array -Depth 1")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("Get-NetFirewallRule failed: %w", err)
+	}
+
+	cleaned := common.CleanJSON(string(output))
+	if cleaned == "" || cleaned == "null" {
+		return nil, fmt.Errorf("empty firewall rule output from PowerShell")
+	}
+
+	var raw []map[string]interface{}
+	if err := json.Unmarshal([]byte(cleaned), &raw); err != nil {
+		return nil, fmt.Errorf("parse firewall rules json: %w", err)
+	}
+
+	rules := make([]FirewallRule, 0, len(raw))
+	for _, item := range raw {
+		var rule FirewallRule
+
+		if name, ok := getJSONString(item, "Name"); ok {
+			rule.Name = name
+		} else {
+			continue
+		}
+
+		if dir, ok := getJSONString(item, "Direction"); ok {
+			if strings.EqualFold(dir, "Inbound") {
+				rule.Direction = "In"
+			} else if strings.EqualFold(dir, "Outbound") {
+				rule.Direction = "Out"
+			} else {
+				rule.Direction = dir
+			}
+		}
+
+		if action, ok := getJSONString(item, "Action"); ok {
+			if strings.EqualFold(action, "Allow") {
+				rule.Action = "Allow"
+			} else {
+				rule.Action = "Block"
+			}
+		}
+
+		if enabled, ok := getJSONString(item, "Enabled"); ok {
+			rule.Enabled = strings.EqualFold(enabled, "True")
+		}
+
+		if profile, ok := getJSONString(item, "Profile"); ok {
+			rule.Profile = profile
+		}
+
+		rule.Protocol = "Any"
+		rule.IsHighRisk = false
+
+		rules = append(rules, rule)
+	}
+
+	if len(rules) > common.MaxFirewallRules {
+		rules = rules[:common.MaxFirewallRules]
+	}
+
+	return rules, nil
 }
 
 // getFirewallRulesLinux retrieves firewall rules using iptables-save or nft.

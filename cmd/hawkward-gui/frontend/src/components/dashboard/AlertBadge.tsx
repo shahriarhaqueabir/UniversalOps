@@ -10,7 +10,7 @@ interface AlertBadgeProps {
 const severityConfig = {
   critical: { bg: 'bg-danger/20', text: 'text-danger', border: 'border-danger/30', label: 'Critical' },
   warning: { bg: 'bg-warning/20', text: 'text-warning', border: 'border-warning/30', label: 'Warning' },
-  info: { bg: 'bg-primary/20', text: 'text-primary', border: 'border-primary/30', label: 'Info' },
+  info: { bg: 'bg-accent/20', text: 'text-accent', border: 'border-accent/30', label: 'Info' },
 } as const
 
 export function AlertBadge({ alerts }: AlertBadgeProps) {
@@ -20,8 +20,8 @@ export function AlertBadge({ alerts }: AlertBadgeProps) {
 
   if (alerts.length === 0) {
     return (
-      <div className="bg-card border border-border rounded-lg p-4">
-        <div className="flex items-center gap-2 text-muted">
+      <div className="bg-panel border border-border rounded-lg p-4">
+        <div className="flex items-center gap-2 text-text-faint">
           <Bell size={16} />
           <span className="text-sm">No active alerts</span>
         </div>
@@ -30,7 +30,7 @@ export function AlertBadge({ alerts }: AlertBadgeProps) {
   }
 
   return (
-    <div className="bg-card border border-border rounded-lg">
+    <div className="bg-panel border border-border rounded-lg">
       {/* Header */}
       <button
         onClick={() => setExpanded(!expanded)}
@@ -39,7 +39,7 @@ export function AlertBadge({ alerts }: AlertBadgeProps) {
         <div className="flex items-center gap-2">
           <Bell
             size={16}
-            className={cn(criticalCount > 0 ? 'text-danger animate-pulse' : 'text-muted')}
+            className={cn(criticalCount > 0 ? 'text-danger animate-pulse' : 'text-text-faint')}
           />
           <span className="text-sm font-medium text-text">
             {activeAlerts.length} Active Alert{activeAlerts.length !== 1 ? 's' : ''}
@@ -52,7 +52,7 @@ export function AlertBadge({ alerts }: AlertBadgeProps) {
             </span>
           )}
           <svg
-            className={cn('w-4 h-4 text-muted transition-transform', expanded && 'rotate-180')}
+            className={cn('w-4 h-4 text-text-faint transition-transform', expanded && 'rotate-180')}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -77,11 +77,11 @@ export function AlertBadge({ alerts }: AlertBadgeProps) {
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-text">{alert.message}</p>
-                  <p className="text-xs text-muted mt-0.5">
+                  <p className="text-xs text-text-faint mt-0.5">
                     {alert.metric} · {alert.value.toFixed(1)} / {alert.threshold}
                   </p>
                 </div>
-                <span className="text-xs text-muted shrink-0">
+                <span className="text-xs text-text-faint shrink-0">
                   {new Date(alert.timestamp).toLocaleTimeString()}
                 </span>
               </div>

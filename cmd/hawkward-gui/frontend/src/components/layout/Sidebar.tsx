@@ -147,7 +147,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
 
       {/* Footer */}
       <div className="px-[14px] py-3 border-t border-[var(--color-border)]">
-        <p className="text-[11px] text-[var(--color-text-faint)]">Hawkward v0.1.0</p>
+        <p className="text-[11px] text-[var(--color-text-faint)]">Hawkward v1.1.1</p>
       </div>
     </aside>
   )

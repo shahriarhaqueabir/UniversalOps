@@ -59,7 +59,7 @@ export function Gauge({
         <path
           d={d}
           fill="none"
-          stroke="#334155"
+          stroke="var(--color-border)"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
         />
@@ -79,7 +79,7 @@ export function Gauge({
           x={center}
           y={center + size * 0.05}
           textAnchor="middle"
-          fill="#f8fafc"
+          fill="var(--color-text)"
           fontSize={size * 0.12}
           fontWeight="bold"
           fontFamily="Inter, sans-serif"
@@ -90,14 +90,14 @@ export function Gauge({
           x={center}
           y={center + size * 0.15}
           textAnchor="middle"
-          fill="#94a3b8"
+          fill="var(--color-text-faint)"
           fontSize={size * 0.06}
           fontFamily="Inter, sans-serif"
         >
           {unit}
         </text>
       </svg>
-      <span className="text-sm text-muted -mt-2">{label}</span>
+      <span className="text-sm text-text-faint -mt-2">{label}</span>
     </div>
   )
 }

@@ -47,17 +47,17 @@ export function HealthCard({
     <button
       onClick={onClick}
       className={cn(
-        'relative bg-card border border-border rounded-lg p-4 text-left transition-all duration-200',
-        'hover:border-primary/40 hover:shadow-[0_0_12px_rgba(56,189,248,0.08)]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+        'relative bg-panel border border-border rounded-lg p-4 text-left transition-all duration-200',
+        'hover:border-accent/40 hover:shadow-[0_0_12px_rgba(124,108,255,0.08)]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50',
         onClick ? 'cursor-pointer' : 'cursor-default',
       )}
     >
       {/* Top row: icon, label, status dot */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-primary">{icon}</span>
-          <span className="text-xs font-medium text-muted uppercase tracking-wider">{label}</span>
+          <span className="text-accent">{icon}</span>
+          <span className="text-xs font-medium text-text-faint uppercase tracking-wider">{label}</span>
         </div>
         <span
           className={cn('inline-block w-2 h-2 rounded-full', statusColors[status], statusGlow[status])}
@@ -69,12 +69,12 @@ export function HealthCard({
         <span
           className={cn(
             'text-2xl font-bold text-text transition-all duration-500',
-            animate && 'scale-110 text-primary',
+            animate && 'scale-110 text-accent',
           )}
         >
           {value}
         </span>
-        {unit && <span className="text-xs text-muted">{unit}</span>}
+        {unit && <span className="text-xs text-text-faint">{unit}</span>}
       </div>
 
       {/* Sparkline */}

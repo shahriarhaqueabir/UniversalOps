@@ -26,13 +26,13 @@ export function ConfirmDialog({
 
   const colors = {
     danger: 'text-danger bg-danger/10 border-danger/20',
-    info: 'text-primary bg-primary/10 border-primary/20',
+    info: 'text-accent bg-accent/10 border-accent/20',
     warning: 'text-warning bg-warning/10 border-warning/20',
   }
 
   const buttonColors = {
     danger: 'bg-danger hover:bg-danger/90',
-    info: 'bg-primary hover:bg-primary/90',
+    info: 'bg-accent hover:bg-accent/90',
     warning: 'bg-warning hover:bg-warning/90 text-black',
   }
 
@@ -49,7 +49,7 @@ export function ConfirmDialog({
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-sidebar-hover text-muted hover:text-text transition-colors"
+            className="p-2 rounded-lg hover:bg-sidebar-hover text-text-faint hover:text-text transition-colors"
           >
             <X size={24} />
           </button>
