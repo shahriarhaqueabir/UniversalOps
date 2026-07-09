@@ -25,6 +25,7 @@ type PingResult struct {
 	Min      time.Duration
 	Max      time.Duration
 	Avg      time.Duration
+	Jitter   time.Duration
 	TTL      int
 }
 
@@ -134,6 +135,19 @@ func pingICMP(target string, count int) (*PingResult, error) {
 			}
 		}
 		result.Avg = total / time.Duration(len(rtts))
+
+		// Calculate Jitter: average difference between consecutive RTTs
+		if len(rtts) > 1 {
+			var jitterTotal time.Duration
+			for i := 1; i < len(rtts); i++ {
+				diff := rtts[i] - rtts[i-1]
+				if diff < 0 {
+					diff = -diff
+				}
+				jitterTotal += diff
+			}
+			result.Jitter = jitterTotal / time.Duration(len(rtts)-1)
+		}
 	}
 
 	return result, nil

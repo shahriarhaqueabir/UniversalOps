@@ -19,6 +19,7 @@ type FirewallRule struct {
 	RemoteIP   string
 	Profile    string // Domain, Private, Public
 	Enabled    bool
+	IsHighRisk bool
 }
 
 // GetFirewallRules retrieves firewall rules from the current platform.
@@ -264,6 +265,16 @@ func parseFirewallRules(output string) ([]FirewallRule, error) {
 		}
 
 		if rule.Name != "" {
+			// Vulnerability intelligence: Flag "Allow" rules with "Any" IP on sensitive ports
+			if rule.Action == "Allow" && rule.Enabled && (rule.RemoteIP == "Any" || rule.RemoteIP == "*") {
+				sensitivePorts := []string{"22", "3389", "445", "139", "21", "23", "3306", "5432", "1433"}
+				for _, p := range sensitivePorts {
+					if strings.Contains(rule.LocalPort, p) {
+						rule.IsHighRisk = true
+						break
+					}
+				}
+			}
 			rules = append(rules, rule)
 		}
 	}

@@ -70,12 +70,17 @@ Currently, Hawkward focuses on local AI for privacy and offline capability. Inte
 
 ### NetOps (Network Operations)
 - **Mechanism**: 
-  - **Ping**: Uses ICMP packets (or `ping.exe` fallback on Windows).
-  - **DNS**: Direct UDP/TCP queries to your system's configured nameservers.
-  - **Port Scan**: Sequential TCP connection attempts with a short timeout.
+  - **Ping**: Uses ICMP packets (or `ping.exe` fallback on Windows). Now includes **Jitter** calculation and a real-time **Latency History Chart** to detect routing instability.
+  - **DNS**: Direct UDP/TCP queries. Now supports **Custom Resolvers** (e.g., 8.8.8.8) to audit local cache poisoning.
+  - **Port Scan**: Concurrent TCP connection attempts. Optimized for speed (~200ms for full common port scan).
+  - **Traceroute**: Sequential ICMP TTL-incrementing probes to map network paths.
+  - **Bandwidth**: Real-time throughput monitoring with historical sparklines.
 
 ### SecOps (Security Operations)
-- **Mechanism**: Orchestrates system tools like `netsh`, `netstat`, and PowerShell's `Get-MpComputerStatus` to audit security posture.
+- **Mechanism**: Orchestrates system tools like `netsh`, `netstat`, and PowerShell's `Get-MpComputerStatus`.
+- **Firewall Intelligence**: Automatically identifies **High Risk** rules (Allow + Any IP + Sensitive Ports like RDP/SSH).
+- **Listener Audit**: Flags processes listening on **External Interfaces** (0.0.0.0), highlighting potential exposure.
+- **Identity Audit**: Lists local accounts with administrative privileges to enforce Least Privilege.
 
 ### DevOps (Development Operations)
 - **Mechanism**: A safe wrapper around shell execution and file system APIs.

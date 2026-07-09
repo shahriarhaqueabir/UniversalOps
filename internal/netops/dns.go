@@ -29,13 +29,13 @@ var publicDNS = []string{
 	"1.1.1.1:53",
 }
 
-// LookupDNS performs DNS lookups for a given hostname using public DNS servers.
-func LookupDNS(hostname string) (*DNSResult, error) {
-	return LookupDNSWithContext(context.Background(), hostname)
+// LookupDNS performs DNS lookups for a given hostname using optional custom DNS servers.
+func LookupDNS(hostname string, servers ...string) (*DNSResult, error) {
+	return LookupDNSWithContext(context.Background(), hostname, servers...)
 }
 
 // LookupDNSWithContext performs DNS lookups with context-based cancellation.
-func LookupDNSWithContext(ctx context.Context, hostname string) (*DNSResult, error) {
+func LookupDNSWithContext(ctx context.Context, hostname string, servers ...string) (*DNSResult, error) {
 	result := &DNSResult{
 		Hostname: hostname,
 	}
@@ -43,9 +43,18 @@ func LookupDNSWithContext(ctx context.Context, hostname string) (*DNSResult, err
 	client := new(dns.Client)
 	client.Timeout = 5 * time.Second
 
+	queryServers := publicDNS
+	if len(servers) > 0 {
+		queryServers = servers
+	}
+
 	// Try each DNS server until one works
 	var lastErr error
-	for _, server := range publicDNS {
+	for _, server := range queryServers {
+		// Ensure server has a port
+		if !strings.Contains(server, ":") {
+			server = server + ":53"
+		}
 		// Check if context is cancelled before proceeding
 		select {
 		case <-ctx.Done():

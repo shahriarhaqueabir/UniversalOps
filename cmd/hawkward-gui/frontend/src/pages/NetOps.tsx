@@ -143,6 +143,7 @@ export function NetOps() {
   const [connections, setConnections] = useState<ConnectionInfo[]>([])
   const [interfaces, setInterfaces] = useState<InterfaceInfo[]>([])
   const [dnsHost, setDnsHost] = useState('google.com')
+  const [dnsServer, setDnsServer] = useState('')
   const [dnsResult, setDnsResult] = useState<DNSResult | null>(null)
   const [dnsLoading, setDnsLoading] = useState(false)
   const [traceTarget, setTraceTarget] = useState('8.8.8.8')
@@ -179,17 +180,26 @@ export function NetOps() {
         seq: prev.length + 1,
         ip: pingTarget,
         rtt_ms: null,
+        jitter_ms: null,
         ttl: null,
         status: 'timeout'
       } as PingEntry])
     } else if (res) {
-      setPingEntries(prev => [...prev.slice(-49), {
-        seq: prev.length + 1,
-        ip: res.ip,
-        rtt_ms: res.avg_ms || res.min_ms,
-        ttl: res.ttl,
-        status: res.lost > 0 ? 'timeout' : 'success'
-      } as PingEntry])
+      setPingEntries(prev => {
+        const lastEntry = prev[prev.length - 1]
+        let currentJitter = 0
+        if (lastEntry && lastEntry.rtt_ms !== null && res.avg_ms !== undefined) {
+          currentJitter = Math.abs(res.avg_ms - lastEntry.rtt_ms)
+        }
+        return [...prev.slice(-49), {
+          seq: prev.length + 1,
+          ip: res.ip,
+          rtt_ms: res.avg_ms || res.min_ms,
+          jitter_ms: currentJitter,
+          ttl: res.ttl,
+          status: res.lost > 0 ? 'timeout' : 'success'
+        } as PingEntry]
+      })
     }
   }, [call, pingTarget])
 
@@ -203,7 +213,7 @@ export function NetOps() {
   const handleDns = async () => {
     setDnsLoading(true); setDnsResult(null)
     try {
-      const res = await call('NetOps.DNSLookup', dnsHost) as DNSResult
+      const res = await call('NetOps.DNSLookup', dnsHost, dnsServer) as DNSResult
       setDnsResult(res)
     } catch (err) {
       console.error('DNS lookup failed:', err)
@@ -307,9 +317,66 @@ export function NetOps() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <MiniStat label="Latency" value={pingEntries.length > 0 ? pingEntries[pingEntries.length - 1].rtt_ms?.toFixed(1) || '—' : '—'} unit="ms" icon={<Timer size={24} />} />
+              <MiniStat
+                label="Jitter"
+                value={pingEntries.length > 1 ? (pingEntries.slice(-10).reduce((acc, curr, i, arr) => {
+                  if (i === 0 || curr.rtt_ms === null || arr[i-1].rtt_ms === null) return acc
+                  return acc + Math.abs(curr.rtt_ms - arr[i-1].rtt_ms!)
+                }, 0) / (pingEntries.slice(-10).filter(e => e.rtt_ms !== null).length - 1 || 1)).toFixed(2) : '0.00'}
+                unit="ms"
+                icon={<Activity size={24} />}
+              />
               <MiniStat label="Reliability" value={pingEntries.length > 0 ? (100 - (pingEntries.filter(e => e.status === 'timeout').length / pingEntries.length * 100)).toFixed(1) : '100'} unit="%" icon={<ShieldCheck size={24} />} />
-              <MiniStat label="Sequence" value={pingEntries.length} unit="probes" icon={<Activity size={24} />} />
               <MiniStat label="Signal" value={pingEntries.length > 0 ? pingEntries[pingEntries.length - 1].ttl || '—' : '—'} unit="ttl" icon={<Signal size={24} />} />
+            </div>
+
+            {/* Latency Chart */}
+            <div className="bg-panel border border-border rounded-[24px] p-8 shadow-xl">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xl font-black text-text uppercase tracking-widest flex items-center gap-3">
+                  <Activity size={20} className="text-accent" /> Latency History
+                </h3>
+                <div className="flex items-center gap-4 text-xs font-bold text-text-faint">
+                  <span className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-accent" /> RTT (ms)
+                  </span>
+                </div>
+              </div>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={pingEntries.map(e => ({ seq: e.seq, rtt: e.rtt_ms || 0 }))}>
+                    <defs>
+                      <linearGradient id="colorRtt" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis dataKey="seq" hide />
+                    <YAxis
+                      stroke="rgba(255,255,255,0.3)"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => `${v}ms`}
+                    />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                      itemStyle={{ color: 'var(--color-accent)' }}
+                      labelStyle={{ display: 'none' }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="rtt"
+                      stroke="var(--color-accent)"
+                      strokeWidth={3}
+                      fillOpacity={1}
+                      fill="url(#colorRtt)"
+                      animationDuration={300}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         )}
@@ -327,7 +394,7 @@ export function NetOps() {
               ]}
             />
             <div className="flex items-center gap-6 bg-panel-2 border border-border p-6 rounded-[24px] shadow-inner">
-              <div className="relative group flex-1">
+              <div className="relative group flex-[2]">
                 <Search size={24} className="absolute left-5 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-accent transition-colors" />
                 <input
                   type="text"
@@ -335,6 +402,18 @@ export function NetOps() {
                   onChange={(e) => setDnsHost(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleDns()}
                   className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-5 text-2xl font-bold text-text placeholder-text-faint focus:outline-none focus:border-accent shadow-xl"
+                  placeholder="Hostname (e.g. google.com)"
+                />
+              </div>
+              <div className="relative group flex-1">
+                <Server size={24} className="absolute left-5 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-accent transition-colors" />
+                <input
+                  type="text"
+                  value={dnsServer}
+                  onChange={(e) => setDnsServer(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleDns()}
+                  className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-5 text-lg font-bold text-text placeholder-text-faint focus:outline-none focus:border-accent shadow-xl"
+                  placeholder="Resolver (e.g. 8.8.8.8)"
                 />
               </div>
               <button onClick={handleDns} disabled={dnsLoading} className="flex items-center gap-3 px-10 py-5 bg-accent text-white text-xl font-black rounded-2xl hover:bg-accent/90 shadow-xl transition-all">

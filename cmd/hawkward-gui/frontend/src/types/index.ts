@@ -108,6 +108,7 @@ export interface PingEntry {
   seq: number
   ip: string
   rtt_ms: number | null
+  jitter_ms: number | null
   ttl: number | null
   status: 'success' | 'timeout'
 }
@@ -193,6 +194,7 @@ export interface FirewallRule {
   remote_ip: string
   profile: string
   enabled: boolean
+  is_high_risk: boolean
 }
 
 export interface UserInfo {
@@ -210,6 +212,7 @@ export interface ListeningPort {
   process_name: string
   pid: number
   state: string
+  is_external: boolean
 }
 
 export interface DefenderStatus {
