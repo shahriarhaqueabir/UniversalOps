@@ -9,7 +9,7 @@
   "frontend:dev:serverUrl": "http://localhost:5173",
   "info": {
     "productName": "Hawkward GUI",
-    "productVersion": "1.1.1",
+    "productVersion": "1.2.0"
     "copyright": "Copyright 2026 Hawkward",
     "comments": "Operations Intelligence & Release Hardening"
   },
