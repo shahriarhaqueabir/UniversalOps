@@ -88,7 +88,7 @@ func ControlService(name, action string) error {
 
 func listWindowsServices() ([]ServiceEntry, error) {
 	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-Command",
-		"Get-Service | Sort-Object Status,Name | Select-Object Name,DisplayName,Status,StartType | ConvertTo-Json -Compress")
+		"Get-Service -ErrorAction SilentlyContinue | Sort-Object Status,Name | Select-Object Name,DisplayName,Status,StartType | ConvertTo-Json -As Array -Depth 2")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("query Windows services: %w", err)
@@ -111,14 +111,17 @@ func parseWindowsServicesJSON(jsonStr string) ([]ServiceEntry, error) {
 		return nil, fmt.Errorf("empty service output")
 	}
 
+	// Clean malformed JSON before parsing — strip control characters
+	cleaned := common.CleanJSON(jsonStr)
+
 	var raw []map[string]interface{}
-	if strings.HasPrefix(jsonStr, "{") {
+	if strings.HasPrefix(cleaned, "{") {
 		var single map[string]interface{}
-		if err := json.Unmarshal([]byte(jsonStr), &single); err != nil {
+		if err := json.Unmarshal([]byte(cleaned), &single); err != nil {
 			return nil, fmt.Errorf("parse service json: %w", err)
 		}
 		raw = []map[string]interface{}{single}
-	} else if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
+	} else if err := json.Unmarshal([]byte(cleaned), &raw); err != nil {
 		return nil, fmt.Errorf("parse service json: %w", err)
 	}
 

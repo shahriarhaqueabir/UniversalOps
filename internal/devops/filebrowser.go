@@ -19,13 +19,15 @@ type FileEntry struct {
 }
 
 // isPathSafe checks that the path does not escape the sandbox.
+// Absolute paths are allowed (the frontend file browser sends them),
+// but directory traversal is blocked.
 func isPathSafe(path string) error {
-	if filepath.IsAbs(path) {
-		return fmt.Errorf("absolute paths are not allowed")
-	}
 	clean := filepath.Clean(path)
-	if strings.HasPrefix(clean, "..") || strings.Contains(clean, ".."+string(filepath.Separator)) {
-		return fmt.Errorf("directory traversal is not allowed")
+	if !filepath.IsAbs(clean) {
+		// For relative paths, block traversal
+		if strings.HasPrefix(clean, "..") || strings.Contains(clean, ".."+string(filepath.Separator)) {
+			return fmt.Errorf("directory traversal is not allowed")
+		}
 	}
 	return nil
 }

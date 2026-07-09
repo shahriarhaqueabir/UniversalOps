@@ -14,7 +14,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.26"
+          go-version: "1.26.5"
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -29,8 +29,11 @@ jobs:
       - name: Install frontend dependencies
         run: cd cmd/hawkward-gui/frontend && npm ci
 
-      - name: Build with NSIS installer
-        run: wails build -platform windows/amd64 -nsis -o hawkward-${{ github.ref_name }}-windows-amd64
+      - name: Build standalone executable
+        run: wails build -platform windows/amd64 -o hawkward-${{ github.ref_name }}-windows-amd64.exe
+
+      - name: Build NSIS installer
+        run: wails build -platform windows/amd64 -nsis -o hawkward-${{ github.ref_name }}-windows-amd64-installer
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -46,7 +49,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.26"
+          go-version: "1.26.5"
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -81,7 +84,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.26"
+          go-version: "1.26.5"
 
       - name: Set up Node
         uses: actions/setup-node@v4

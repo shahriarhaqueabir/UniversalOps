@@ -84,14 +84,17 @@ function HeroSection({ stats }: { stats: DashboardData }) {
   const dash = (avgHealth / 100) * circumference
   const gap = circumference - dash
 
-  const uptimeBars = useMemo(() => {
-    return Array.from({ length: 90 }, (_, i) => {
-      const val = (Math.sin(i * 12.3) + 1) / 2
-      if (val > 0.15) return 'up' as const
-      if (val > 0.05) return 'degraded' as const
-      return 'down' as const
-    })
-  }, [])
+  const cpuHistoryBars = useMemo(() => {
+    const hist = stats.cpu.history || []
+    if (hist.length === 0) return []
+    // Sample to 90 bars
+    const step = Math.max(1, Math.floor(hist.length / 90))
+    const sampled: number[] = []
+    for (let i = 0; i < 90 && i * step < hist.length; i++) {
+      sampled.push(hist[i * step])
+    }
+    return sampled
+  }, [stats.cpu.history])
 
   return (
     <div className="bg-panel border-2 border-accent/20 rounded-[28px] p-10 flex flex-col lg:flex-row items-center gap-12 shadow-2xl relative overflow-hidden group">
@@ -124,6 +127,11 @@ function HeroSection({ stats }: { stats: DashboardData }) {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             <div className="px-4 py-1.5 rounded-full bg-success/10 border border-success/30 text-xs font-black text-success uppercase tracking-widest">System Nominal</div>
+            {stats.alerts > 0 && (
+              <div className="px-4 py-1.5 rounded-full bg-warning/10 border border-warning/30 text-xs font-black text-warning uppercase tracking-widest flex items-center gap-2">
+                <AlertTriangle size={12} /> {stats.alerts} Active Alerts
+              </div>
+            )}
             <span className="text-3xl font-black text-text">Platform Vitality</span>
           </div>
           <div className="text-right">
@@ -134,21 +142,23 @@ function HeroSection({ stats }: { stats: DashboardData }) {
 
         <p className="text-text-dim text-xl leading-relaxed mb-8 max-w-2xl font-medium">
           Aggregate performance score derived from core compute, volatile memory, and storage throughput.
-          Current status indicates <span className="text-text font-black">Stable Operation</span> with {stats.alerts} resolved anomalies.
+          Current status indicates <span className="text-text font-black">Stable Operation</span> across all monitored subsystems.
         </p>
 
         <div className="flex gap-1 items-end h-12 w-full bg-panel-3 p-2 rounded-xl border border-border shadow-inner">
-          {uptimeBars.map((state, i) => (
+          {cpuHistoryBars.length > 0 ? cpuHistoryBars.map((val, i) => (
             <div
               key={i}
-              className="flex-1 rounded-[1px] transition-all hover:scale-y-125"
+              className="flex-1 rounded-[1px] transition-all hover:scale-y-125 hover:opacity-80"
               style={{
-                height: state === 'up' ? '100%' : state === 'degraded' ? '60%' : '30%',
-                backgroundColor: state === 'up' ? 'var(--color-success)' : state === 'degraded' ? 'var(--color-warning)' : 'var(--color-danger)',
-                opacity: state === 'up' ? 0.4 : 1,
+                height: `${Math.max(5, val)}%`,
+                backgroundColor: healthColor(val),
+                opacity: val > 80 ? 0.9 : 0.5,
               }}
             />
-          ))}
+          )) : (
+            <div className="w-full text-center text-xs font-bold text-text-faint">No history data</div>
+          )}
         </div>
       </div>
     </div>
@@ -182,16 +192,17 @@ function KpiCard({ icon, label, value, unit, status, description }: { icon: Reac
    Main Dashboard
    ─────────────────────────────────────────── */
 
-export function Dashboard() {
+import type { Page } from '@/App'
+
+export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void }) {
   const { call } = useBackend()
   const [data, setData] = useState<DashboardData | null>(null)
   const [cpuHistory, setCpuHistory] = useState<TimeSeriesPoint[]>([])
-  const [memHistory, setMemHistory] = useState<TimeSeriesPoint[]>([]) // prettier-ignore
-  const [alerts, setAlerts] = useState<AlertInfo[]>([]) // prettier-ignore
-  void memHistory; void alerts; // used by event handlers
+  // Only need setAlerts for the event callback; alerts value is unused
+  const setAlerts = useState<AlertInfo[]>([])[1];
 
   useEffect(() => {
-    call('Dash.GetDashboardData').then(res => setData(res as DashboardData))
+    call('Dashboard.GetDashboardData').then(res => setData(res as DashboardData))
   }, [call])
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Wails event payload is dynamic
@@ -200,7 +211,6 @@ export function Dashboard() {
     setData(d)
     const t = new Date().toLocaleTimeString()
     setCpuHistory(prev => [...prev.slice(-59), { time: t, value: d.cpu.value }])
-    setMemHistory(prev => [...prev.slice(-59), { time: t, value: d.memory.value }])
   }, []))
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Wails event payload is dynamic
@@ -221,10 +231,10 @@ export function Dashboard() {
           <p className="text-xl text-text-dim mt-2 font-medium">Strategic overview of system-wide heuristics and critical subsystems.</p>
         </div>
         <div className="flex gap-4">
-          <button className="flex items-center gap-3 px-6 py-3 rounded-xl bg-panel-2 border border-border text-text font-bold hover:bg-panel-3 transition-all shadow-lg active:scale-95">
+          <button onClick={() => onNavigate?.('sysops')} className="flex items-center gap-3 px-6 py-3 rounded-xl bg-panel-2 border border-border text-text font-bold hover:bg-panel-3 transition-all shadow-lg active:scale-95">
             <Zap size={18} className="text-warning" /> QUICK DIAGNOSTIC
           </button>
-          <button className="flex items-center gap-3 px-6 py-3 rounded-xl bg-accent text-white font-bold hover:bg-accent/90 transition-all shadow-[0_10px_20px_rgba(124,108,255,0.2)] active:scale-95">
+          <button onClick={() => onNavigate?.('aiops')} className="flex items-center gap-3 px-6 py-3 rounded-xl bg-accent text-white font-bold hover:bg-accent/90 transition-all shadow-[0_10px_20px_rgba(124,108,255,0.2)] active:scale-95">
             <FileSearch size={18} /> GENERATE BRIEFING
           </button>
         </div>
@@ -318,10 +328,10 @@ export function Dashboard() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           {opsItems.map((item) => (
-            <a
+            <button
               key={item.id}
-              href={`#${item.id}`}
-              className="bg-panel-2 border border-border/50 rounded-[20px] p-6 transition-all duration-300 hover:bg-accent-soft hover:border-accent/40 group relative overflow-hidden"
+              onClick={() => onNavigate?.(item.id)}
+              className="bg-panel-2 border border-border/50 rounded-[20px] p-6 transition-all duration-300 hover:bg-accent-soft hover:border-accent/40 group relative overflow-hidden text-left w-full"
             >
               <div className="absolute -bottom-4 -right-4 opacity-5 group-hover:opacity-10 transition-all group-hover:scale-150">
                 {item.icon}
@@ -335,7 +345,7 @@ export function Dashboard() {
                   <p className="text-xs font-bold text-text-faint uppercase tracking-tighter group-hover:text-accent transition-colors">Launch Module</p>
                 </div>
               </div>
-            </a>
+            </button>
           ))}
         </div>
       </div>
@@ -343,7 +353,7 @@ export function Dashboard() {
   )
 }
 
-const opsItems = [
+const opsItems: { id: Page; label: string; icon: React.ReactNode }[] = [
   { id: 'sysops', label: 'System', icon: <Cpu size={20} /> },
   { id: 'netops', label: 'Network', icon: <Network size={20} /> },
   { id: 'secops', label: 'Security', icon: <Shield size={20} /> },

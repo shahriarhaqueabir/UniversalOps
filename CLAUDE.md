@@ -1,13 +1,13 @@
 # Project Instructions: Hawkward GUI
 
 ## Tech Stack
-- **Backend**: Go 1.26.4
+- **Backend**: Go 1.26.5
 - **Frontend**: React + TypeScript + Vite (Tailwind v4)
 - **GUI Framework**: Wails v2 (`github.com/wailsapp/wails/v2`)
 - **Ops Libraries**: `gopsutil/v4`, `miekg/dns`, `golang.org/x/net`
 
 ## Build & Run
-- **Build**: `wails build`
+- **Build**: `wails build` (NOT `go build` — Wails embed + assets require `wails build`)
 - **Dev**: `wails dev`
 - **Frontend Dev**: `cd cmd/hawkward-gui/frontend && npm run dev`
 - **Test (Go)**: `go test ./...`
@@ -27,8 +27,8 @@
 - **Frontend**: Vitest + React Testing Library (RTL).
 
 ## Project Structure
-- `cmd/hawkward/`: Entry point.
-- `internal/ui/`: Root TUI components and routing.
+- `main.go`: Entry point (Wails v2 embed + runtime).
+- `cmd/hawkward-gui/frontend/`: React + Vite frontend.
 - `internal/common/`: Shared utilities, types, and logging.
 - `internal/{sysops,netops,secops,devops,aiops}/`: Modular domain logic.
 - `docs/`: Project documentation.

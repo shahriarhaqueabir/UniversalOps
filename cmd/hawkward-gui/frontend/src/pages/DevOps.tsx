@@ -28,6 +28,12 @@ import { cn } from '@/lib/utils'
 import * as Tabs from '@radix-ui/react-tabs'
 import { useBackend } from '@/hooks/useBackend'
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
+
+// Strip ANSI escape sequences from terminal output
+function stripAnsi(text: string): string {
+  // Matches ANSI escape sequences: ESC[<params>m, ESC[<params>K, ESC[<params>J, etc.
+  return text.replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, '')
+}
 import type { CommandResult, ServiceEntry, FileEntry } from '@/types'
 
 type TabId = 'terminal' | 'powershell-pro' | 'services' | 'file-browser'
@@ -257,7 +263,7 @@ function TerminalTab() {
       >
         {output.map((block, i) => (
           <div key={i} className="whitespace-pre-wrap break-all mb-2">
-            {block}
+            {stripAnsi(block)}
           </div>
         ))}
         {isRunning && (
@@ -367,7 +373,7 @@ function PowerShellProTab() {
           )}
         </div>
         <div className="flex-1 bg-[#0b1120] border border-border rounded-2xl p-8 overflow-y-auto font-[JetBrains_Mono] text-lg leading-relaxed whitespace-pre shadow-inner">
-          {output || 'Select a workflow to begin diagnostic execution.'}
+          {stripAnsi(output) || 'Select a workflow to begin diagnostic execution.'}
         </div>
         <button
           onClick={() => setOutput('')}
@@ -557,7 +563,7 @@ function ServicesTab() {
 
 function FileBrowserTab() {
   const { call } = useBackend()
-  const [currentPath, setCurrentPath] = useState('E:/Projects/projectx/AllOpsFull')
+  const [currentPath, setCurrentPath] = useState('')
   const [entries, setEntries] = useState<FileEntry[]>([])
   const [history, setHistory] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
@@ -578,8 +584,18 @@ function FileBrowserTab() {
   }, [call])
 
   useEffect(() => {
-    fetchDir(currentPath)
-  }, [fetchDir, currentPath])
+    if (!currentPath) {
+      call('DevOps.GetDefaultPath').then((p) => {
+        const path = (p as string) || ''
+        setCurrentPath(path)
+        if (path) fetchDir(path)
+      }).catch(() => {
+        setCurrentPath('')
+      })
+    } else {
+      fetchDir(currentPath)
+    }
+  }, [fetchDir, currentPath, call])
 
   const navigate = (path: string) => {
     setHistory(prev => [...prev, currentPath])

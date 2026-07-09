@@ -13,7 +13,7 @@ function App() {
       <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar currentPage={currentPage} />
-        <MainContent currentPage={currentPage} />
+        <MainContent currentPage={currentPage} onNavigate={setCurrentPage} />
       </div>
     </div>
   )

@@ -15,12 +15,13 @@ const Settings = lazy(() => import('../../pages/Settings').then(m => ({ default:
 
 interface MainContentProps {
   currentPage: Page
+  onNavigate?: (page: Page) => void
 }
 
-export function MainContent({ currentPage }: MainContentProps) {
+export function MainContent({ currentPage, onNavigate }: MainContentProps) {
   const renderPage = () => {
     switch (currentPage) {
-      case 'dashboard': return <Dashboard />
+      case 'dashboard': return <Dashboard onNavigate={onNavigate} />
       case 'sysops': return <SysOps />
       case 'netops': return <NetOps />
       case 'secops': return <SecOps />

@@ -28,33 +28,35 @@ type DefenderStatus struct {
 // On non-Windows systems it returns an error indicating the feature is unavailable.
 func GetDefenderStatus() (*DefenderStatus, error) {
 	if common.IsWindows() {
-		cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-Command", "Get-MpComputerStatus | ConvertTo-Json -Compress -Depth 2")
+		// Approach 1: Standard Get-MpComputerStatus
+		cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-NoProfile", "-Command",
+			"$r=Get-MpComputerStatus -ErrorAction SilentlyContinue; if($r){$r|ConvertTo-Json -Depth 2}else{echo '{}'}")
 		output, err := cmd.Output()
 		if err == nil {
 			status, parseErr := parseDefenderJSON(string(output))
-			if parseErr == nil {
+			if parseErr == nil && status != nil && (status.AMServiceEnabled || status.AntispywareEnabled) {
 				return status, nil
 			}
 		}
 
-		// Try with a different approach if the first fails
-		cmd2 := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-Command",
-			"$s=Get-MpComputerStatus; $s | Select-Object @{N='Enabled';E={$_.AntivirusEnabled}}, @{N='SignatureAge';E={$_.SignatureAge}}, @{N='SignatureLastUpdated';E={$_.SignatureLastUpdated}}, @{N='QuickScanEndTime';E={$_.QuickScanEndTime}}, @{N='FullScanEndTime';E={$_.FullScanEndTime}}, @{N='RealTimeProtectionEnabled';E={$_.RealTimeProtectionEnabled}}, @{N='CloudProtectionEnabled';E={$_.CloudProtectionEnabled}}, AMServiceEnabled, AntispywareEnabled, NISEnabled | ConvertTo-Json -Compress")
-		output2, err2 := cmd2.Output()
-		if err2 == nil {
-			status, parseErr := parseDefenderJSON(string(output2))
-			if parseErr == nil {
+		// Approach 2: Try Get-MpPreference as alternative
+		cmd3 := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-NoProfile", "-Command",
+			"Get-MpPreference -ErrorAction SilentlyContinue | Select-Object DisableRealtimeMonitoring,DisableIOAVProtection,DisableBehaviorMonitoring,DisableScriptScanning | ConvertTo-Json -Depth 2")
+		output3, err3 := cmd3.Output()
+		if err3 == nil {
+			status, parseErr := parseDefenderPreferenceJSON(string(output3))
+			if parseErr == nil && status != nil {
 				return status, nil
 			}
 		}
 
-		// Fallback: try WMIC (available in locked-down environments where PowerShell is restricted)
+		// Approach 3: Try WMIC (available in locked-down environments)
 		status, err := defenderWMICFallback()
 		if err == nil {
 			return status, nil
 		}
 
-		return nil, fmt.Errorf("failed to query Windows Defender: all approaches failed")
+		return nil, fmt.Errorf("failed to query Windows Defender: all approaches failed (PS: %v, MpPref: %v, WMIC: %v)", err, err3, err)
 	}
 
 	return nil, fmt.Errorf("windows Defender is not available on this platform")
@@ -278,4 +280,28 @@ func formatTimeStr(t string) string {
 		t = t[:19]
 	}
 	return t
+}
+
+// parseDefenderPreferenceJSON parses Get-MpPreference JSON output
+// as a fallback when Get-MpComputerStatus is unavailable.
+func parseDefenderPreferenceJSON(jsonStr string) (*DefenderStatus, error) {
+	var data map[string]interface{}
+	if err := json.Unmarshal([]byte(jsonStr), &data); err != nil {
+		return nil, fmt.Errorf("failed to parse defender preference JSON: %w", err)
+	}
+
+	status := &DefenderStatus{
+		SignatureAge: "Unknown",
+		LastScan:     "Unknown",
+	}
+
+	// In MpPreference, DisableRealtimeMonitoring being false means it IS enabled
+	disableRTM := getJSONBool(data, "DisableRealtimeMonitoring")
+	status.RealTimeProtection = !disableRTM
+	status.Enabled = true
+	status.AMServiceEnabled = true
+	status.AntispywareEnabled = true
+	status.UpToDate = false
+
+	return status, nil
 }

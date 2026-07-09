@@ -43,6 +43,19 @@ function SettingRow({ label, description, children }: { label: string; descripti
   )
 }
 
+// ── localStorage helpers ──
+
+function loadSetting<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw !== null ? (JSON.parse(raw) as T) : fallback
+  } catch { return fallback }
+}
+
+function saveSetting<T>(key: string, value: T): void {
+  try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* ignore quota errors */ }
+}
+
 // ══════════════════════════════════
 //  Settings Page
 // ══════════════════════════════════
@@ -58,14 +71,14 @@ const intervalOptions = [
 interface AppInfo {
   name: string
   version: string
-  goVersion: string
+  go_version: string
   uptime: string
 }
 
 const DEFAULT_APP_INFO: AppInfo = {
   name: 'Hawkward',
   version: '0.1.0',
-  goVersion: 'go1.26.4',
+  go_version: 'go1.26.4',
   uptime: '--',
 }
 
@@ -76,23 +89,23 @@ export function Settings() {
   const { theme, toggle } = useTheme()
 
   // Collection / Refresh
-  const [refreshInterval, setRefreshInterval] = useState(5000)
+  const [refreshInterval, setRefreshInterval] = useState(() => loadSetting('hawkward_refreshInterval', 5000))
 
   // Network
-  const [pingCount, setPingCount] = useState(4)
-  const [dnsTimeout, setDnsTimeout] = useState(2000)
+  const [pingCount, setPingCount] = useState(() => loadSetting('hawkward_pingCount', 4))
+  const [dnsTimeout, setDnsTimeout] = useState(() => loadSetting('hawkward_dnsTimeout', 2000))
 
   // About
   const [appInfo, setAppInfo] = useState<AppInfo>(DEFAULT_APP_INFO)
 
   useEffect(() => {
-    call('GetAppInfo').then((result: unknown) => {
+    call('App.GetAppInfo').then((result: unknown) => {
       if (result) {
         const info = result as Partial<AppInfo>
         setAppInfo({
           name: info.name || DEFAULT_APP_INFO.name,
           version: info.version || DEFAULT_APP_INFO.version,
-          goVersion: info.goVersion || DEFAULT_APP_INFO.goVersion,
+          go_version: info.go_version || DEFAULT_APP_INFO.go_version,
           uptime: info.uptime || DEFAULT_APP_INFO.uptime,
         })
       }
@@ -153,6 +166,7 @@ export function Settings() {
             onChange={(e) => {
               const val = Number(e.target.value)
               setRefreshInterval(val)
+              saveSetting('hawkward_refreshInterval', val)
               call('PipelineAPI.UpdateSettings', val, 0)
             }}
             className="bg-panel-2 border border-border rounded-xl px-4 py-2.5 text-base font-bold text-text focus:outline-none focus:border-accent transition-colors"
@@ -175,7 +189,7 @@ export function Settings() {
           <div className="flex items-center gap-3 w-44">
             <Slider.Root
               value={[pingCount]}
-              onValueChange={([v]) => setPingCount(v)}
+              onValueChange={([v]) => { setPingCount(v); saveSetting('hawkward_pingCount', v) }}
               min={1}
               max={20}
               step={1}
@@ -197,7 +211,7 @@ export function Settings() {
           <div className="flex items-center gap-3 w-44">
             <Slider.Root
               value={[dnsTimeout]}
-              onValueChange={([v]) => setDnsTimeout(v)}
+              onValueChange={([v]) => { setDnsTimeout(v); saveSetting('hawkward_dnsTimeout', v) }}
               min={500}
               max={10000}
               step={100}
@@ -226,7 +240,7 @@ export function Settings() {
           </div>
           <div>
             <p className="text-xs font-black text-text-faint uppercase tracking-[0.2em] mb-1">Go Version</p>
-            <p className="text-text font-bold font-[JetBrains_Mono]">{appInfo.goVersion}</p>
+            <p className="text-text font-bold font-[JetBrains_Mono]">{appInfo.go_version}</p>
           </div>
           <div>
             <p className="text-xs font-black text-text-faint uppercase tracking-[0.2em] mb-1">Uptime</p>
@@ -235,10 +249,10 @@ export function Settings() {
         </div>
         <div className="pt-6 border-t border-border/50 mt-6">
           <div className="flex items-center gap-6">
-            <a href="#" className="flex items-center gap-2 text-sm font-bold text-accent hover:text-accent-2 transition-colors">
+            <a href="https://github.com/shahriarhaqueabir/AllOpsFull" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-bold text-accent hover:text-accent-2 transition-colors">
               <ExternalLink size={16} /> GitHub
             </a>
-            <a href="#" className="flex items-center gap-2 text-sm font-bold text-accent hover:text-accent-2 transition-colors">
+            <a href="https://github.com/shahriarhaqueabir/AllOpsFull#readme" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-bold text-accent hover:text-accent-2 transition-colors">
               <ExternalLink size={16} /> Documentation
             </a>
           </div>

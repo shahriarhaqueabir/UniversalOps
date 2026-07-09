@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -30,7 +31,13 @@ type PingResult struct {
 // Ping sends ICMP echo requests to a target host.
 // On Windows, it falls back to using the system ping.exe.
 func Ping(target string, count int) (*PingResult, error) {
-	// Try ICMP-based ping first
+	// Windows does not allow raw ICMP sockets without Administrator
+	// privileges, so skip directly to the system ping.exe fallback.
+	if runtime.GOOS == "windows" {
+		return pingExec(target, count)
+	}
+
+	// Try ICMP-based ping first (requires elevated privileges on Linux/macOS)
 	result, err := pingICMP(target, count)
 	if err == nil && result != nil {
 		return result, nil
@@ -156,7 +163,7 @@ func parsePingOutput(target, output string, count int) (*PingResult, error) {
 	}
 
 	// Extract IP address
-	ipRe := regexp.MustCompile(`\[([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\]|Pinging\s+\S+\s+\[([0-9.]+)\]|from\s+([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)`)
+	ipRe := regexp.MustCompile(`\[([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\]|Pinging\s+\S+\s+\[([0-9.]+)\]|Pinging\s+([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\s+with|from\s+([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)`)
 	if matches := ipRe.FindStringSubmatch(output); len(matches) > 0 {
 		for _, m := range matches[1:] {
 			if m != "" {
@@ -173,8 +180,9 @@ func parsePingOutput(target, output string, count int) (*PingResult, error) {
 		}
 	}
 
-	// Extract sent/received/lost from "Sent = X, Received = Y, Lost = Z" or similar
-	statsRe := regexp.MustCompile(`(?:Sent|Packets:)\s*=\s*(\d+)[^=]*Received\s*=\s*(\d+)[^=]*Lost\s*=\s*(\d+)`)
+	// Extract sent/received/lost from "Packets: Sent = X, Received = Y, Lost = Z" (Windows)
+	// or "Sent = X, Received = Y, Lost = Z" (Linux).
+	statsRe := regexp.MustCompile(`(?:Packets:\s*)?Sent\s*=\s*(\d+)[^=]*Received\s*=\s*(\d+)[^=]*Lost\s*=\s*(\d+)`)
 	if matches := statsRe.FindStringSubmatch(output); len(matches) > 3 {
 		result.Sent, _ = strconv.Atoi(matches[1])
 		result.Received, _ = strconv.Atoi(matches[2])

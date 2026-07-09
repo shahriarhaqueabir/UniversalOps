@@ -3,6 +3,7 @@ package netops
 import (
 	"context"
 	"fmt"
+	"net"
 	"sort"
 	"strings"
 	"time"
@@ -96,6 +97,45 @@ func LookupDNSWithContext(ctx context.Context, hostname string) (*DNSResult, err
 			sort.Strings(result.AAAA)
 			sort.Strings(result.NS)
 			sort.Strings(result.TXT)
+			return result, nil
+		}
+	}
+
+	// All public DNS servers failed — try system resolver as fallback
+	if len(result.A) == 0 && len(result.AAAA) == 0 {
+		sysResolverUsed := false
+
+		// A/AAAA records via system resolver
+		addrs, err := net.DefaultResolver.LookupHost(ctx, hostname)
+		if err == nil {
+			for _, addr := range addrs {
+				ip := net.ParseIP(addr)
+				if ip == nil {
+					continue
+				}
+				if ip.To4() != nil {
+					result.A = append(result.A, addr)
+				} else {
+					result.AAAA = append(result.AAAA, addr)
+				}
+			}
+			if len(result.A) > 0 || len(result.AAAA) > 0 {
+				sort.Strings(result.A)
+				sort.Strings(result.AAAA)
+				sysResolverUsed = true
+			}
+		}
+
+		// TXT records via system resolver
+		txtRecords, err := net.DefaultResolver.LookupTXT(ctx, hostname)
+		if err == nil && len(txtRecords) > 0 {
+			result.TXT = txtRecords
+			sort.Strings(result.TXT)
+			sysResolverUsed = true
+		}
+
+		if sysResolverUsed {
+			result.Error = "Public DNS servers unreachable — results from system resolver"
 			return result, nil
 		}
 	}

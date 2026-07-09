@@ -32,7 +32,7 @@ func GetFirewallRules() ([]FirewallRule, error) {
 				return rules, nil
 			}
 		}
-		return nil, fmt.Errorf("failed to query Windows firewall: %w", err)
+		return nil, fmt.Errorf("no firewall rules parsed — check netsh output format (non-English locale?): %w", err)
 	}
 
 	if common.IsLinux() {

@@ -162,9 +162,15 @@ var AllowedPowerShellWorkflows = []string{
 }
 
 // PowerShellProfilePath is the path to the PowerShell profile script.
-// It is resolved relative to the executable's working directory.
+// It is resolved relative to the executable's directory at runtime.
 // Override for testing.
-var PowerShellProfilePath = filepath.Join("profiles", "powershell_profile.ps1")
+var PowerShellProfilePath = func() string {
+	exe, err := os.Executable()
+	if err == nil {
+		return filepath.Join(filepath.Dir(exe), "profiles", "powershell_profile.ps1")
+	}
+	return filepath.Join("profiles", "powershell_profile.ps1")
+}()
 
 // isAllowedWorkflow checks whether cmd is one of the approved PowerShell workflow names.
 func isAllowedWorkflow(cmd string) bool {
@@ -187,12 +193,14 @@ func RunPowerShell(cmd string) (*ShellResult, error) {
 		return nil, fmt.Errorf("RunPowerShell: command %q is not in the allowed PowerShell workflow allowlist", cmd)
 	}
 
-	// 2. Profile must exist — no silent fallback
+	// 2. Profile is optional — warn if missing but continue
 	profilePath := PowerShellProfilePath
-	if _, err := os.Stat(profilePath); err != nil {
-		return nil, fmt.Errorf("RunPowerShell: PowerShell profile not found at %s: %w", PowerShellProfilePath, err)
+	psCmd := cmd
+	if _, err := os.Stat(profilePath); err == nil {
+		psCmd = fmt.Sprintf(". '%s'; %s", profilePath, cmd)
+	} else {
+		common.LogWarn("RunPowerShell: PowerShell profile not found at %s, running without profile: %v", PowerShellProfilePath, err)
 	}
-	psCmd := fmt.Sprintf(". '%s'; %s", profilePath, cmd)
 
 	// 3. Use 'pwsh' (PowerShell 7) if available, otherwise 'powershell'
 	shell := "pwsh"

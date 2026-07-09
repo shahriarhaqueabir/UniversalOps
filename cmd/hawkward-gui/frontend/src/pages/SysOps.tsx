@@ -13,7 +13,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
-import type { CPUInfo, MemoryInfo, ProcessInfo, SystemInfo } from '@/types'
+import type { CPUInfo, MemoryInfo, ProcessInfo, SystemInfo, DiskInfo } from '@/types'
 
 // ── Types ──
 
@@ -31,7 +31,7 @@ const tabs: TabDef[] = [
   { id: 'system-info', label: 'Inventory', icon: <Box size={20} /> },
 ]
 
-void 'ProcSortKey'; // preserved for future use
+
 
 const BAR_GREEN = '#4ade80'
 const BAR_AMBER = '#fbbf24'
@@ -109,19 +109,21 @@ export function SysOps() {
   const [cpuInfo, setCpuInfo] = useState<CPUInfo | null>(null)
   const [memInfo, setMemInfo] = useState<MemoryInfo | null>(null)
   const [sysInfo, setSysInfo] = useState<SystemInfo | null>(null)
+  const [diskInfo, setDiskInfo] = useState<DiskInfo | null>(null)
   const [processes, setProcesses] = useState<ProcessInfo[]>([])
   const [search, setSearch] = useState('')
   const [killTarget, setKillTarget] = useState<{ pid: number, name: string } | null>(null)
 
   const loadData = useCallback(async () => {
     try {
-      const [c, m, s, p] = await Promise.all([
+      const [c, m, s, p, d] = await Promise.all([
         call('SysOps.GetCPUInfo'),
         call('SysOps.GetMemoryInfo'),
         call('SysOps.GetSystemInfo'),
         call('SysOps.ListAllProcesses', 100),
+        call('SysOps.GetDiskInfo'),
       ])
-      setCpuInfo(c as CPUInfo); setMemInfo(m as MemoryInfo); setSysInfo(s as SystemInfo); setProcesses(p as ProcessInfo[])
+      setCpuInfo(c as CPUInfo); setMemInfo(m as MemoryInfo); setSysInfo(s as SystemInfo); setProcesses(p as ProcessInfo[]); setDiskInfo(d as DiskInfo)
     } catch (err) { console.error(err) }
   }, [call])
 
@@ -133,7 +135,7 @@ export function SysOps() {
     setKillTarget(null)
   }
 
-  if (!cpuInfo || !memInfo || !sysInfo) {
+  if (!cpuInfo || !memInfo || !sysInfo || !diskInfo) {
     return (
       <div className="p-6 space-y-4 animate-pulse">
         <div className="h-8 w-48 bg-panel-2 rounded" />
@@ -224,6 +226,34 @@ export function SysOps() {
                     <p className="text-xs font-black text-text-faint uppercase mb-1">Swap Usage</p>
                     <p className="text-2xl font-black text-warning">{memInfo.swap_percent.toFixed(1)}%</p>
                   </div>
+                </div>
+              </div>
+
+              {/* Disk Card */}
+              <div className="bg-panel border border-border rounded-[28px] p-8 shadow-2xl">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-xl font-black text-text uppercase tracking-widest flex items-center gap-3"><Disc size={24} className="text-accent" /> Storage Analysis</h3>
+                  <span className="text-3xl font-black text-accent">
+                    {diskInfo.partitions.length > 0
+                      ? (diskInfo.partitions.reduce((a, p) => a + p.used_bytes, 0) / Math.max(diskInfo.partitions.reduce((a, p) => a + p.total_bytes, 0), 1) * 100).toFixed(1)
+                      : 0}%
+                  </span>
+                </div>
+                <div className="space-y-6">
+                  {diskInfo.partitions.map((p, i) => (
+                    <div key={i}>
+                      <Bar label={p.mountpoint.length > 20 ? p.mountpoint.slice(0, 20) + '…' : p.mountpoint} value={p.used_percent} />
+                      <div className="flex items-center justify-between text-sm mt-1">
+                        <span className="text-text-dim">
+                          {(p.total_bytes / 1e9).toFixed(1)} GB total · {(p.free_bytes / 1e9).toFixed(1)} GB free · {(p.used_bytes / 1e9).toFixed(1)} GB used
+                        </span>
+                        <span className="text-text-faint text-xs">{p.fs_type} · {p.device}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {diskInfo.partitions.length === 0 && (
+                    <p className="text-text-dim text-center py-4">No partitions detected.</p>
+                  )}
                 </div>
               </div>
             </div>
