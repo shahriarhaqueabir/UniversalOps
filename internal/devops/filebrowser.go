@@ -10,12 +10,14 @@ import (
 
 // FileEntry represents a file or directory entry.
 type FileEntry struct {
-	Name    string
-	Path    string
-	Size    string
-	IsDir   bool
-	Mode    os.FileMode
-	ModTime time.Time
+	Name     string
+	Path     string
+	Size     string
+	RawSize  int64
+	IsDir    bool
+	IsBinary bool
+	Mode     os.FileMode
+	ModTime  time.Time
 }
 
 // isPathSafe checks that the path does not escape the sandbox.
@@ -49,28 +51,95 @@ func ListDir(path string) ([]FileEntry, error) {
 			continue
 		}
 		files = append(files, FileEntry{
-			Name:    entry.Name(),
-			Path:    filepath.Join(path, entry.Name()),
-			Size:    formatSize(info.Size()),
-			IsDir:   info.IsDir(),
-			Mode:    info.Mode(),
-			ModTime: info.ModTime(),
+			Name:     entry.Name(),
+			Path:     filepath.Join(path, entry.Name()),
+			Size:     formatSize(info.Size()),
+			RawSize:  info.Size(),
+			IsDir:    info.IsDir(),
+			IsBinary: isBinaryFile(filepath.Join(path, entry.Name()), info),
+			Mode:     info.Mode(),
+			ModTime:  info.ModTime(),
 		})
 	}
 
 	return files, nil
 }
 
-// ReadFile reads the entire contents of a file.
+// isBinaryFile checks if a file is binary by looking at its extension and a small sample.
+func isBinaryFile(path string, info os.FileInfo) bool {
+	if info.IsDir() {
+		return false
+	}
+	// Common binary extensions
+	ext := strings.ToLower(filepath.Ext(path))
+	binaryExts := map[string]bool{
+		".exe": true, ".dll": true, ".so": true, ".dylib": true,
+		".bin": true, ".obj": true, ".o": true, ".a": true, ".lib": true,
+		".zip": true, ".tar": true, ".gz": true, ".7z": true, ".rar": true,
+		".png": true, ".jpg": true, ".jpeg": true, ".gif": true, ".pdf": true,
+		".db": true, ".sqlite": true, ".dat": true,
+	}
+	if binaryExts[ext] {
+		return true
+	}
+
+	// Read small sample if file isn't huge
+	if info.Size() == 0 {
+		return false
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return true // treat unreadable as binary for safety
+	}
+	defer f.Close()
+
+	sample := make([]byte, 512)
+	n, _ := f.Read(sample)
+	for i := 0; i < n; i++ {
+		if sample[i] == 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// ReadFile reads the first 1MB of a file's contents if it's not binary.
 func ReadFile(path string) (string, error) {
 	if err := isPathSafe(path); err != nil {
 		return "", err
 	}
-	data, err := os.ReadFile(path)
+	info, err := os.Stat(path)
 	if err != nil {
 		return "", err
 	}
-	return string(data), nil
+	if isBinaryFile(path, info) {
+		return "// [Hawkward] Binary file content hidden for safety.", nil
+	}
+
+	// Limit read to 1MB
+	maxSize := int64(1 * 1024 * 1024)
+	readSize := info.Size()
+	if readSize > maxSize {
+		readSize = maxSize
+	}
+
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	data := make([]byte, readSize)
+	_, err = f.Read(data)
+	if err != nil {
+		return "", err
+	}
+
+	content := string(data)
+	if info.Size() > maxSize {
+		content += "\n\n// [Hawkward] File truncated - viewing first 1MB."
+	}
+	return content, nil
 }
 
 // WriteFile writes data to a file.

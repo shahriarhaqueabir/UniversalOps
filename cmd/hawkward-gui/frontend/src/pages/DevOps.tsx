@@ -634,9 +634,31 @@ function FileBrowserTab() {
           >
             <ChevronRight size={24} className="rotate-180" />
           </button>
-          <div className="flex-1 bg-panel border border-border rounded-xl px-6 py-3 flex items-center gap-3 overflow-hidden shadow-inner">
-            <Home size={20} className="text-text-faint shrink-0" />
-            <span className="text-lg font-medium text-text truncate">{currentPath}</span>
+          <div className="flex-1 bg-panel border border-border rounded-xl px-6 py-2.5 flex items-center gap-1 overflow-x-auto no-scrollbar shadow-inner">
+            <button
+              onClick={() => call('DevOps.GetDefaultPath').then(p => navigate(p as string))}
+              className="p-1.5 hover:bg-white/10 rounded-lg text-text-faint hover:text-primary transition-all shrink-0"
+            >
+              <Home size={18} />
+            </button>
+            {currentPath.split(/[\\/]/).filter(Boolean).map((part, i, arr) => {
+              const fullPath = currentPath.split(/[\\/]/).slice(0, i + 2).join('\\') // Handle Windows paths
+              const isLast = i === arr.length - 1
+              return (
+                <div key={i} className="flex items-center gap-1 shrink-0">
+                  <ChevronRight size={14} className="text-text-dim" />
+                  <button
+                    onClick={() => !isLast && navigate(fullPath)}
+                    className={cn(
+                      "px-2 py-1 rounded-lg text-sm font-bold transition-all",
+                      isLast ? "text-text cursor-default" : "text-text-dim hover:text-primary hover:bg-white/5"
+                    )}
+                  >
+                    {part}
+                  </button>
+                </div>
+              )
+            })}
           </div>
         </div>
 
@@ -679,24 +701,43 @@ function FileBrowserTab() {
       {previewFile && (
         <div className="w-1/2 flex flex-col space-y-4 animate-in slide-in-from-right-8 duration-300">
           <div className="flex items-center justify-between p-2">
-            <h3 className="text-xl font-bold text-text flex items-center gap-3">
-              <FileText size={24} className="text-primary" />
-              {previewFile.name}
+            <h3 className="text-xl font-bold text-text flex items-center gap-3 min-w-0">
+              <FileText size={24} className="text-primary shrink-0" />
+              <span className="truncate">{previewFile.name}</span>
             </h3>
-            <button
-              onClick={() => setPreviewFile(null)}
-              className="p-2 rounded-lg hover:bg-danger/10 text-text-faint hover:text-danger transition-all"
-            >
-              <X size={28} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(previewFile.path)
+                  // Could add a toast here
+                }}
+                className="p-2.5 rounded-lg bg-panel border border-border hover:bg-panel-3 text-text-faint hover:text-text transition-all"
+                title="Copy full path"
+              >
+                <Folder size={20} />
+              </button>
+              <button
+                onClick={() => setPreviewFile(null)}
+                className="p-2.5 rounded-lg hover:bg-danger/10 text-text-faint hover:text-danger transition-all"
+              >
+                <X size={28} />
+              </button>
+            </div>
           </div>
           <div className="flex-1 bg-[#0b1120] border border-border rounded-2xl p-8 overflow-y-auto shadow-inner relative group">
-            <div className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Lock size={20} className="text-text-faint" />
-            </div>
-            <pre className="font-[JetBrains_Mono] text-base text-text leading-relaxed whitespace-pre-wrap">
-              {fileContent || '// No readable content or file is too large.'}
-            </pre>
+            {previewFile.is_binary ? (
+              <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-50">
+                <Lock size={48} className="text-warning" />
+                <div>
+                  <p className="text-xl font-bold text-text">Binary Data Encrypted</p>
+                  <p className="text-base text-text-dim">Direct preview is disabled for safety.</p>
+                </div>
+              </div>
+            ) : (
+              <pre className="font-[JetBrains_Mono] text-base text-text leading-relaxed whitespace-pre-wrap">
+                {fileContent || '// No readable content or file is empty.'}
+              </pre>
+            )}
           </div>
         </div>
       )}

@@ -7,6 +7,12 @@
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "http://localhost:5173",
+  "info": {
+    "productName": "Hawkward GUI",
+    "productVersion": "1.1.1",
+    "copyright": "Copyright 2026 Hawkward",
+    "comments": "Operations Intelligence & Release Hardening"
+  },
   "author": {
     "name": "Hawkward",
     "email": "dev@hawkward.io"

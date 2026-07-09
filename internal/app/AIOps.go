@@ -83,9 +83,10 @@ func (a *AIOps) GetOllamaStatus() OllamaStatus {
 		}
 	}
 	return OllamaStatus{
-		Available: status.Available,
-		Model:     status.Model,
-		Version:   status.Version,
+		Available:       status.Available,
+		Model:           status.Model,
+		Version:         status.Version,
+		AvailableModels: status.AvailableModels,
 	}
 }
 

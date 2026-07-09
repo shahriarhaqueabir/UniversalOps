@@ -29,6 +29,8 @@ export interface CPUInfo {
   percent: number
   per_cpu: number[]
   model_name: string
+  logical_cores: number
+  physical_cores: number
   core_count: number
   load_avg_1: number
   load_avg_5: number
@@ -268,7 +270,9 @@ export interface FileEntry {
   name: string
   path: string
   size: string
+  raw_size: number
   is_dir: boolean
+  is_binary: boolean
   mode: string
   mod_time: string
 }
@@ -295,6 +299,7 @@ export interface OllamaStatus {
   available: boolean
   model: string
   version: string
+  available_models?: string[]
   error?: string
 }
 

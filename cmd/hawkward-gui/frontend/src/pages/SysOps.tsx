@@ -202,11 +202,24 @@ export function SysOps() {
               {/* CPU Card */}
               <div className="bg-panel border border-border rounded-[28px] p-8 shadow-2xl">
                 <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-xl font-black text-text uppercase tracking-widest flex items-center gap-3"><Cpu size={24} className="text-accent" /> Processor Health</h3>
-                  <span className="text-3xl font-black text-text">{cpuInfo.percent.toFixed(1)}%</span>
+                  <div className="flex flex-col">
+                    <h3 className="text-xl font-black text-text uppercase tracking-widest flex items-center gap-3"><Cpu size={24} className="text-accent" /> Processor Health</h3>
+                    <p className="text-sm font-bold text-text-faint mt-1 uppercase tracking-tighter">
+                      {cpuInfo.physical_cores} Physical • {cpuInfo.logical_cores} Logical Cores
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-3xl font-black text-text">{cpuInfo.percent.toFixed(1)}%</span>
+                    <span className={cn(
+                      "text-[10px] font-black px-2 py-0.5 rounded border mt-1 uppercase tracking-widest",
+                      (cpuInfo.load_avg_1 / cpuInfo.logical_cores) > 0.8 ? "bg-danger/20 text-danger border-danger/30" : "bg-success/20 text-success border-success/30"
+                    )}>
+                      {((cpuInfo.load_avg_1 / cpuInfo.logical_cores) * 100).toFixed(0)}% Saturation
+                    </span>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-x-10 gap-y-6">
-                  {cpuInfo.per_cpu.slice(0, 8).map((p, i) => <Bar key={i} label={`Core ${i}`} value={p} />)}
+                <div className="grid grid-cols-2 gap-x-10 gap-y-4 max-h-[300px] overflow-y-auto pr-4 custom-scrollbar">
+                  {cpuInfo.per_cpu.map((p, i) => <Bar key={i} label={`Core ${i}`} value={p} />)}
                 </div>
               </div>
 

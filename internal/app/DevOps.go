@@ -99,12 +99,14 @@ func (d *DevOps) ListDirectory(path string) []FileEntry {
 	out := make([]FileEntry, 0, len(entries))
 	for _, e := range entries {
 		out = append(out, FileEntry{
-			Name:    e.Name,
-			Path:    e.Path,
-			Size:    e.Size,
-			IsDir:   e.IsDir,
-			Mode:    e.Mode.String(),
-			ModTime: e.ModTime.Format(time.RFC3339),
+			Name:     e.Name,
+			Path:     e.Path,
+			Size:     e.Size,
+			RawSize:  e.RawSize,
+			IsDir:    e.IsDir,
+			IsBinary: e.IsBinary,
+			Mode:     e.Mode.String(),
+			ModTime:  e.ModTime.Format(time.RFC3339),
 		})
 	}
 	return out

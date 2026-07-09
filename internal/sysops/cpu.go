@@ -10,21 +10,18 @@ import (
 
 // CPUStats holds CPU information.
 type CPUStats struct {
-	Percent   float64
-	PerCPU    []float64
-	ModelName string
-	CoreCount int
-	LoadAvg1  float64
-	LoadAvg5  float64
-	LoadAvg15 float64
+	Percent       float64
+	PerCPU        []float64
+	ModelName     string
+	LogicalCores  int
+	PhysicalCores int
+	CoreCount     int // Deprecated: use LogicalCores
+	LoadAvg1      float64
+	LoadAvg5      float64
+	LoadAvg15     float64
 }
 
 // GetCPUStats returns current CPU usage and info.
-//
-// Uses a single blocking cpu.Percent call (500ms delta) for total CPU percentage,
-// then estimates per-CPU values from total / core count. This avoids the ~1s wall
-// time that two sequential cpu.Percent calls would incur, keeping collection within
-// the 1s tick interval.
 func GetCPUStats() (*CPUStats, error) {
 	// Single blocking call for total CPU percentage (500ms delta)
 	percent, err := cpu.Percent(500*time.Millisecond, false)
@@ -37,12 +34,18 @@ func GetCPUStats() (*CPUStats, error) {
 		cpuPercent = percent[0]
 	}
 
-	// Estimate per-CPU from total / core count instead of a second blocking call
-	coreCount := runtime.NumCPU()
+	logicalCores, _ := cpu.Counts(true)
+	physicalCores, _ := cpu.Counts(false)
+
+	// If logicalCores is 0 (failure), fallback to runtime.NumCPU()
+	if logicalCores == 0 {
+		logicalCores = runtime.NumCPU()
+	}
+
 	var perCPU []float64
-	if coreCount > 0 {
-		perCPUEstimate := cpuPercent / float64(coreCount)
-		perCPU = make([]float64, coreCount)
+	if logicalCores > 0 {
+		perCPUEstimate := cpuPercent / float64(logicalCores)
+		perCPU = make([]float64, logicalCores)
 		for i := range perCPU {
 			perCPU[i] = perCPUEstimate
 		}
@@ -69,12 +72,14 @@ func GetCPUStats() (*CPUStats, error) {
 	}
 
 	return &CPUStats{
-		Percent:   cpuPercent,
-		PerCPU:    perCPU,
-		ModelName: modelName,
-		CoreCount: coreCount,
-		LoadAvg1:  avg1,
-		LoadAvg5:  avg5,
-		LoadAvg15: avg15,
+		Percent:       cpuPercent,
+		PerCPU:        perCPU,
+		ModelName:     modelName,
+		LogicalCores:  logicalCores,
+		PhysicalCores: physicalCores,
+		CoreCount:     logicalCores,
+		LoadAvg1:      avg1,
+		LoadAvg5:      avg5,
+		LoadAvg15:     avg15,
 	}, nil
 }
