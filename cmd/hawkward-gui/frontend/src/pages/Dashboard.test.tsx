@@ -17,6 +17,8 @@ vi.mock('../hooks/useBackend', () => ({
       cpu: { value: 45, unit: '%', history: [30, 40, 45], forecast: [46, 47], trend: 'rising' },
       memory: { value: 62, unit: '%', history: [60, 61, 62], forecast: [63, 64], trend: 'rising' },
       disk: { value: 78, unit: '%', history: [77, 78, 78], forecast: [78, 79], trend: 'stable' },
+      gpu: { name: '', vendor: '', memory_gb: 0, driver: '', detected: false },
+      battery: { percent: 0, charging: false, time_left_sec: -1, status: '', detected: false },
       network: { rxRate: 1000000, txRate: 500000, unit: 'bps' },
       processes: 245,
       connections: 12,

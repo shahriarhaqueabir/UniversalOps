@@ -18,11 +18,29 @@ export interface DashboardData {
   cpu: GaugeMetric
   memory: GaugeMetric
   disk: GaugeMetric
+  gpu: GPUData
+  battery: BatteryData
   network: NetworkMetric
   processes: number
   connections: number
   alerts: number
   uptime: string
+}
+
+export interface GPUData {
+  name: string
+  vendor: string
+  memory_gb: number
+  driver: string
+  detected: boolean
+}
+
+export interface BatteryData {
+  percent: number
+  charging: boolean
+  time_left_sec: number
+  status: string
+  detected: boolean
 }
 
 export interface CPUInfo {
@@ -291,8 +309,15 @@ export interface RiskInfo {
   recommendation: string
 }
 
-// ── DevOps Types ──
+export interface SecuritySummary {
+  score: number
+  summary: string
+  risks: string[]
+  recommendations: string[]
+  analyzedAt: string
+}
 
+// ── DevOps Types ─────────────────────────────────────────────────────────────
 export interface ContainerInfo {
   id: string
   name: string
