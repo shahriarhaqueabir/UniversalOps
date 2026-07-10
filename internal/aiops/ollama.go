@@ -25,6 +25,8 @@ type OllamaStatus struct {
 	AvailableModels []string
 }
 
+var effectiveModel string // resolved by CheckOllama, used by Chat
+
 const (
 	defaultOllamaURL   = "http://localhost:11434"
 	defaultOllamaModel = "llama3.2"
@@ -79,6 +81,9 @@ func CheckOllama() (*OllamaStatus, error) {
 		}
 	}
 
+	// Store the effective model so Chat() uses the same resolved model
+	effectiveModel = modelName
+
 	version := "detected"
 	if len(listResp.Models) > 0 {
 		if v := listResp.Models[0].Details.Family; v != "" {
@@ -107,9 +112,15 @@ func Chat(messages []ChatMessage) (string, error) {
 		}
 	}
 
+	// Use the model resolved by CheckOllama, falling back to env/default
+	model := effectiveModel
+	if model == "" {
+		model = getOllamaModel()
+	}
+
 	stream := false
 	req := &api.ChatRequest{
-		Model:    getOllamaModel(),
+		Model:    model,
 		Messages: apiMessages,
 		Stream:   &stream,
 	}

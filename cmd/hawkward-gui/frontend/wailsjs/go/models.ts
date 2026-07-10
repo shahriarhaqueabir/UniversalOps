@@ -70,6 +70,8 @@ export namespace app {
 	    percent: number;
 	    per_cpu: number[];
 	    model_name: string;
+	    logical_cores: number;
+	    physical_cores: number;
 	    core_count: number;
 	    load_avg_1: number;
 	    load_avg_5: number;
@@ -84,6 +86,8 @@ export namespace app {
 	        this.percent = source["percent"];
 	        this.per_cpu = source["per_cpu"];
 	        this.model_name = source["model_name"];
+	        this.logical_cores = source["logical_cores"];
+	        this.physical_cores = source["physical_cores"];
 	        this.core_count = source["core_count"];
 	        this.load_avg_1 = source["load_avg_1"];
 	        this.load_avg_5 = source["load_avg_5"];
@@ -115,6 +119,7 @@ export namespace app {
 	    remote_addr: string;
 	    local_port: number;
 	    remote_port: number;
+	    protocol: string;
 	    state: string;
 	    process_name: string;
 	    pid: number;
@@ -129,6 +134,7 @@ export namespace app {
 	        this.remote_addr = source["remote_addr"];
 	        this.local_port = source["local_port"];
 	        this.remote_port = source["remote_port"];
+	        this.protocol = source["protocol"];
 	        this.state = source["state"];
 	        this.process_name = source["process_name"];
 	        this.pid = source["pid"];
@@ -331,7 +337,9 @@ export namespace app {
 	    name: string;
 	    path: string;
 	    size: string;
+	    raw_size: number;
 	    is_dir: boolean;
+	    is_binary: boolean;
 	    mode: string;
 	    mod_time: string;
 	
@@ -344,7 +352,9 @@ export namespace app {
 	        this.name = source["name"];
 	        this.path = source["path"];
 	        this.size = source["size"];
+	        this.raw_size = source["raw_size"];
 	        this.is_dir = source["is_dir"];
+	        this.is_binary = source["is_binary"];
 	        this.mode = source["mode"];
 	        this.mod_time = source["mod_time"];
 	    }
@@ -359,6 +369,7 @@ export namespace app {
 	    remote_ip: string;
 	    profile: string;
 	    enabled: boolean;
+	    is_high_risk: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new FirewallRule(source);
@@ -375,6 +386,7 @@ export namespace app {
 	        this.remote_ip = source["remote_ip"];
 	        this.profile = source["profile"];
 	        this.enabled = source["enabled"];
+	        this.is_high_risk = source["is_high_risk"];
 	    }
 	}
 	
@@ -420,6 +432,7 @@ export namespace app {
 	    process_name: string;
 	    pid: number;
 	    state: string;
+	    is_external: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new ListeningPort(source);
@@ -432,6 +445,7 @@ export namespace app {
 	        this.process_name = source["process_name"];
 	        this.pid = source["pid"];
 	        this.state = source["state"];
+	        this.is_external = source["is_external"];
 	    }
 	}
 	export class LogEntry {
@@ -589,6 +603,7 @@ export namespace app {
 	    available: boolean;
 	    model: string;
 	    version: string;
+	    available_models: string[];
 	    error?: string;
 	
 	    static createFrom(source: any = {}) {
@@ -600,6 +615,7 @@ export namespace app {
 	        this.available = source["available"];
 	        this.model = source["model"];
 	        this.version = source["version"];
+	        this.available_models = source["available_models"];
 	        this.error = source["error"];
 	    }
 	}
@@ -612,6 +628,7 @@ export namespace app {
 	    min_ms: number;
 	    max_ms: number;
 	    avg_ms: number;
+	    jitter_ms: number;
 	    ttl: number;
 	    error?: string;
 	
@@ -629,6 +646,7 @@ export namespace app {
 	        this.min_ms = source["min_ms"];
 	        this.max_ms = source["max_ms"];
 	        this.avg_ms = source["avg_ms"];
+	        this.jitter_ms = source["jitter_ms"];
 	        this.ttl = source["ttl"];
 	        this.error = source["error"];
 	    }

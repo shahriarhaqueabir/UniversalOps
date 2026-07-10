@@ -287,7 +287,7 @@ export function NetOps() {
               aria-label={`${tab.label} tab`}
               className={cn(
                 'flex items-center gap-3 px-8 py-3 rounded-xl text-lg font-bold transition-all whitespace-nowrap',
-                activeTab === tab.id ? 'bg-accent text-white shadow-lg' : 'text-text-dim hover:text-text hover:bg-white/5',
+                activeTab === tab.id ? 'bg-accent text-white shadow-lg' : 'text-text-dim hover:text-text hover:bg-[var(--color-sidebar-hover)]',
               )}
             >
               {tab.icon}
@@ -531,7 +531,7 @@ export function NetOps() {
                     </thead>
                     <tbody>
                       {connections.map((c, i) => (
-                        <tr key={i} className="border-b border-border/20 hover:bg-white/5 transition-all group">
+                        <tr key={i} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all group">
                           <td className="px-8 py-4 font-black text-accent">{c.protocol}</td>
                           <td className="px-8 py-4">
                             <div className="flex flex-col">
@@ -654,7 +654,7 @@ export function NetOps() {
                     </thead>
                     <tbody>
                       {traceResult.hops.map((hop) => (
-                        <tr key={hop.number} className="border-b border-border/20 hover:bg-white/5 transition-all group">
+                        <tr key={hop.number} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all group">
                           <td className="px-8 py-5 text-2xl font-black text-accent tabular-nums">{hop.number}</td>
                           <td className="px-8 py-5">
                             <div className="flex flex-col">
@@ -749,7 +749,7 @@ export function NetOps() {
                     </thead>
                     <tbody>
                       {portScanResults.map((p, i) => (
-                        <tr key={i} className="border-b border-border/20 hover:bg-white/5 transition-all group">
+                        <tr key={i} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all group">
                           <td className="px-8 py-5">
                             <span className="text-2xl font-black text-accent tabular-nums">{p.port}</span>
                           </td>

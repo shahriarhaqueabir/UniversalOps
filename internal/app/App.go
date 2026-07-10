@@ -85,6 +85,9 @@ func (a *App) Startup(ctx context.Context) {
 
 	common.LogInfo("Hawkward GUI starting up")
 
+	// Initialize Prometheus metrics exporter
+	common.InitMetricsExporter(0)
+
 	// Start the metrics collection tick loop
 	a.startTickLoop()
 }
@@ -109,7 +112,7 @@ func (a *App) Shutdown(ctx context.Context) {
 func (a *App) GetAppInfo() AppInfo {
 	return AppInfo{
 		Name:      "Hawkward Operations Platform",
-		Version:   "1.1.1",
+		Version:   "1.3.0",
 		GoVersion: goruntime.Version(),
 		Uptime:    common.FormatUptime(uint64(time.Since(a.startedAt).Seconds())),
 	}
@@ -263,6 +266,14 @@ func (a *App) collectAndEmit() {
 		Processes:   int(procMF.LastValue),
 		Connections: 0, // fetched on-demand
 	}
+
+	// Update Prometheus metrics
+	common.SetCPUMetric(cpuMF.LastValue)
+	common.SetMemoryMetric(memMF.LastValue)
+	common.SetDiskMetric(diskMF.LastValue)
+	common.SetProcessCountMetric(procMF.LastValue)
+	common.SetAlertCountMetric(float64(a.alerts.AlertCount()))
+	common.IncPipelineTick()
 
 	// Emit metrics event
 	runtime.EventsEmit(a.ctx, EventMetrics, metricsEvent)

@@ -188,7 +188,7 @@ export function SysOps() {
               aria-label={`${tab.label} tab`}
               className={cn(
                 'flex items-center gap-3 px-8 py-3 rounded-xl text-lg font-black transition-all',
-                activeTab === tab.id ? 'bg-accent text-white shadow-lg' : 'text-text-dim hover:text-text hover:bg-white/5',
+                activeTab === tab.id ? 'bg-accent text-white shadow-lg' : 'text-text-dim hover:text-text hover:bg-[var(--color-sidebar-hover)]',
               )}
             >
               {tab.icon}
@@ -340,7 +340,7 @@ export function SysOps() {
                             </td>
                           </tr>
                         ) : processes.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).map(p => (
-                          <tr key={p.pid} className="border-b border-border/20 hover:bg-white/5 transition-all group">
+                          <tr key={p.pid} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all group">
                             <td className="px-10 py-5">
                               <div className="flex flex-col">
                                 <span className="text-xl font-black text-text">{p.name}</span>

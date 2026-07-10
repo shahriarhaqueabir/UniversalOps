@@ -89,7 +89,7 @@ export function DevOps() {
               value={tab.id}
               className={cn(
                 'flex items-center gap-3 px-6 py-4 text-base font-bold transition-all border-b-2 border-transparent',
-                activeTab === tab.id ? 'border-accent text-text bg-accent/5' : 'text-text-faint hover:text-text hover:bg-white/5',
+                activeTab === tab.id ? 'border-accent text-text bg-accent/5' : 'text-text-faint hover:text-text hover:bg-[var(--color-sidebar-hover)]',
               )}
             >
               {tab.icon}
@@ -484,7 +484,7 @@ function ServicesTab() {
                 </tr>
               ) : (
                 filtered.map((svc) => (
-                  <tr key={svc.name} className="border-b border-border/20 hover:bg-white/5 transition-colors group">
+                  <tr key={svc.name} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-colors group">
                     <td className="px-8 py-4 font-[JetBrains_Mono] text-base text-accent font-medium">{svc.name}</td>
                     <td className="px-8 py-4 text-lg text-text">{svc.display_name}</td>
                     <td className="px-8 py-4"><StatusBadge status={svc.status} /></td>
@@ -657,7 +657,7 @@ function FileBrowserTab() {
                     <tr
                       key={file.path}
                       onClick={() => openFile(file)}
-                      className="border-b border-border/20 hover:bg-white/5 cursor-pointer transition-colors group"
+                      className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] cursor-pointer transition-colors group"
                     >
                       <td className="px-8 py-4 flex items-center gap-4">
                         {file.is_dir ? <Folder size={24} className="text-accent" /> : <FileText size={24} className="text-text-faint" />}

@@ -24,6 +24,9 @@ hawkward-gui.log
 
 # Database
 hawkward.db
+hawkward.db-shm
+hawkward.db-wal
+*.db
 
 # Dependencies
 node_modules/

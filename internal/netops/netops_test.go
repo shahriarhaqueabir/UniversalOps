@@ -8,10 +8,16 @@ import (
 
 func TestPing(t *testing.T) {
 	// On Linux CI (GitHub Actions, etc.), ping often requires CAP_NET_RAW or root.
-	// Skip if the ping binary itself won't work without elevated privileges.
+	// Test using ICMP socket first (needs root), fall back to ping exec binary (also needs
+	// elevated on some systems). Skip if neither works.
 	if runtime.GOOS == "linux" {
+		// Check if ping binary exists at all
+		if _, err := exec.LookPath("ping"); err != nil {
+			t.Skipf("Skipping ping test: ping binary not found on this system: %v", err)
+		}
 		// Check if we can execute a simple ping to localhost without error
-		if err := exec.Command("ping", "-c", "1", "-w", "1", "127.0.0.1").Run(); err != nil {
+		// Use -c 1 with a short timeout
+		if err := exec.Command("ping", "-c", "1", "-W", "1", "127.0.0.1").Run(); err != nil {
 			t.Skipf("Skipping ping test: ping requires elevated privileges on this system: %v", err)
 		}
 	}

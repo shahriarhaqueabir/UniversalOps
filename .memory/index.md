@@ -1,135 +1,95 @@
 # Hawkward — Workspace Memory
 
 ## Active Session
-- **Sprint 20: CI Fix + UI/UX Deep Audit + Library Enhancement** — ✅ COMPLETE
+- **Sprint 21.5: Dashboard Functionality, Prometheus Integration, CI Hardening** ✅ DONE
 
-## Completed Tickets
+## Completed Work
 
-| ID | Status | Description |
-|----|--------|-------------|
-| T-01 | ✅ DONE | Fix nil error wrap in GetUsers + non-English locale fallback for netsh |
-| T-02 | ✅ DONE | Fix PowerShell JSON parsing (GetServices + GetSecurityEvents) |
-| T-03 | ✅ DONE | Improve GetDefenderStatus fallback handling |
-| T-04 | ✅ DONE | Fix ListDirectory path handling |
-| T-05 | ✅ DONE | Fix RunPowerShell profile path for dev mode |
-| T-06 | ✅ DONE | Verify NetOps tabs work end-to-end |
-| T-07 | ✅ DONE | Audit every button/tab across all sections |
-| T-08 | ✅ DONE | Verify release pipeline produces downloadable exe |
-| T-09 | ✅ DONE | Write no-programmer launch guide in README |
-| T-10 | ✅ DONE | Build, tag & push v1.2.0 |
-| T-11 | ✅ DONE | UI/UX Review & CSS Theming Fixes |
-| T-12 | ✅ DONE | Library Research & Open-Source Report |
-| T-13 | ✅ DONE | Phase 2 Bugfixes |
-| T-14 | ✅ DONE | Fresh UI/UX Audit — hardcoded colors, error handling, empty dirs, tests |
-| T-15 | ✅ DONE | Full Library Integration + UI/UX Review |
-| **T-16** | ✅ DONE | **CI Eslint Dependency Fix — peer dep conflict** |
-| **T-17** | ✅ DONE | **Deep UI/UX Audit — fix all remaining issues** |
-| **T-18** | ✅ DONE | **New Library Installation & Enhancement** |
+| ID | Description | Status |
+|----|-------------|--------|
+| T-01 → T-18 | Sprints 1–20 | ✅ |
+| T-19 | Dashboard Quick Diag + Generate Briefing backend actions | ✅ |
+| T-20 | Dashboard UI: dynamic red flags, diag/briefing overlays | ✅ |
+| T-21 | Prometheus metrics exporter (port 9210) | ✅ |
+| T-22 | TestPing Linux CI skip logic improved | ✅ |
+| T-23 | README badges fixed for private repo | ✅ |
+| T-24 | npm lockfile synced (typescript reinstalled) | ✅ |
+| T-25 | Compute Logic Analysis now dynamic with real data | ✅ |
 
-## Sprint 20 Changes (2026-07-10)
+## Git State (Current)
+- **Branch**: `main` — has uncommitted changes
+- **HEAD**: `b060cee` — `fix: missing comma in wails.json blocking wails build`
+- **Tags**: `v1.3.0` (pushed), `v1.2.0`, `v1.1.1`, `v1.1.0`, `v1.0.0`
 
-### Git State
-- **Branch**: `main` — working tree has uncommitted changes
-- **Previous HEAD**: `d4e466e` (libraries) — all previous work committed & pushed
-
-### T-16: CI Eslint Peer Dependency Conflict — FIXED
-
-**Problem**: `npm ci` failed in CI because `eslint-plugin-react-hooks@5.2.0` only supports eslint up to v9, but npm resolved eslint@10.6.0.
-
-**Fix**: Updated to eslint 10 ecosystem:
-- `eslint` → `^10.6.0`
-- `@eslint/js` → `^10.0.0`
-- `eslint-plugin-react-hooks` → `^7.1.1` (supports eslint 10)
-- Added `jiti` as dev dependency (required by eslint 10)
-
-**eslint.config.js changes**: Disabled two overly strict new rules from react-hooks v7:
-- `react-hooks/set-state-in-effect` — Wails desktop apps commonly call setState in effects on mount
-- `react-hooks/incompatible-library` — TanStack Virtual's useVirtualizer triggers this, but it's expected
-
-**Lint fixes applied across 7 files**:
-- `App.tsx`: Replaced `any` types with typed `WailsRuntime` interface
-- `useEvents.ts`: Moved `handlerRef.current = handler` to a dedicated `useEffect` to avoid ref-write-during-render
-- `Settings.test.tsx`, `Dashboard.test.tsx`, `Logs.test.tsx`: Replaced `any` in zustand/query mocks with proper generics
-- `utils.test.tsx`: Changed `false && 'hidden'` to `falsy && 'hidden'` to avoid no-constant-binary-expression
-- `DevOps.tsx`: Restructured FileBrowserTab initialization effect (split into two useEffects with proper deps)
-
-**Verification**: `npm ci` ✅ | `npm run lint` ✅ (0 errors, 0 warnings) | `npm test` ✅ (27/27) | `npm run build` ✅
-
-### T-17: Deep UI/UX Issues — FIXED
+## Fixes Applied This Session
 
 | # | Issue | File | Fix |
 |---|-------|------|-----|
-| 1 | `hover:bg-white/5` breaks in light mode | `Sidebar.tsx` (3 instances) | Replaced with `hover:bg-[var(--color-sidebar-hover)]` |
-| 2 | Light theme `--color-border` too faint | `globals.css` | Changed from `rgba(0,0,0,0.07)` to `rgba(0,0,0,0.12)` |
-| 3 | Inline `style` for background in header | `TopBar.tsx` | Moved to `bg-[var(--color-bg)]` className |
-| 4 | Inline hex colors in bandwidth chart | `NetOps.tsx` (6 instances) | Replaced `#14b8a6` → `var(--color-success)`, `#3b82f6` → `var(--color-accent)` |
-| 5 | `import type { Page }` at bottom of file | `Dashboard.tsx` | Moved to top imports section |
-| 6 | Ping entries not cleared on new ping | `NetOps.tsx` | Added `setPingEntries([])` on START PROBE |
-| 7 | NetworkDesign canvas session-only | `NetworkDesign.tsx` | Added localStorage auto-save with 500ms debounce + auto-restore on mount |
-| 8 | `hover:bg-white/5` in DevOps breadcrumb | `DevOps.tsx` | Wait — line 617 uses `hover:bg-white/10` and line 631 uses `hover:bg-white/5` — these should be CSS vars |
+| 1 | Dashboard "Quick Diag" button just navigated to SysOps | `Dashboard.tsx`, `Dashboard.go` | Added `RunQuickDiag()` backend call + results overlay |
+| 2 | Dashboard "Generate Briefing" button just navigated to AIOps | `Dashboard.tsx`, `Dashboard.go` | Added `GenerateDashboardBriefing()` backend call + briefing overlay |
+| 3 | Compute Logic Analysis was 100% hardcoded text | `Dashboard.tsx` | Added `computeRedFlags()` that uses real pipeline data |
+| 4 | TestPing fails on Linux CI | `netops_test.go`, `ping.go` | Added `exec.LookPath` check, fixed Linux ping flags (`-c`/`-W` vs `-n`) |
+| 5 | Typescript not installed in node_modules | `package.json` | Reinstalled typescript (`npm install typescript@~5.7.2`) |
+| 6 | No Prometheus metrics endpoint | `metrics_exporter.go`, `App.go` | Added minimal HTTP server on :9210 with `/metrics`, wired into tick loop |
+| 7 | `GetAlerts()` not exposed on AlertEngine | `alerts.go` | Added `GetAlerts()` method for dashboard briefing |
+| 8 | README badges unclear for private repo | `README.md` | Added private repo notice, added platform badge |
 
-**Note**: The DevOps breadcrumb at lines 617 and 631 also uses `hover:bg-white/5` and `hover:bg-white/10` — these are legacy hardcoded colors that should be `var(--color-sidebar-hover)`. Fixed as part of this sprint.
+## Library Inventory
 
-### T-18: New Library Installation
+### Installed (Frontend)
+| Library | Version | Purpose |
+|---------|---------|---------|
+| `@radix-ui/*` (10 packages) | latest | Accessible UI primitives |
+| `@tanstack/react-query` | v5.101+ | Data fetching & caching |
+| `@tanstack/react-table` | v8.21+ | Table rendering |
+| `@tanstack/react-virtual` | v3.14+ | Virtual scrolling |
+| `zustand` | v5 | State management |
+| `recharts` | v3 | Charts |
+| `lucide-react` | v1.23+ | Icons |
+| `motion` | v12 | Animations |
+| `sonner` | v2 | Toast notifications |
+| `class-variance-authority` | v0.7+ | Class variants |
+| `date-fns` | v4 | Date formatting |
+| `nanoid` | v5 | ID generation |
+| `tailwindcss` | v4 | Styling |
+| `Tailwind v4 Vite plugin` | v4.3+ | Tailwind integration |
 
-**Researched libraries verified against existing package.json:**
+### Installed (Go Backend)
+| Library | Purpose |
+|---------|---------|
+| `gopsutil/v4` | System metrics (CPU, memory, disk, processes) |
+| `miekg/dns` | DNS lookups |
+| `golang.org/x/net` | ICMP ping, network operations |
+| `modernc.org/sqlite` | Embedded SQLite database |
+| `ollama/ollama/api` | AI chat via Ollama |
+| `rs/zerolog` | Structured logging |
+| `prometheus/client_golang` | **NEW** — Prometheus metrics exposition |
 
-| Library | Previously? | Status |
-|---------|-------------|--------|
-| `@tanstack/react-table` | ❌ NOT installed | ✅ INSTALLED v8.21.3 |
-| `@radix-ui/react-collapsible` | ❌ NOT installed | ✅ INSTALLED v1.1.16 |
-| `@radix-ui/react-progress` | ❌ NOT installed | ✅ INSTALLED v1.1.12 |
-| `@radix-ui/react-toggle` | ❌ NOT installed | ✅ INSTALLED v1.1.14 |
-| `prometheus/client_golang` | ❌ NOT installed | ⏸️ P4 — needs HTTP endpoint |
-| `google/gopacket` | ❌ NOT installed | ⏸️ P4 — needs Npcap runtime |
+### Pending (P4)
+| Library | Why Deferred |
+|---------|-------------|
+| `google/gopacket` | Needs Npcap runtime on Windows (libpcap on Linux) |
 
-### Files Changed (source only)
+## Dashboard Architecture
 
-```
-cmd/hawkward-gui/frontend/package.json
-cmd/hawkward-gui/frontend/package-lock.json
-cmd/hawkward-gui/frontend/eslint.config.js
-cmd/hawkward-gui/frontend/src/App.tsx
-cmd/hawkward-gui/frontend/src/hooks/useEvents.ts
-cmd/hawkward-gui/frontend/src/components/layout/Sidebar.tsx
-cmd/hawkward-gui/frontend/src/components/layout/TopBar.tsx
-cmd/hawkward-gui/frontend/src/pages/Dashboard.tsx
-cmd/hawkward-gui/frontend/src/pages/Dashboard.test.tsx
-cmd/hawkward-gui/frontend/src/pages/Logs.test.tsx
-cmd/hawkward-gui/frontend/src/pages/NetOps.tsx
-cmd/hawkward-gui/frontend/src/pages/NetworkDesign.tsx
-cmd/hawkward-gui/frontend/src/pages/DevOps.tsx
-cmd/hawkward-gui/frontend/src/pages/Settings.test.tsx
-cmd/hawkward-gui/frontend/src/test/utils.test.tsx
-cmd/hawkward-gui/frontend/src/styles/globals.css
-```
+### Data Flow
+1. **Initial load**: `useQuery` calls `Dashboard.GetDashboardData()` → reads `DataPipeline` metrics → populates KPI cards, hero section
+2. **Live updates**: `useEvents('metrics')` receives 3-second ticks from `App.collectAndEmit()` → updates DashboardData and CPU timeline
+3. **Quick Diag**: Button calls `Dashboard.RunQuickDiag()` → returns categorized status (pass/warn/fail) with messages
+4. **Briefing**: Button calls `Dashboard.GenerateDashboardBriefing()` → returns sections (CPU, Memory, Disk, Network, Alerts)
+5. **Red Flags**: Computed client-side from DashboardData — dynamic based on actual metric values
 
-### Verification Results
-- `npm ci` ✅ — clean install, 0 vulnerabilities
-- `npm run lint` ✅ — 0 errors, 0 warnings
-- `npm run build` ✅ — builds in ~7s
-- `npm test` ✅ — 27 tests, 7 files, all passing
-- `go vet ./...` ✅ — clean
-- `go test ./internal/...` ✅ — except TestPing (needs admin perms)
+### Button Behavior (Fixed)
+- **QUICK DIAGNOSTIC**: NOW calls `Dashboard.RunQuickDiag()` → shows overlay with results. NOT just navigation.
+- **GENERATE BRIEFING**: NOW calls `Dashboard.GenerateDashboardBriefing()` → shows overlay with briefing sections. NOT just navigation.
 
-### Known Remaining Issues
-- Some inline styles remain in chart components (Tooltip contentStyle in NetOps, Dashboard) — Recharts doesn't support className
-- All "Cannot find module" LSP diagnostics for wailsjs are stale — packages exist and build succeeds
-- NetworkDesign topology canvas uses hardcoded seed devices on first visit (BY DESIGN — example topology)
-- Missing frontend test coverage: TopBar, NetOps, SecOps, DevOps, AIOps, NetworkDesign pages — P3
-- Prometheus (`client_golang`) and gopacket not installed — P4 feature additions (requires new HTTP endpoint / Npcap runtime)
-- Recharts `ResponsiveContainer` stderr warnings in Dashboard tests — cosmetic (jsdom has no layout)
-
-## Sprint 20 Finalized (2026-07-10)
-
-### Git Operations ✅
-- **Commit**: `06ed2f2` — pushed to `origin/main`
-- **Tag**: `v1.3.0` — pushed, should trigger release pipeline
-
-### Additional Fixes in Final Pass
-| # | Fix | File |
-|---|-----|------|
-| 1 | TestPing skips on Linux CI when `ping -c 1` fails without root | `internal/netops/netops_test.go` |
-| 2 | Bump version to v1.3.0 (was v1.1.1 / v1.2.0) | `package.json`, `Sidebar.tsx`, `README.md` |
-| 3 | Fixed Sidebar.test.tsx to expect v1.3.0 instead of v1.1.1 | `Sidebar.test.tsx` |
-| 4 | README badges changed from dynamic shields.io to static | `README.md` |
+## Known Remaining Issues
+1. **Release pipeline**: `softrops/action-gh-release` with `GITHUB_TOKEN` can't create releases on private repos. Needs PAT in `GH_TOKEN` secret.
+2. **TestPing**: May fail on Linux CI (no root for raw sockets + ping binary needs CAP_NET_RAW) — improved skip logic.
+3. **TestInsertLogAndQuery**: Flaky in full suite — SQLite DB leaks between tests.
+4. **Recharts ResponsiveContainer**: Stderr warnings in jsdom tests — cosmetic (jsdom has no layout).
+5. **Frontend test coverage**: Missing for TopBar, NetOps, SecOps, DevOps, AIOps, NetworkDesign — P3.
+6. **gopacket**: P4 — needs Npcap runtime on Windows.
+7. **"Cannot find module" LSP diagnostics for wailsjs**: Stale — packages exist and build succeeds.
+8. **NetworkDesign**: Hardcoded seed devices on first visit — BY DESIGN (example topology).
+9. **npm ci on Windows**: EPERM errors on `lightningcss.win32-x64-msvc.node` due to file locks — CI uses Linux, unaffected.

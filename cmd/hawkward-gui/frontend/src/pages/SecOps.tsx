@@ -160,7 +160,7 @@ function FirewallTab({ call }: { call: BackendCall }) {
             </thead>
             <tbody>
               {filtered.map((rule, i) => (
-                <tr key={i} className="border-b border-border/20 hover:bg-white/5 transition-all">
+                <tr key={i} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all">
                   <td className="px-8 py-5 text-xl font-black text-text truncate max-w-md">
                     <div className="flex items-center gap-3">
                       {rule.is_high_risk && (
@@ -368,7 +368,7 @@ function ListeningTab({ call }: { call: BackendCall }) {
               </thead>
               <tbody>
                 {ports.map((p, i) => (
-                  <tr key={i} className={cn("border-b border-border/20 hover:bg-white/5 transition-all", p.is_external ? "bg-warning/5" : "")}>
+                  <tr key={i} className={cn("border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all", p.is_external ? "bg-warning/5" : "")}>
                     <td className="px-8 py-5 text-xl font-black text-accent tabular-nums">
                       <div className="flex items-center gap-3">
                         {p.port}
@@ -427,7 +427,7 @@ function EventsTab({ call }: { call: BackendCall }) {
               </thead>
               <tbody>
                 {events.map((e, i) => (
-                  <tr key={i} className={cn("border-b border-border/20 hover:bg-white/5 transition-all group", e.level === 'Error' ? "bg-danger/5" : "")}>
+                  <tr key={i} className={cn("border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all group", e.level === 'Error' ? "bg-danger/5" : "")}>
                     <td className="px-8 py-5 font-bold text-lg text-text-faint tabular-nums">{e.id}</td>
                     <td className="px-8 py-5">
                       <span className={cn("px-4 py-1 rounded-full text-xs font-black uppercase tracking-tighter border", e.level === 'Error' ? "bg-danger text-white border-danger/30 shadow-[0_0_12px_rgba(251,93,107,0.4)]" : "bg-panel-3 text-text-dim border-border")}>
@@ -472,7 +472,7 @@ export function SecOps() {
               aria-label={`${tab.label} tab`}
               className={cn(
                 'flex items-center gap-3 px-6 py-3 rounded-xl text-lg font-bold transition-all',
-                activeTab === tab.id ? 'bg-danger text-white shadow-lg' : 'text-text-dim hover:text-text hover:bg-white/5',
+                activeTab === tab.id ? 'bg-danger text-white shadow-lg' : 'text-text-dim hover:text-text hover:bg-[var(--color-sidebar-hover)]',
               )}
             >
               {tab.icon}
