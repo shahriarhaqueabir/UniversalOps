@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -44,8 +45,34 @@ func (n *NetOps) Ping(host string, count int) PingResult {
 	result, err := netops.Ping(host, count)
 	if err != nil {
 		common.LogWarn("Ping failed: %v", err)
+
+		n.app.eventBus.Emit(common.NewEvent(
+			common.CatNetwork,
+			common.EventWarning,
+			"netops",
+			"Ping failed",
+			fmt.Sprintf("Ping to %s failed: %s", host, err.Error()),
+		))
+
 		return PingResult{Target: host, Error: err.Error()}
 	}
+
+	// Emit timeline event for significant packet loss
+	if result.Lost > 0 {
+		level := common.EventInfo
+		if float64(result.Lost)/float64(result.Sent) > 0.5 {
+			level = common.EventWarning
+		}
+		n.app.eventBus.Emit(common.NewEventWithMeta(
+			common.CatNetwork,
+			level,
+			"netops",
+			"Ping packet loss",
+			fmt.Sprintf("Ping to %s: %d/%d packets lost (avg RTT %dms)", host, result.Lost, result.Sent, result.Avg.Milliseconds()),
+			map[string]string{"host": host, "lost": fmt.Sprintf("%d", result.Lost), "sent": fmt.Sprintf("%d", result.Sent)},
+		))
+	}
+
 	return PingResult{
 		Target:   result.Target,
 		IP:       result.IP,
@@ -76,6 +103,15 @@ func (n *NetOps) DNSLookup(hostname string, server string, timeoutMs int) DNSRes
 	result, err := netops.LookupDNSWithContext(ctx, hostname, servers...)
 	if err != nil {
 		common.LogWarn("DNSLookup failed: %v", err)
+
+		n.app.eventBus.Emit(common.NewEvent(
+			common.CatNetwork,
+			common.EventWarning,
+			"netops",
+			"DNS resolution failed",
+			fmt.Sprintf("DNS lookup for %s failed: %s", hostname, err.Error()),
+		))
+
 		return DNSResult{Hostname: hostname, Error: err.Error()}
 	}
 	return DNSResult{

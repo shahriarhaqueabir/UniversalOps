@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
-import * as Tooltip from '@radix-ui/react-tooltip'
+import { motion } from 'motion/react'
 import {
   LayoutDashboard,
   Monitor,

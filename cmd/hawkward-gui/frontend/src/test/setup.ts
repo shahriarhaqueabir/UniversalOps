@@ -6,13 +6,18 @@ const mockWails = {
   go: {
     app: {
       App: {
-        GetAppInfo: vi.fn().mockResolvedValue({ name: 'Hawkward', version: '1.0.0' }),
+        GetAppInfo: vi.fn().mockResolvedValue({ name: 'Hawkward', version: '1.3.0' }),
       },
       SysOps: {
         GetCPUInfo: vi.fn(),
         GetMemoryInfo: vi.fn(),
         GetDiskInfo: vi.fn(),
       },
+      Dashboard: {
+        GetDashboardData: vi.fn(),
+        RunQuickDiag: vi.fn(),
+        GenerateDashboardBriefing: vi.fn(),
+      }
     },
   },
   runtime: {
@@ -24,21 +29,31 @@ const mockWails = {
 Object.defineProperty(window, 'go', { value: mockWails.go })
 Object.defineProperty(window, 'runtime', { value: mockWails.runtime })
 
-// Polyfill localStorage if not available in test environment
-if (typeof window !== 'undefined' && !window.localStorage) {
-  const store: Record<string, string> = {}
-  Object.defineProperty(window, 'localStorage', {
-    value: {
-      getItem: (key: string) => store[key] ?? null,
-      setItem: (key: string, value: string) => { store[key] = value },
-      removeItem: (key: string) => { delete store[key] },
-      clear: () => { Object.keys(store).forEach(k => delete store[k]) },
-      get length() { return Object.keys(store).length },
-      key: (i: number) => Object.keys(store)[i] ?? null,
+// Force a consistent localStorage mock for vitest/jsdom
+const localStorageMock = (() => {
+  let store: Record<string, string> = {}
+  return {
+    getItem: vi.fn((key: string) => store[key] ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = value.toString()
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key]
+    }),
+    clear: vi.fn(() => {
+      store = {}
+    }),
+    key: vi.fn((index: number) => Object.keys(store)[index] || null),
+    get length() {
+      return Object.keys(store).length
     },
-    writable: true,
-  })
-}
+  }
+})()
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+})
 
 // Polyfill ResizeObserver for Radix UI components
 class ResizeObserverMock {

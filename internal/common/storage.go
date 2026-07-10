@@ -149,6 +149,19 @@ func (s *Storage) migrate() error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_metrics_name_time ON metrics(name, timestamp)`,
 		`CREATE INDEX IF NOT EXISTS idx_logs_time ON logs(timestamp)`,
+		`CREATE TABLE IF NOT EXISTS events (
+			id TEXT PRIMARY KEY,
+			timestamp DATETIME NOT NULL,
+			category TEXT NOT NULL,
+			level TEXT NOT NULL,
+			title TEXT NOT NULL,
+			detail TEXT NOT NULL DEFAULT '',
+			module TEXT NOT NULL DEFAULT '',
+			related TEXT NOT NULL DEFAULT '',
+			metadata TEXT NOT NULL DEFAULT ''
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_events_time ON events(timestamp)`,
+		`CREATE INDEX IF NOT EXISTS idx_events_cat ON events(category, timestamp)`,
 	}
 
 	for _, q := range queries {
@@ -358,5 +371,124 @@ func (s *Storage) Prune(olderThan time.Duration) {
 	cutoff := time.Now().Add(-olderThan)
 	s.db.Exec(`DELETE FROM metrics WHERE timestamp < ?`, cutoff)
 	s.db.Exec(`DELETE FROM logs WHERE timestamp < ?`, cutoff)
+	s.db.Exec(`DELETE FROM events WHERE timestamp < ?`, cutoff)
 	LogInfo("Retention policy applied: Pruned data older than %v", olderThan)
+}
+
+// ── Events CRUD ────────────────────────────────────────────────────────────────
+
+// InsertEvent persists a timeline event.
+func (s *Storage) InsertEvent(evt TimelineEvent) error {
+	// Encode related IDs as comma-separated
+	related := ""
+	for i, r := range evt.Related {
+		if i > 0 {
+			related += ","
+		}
+		related += r
+	}
+
+	_, err := s.db.Exec(
+		`INSERT OR IGNORE INTO events (id, timestamp, category, level, title, detail, module, related) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		evt.ID, evt.Timestamp, string(evt.Category), evt.Level.String(), evt.Title, evt.Detail, evt.Module, related,
+	)
+	if err != nil {
+		LogWarn("InsertEvent failed: %v", err)
+	}
+	return err
+}
+
+// QueryEvents retrieves events, newest first, with optional filters.
+func (s *Storage) QueryEvents(category string, level string, limit int, offset int) ([]TimelineEvent, error) {
+	query := `SELECT id, timestamp, category, level, title, detail, module, related FROM events WHERE 1=1`
+	args := []interface{}{}
+
+	if category != "" {
+		query += ` AND category = ?`
+		args = append(args, category)
+	}
+	if level != "" {
+		query += ` AND level = ?`
+		args = append(args, level)
+	}
+
+	query += ` ORDER BY timestamp DESC LIMIT ? OFFSET ?`
+	args = append(args, limit, offset)
+
+	rows, err := s.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var events []TimelineEvent
+	for rows.Next() {
+		var e TimelineEvent
+		var cat, lvl, related string
+		if err := rows.Scan(&e.ID, &e.Timestamp, &cat, &lvl, &e.Title, &e.Detail, &e.Module, &related); err != nil {
+			return nil, err
+		}
+		e.Category = EventCategory(cat)
+		switch lvl {
+		case "warning":
+			e.Level = EventWarning
+		case "critical":
+			e.Level = EventCritical
+		default:
+			e.Level = EventInfo
+		}
+		// Parse related IDs
+		if related != "" {
+			e.Related = splitComma(related)
+		}
+		events = append(events, e)
+	}
+	return events, nil
+}
+
+// GetEventByID retrieves a single event by ID.
+func (s *Storage) GetEventByID(id string) (*TimelineEvent, error) {
+	query := `SELECT id, timestamp, category, level, title, detail, module, related FROM events WHERE id = ?`
+	row := s.db.QueryRow(query, id)
+
+	var e TimelineEvent
+	var cat, lvl, related string
+	if err := row.Scan(&e.ID, &e.Timestamp, &cat, &lvl, &e.Title, &e.Detail, &e.Module, &related); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	e.Category = EventCategory(cat)
+	switch lvl {
+	case "warning":
+		e.Level = EventWarning
+	case "critical":
+		e.Level = EventCritical
+	default:
+		e.Level = EventInfo
+	}
+	if related != "" {
+		e.Related = splitComma(related)
+	}
+	return &e, nil
+}
+
+// splitComma splits a comma-separated string, handling empty input.
+func splitComma(s string) []string {
+	if s == "" {
+		return nil
+	}
+	var out []string
+	start := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == ',' {
+			out = append(out, s[start:i])
+			start = i + 1
+		}
+	}
+	if start < len(s) {
+		out = append(out, s[start:])
+	}
+	return out
 }

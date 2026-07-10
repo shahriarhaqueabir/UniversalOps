@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -210,6 +211,14 @@ func (d *DevOps) ControlService(name, action string) bool {
 		common.LogWarn("ControlService failed: %v", err)
 		return false
 	}
+
+	d.app.eventBus.Emit(common.NewEvent(
+		common.CatDevOps,
+		common.EventInfo,
+		"devops",
+		"Service state changed",
+		fmt.Sprintf("Service '%s' %s", name, action),
+	))
 	return true
 }
 

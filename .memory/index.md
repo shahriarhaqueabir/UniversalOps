@@ -1,6 +1,7 @@
 # Hawkward — Workspace Memory
 
 ## Active Session
+- **Sprint 24: Quality Polish & Documentation Sync** 🔄 IN PROGRESS
 - **Sprint 23: Comprehensive Codebase Audit, Settings Verification, CI Pipeline Hardening** ✅ DONE
 
 ## Completed Work
