@@ -39,6 +39,7 @@ import type {
   TraceResult,
   PortResult,
 } from '@/types'
+import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 
 type NetOpsTab = 'ping' | 'dns' | 'connections' | 'interfaces' | 'traceroute' | 'portscan' | 'bandwidth'
 
@@ -135,6 +136,126 @@ function MiniStat({ label, value, icon, unit }: { label: string; value: string |
   )
 }
 
+// ── Connectivity Panel ──
+
+type ConnectivityStatus = 'ok' | 'error' | 'unknown' | 'checking'
+
+interface ConnectivityCardProps {
+  label: string
+  icon: React.ReactNode
+  status: ConnectivityStatus
+  detail: string
+}
+
+function ConnectivityCard({ label, icon, status, detail }: ConnectivityCardProps) {
+  const statusStyle = {
+    ok: 'border-success/40 bg-success/5',
+    error: 'border-danger/40 bg-danger/5',
+    unknown: 'border-warning/40 bg-warning/5',
+    checking: 'border-border bg-panel-2',
+  }[status]
+
+  const dotStyle = {
+    ok: 'bg-success shadow-[0_0_8px_var(--color-success)]',
+    error: 'bg-danger shadow-[0_0_8px_var(--color-danger)]',
+    unknown: 'bg-warning shadow-[0_0_8px_var(--color-warning)]',
+    checking: 'bg-text-faint animate-pulse',
+  }[status]
+
+  return (
+    <div className={cn('border rounded-2xl p-5 flex items-center gap-4 transition-all', statusStyle)}>
+      <div className="w-12 h-12 rounded-xl bg-panel-3 flex items-center justify-center border border-border shadow-inner">
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <span className={cn('w-2.5 h-2.5 rounded-full shrink-0', dotStyle)} />
+          <span className="text-sm font-bold text-text uppercase tracking-wider">{label}</span>
+        </div>
+        <p className="text-xs font-medium text-text-faint truncate">{detail}</p>
+      </div>
+    </div>
+  )
+}
+
+function ConnectivityPanel() {
+  const { call } = useBackend()
+  const { dnsTimeout } = useSettingsStore()
+
+  const internetQuery = useQuery({
+    queryKey: ['connectivity-internet'],
+    queryFn: async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Wails bridge returns dynamic type
+        const res = await call('NetOps.Ping', '8.8.8.8', 1) as any
+        if (res?.error) return { status: 'error' as ConnectivityStatus, detail: String(res.error) }
+        if (res?.lost > 0) return { status: 'error' as ConnectivityStatus, detail: 'Packet loss detected' }
+        return { status: 'ok' as ConnectivityStatus, detail: `${res.avg_ms}ms latency` }
+      } catch { return { status: 'error' as ConnectivityStatus, detail: 'Ping failed' } }
+    },
+    refetchInterval: 15000,
+    retry: false,
+  })
+
+  const dnsQuery = useQuery({
+    queryKey: ['connectivity-dns'],
+    queryFn: async () => {
+      try {
+        const res = await call('NetOps.DNSLookup', 'google.com', '', Math.min(dnsTimeout, 3000)) as DNSResult
+        if (res?.error) return { status: 'error' as ConnectivityStatus, detail: res.error }
+        const count = res?.a?.length || 0
+        return { status: 'ok' as ConnectivityStatus, detail: `Resolved ${count} A record${count !== 1 ? 's' : ''}` }
+      } catch { return { status: 'error' as ConnectivityStatus, detail: 'Resolution failed' } }
+    },
+    refetchInterval: 15000,
+    retry: false,
+  })
+
+  const { data: connInterfaces = [] } = useQuery<InterfaceInfo[]>({
+    queryKey: ['connectivity-interfaces'],
+    queryFn: async () => {
+      const res = await call('NetOps.GetInterfaces') as InterfaceInfo[]
+      return res || []
+    },
+    refetchInterval: 10000,
+  })
+
+  const nonLoopbackUp = connInterfaces.filter(i => i.is_up && !i.name.includes('[Loopback]'))
+
+  const lanStatus: { status: ConnectivityStatus; detail: string } = nonLoopbackUp.length > 0
+    ? { status: 'ok', detail: `${nonLoopbackUp.length} active adapter${nonLoopbackUp.length !== 1 ? 's' : ''}` }
+    : { status: 'error', detail: 'No active adapters' }
+
+  const vpnPatterns = /vpn|wireguard|tunnel|ppp|tun|tap/i
+  const vpnIface = connInterfaces.find(i => vpnPatterns.test(i.name))
+  const vpnStatus: { status: ConnectivityStatus; detail: string } = vpnIface
+    ? { status: 'ok', detail: vpnIface.name.replace(/^\[.*?\]\s*/, '') }
+    : { status: 'unknown', detail: 'No VPN adapter detected' }
+
+  const internetDetail = internetQuery.isLoading ? 'Checking...' : internetQuery.data?.detail || 'Unavailable'
+  const dnsDetail = dnsQuery.isLoading ? 'Checking...' : dnsQuery.data?.detail || 'Unavailable'
+
+  const cards: ConnectivityCardProps[] = [
+    { label: 'Internet', icon: <Globe size={24} className="text-accent" />, status: internetQuery.data?.status || 'checking', detail: internetDetail },
+    { label: 'LAN', icon: <Wifi size={24} className="text-accent" />, ...lanStatus },
+    { label: 'Gateway', icon: <Server size={24} className="text-accent" />, status: 'unknown', detail: 'Gateway detection N/A' },
+    { label: 'DNS', icon: <Server size={24} className="text-accent" />, status: dnsQuery.data?.status || 'checking', detail: dnsDetail },
+    { label: 'VPN', icon: <ShieldCheck size={24} className="text-accent" />, ...vpnStatus },
+  ]
+
+  return (
+    <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-xl">
+      <div className="flex items-center gap-3 mb-5">
+        <Signal size={20} className="text-accent" />
+        <h3 className="text-sm font-bold text-text uppercase tracking-widest">Connectivity</h3>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        {cards.map(card => <ConnectivityCard key={card.label} {...card} />)}
+      </div>
+    </div>
+  )
+}
+
 // ── Main Page ──
 export function NetOps() {
   const { call } = useBackend()
@@ -166,7 +287,7 @@ export function NetOps() {
   })
 
   // Interfaces — polled via react-query
-  const { data: interfaces = [], isLoading: interfacesLoading } = useQuery<InterfaceInfo[]>({
+  const { data: interfaces = [], isLoading: interfacesLoading, dataUpdatedAt: ifacesUpdatedAt } = useQuery<InterfaceInfo[]>({
     queryKey: ['netops-interfaces'],
     queryFn: async () => {
       const res = await call('NetOps.GetInterfaces') as InterfaceInfo[]
@@ -278,6 +399,7 @@ export function NetOps() {
             <Network size={32} className="text-accent" /> NETWORK OPERATIONS
           </h1>
           <p className="text-text-dim text-lg mt-2">Fabric probes, resolver triage, and cumulative traffic heuristics.</p>
+          <DataFreshnessIndicator lastUpdated={ifacesUpdatedAt ? new Date(ifacesUpdatedAt) : null} className="mt-1" />
         </div>
         <div className="flex gap-1 bg-panel border border-border rounded-2xl p-1.5 shadow-inner overflow-x-auto max-w-[800px]">
           {tabs.map((tab) => (
@@ -300,6 +422,8 @@ export function NetOps() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <ConnectivityPanel />
+
         {activeTab === 'ping' && (
           <div className="space-y-8 animate-in fade-in duration-500">
             <SectionBriefing
@@ -519,7 +643,12 @@ export function NetOps() {
               />
               <ProtocolReference />
             </div>
-            <div className="lg:col-span-3">
+            <div className="lg:col-span-3 space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <MiniStat label="Established" value={connections.filter(c => c.state === 'ESTABLISHED').length} icon={<Cable size={24} />} />
+                <MiniStat label="Listening" value={connections.filter(c => c.state === 'LISTEN').length} icon={<Server size={24} />} />
+                <MiniStat label="Time Wait" value={connections.filter(c => c.state === 'TIME_WAIT').length} icon={<Timer size={24} />} />
+              </div>
               <div className="bg-panel border border-border rounded-[var(--radius-lg)] overflow-hidden shadow-2xl">
                 <div className="max-h-[800px] overflow-y-auto">
                   <table className="w-full text-left border-collapse">

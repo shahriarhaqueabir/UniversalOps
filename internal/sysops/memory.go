@@ -10,6 +10,7 @@ type MemoryStats struct {
 	AvailableBytes uint64
 	UsedBytes      uint64
 	UsedPercent    float64
+	CachedBytes    uint64
 	SwapTotal      uint64
 	SwapUsed       uint64
 	SwapPercent    float64
@@ -37,6 +38,7 @@ func GetMemoryStats() (*MemoryStats, error) {
 		AvailableBytes: v.Available,
 		UsedBytes:      v.Used,
 		UsedPercent:    v.UsedPercent,
+		CachedBytes:    v.Cached,
 		SwapTotal:      swapTotal,
 		SwapUsed:       swapUsed,
 		SwapPercent:    swapPct,

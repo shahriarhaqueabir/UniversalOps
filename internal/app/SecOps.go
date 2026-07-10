@@ -2,6 +2,8 @@ package app
 
 import (
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/secops"
@@ -103,6 +105,7 @@ func (s *SecOps) GetDefenderStatus() DefenderStatus {
 		NISEnabled:         status.NISEnabled,
 		QuickScanAge:       status.QuickScanAge,
 		FullScanAge:        status.FullScanAge,
+		ThreatsDetected:    status.ThreatsDetected,
 	}
 }
 
@@ -169,4 +172,320 @@ func (s *SecOps) SetFirewallRuleState(name string, enable bool) bool {
 		fmt.Sprintf("Firewall rule '%s' %s", name, action),
 	))
 	return true
+}
+
+// GetSecurityScore computes a security posture score from existing data sources.
+func (s *SecOps) GetSecurityScore() SecurityScore {
+	score := 15 // base score
+	breakdown := make(map[string]int)
+	var recommendations []string
+
+	// ── Defender ──
+	defenderScore := 0
+	defender, dErr := secops.GetDefenderStatus()
+	if dErr == nil {
+		if defender.Enabled {
+			defenderScore += 20
+		} else {
+			recommendations = append(recommendations, "Enable Windows Defender for endpoint protection.")
+		}
+		if defender.UpToDate {
+			defenderScore += 10
+		} else {
+			recommendations = append(recommendations, "Update Defender signatures — definitions are outdated.")
+		}
+		if defender.LastScan != "" {
+			if t, err := time.Parse("2006-01-02 15:04:05", defender.LastScan); err == nil {
+				if time.Since(t) <= 7*24*time.Hour {
+					defenderScore += 5
+				} else {
+					recommendations = append(recommendations, "Run a Defender scan — last scan was over 7 days ago.")
+				}
+			} else if t, err := time.Parse(time.RFC3339, defender.LastScan); err == nil {
+				if time.Since(t) <= 7*24*time.Hour {
+					defenderScore += 5
+				} else {
+					recommendations = append(recommendations, "Run a Defender scan — last scan was over 7 days ago.")
+				}
+			}
+		}
+	}
+	breakdown["Defender"] = defenderScore
+	score += defenderScore
+
+	// ── Firewall ──
+	firewallScore := 0
+	rules, fErr := secops.GetFirewallRules()
+	if fErr == nil {
+		if len(rules) > 0 {
+			allDisabled := true
+			highRiskCount := 0
+			for _, r := range rules {
+				if r.Enabled {
+					allDisabled = false
+				}
+				if r.IsHighRisk {
+					highRiskCount++
+				}
+			}
+			if !allDisabled {
+				firewallScore += 15
+			} else {
+				recommendations = append(recommendations, "Enable firewall rules — no active rules detected.")
+			}
+			if highRiskCount == 0 {
+				firewallScore += 5
+			} else {
+				recommendations = append(recommendations, fmt.Sprintf("Review %d high-risk firewall rule(s) and tighten access policies.", highRiskCount))
+			}
+		} else {
+			recommendations = append(recommendations, "Configure firewall rules — no rules found.")
+		}
+	}
+	breakdown["Firewall"] = firewallScore
+	score += firewallScore
+
+	// ── Users ──
+	userScore := 10
+	users, uErr := secops.GetUsers()
+	if uErr == nil {
+		adminCount := 0
+		for _, u := range users {
+			if u.IsAdmin && u.IsEnabled {
+				adminCount++
+			}
+		}
+		if adminCount <= 2 {
+			userScore = 10
+		} else {
+			userScore = 10 - 3*(adminCount-2)
+			if userScore < -10 {
+				userScore = -10
+			}
+			recommendations = append(recommendations, fmt.Sprintf("Reduce admin accounts — %d enabled admins found (recommend ≤2).", adminCount))
+		}
+	}
+	breakdown["Users"] = userScore
+	score += userScore
+
+	// ── Listening Ports ──
+	portScore := 10
+	dangerousPorts := map[int]string{3389: "RDP", 445: "SMB", 23: "Telnet"}
+	ports, pErr := secops.GetListeningPorts()
+	if pErr == nil {
+		dangerousCount := 0
+		for _, p := range ports {
+			if p.IsExternal {
+				if svc, ok := dangerousPorts[p.Port]; ok {
+					dangerousCount++
+					if dangerousCount == 1 {
+						recommendations = append(recommendations, fmt.Sprintf("Close or restrict external-facing %s (port %d).", svc, p.Port))
+					}
+				}
+			}
+		}
+		if dangerousCount > 0 {
+			portScore = 10 - 5*dangerousCount
+			if portScore < -10 {
+				portScore = -10
+			}
+		}
+	}
+	breakdown["Ports"] = portScore
+	score += portScore
+
+	// ── Security Events ──
+	eventScore := 10
+	events, eErr := secops.GetSecurityEvents()
+	if eErr == nil {
+		failedLogins := 0
+		for _, e := range events {
+			if strings.Contains(strings.ToLower(e.Message), "failed") ||
+				strings.Contains(strings.ToLower(e.Message), "logon") && strings.Contains(strings.ToLower(e.Message), "fail") {
+				failedLogins++
+			}
+		}
+		if failedLogins > 10 {
+			penalty := failedLogins - 10
+			if penalty > 10 {
+				penalty = 10
+			}
+			eventScore = 10 - penalty
+			recommendations = append(recommendations, fmt.Sprintf("Investigate %d failed login(s) in recent security events.", failedLogins))
+		}
+	}
+	breakdown["Events"] = eventScore
+	score += eventScore
+
+	// ── Cap & Grade ──
+	if score > 100 {
+		score = 100
+	} else if score < 0 {
+		score = 0
+	}
+
+	grade := "F"
+	switch {
+	case score >= 90:
+		grade = "A"
+	case score >= 75:
+		grade = "B"
+	case score >= 60:
+		grade = "C"
+	case score >= 40:
+		grade = "D"
+	}
+
+	// Keep top 3 recommendations
+	if len(recommendations) > 3 {
+		recommendations = recommendations[:3]
+	}
+
+	return SecurityScore{
+		Score:           score,
+		Grade:           grade,
+		Breakdown:       breakdown,
+		Recommendations: recommendations,
+	}
+}
+
+// GetFirewallStatus returns the global firewall on/off status and per-profile status.
+func (s *SecOps) GetFirewallStatus() FirewallStatus {
+	profiles, err := secops.GetFirewallProfiles()
+	if err != nil {
+		common.LogWarn("GetFirewallStatus failed: %v", err)
+		return FirewallStatus{}
+	}
+	out := make([]FirewallProfile, 0, len(profiles))
+	enabled := false
+	for _, p := range profiles {
+		out = append(out, FirewallProfile{
+			Name:    p.Name,
+			Enabled: p.Enabled,
+		})
+		if p.Enabled {
+			enabled = true
+		}
+	}
+	return FirewallStatus{
+		Enabled:  enabled,
+		Profiles: out,
+	}
+}
+
+// GetRisks returns a list of detected security risks.
+func (s *SecOps) GetRisks() []RiskInfo {
+	var risks []RiskInfo
+	dangerousPorts := map[int]string{3389: "RDP", 445: "SMB", 23: "Telnet"}
+
+	// ── Check listening ports for exposed services ──
+	ports, pErr := secops.GetListeningPorts()
+	if pErr == nil {
+		for _, p := range ports {
+			if p.IsExternal {
+				if svc, ok := dangerousPorts[p.Port]; ok {
+					risks = append(risks, RiskInfo{
+						Category:       "Network",
+						Severity:       "critical",
+						Title:          fmt.Sprintf("%s exposed on port %d", svc, p.Port),
+						Description:    fmt.Sprintf("%s service is listening on all interfaces (port %d). This is a common attack vector.", svc, p.Port),
+						Recommendation: fmt.Sprintf("Close or restrict external access to port %d. Use firewall rules to limit access to trusted IPs only.", p.Port),
+					})
+				} else {
+					risks = append(risks, RiskInfo{
+						Category:       "Network",
+						Severity:       "medium",
+						Title:          fmt.Sprintf("External listening port %d (%s)", p.Port, p.ProcessName),
+						Description:    fmt.Sprintf("Port %d is bound to all interfaces via %s. Verify this is expected.", p.Port, p.ProcessName),
+						Recommendation: "Review whether this service needs to be externally accessible.",
+					})
+				}
+			}
+		}
+	}
+
+	// ── Check firewall rules for high-risk entries ──
+	rules, fErr := secops.GetFirewallRules()
+	if fErr == nil {
+		highRisk := 0
+		for _, r := range rules {
+			if r.IsHighRisk {
+				highRisk++
+			}
+		}
+		if highRisk > 0 {
+			risks = append(risks, RiskInfo{
+				Category:       "Firewall",
+				Severity:       "high",
+				Title:          fmt.Sprintf("%d high-risk firewall rule(s)", highRisk),
+				Description:    "Firewall rules allow traffic from any IP on sensitive ports. This creates an open attack surface.",
+				Recommendation: "Tighten firewall rules to restrict access to specific source IPs.",
+			})
+		}
+	}
+
+	// ── Check user accounts ──
+	users, uErr := secops.GetUsers()
+	if uErr == nil {
+		adminCount := 0
+		for _, u := range users {
+			if u.IsAdmin && u.IsEnabled {
+				adminCount++
+			}
+		}
+		if adminCount > 2 {
+			risks = append(risks, RiskInfo{
+				Category:       "Identity",
+				Severity:       "medium",
+				Title:          fmt.Sprintf("%d administrator accounts detected", adminCount),
+				Description:    "Too many admin accounts increase the risk of privilege escalation.",
+				Recommendation: "Reduce to 2 or fewer admin accounts. Apply the Principle of Least Privilege.",
+			})
+		}
+	}
+
+	// ── Check Defender status ──
+	defender, dErr := secops.GetDefenderStatus()
+	if dErr == nil {
+		if !defender.UpToDate {
+			risks = append(risks, RiskInfo{
+				Category:       "Defender",
+				Severity:       "high",
+				Title:          "Defender signatures are outdated",
+				Description:    fmt.Sprintf("Last signature update was %s. Outdated definitions miss known threats.", defender.SignatureAge),
+				Recommendation: "Run Windows Update or trigger a manual Defender signature update.",
+			})
+		}
+		if defender.ThreatsDetected > 0 {
+			risks = append(risks, RiskInfo{
+				Category:       "Defender",
+				Severity:       "critical",
+				Title:          fmt.Sprintf("%d threat(s) detected by Defender", defender.ThreatsDetected),
+				Description:    "Windows Defender has detected active threats on this system.",
+				Recommendation: "Review and remediate detected threats immediately in Windows Security.",
+			})
+		}
+	}
+
+	// ── Check security events for failed logins ──
+	events, eErr := secops.GetSecurityEvents()
+	if eErr == nil {
+		failedLogins := 0
+		for _, e := range events {
+			if e.ID == 4625 {
+				failedLogins++
+			}
+		}
+		if failedLogins > 10 {
+			risks = append(risks, RiskInfo{
+				Category:       "Identity",
+				Severity:       "high",
+				Title:          fmt.Sprintf("%d failed login attempts detected", failedLogins),
+				Description:    "A spike in failed logins may indicate a brute-force attack.",
+				Recommendation: "Investigate the source IPs, enable account lockout policies, and consider enabling MFA.",
+			})
+		}
+	}
+
+	return risks
 }

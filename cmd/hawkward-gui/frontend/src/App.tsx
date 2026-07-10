@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import { Sidebar } from './components/layout/Sidebar'
 import { TopBar } from './components/layout/TopBar'
 import { MainContent } from './components/layout/MainContent'
-import { useThemeStore, useAlertStore } from './stores/useSettingsStore'
+import { useThemeStore, useAlertStore, useSettingsStore } from './stores/useSettingsStore'
 import type { AlertInfo } from './types'
 
 export type Page = 'dashboard' | 'sysops' | 'netops' | 'secops' | 'devops' | 'aiops' | 'network-design' | 'logs' | 'settings'
@@ -21,7 +21,24 @@ function getRuntime(): WailsRuntime | null {
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
   const { theme } = useThemeStore()
+  const refreshInterval = useSettingsStore((s) => s.refreshInterval)
   const addAlert = useAlertStore((s) => s.addAlert)
+
+  // Sync refresh interval to backend on mount
+  useEffect(() => {
+    const syncInterval = async () => {
+      try {
+        const w = window as Record<string, unknown>
+        const go = w.go as Record<string, Record<string, (...args: unknown[]) => Promise<unknown>>> | undefined
+        if (go?.app?.PipelineAPI?.UpdateSettings) {
+          await go.app.PipelineAPI.UpdateSettings(refreshInterval, 0)
+        }
+      } catch {
+        // Backend not ready yet — will be synced on next Settings page visit
+      }
+    }
+    syncInterval()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Apply theme on mount and when it changes
   useEffect(() => {

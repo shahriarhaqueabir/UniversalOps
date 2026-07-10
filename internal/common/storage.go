@@ -2,6 +2,7 @@ package common
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -162,6 +163,19 @@ func (s *Storage) migrate() error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_events_time ON events(timestamp)`,
 		`CREATE INDEX IF NOT EXISTS idx_events_cat ON events(category, timestamp)`,
+		`CREATE TABLE IF NOT EXISTS alerts (
+			id TEXT PRIMARY KEY,
+			timestamp DATETIME NOT NULL,
+			level TEXT NOT NULL,
+			metric TEXT NOT NULL,
+			message TEXT NOT NULL,
+			value REAL NOT NULL,
+			threshold REAL NOT NULL,
+			resolved INTEGER NOT NULL DEFAULT 0,
+			resolved_at DATETIME
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_alerts_time ON alerts(timestamp)`,
+		`CREATE INDEX IF NOT EXISTS idx_alerts_metric ON alerts(metric)`,
 	}
 
 	for _, q := range queries {
@@ -313,6 +327,41 @@ func (s *Storage) GetMetricHistory(name string, limit int) ([]float64, error) {
 	return values, nil
 }
 
+// MetricDataPoint pairs a metric value with its timestamp.
+type MetricDataPoint struct {
+	Timestamp time.Time `json:"timestamp"`
+	Value     float64   `json:"value"`
+}
+
+// GetMetricHistoryWithTimestamps retrieves historical values with timestamps for a metric.
+func (s *Storage) GetMetricHistoryWithTimestamps(name string, limit int) ([]MetricDataPoint, error) {
+	query := `SELECT timestamp, value FROM metrics WHERE name = ? ORDER BY timestamp DESC LIMIT ?`
+	rows, err := s.db.Query(query, name, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var points []MetricDataPoint
+	for rows.Next() {
+		var p MetricDataPoint
+		if err := rows.Scan(&p.Timestamp, &p.Value); err != nil {
+			return nil, err
+		}
+		points = append(points, p)
+	}
+
+	// Reverse to maintain chronological order
+	for i, j := 0, len(points)-1; i < j; i, j = i+1, j-1 {
+		points[i], points[j] = points[j], points[i]
+	}
+
+	if points == nil {
+		points = []MetricDataPoint{}
+	}
+	return points, nil
+}
+
 // ── Logs CRUD ───────────────────────────────────────────────────────────────
 
 // InsertLog persists a log entry.
@@ -366,6 +415,83 @@ type LogEntryData struct {
 	Message   string
 }
 
+// SourceCount pairs a module name with its occurrence count.
+type SourceCount struct {
+	Source string
+	Count  int
+}
+
+// TrendingLogError holds a frequently occurring error.
+type TrendingLogError struct {
+	Message  string
+	Count    int
+	LastSeen time.Time
+}
+
+// CountLogsAfter returns the number of log entries after the given time.
+func (s *Storage) CountLogsAfter(t time.Time) int {
+	var count int
+	s.db.QueryRow(`SELECT COUNT(*) FROM logs WHERE timestamp >= ?`, t).Scan(&count)
+	return count
+}
+
+// CountLogsByLevel returns the number of log entries with the given level.
+func (s *Storage) CountLogsByLevel(level string) int {
+	var count int
+	s.db.QueryRow(`SELECT COUNT(*) FROM logs WHERE level = ?`, level).Scan(&count)
+	return count
+}
+
+// TopLogSources returns the top N log sources by count.
+func (s *Storage) TopLogSources(limit int) ([]SourceCount, error) {
+	rows, err := s.db.Query(
+		`SELECT module, COUNT(*) as cnt FROM logs WHERE module != '' GROUP BY module ORDER BY cnt DESC LIMIT ?`,
+		limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []SourceCount
+	for rows.Next() {
+		var sc SourceCount
+		if err := rows.Scan(&sc.Source, &sc.Count); err != nil {
+			return nil, err
+		}
+		results = append(results, sc)
+	}
+	if results == nil {
+		results = []SourceCount{}
+	}
+	return results, nil
+}
+
+// TrendingLogErrors returns the top N most frequent error messages.
+func (s *Storage) TrendingLogErrors(limit int) ([]TrendingLogError, error) {
+	rows, err := s.db.Query(
+		`SELECT message, COUNT(*) as cnt, MAX(timestamp) as last_seen FROM logs WHERE level = 'ERROR' GROUP BY message ORDER BY cnt DESC LIMIT ?`,
+		limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []TrendingLogError
+	for rows.Next() {
+		var te TrendingLogError
+		if err := rows.Scan(&te.Message, &te.Count, &te.LastSeen); err != nil {
+			return nil, err
+		}
+		results = append(results, te)
+	}
+	if results == nil {
+		results = []TrendingLogError{}
+	}
+	return results, nil
+}
+
 // Prune removes data older than the given duration.
 func (s *Storage) Prune(olderThan time.Duration) {
 	cutoff := time.Now().Add(-olderThan)
@@ -388,9 +514,17 @@ func (s *Storage) InsertEvent(evt TimelineEvent) error {
 		related += r
 	}
 
+	// Encode metadata as JSON
+	metaJSON := ""
+	if len(evt.Metadata) > 0 {
+		if b, err := json.Marshal(evt.Metadata); err == nil {
+			metaJSON = string(b)
+		}
+	}
+
 	_, err := s.db.Exec(
-		`INSERT OR IGNORE INTO events (id, timestamp, category, level, title, detail, module, related) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		evt.ID, evt.Timestamp, string(evt.Category), evt.Level.String(), evt.Title, evt.Detail, evt.Module, related,
+		`INSERT OR IGNORE INTO events (id, timestamp, category, level, title, detail, module, related, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		evt.ID, evt.Timestamp, string(evt.Category), evt.Level.String(), evt.Title, evt.Detail, evt.Module, related, metaJSON,
 	)
 	if err != nil {
 		LogWarn("InsertEvent failed: %v", err)
@@ -400,7 +534,7 @@ func (s *Storage) InsertEvent(evt TimelineEvent) error {
 
 // QueryEvents retrieves events, newest first, with optional filters.
 func (s *Storage) QueryEvents(category string, level string, limit int, offset int) ([]TimelineEvent, error) {
-	query := `SELECT id, timestamp, category, level, title, detail, module, related FROM events WHERE 1=1`
+	query := `SELECT id, timestamp, category, level, title, detail, module, related, metadata FROM events WHERE 1=1`
 	args := []interface{}{}
 
 	if category != "" {
@@ -424,8 +558,8 @@ func (s *Storage) QueryEvents(category string, level string, limit int, offset i
 	var events []TimelineEvent
 	for rows.Next() {
 		var e TimelineEvent
-		var cat, lvl, related string
-		if err := rows.Scan(&e.ID, &e.Timestamp, &cat, &lvl, &e.Title, &e.Detail, &e.Module, &related); err != nil {
+		var cat, lvl, related, metaJSON string
+		if err := rows.Scan(&e.ID, &e.Timestamp, &cat, &lvl, &e.Title, &e.Detail, &e.Module, &related, &metaJSON); err != nil {
 			return nil, err
 		}
 		e.Category = EventCategory(cat)
@@ -441,6 +575,10 @@ func (s *Storage) QueryEvents(category string, level string, limit int, offset i
 		if related != "" {
 			e.Related = splitComma(related)
 		}
+		// Parse metadata JSON
+		if metaJSON != "" {
+			_ = json.Unmarshal([]byte(metaJSON), &e.Metadata)
+		}
 		events = append(events, e)
 	}
 	return events, nil
@@ -448,12 +586,12 @@ func (s *Storage) QueryEvents(category string, level string, limit int, offset i
 
 // GetEventByID retrieves a single event by ID.
 func (s *Storage) GetEventByID(id string) (*TimelineEvent, error) {
-	query := `SELECT id, timestamp, category, level, title, detail, module, related FROM events WHERE id = ?`
+	query := `SELECT id, timestamp, category, level, title, detail, module, related, metadata FROM events WHERE id = ?`
 	row := s.db.QueryRow(query, id)
 
 	var e TimelineEvent
-	var cat, lvl, related string
-	if err := row.Scan(&e.ID, &e.Timestamp, &cat, &lvl, &e.Title, &e.Detail, &e.Module, &related); err != nil {
+	var cat, lvl, related, metaJSON string
+	if err := row.Scan(&e.ID, &e.Timestamp, &cat, &lvl, &e.Title, &e.Detail, &e.Module, &related, &metaJSON); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
@@ -470,6 +608,9 @@ func (s *Storage) GetEventByID(id string) (*TimelineEvent, error) {
 	}
 	if related != "" {
 		e.Related = splitComma(related)
+	}
+	if metaJSON != "" {
+		_ = json.Unmarshal([]byte(metaJSON), &e.Metadata)
 	}
 	return &e, nil
 }
@@ -491,4 +632,88 @@ func splitComma(s string) []string {
 		out = append(out, s[start:])
 	}
 	return out
+}
+
+// ── Alerts Persistence ─────────────────────────────────────────────────────
+
+// AlertRecord represents a persisted alert.
+type AlertRecord struct {
+	ID         string
+	Timestamp  time.Time
+	Level      string
+	Metric     string
+	Message    string
+	Value      float64
+	Threshold  float64
+	Resolved   bool
+	ResolvedAt *time.Time
+}
+
+// InsertAlert persists a fired alert to SQLite.
+func (s *Storage) InsertAlert(a AlertRecord) error {
+	_, err := s.db.Exec(
+		`INSERT OR REPLACE INTO alerts (id, timestamp, level, metric, message, value, threshold, resolved, resolved_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		a.ID, a.Timestamp, a.Level, a.Metric, a.Message, a.Value, a.Threshold, boolToInt(a.Resolved), timePtrToSQL(a.ResolvedAt),
+	)
+	if err != nil {
+		LogWarn("InsertAlert failed: %v", err)
+	}
+	return err
+}
+
+// UpdateAlertResolved marks an alert as resolved in SQLite.
+func (s *Storage) UpdateAlertResolved(id string) error {
+	_, err := s.db.Exec(
+		`UPDATE alerts SET resolved = 1, resolved_at = ? WHERE id = ?`,
+		time.Now(), id,
+	)
+	return err
+}
+
+// QueryAlertHistory returns all alerts, newest first, with an optional limit.
+func (s *Storage) QueryAlertHistory(limit int) ([]AlertRecord, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	rows, err := s.db.Query(
+		`SELECT id, timestamp, level, metric, message, value, threshold, resolved, resolved_at FROM alerts ORDER BY timestamp DESC LIMIT ?`,
+		limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var alerts []AlertRecord
+	for rows.Next() {
+		var a AlertRecord
+		var resolved int
+		var resolvedAt sql.NullTime
+		if err := rows.Scan(&a.ID, &a.Timestamp, &a.Level, &a.Metric, &a.Message, &a.Value, &a.Threshold, &resolved, &resolvedAt); err != nil {
+			return nil, err
+		}
+		a.Resolved = resolved != 0
+		if resolvedAt.Valid {
+			a.ResolvedAt = &resolvedAt.Time
+		}
+		alerts = append(alerts, a)
+	}
+	if alerts == nil {
+		alerts = []AlertRecord{}
+	}
+	return alerts, nil
+}
+
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+func timePtrToSQL(t *time.Time) interface{} {
+	if t == nil {
+		return nil
+	}
+	return *t
 }

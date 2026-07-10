@@ -77,6 +77,7 @@ type MemoryInfo struct {
 	AvailableBytes uint64  `json:"available_bytes"`
 	UsedBytes      uint64  `json:"used_bytes"`
 	UsedPercent    float64 `json:"used_percent"`
+	CachedBytes    uint64  `json:"cached_bytes"`
 	TotalGB        float64 `json:"total_gb"`
 	UsedGB         float64 `json:"used_gb"`
 	SwapTotal      uint64  `json:"swap_total"`
@@ -207,6 +208,14 @@ type InterfaceInfo struct {
 
 // ── SecOps Types ─────────────────────────────────────────────────────────────
 
+// SecurityScore holds a computed security posture score.
+type SecurityScore struct {
+	Score           int            `json:"score"`
+	Grade           string         `json:"grade"`
+	Breakdown       map[string]int `json:"breakdown"`
+	Recommendations []string       `json:"recommendations"`
+}
+
 // FirewallRule holds a firewall rule entry.
 type FirewallRule struct {
 	Name       string `json:"name"`
@@ -254,6 +263,7 @@ type DefenderStatus struct {
 	NISEnabled         bool   `json:"nis_enabled"`
 	QuickScanAge       int    `json:"quick_scan_age"`
 	FullScanAge        int    `json:"full_scan_age"`
+	ThreatsDetected    int    `json:"threats_detected"`
 }
 
 // ScheduledTask holds a scheduled task entry.
@@ -274,6 +284,27 @@ type SecurityEvent struct {
 	Time      string `json:"time"`
 	Message   string `json:"message"`
 	Important bool   `json:"important"`
+}
+
+// FirewallProfile holds the status of a single firewall profile.
+type FirewallProfile struct {
+	Name    string `json:"name"`
+	Enabled bool   `json:"enabled"`
+}
+
+// FirewallStatus holds the global firewall status.
+type FirewallStatus struct {
+	Enabled  bool              `json:"enabled"`
+	Profiles []FirewallProfile `json:"profiles"`
+}
+
+// RiskInfo holds a detected security risk.
+type RiskInfo struct {
+	Category       string `json:"category"`
+	Severity       string `json:"severity"`
+	Title          string `json:"title"`
+	Description    string `json:"description"`
+	Recommendation string `json:"recommendation"`
 }
 
 // ── DevOps Types ─────────────────────────────────────────────────────────────
@@ -315,6 +346,80 @@ type ServiceEntry struct {
 	DisplayName string `json:"display_name"`
 	Status      string `json:"status"`
 	StartType   string `json:"start_type"`
+}
+
+// ToolInfo holds information about an installed development tool.
+type ToolInfo struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	Path    string `json:"path"`
+	Status  string `json:"status"` // "installed", "not-found", "error"
+}
+
+// ContainerInfo holds information about a single container.
+type ContainerInfo struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Image  string `json:"image"`
+	State  string `json:"state"`  // running, exited, created, paused
+	Status string `json:"status"` // "Up 2 hours", "Exited (0) 3 days ago"
+	Ports  string `json:"ports"`
+}
+
+// ContainerSummary holds Docker container status overview.
+type ContainerSummary struct {
+	Running    int             `json:"running"`
+	Stopped    int             `json:"stopped"`
+	Failed     int             `json:"failed"`
+	Total      int             `json:"total"`
+	Containers []ContainerInfo `json:"containers"`
+}
+
+// GitRepoInfo holds status for a single git repository.
+type GitRepoInfo struct {
+	Path           string `json:"path"`
+	Branch         string `json:"branch"`
+	ModifiedFiles  int    `json:"modified_files"`
+	UntrackedFiles int    `json:"untracked_files"`
+	Ahead          int    `json:"ahead"`
+	Behind         int    `json:"behind"`
+	Clean          bool   `json:"clean"`
+}
+
+// GitSummary holds aggregated git repository status.
+type GitSummary struct {
+	Repositories []GitRepoInfo `json:"repositories"`
+	TotalRepos   int           `json:"total_repos"`
+}
+
+// LocalServer holds information about a locally listening server.
+type LocalServer struct {
+	Port      int    `json:"port"`
+	Protocol  string `json:"protocol"`
+	Process   string `json:"process"`
+	PID       int    `json:"pid"`
+	Framework string `json:"framework"`
+	Health    string `json:"health"` // "healthy", "unknown", "error"
+}
+
+// EnvVarInfo holds a single environment variable.
+type EnvVarInfo struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// ToolVersion holds a tool name and its version string.
+type ToolVersion struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+// EnvironmentInfo holds environment and SDK details.
+type EnvironmentInfo struct {
+	PathDirs        []string      `json:"path_dirs"`
+	KeyVars         []EnvVarInfo  `json:"key_vars"`
+	SDKs            []ToolVersion `json:"sdks"`
+	PackageManagers []ToolVersion `json:"package_managers"`
 }
 
 // ── AIOps Types ──────────────────────────────────────────────────────────────
@@ -407,4 +512,37 @@ type LogFilter struct {
 	Level string `json:"level"` // "info", "warn", "error"
 	Since string `json:"since"` // ISO 8601 timestamp
 	N     int    `json:"n"`     // max entries
+}
+
+// LogStats holds aggregated log statistics for the Overview tab.
+type LogStats struct {
+	TotalToday     int              `json:"totalToday"`
+	TotalThisHour  int              `json:"totalThisHour"`
+	TotalLastMin   int              `json:"totalLastMin"`
+	ErrorCount     int              `json:"errorCount"`
+	WarningCount   int              `json:"warningCount"`
+	InfoCount      int              `json:"infoCount"`
+	DebugCount     int              `json:"debugCount"`
+	TopSources     []LogSourceCount `json:"topSources"`
+	TrendingErrors []TrendingError  `json:"trendingErrors"`
+}
+
+// LogSourceCount pairs a log module with its occurrence count.
+type LogSourceCount struct {
+	Source string `json:"source"`
+	Count  int    `json:"count"`
+}
+
+// TrendingError holds a frequently occurring error message.
+type TrendingError struct {
+	Message  string `json:"message"`
+	Count    int    `json:"count"`
+	LastSeen string `json:"lastSeen"`
+}
+
+// SystemRecommendation is a heuristic recommendation for system health.
+type SystemRecommendation struct {
+	Category string `json:"category"` // cpu, memory, disk, uptime
+	Severity string `json:"severity"` // info, warning, critical
+	Message  string `json:"message"`
 }
