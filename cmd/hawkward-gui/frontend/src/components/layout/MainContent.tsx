@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import type { Page } from '../../App'
 import { ErrorBoundary } from '../ui/ErrorBoundary'
@@ -25,7 +25,39 @@ const pageVariants = {
   exit: { opacity: 0, y: -8 },
 }
 
+function PageSkeleton() {
+  return (
+    <div className="p-10 space-y-8 animate-pulse">
+      <div className="flex items-center justify-between">
+        <div className="space-y-3">
+          <div className="h-8 w-72 bg-[var(--color-panel-2)] rounded-xl" />
+          <div className="h-4 w-96 bg-[var(--color-panel-2)] rounded-lg" />
+        </div>
+        <div className="flex gap-3">
+          <div className="h-10 w-36 bg-[var(--color-panel-2)] rounded-xl" />
+          <div className="h-10 w-40 bg-[var(--color-panel-2)] rounded-xl" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-48 bg-[var(--color-panel-2)] rounded-[var(--radius-lg)]" />
+        ))}
+      </div>
+      <div className="h-64 bg-[var(--color-panel-2)] rounded-[var(--radius-xl)]" />
+    </div>
+  )
+}
+
 export function MainContent({ currentPage, onNavigate }: MainContentProps) {
+  const [prefersReduced, setPrefersReduced] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    setPrefersReduced(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setPrefersReduced(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard': return <Dashboard onNavigate={onNavigate} />
@@ -44,11 +76,7 @@ export function MainContent({ currentPage, onNavigate }: MainContentProps) {
   return (
     <main className="flex-1 overflow-y-auto bg-[var(--color-bg)]">
       <ErrorBoundary>
-        <Suspense fallback={
-          <div className="flex h-full items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
-          </div>
-        }>
+        <Suspense fallback={<PageSkeleton />}>
           <AnimatePresence mode="wait">
             <motion.div
               key={currentPage}
@@ -56,7 +84,7 @@ export function MainContent({ currentPage, onNavigate }: MainContentProps) {
               initial="initial"
               animate="animate"
               exit="exit"
-              transition={{ duration: 0.15, ease: 'easeOut' }}
+              transition={{ duration: prefersReduced ? 0 : 0.15, ease: 'easeOut' }}
             >
               {renderPage()}
             </motion.div>

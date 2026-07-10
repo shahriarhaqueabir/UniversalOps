@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils'
 import * as Tabs from '@radix-ui/react-tabs'
 import { useBackend } from '@/hooks/useBackend'
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 // Strip ANSI escape sequences from terminal output
 function stripAnsi(text: string): string {
@@ -218,10 +219,10 @@ function TerminalTab() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Enter shell command (cmd/sh)..."
-            className="w-full bg-[var(--color-bg)] border border-border rounded-xl pl-12 pr-4 py-4 text-lg font-[JetBrains_Mono] text-text placeholder-text-faint focus:outline-none focus:border-primary shadow-inner"
+            className="w-full bg-[var(--color-bg)] border border-border rounded-xl pl-12 pr-4 py-4 text-lg font-[Geist_Mono] text-text placeholder-text-faint focus:outline-none focus:border-primary shadow-inner"
             disabled={isRunning}
           />
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-success text-xl font-bold font-[JetBrains_Mono]">$</span>
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-success text-xl font-bold font-[Geist_Mono]">$</span>
         </div>
         <button
           onClick={() => { if (input.trim()) runCommand(input) }}
@@ -243,17 +244,23 @@ function TerminalTab() {
       {/* Output */}
       <div
         ref={outputRef}
-        className="flex-1 bg-[var(--color-bg)] border border-border rounded-2xl p-8 overflow-y-auto font-[JetBrains_Mono] text-lg leading-relaxed whitespace-pre-wrap shadow-inner"
+        className="flex-1 bg-[var(--color-bg)] border border-border rounded-2xl p-8 overflow-y-auto font-[Geist_Mono] text-lg leading-relaxed whitespace-pre-wrap shadow-inner"
       >
         {output.map((block, i) => (
           <div key={i} className="whitespace-pre-wrap break-all mb-2">
             {stripAnsi(block)}
           </div>
         ))}
+        {!isRunning && output.length > 0 && (
+          <div className="inline-flex items-center">
+            <span className="text-[var(--color-success)] text-lg font-bold font-[Geist_Mono]">$</span>
+            <span className="inline-block w-2.5 h-5 bg-[var(--color-success)] ml-1 animate-pulse" style={{ animationDuration: '1s' }} />
+          </div>
+        )}
         {isRunning && (
           <div className="flex items-center gap-2 mt-2">
-            <span className="inline-block w-3 h-6 bg-success animate-pulse" />
-            <span className="text-sm font-bold text-success uppercase tracking-widest animate-pulse">Running...</span>
+            <span className="inline-block w-3 h-6 bg-[var(--color-success)] animate-pulse" />
+            <span className="text-sm font-bold text-[var(--color-success)] uppercase tracking-widest animate-pulse">Running...</span>
           </div>
         )}
       </div>
@@ -359,7 +366,7 @@ function PowerShellProTab() {
             </div>
           )}
         </div>
-        <div className="flex-1 bg-[var(--color-bg)] border border-border rounded-2xl p-8 overflow-y-auto font-[JetBrains_Mono] text-lg leading-relaxed whitespace-pre shadow-inner">
+        <div className="flex-1 bg-[var(--color-bg)] border border-border rounded-2xl p-8 overflow-y-auto font-[Geist_Mono] text-lg leading-relaxed whitespace-pre shadow-inner">
           {stripAnsi(output) || 'Select a workflow to begin diagnostic execution.'}
         </div>
         <button
@@ -461,32 +468,40 @@ function ServicesTab() {
           <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border">
               <tr>
-                <th className="px-8 py-5 text-sm font-bold text-text-dim uppercase tracking-widest">Name</th>
-                <th className="px-8 py-5 text-sm font-bold text-text-dim uppercase tracking-widest">Display Name</th>
-                <th className="px-8 py-5 text-sm font-bold text-text-dim uppercase tracking-widest">Status</th>
-                <th className="px-8 py-5 text-sm font-bold text-text-dim uppercase tracking-widest">Startup</th>
-                <th className="px-8 py-5 text-sm font-bold text-text-dim uppercase tracking-widest text-right">Control</th>
+                <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Name</th>
+                <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Display Name</th>
+                <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Startup</th>
+                <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider text-right">Control</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-8 py-20 text-center">
-                    <div className="flex flex-col items-center gap-4 text-text-faint">
-                      <RefreshCw size={48} className="animate-spin opacity-20" />
-                      <p className="text-xl">Enumerating System Services...</p>
+                  <td colSpan={5} className="px-6 py-16 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-[var(--color-panel-2)] border border-[var(--color-border)] flex items-center justify-center">
+                        <RefreshCw size={20} className="text-[var(--color-text-faint)] animate-spin" />
+                      </div>
+                      <p className="text-sm font-semibold text-[var(--color-text-dim)]">Enumerating services...</p>
                     </div>
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-8 py-20 text-center text-text-faint text-xl italic">No services matching your criteria</td>
+                  <td colSpan={5} className="px-6 py-16 text-center">
+                    <EmptyState
+                      icon={<Server size={28} />}
+                      title="No Services Found"
+                      description={search ? 'No services match your search query. Try adjusting your filter.' : 'No system services were detected on this machine.'}
+                    />
+                  </td>
                 </tr>
               ) : (
                 filtered.map((svc) => (
                   <tr key={svc.name} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-colors group">
-                    <td className="px-8 py-4 font-[JetBrains_Mono] text-base text-accent font-medium">{svc.name}</td>
-                    <td className="px-8 py-4 text-lg text-text">{svc.display_name}</td>
+                    <td className="px-6 py-4 font-[Geist_Mono] text-sm text-accent font-medium">{svc.name}</td>
+                    <td className="px-8 py-4 text-sm text-[var(--color-text)]">{svc.display_name}</td>
                     <td className="px-8 py-4"><StatusBadge status={svc.status} /></td>
                     <td className="px-8 py-4"><StatusBadge status={svc.start_type} /></td>
                     <td className="px-8 py-4 text-right">
@@ -551,7 +566,7 @@ function FileBrowserTab() {
     setLoading(true)
     try {
       const res = await call('DevOps.ListDirectory', path)
-      setEntries(res as FileEntry[])
+      setEntries((res as FileEntry[]) || [])
       setCurrentPath(path)
     } catch (err) {
       console.error(err)
@@ -663,7 +678,7 @@ function FileBrowserTab() {
                         {file.is_dir ? <Folder size={24} className="text-accent" /> : <FileText size={24} className="text-text-faint" />}
                         <span className="text-lg text-text group-hover:text-accent transition-colors">{file.name}</span>
                       </td>
-                      <td className="px-8 py-4 text-right font-[JetBrains_Mono] text-base text-text-dim">{file.size}</td>
+                      <td className="px-8 py-4 text-right font-[Geist_Mono] text-base text-text-dim">{file.size}</td>
                       <td className="px-8 py-4 text-base text-text-faint">{new Date(file.mod_time).toLocaleString()}</td>
                     </tr>
                   ))
@@ -711,7 +726,7 @@ function FileBrowserTab() {
                 </div>
               </div>
             ) : (
-              <pre className="font-[JetBrains_Mono] text-base text-text leading-relaxed whitespace-pre-wrap">
+              <pre className="font-[Geist_Mono] text-base text-text leading-relaxed whitespace-pre-wrap">
                 {fileContent || '// No readable content or file is empty.'}
               </pre>
             )}

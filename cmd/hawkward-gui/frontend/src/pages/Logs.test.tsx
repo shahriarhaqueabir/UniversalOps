@@ -2,6 +2,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { Logs } from './Logs'
 
+// Ensure localStorage is available for zustand stores
+const localStorageMock = {
+  getItem: vi.fn(() => null),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  get length() { return 0 },
+  key: vi.fn(() => null),
+}
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+  configurable: true,
+})
+
 const mockLogs = [
   { timestamp: '2026/07/08 12:00:00', level: 'INFO', module: 'system', message: 'System started' },
   { timestamp: '2026/07/08 12:00:05', level: 'WARN', module: 'network', message: 'High latency detected' },

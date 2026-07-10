@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import * as Switch from '@radix-ui/react-switch'
 import { cn } from '@/lib/utils'
+import { EmptyState } from '@/components/ui/EmptyState'
 import {
   Shield,
   Search,
@@ -69,7 +71,7 @@ function SecurityStatusBadge({ status }: { status: string }) {
   }
   const s = status.toLowerCase()
   return (
-    <span className={cn('inline-block px-3 py-1 text-xs font-black uppercase tracking-widest rounded-full border shadow-sm', colorMap[s] || 'bg-text-faint/20 text-text-faint border-border')}>
+    <span className={cn('inline-block px-3 py-1 text-xs font-bold uppercase tracking-widest rounded-full border shadow-sm', colorMap[s] || 'bg-text-faint/20 text-text-faint border-border')}>
       {status}
     </span>
   )
@@ -126,19 +128,19 @@ function FirewallTab({ call }: { call: BackendCall }) {
             placeholder="Search firewall policy..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-panel border border-border rounded-xl pl-14 pr-4 py-4 text-xl text-text placeholder-text-faint focus:outline-none focus:border-accent shadow-inner"
+            className="w-full bg-panel border border-border rounded-xl pl-14 pr-4 py-2.5 text-sm text-[var(--color-text)] placeholder-[var(--color-text-faint)] focus:outline-none focus:border-accent shadow-inner"
           />
         </div>
         <div className="flex-1" />
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-4 bg-panel border border-border px-6 py-4 rounded-xl shadow-lg">
             <ShieldCheck size={20} className="text-success" />
-            <span className="text-lg font-black text-text uppercase tabular-nums">{rules.filter(r => r.enabled).length} ACTIVE RULES</span>
+            <span className="text-sm font-semibold text-[var(--color-text)] uppercase tracking-wider tabular-nums">{rules.filter(r => r.enabled).length} ACTIVE RULES</span>
           </div>
           {rules.some(r => r.is_high_risk) && (
             <div className="flex items-center gap-4 bg-danger/10 border border-danger/30 px-6 py-4 rounded-xl shadow-lg animate-pulse">
               <AlertTriangle size={20} className="text-danger" />
-              <span className="text-lg font-black text-danger uppercase tabular-nums">
+              <span className="text-sm font-semibold text-[var(--color-danger)] uppercase tracking-wider tabular-nums">
                 {rules.filter(r => r.is_high_risk).length} HIGH RISK
               </span>
             </div>
@@ -146,22 +148,22 @@ function FirewallTab({ call }: { call: BackendCall }) {
         </div>
       </div>
 
-      <div className="bg-panel border border-border rounded-[24px] overflow-hidden shadow-2xl">
+      <div className="bg-panel border border-border rounded-[var(--radius-lg)] overflow-hidden shadow-2xl">
         <div className="overflow-x-auto h-full max-h-[600px] overflow-y-auto">
           <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border shadow-sm">
               <tr>
-                <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Policy Name</th>
-                <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Action</th>
-                <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Protocol</th>
-                <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Local Port</th>
-                <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest text-center">State</th>
+                <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Policy Name</th>
+                <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Action</th>
+                <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Protocol</th>
+                <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Local Port</th>
+                <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider text-center">State</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((rule, i) => (
                 <tr key={i} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all">
-                  <td className="px-8 py-5 text-xl font-black text-text truncate max-w-md">
+                  <td className="px-6 py-4 text-sm font-medium text-[var(--color-text)] truncate max-w-md">
                     <div className="flex items-center gap-3">
                       {rule.is_high_risk && (
                         <AlertTriangle size={20} className="text-danger animate-pulse shrink-0" />
@@ -175,18 +177,24 @@ function FirewallTab({ call }: { call: BackendCall }) {
                   <td className="px-8 py-5 font-bold text-lg text-text-faint tabular-nums">{rule.protocol}</td>
                   <td className="px-8 py-5 font-bold text-lg text-accent tabular-nums">{rule.local_port}</td>
                   <td className="px-8 py-5 text-center">
-                    <button
-                      onClick={() => {
+                    <Switch.Root
+                      checked={rule.enabled}
+                      onCheckedChange={() => {
                         setPendingAction({ index: i, name: rule.name })
                         setConfirmOpen(true)
                       }}
                       className={cn(
-                        'relative inline-flex h-8 w-14 items-center rounded-full transition-all shadow-inner border border-border',
-                        rule.enabled ? 'bg-success/30 border-success/50' : 'bg-panel-3',
+                        'relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer',
+                        rule.enabled ? 'bg-[var(--color-success)]' : 'bg-[var(--color-panel-3)]'
                       )}
                     >
-                      <span className={cn('h-5 w-5 rounded-full bg-white shadow-lg transition-transform', rule.enabled ? 'translate-x-7' : 'translate-x-1')} />
-                    </button>
+                      <Switch.Thumb
+                        className={cn(
+                          'block h-4 w-4 rounded-full bg-white shadow-lg transition-transform will-change-transform',
+                          rule.enabled ? 'translate-x-6' : 'translate-x-1'
+                        )}
+                      />
+                    </Switch.Root>
                   </td>
                 </tr>
               ))}
@@ -217,15 +225,23 @@ function UsersTab({ call }: { call: BackendCall }) {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {users.map(user => (
-          <div key={user.username} className="bg-panel border border-border rounded-[24px] p-8 shadow-xl flex items-center gap-8">
+        {users.length === 0 ? (
+          <div className="lg:col-span-2">
+            <EmptyState
+              icon={<Users size={28} />}
+              title="No Users Found"
+              description="No local user accounts were detected on this system."
+            />
+          </div>
+        ) : users.map(user => (
+          <div key={user.username} className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl flex items-center gap-8">
             <div className={cn("w-20 h-20 rounded-2xl flex items-center justify-center shrink-0 border shadow-inner", user.is_admin ? "bg-warning/10 border-warning/30 text-warning" : "bg-accent/10 border-accent/30 text-accent")}>
               {user.is_admin ? <ShieldAlert size={40} /> : <UserCheck size={40} />}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-4 mb-1">
-                <h3 className="text-2xl font-black text-text truncate">{user.username}</h3>
-                {user.is_admin && <span className="px-3 py-1 rounded-full bg-warning text-black text-xs font-black uppercase tracking-tighter">Admin</span>}
+                <h3 className="text-2xl font-bold text-text truncate">{user.username}</h3>
+                {user.is_admin && <span className="px-3 py-1 rounded-full bg-warning text-black text-xs font-bold uppercase tracking-tighter">Admin</span>}
               </div>
               <p className="text-text-dim text-lg mb-4">{user.full_name || 'System Account'}</p>
               <div className="flex items-center gap-4">
@@ -270,11 +286,11 @@ function DefenderTab({ call }: { call: BackendCall }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {metrics.map(m => (
-          <div key={m.label} className={cn("bg-panel border rounded-[24px] p-8 shadow-xl transition-all border-l-[8px]", m.active ? "border-l-success border-border" : "border-l-danger border-danger/30")}>
+          <div key={m.label} className={cn("bg-panel border rounded-[var(--radius-lg)] p-8 shadow-xl transition-all border-l-[8px]", m.active ? "border-l-success border-border" : "border-l-danger border-danger/30")}>
             <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-6 border shadow-inner", m.active ? "bg-success/10 border-success/30 text-success" : "bg-danger/10 border-danger/30 text-danger")}>
               {m.icon}
             </div>
-            <h4 className="text-lg font-black text-text mb-2">{m.label}</h4>
+            <h4 className="text-lg font-bold text-text mb-2">{m.label}</h4>
             <span className={cn("text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full", m.active ? "bg-success text-white" : "bg-danger text-white")}>
               {m.active ? 'Operational' : 'Disabled'}
             </span>
@@ -282,22 +298,22 @@ function DefenderTab({ call }: { call: BackendCall }) {
         ))}
       </div>
 
-      <div className="bg-panel border border-border rounded-[24px] p-10 shadow-2xl">
-        <h3 className="text-xl font-black text-text uppercase tracking-widest mb-8 flex items-center gap-4">
+      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-10 shadow-2xl">
+        <h3 className="text-xl font-bold text-text uppercase tracking-widest mb-8 flex items-center gap-4">
           <History size={24} className="text-accent" /> Scan & Integrity Timeline
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
           <div>
             <p className="text-sm font-bold text-text-faint uppercase mb-2">Last Threat Scan</p>
-            <p className="text-2xl font-black text-text">{status.last_scan}</p>
+            <p className="text-2xl font-bold text-text">{status.last_scan}</p>
           </div>
           <div>
             <p className="text-sm font-bold text-text-faint uppercase mb-2">Signature Age</p>
-            <p className="text-2xl font-black text-success tabular-nums">{status.signature_age}</p>
+            <p className="text-2xl font-bold text-success tabular-nums">{status.signature_age}</p>
           </div>
           <div>
             <p className="text-sm font-bold text-text-faint uppercase mb-2">Full Scan Recency</p>
-            <p className="text-2xl font-black text-text tabular-nums">{status.full_scan_age} Days</p>
+            <p className="text-2xl font-bold text-text tabular-nums">{status.full_scan_age} Days</p>
           </div>
         </div>
       </div>
@@ -326,59 +342,62 @@ function ListeningTab({ call }: { call: BackendCall }) {
       />
 
       {loading && (
-        <div className="flex flex-col items-center justify-center py-32 opacity-40">
-          <Radio size={64} className="animate-pulse mb-6 text-accent" />
-          <p className="text-2xl font-black uppercase tracking-[0.15em]">Scanning ports...</p>
+        <div className="flex flex-col items-center justify-center py-20">
+          <div className="w-16 h-16 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-accent)] mb-4">
+            <Radio size={28} className="animate-pulse" />
+          </div>
+          <p className="text-sm font-semibold text-[var(--color-text-dim)]">Scanning ports...</p>
         </div>
       )}
 
       {error && !loading && (
-        <div className="bg-panel border border-danger/30 rounded-[24px] p-10 shadow-2xl">
-          <div className="flex items-center gap-6">
-            <div className="w-16 h-16 rounded-2xl bg-danger/20 flex items-center justify-center shrink-0">
-              <ShieldAlert size={36} className="text-danger" />
+        <div className="bg-[var(--color-panel)] border border-[var(--color-danger)]/30 rounded-[var(--radius-lg)] p-6 shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-[var(--color-danger)]/10 flex items-center justify-center shrink-0">
+              <ShieldAlert size={20} className="text-[var(--color-danger)]" />
             </div>
             <div>
-              <h3 className="text-2xl font-black text-danger mb-2">Scan Failed</h3>
-              <p className="text-xl text-text-dim">{error}</p>
+              <h3 className="text-sm font-bold text-[var(--color-danger)] mb-0.5">Scan Failed</h3>
+              <p className="text-sm text-[var(--color-text-dim)]">{error}</p>
             </div>
           </div>
         </div>
       )}
 
       {!loading && !error && ports.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-32 opacity-40">
-          <ShieldCheck size={64} className="mb-6 text-success" />
-          <p className="text-2xl font-black uppercase tracking-[0.15em]">No listening ports found</p>
-        </div>
+        <EmptyState
+          icon={<ShieldCheck size={28} />}
+          title="No Listening Ports"
+          description="No open ports detected on this system. All services appear to be bound to internal interfaces."
+        />
       )}
 
       {!loading && !error && ports.length > 0 && (
-        <div className="bg-panel border border-border rounded-[24px] overflow-hidden shadow-2xl">
+        <div className="bg-panel border border-border rounded-[var(--radius-lg)] overflow-hidden shadow-2xl">
           <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border shadow-sm">
                 <tr>
-                  <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Port</th>
-                  <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Protocol</th>
-                  <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Process</th>
-                  <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">PID</th>
-                  <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">State</th>
+                  <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Port</th>
+                  <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Protocol</th>
+                  <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Process</th>
+                  <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">PID</th>
+                  <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">State</th>
                 </tr>
               </thead>
               <tbody>
                 {ports.map((p, i) => (
                   <tr key={i} className={cn("border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all", p.is_external ? "bg-warning/5" : "")}>
-                    <td className="px-8 py-5 text-xl font-black text-accent tabular-nums">
+                    <td className="px-6 py-4 text-sm font-semibold text-[var(--color-accent)] tabular-nums">
                       <div className="flex items-center gap-3">
                         {p.port}
                         {p.is_external && (
-                          <span className="px-2 py-0.5 rounded-md bg-warning/20 text-warning text-[10px] font-black uppercase tracking-widest border border-warning/30">External</span>
+                          <span className="px-2 py-0.5 rounded-md bg-warning/20 text-warning text-[10px] font-bold uppercase tracking-widest border border-warning/30">External</span>
                         )}
                       </div>
                     </td>
                     <td className="px-8 py-5 font-bold text-lg text-text-faint tabular-nums uppercase">{p.protocol}</td>
-                    <td className="px-8 py-5 text-xl font-bold text-text truncate max-w-md">{p.process_name}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-[var(--color-text)] truncate max-w-md">{p.process_name}</td>
                     <td className="px-8 py-5 font-bold text-lg text-text-faint tabular-nums">{p.pid}</td>
                     <td className="px-8 py-5">
                       <SecurityStatusBadge status={p.state} />
@@ -407,22 +426,22 @@ function EventsTab({ call }: { call: BackendCall }) {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="bg-panel border border-border rounded-[24px] overflow-hidden shadow-2xl">
+      <div className="bg-panel border border-border rounded-[var(--radius-lg)] overflow-hidden shadow-2xl">
         <div className="max-h-[700px] overflow-y-auto">
           {events.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-32 opacity-40">
-              <FileText size={64} className="mb-6 text-text-faint" />
-              <p className="text-2xl font-black uppercase tracking-[0.15em]">No security events recorded</p>
-              <p className="text-text-faint text-lg mt-4">Events will appear here as they occur.</p>
-            </div>
+            <EmptyState
+              icon={<FileText size={28} />}
+              title="No Security Events"
+              description="No security events have been recorded yet. Events will appear here as they occur."
+            />
           ) : (
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border shadow-sm">
                 <tr>
-                  <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">ID</th>
-                  <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Level</th>
-                  <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Origin</th>
-                  <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Message</th>
+                  <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">ID</th>
+                  <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Level</th>
+                  <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Origin</th>
+                  <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Message</th>
                 </tr>
               </thead>
               <tbody>
@@ -430,12 +449,12 @@ function EventsTab({ call }: { call: BackendCall }) {
                   <tr key={i} className={cn("border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all group", e.level === 'Error' ? "bg-danger/5" : "")}>
                     <td className="px-8 py-5 font-bold text-lg text-text-faint tabular-nums">{e.id}</td>
                     <td className="px-8 py-5">
-                      <span className={cn("px-4 py-1 rounded-full text-xs font-black uppercase tracking-tighter border", e.level === 'Error' ? "bg-danger text-white border-danger/30 shadow-[0_0_12px_rgba(251,93,107,0.4)]" : "bg-panel-3 text-text-dim border-border")}>
+                      <span className={cn("px-4 py-1 rounded-full text-xs font-bold uppercase tracking-tighter border", e.level === 'Error' ? "bg-danger text-white border-danger/30 shadow-[0_0_12px_rgba(251,93,107,0.4)]" : "bg-panel-3 text-text-dim border-border")}>
                         {e.level}
                       </span>
                     </td>
-                    <td className="px-8 py-5 text-xl font-bold text-text truncate max-w-[200px]">{e.provider}</td>
-                    <td className="px-8 py-5 text-lg text-text-dim leading-relaxed">{e.message}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-[var(--color-text)] truncate max-w-[200px]">{e.provider}</td>
+                    <td className="px-6 py-4 text-sm text-[var(--color-text-dim)] leading-relaxed">{e.message}</td>
                   </tr>
                 ))}
               </tbody>
@@ -457,7 +476,7 @@ export function SecOps() {
     <div className="flex flex-col h-full bg-[var(--color-bg)]">
       <div className="p-8 border-b border-border bg-panel-2 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-text flex items-center gap-4">
+          <h1 className="text-2xl font-bold text-text flex items-center gap-4">
             <Shield size={32} className="text-danger" /> Security Operations
           </h1>
           <p className="text-text-dim text-lg mt-2">Threat surface analysis, access control, and endpoint protection status.</p>
@@ -482,7 +501,7 @@ export function SecOps() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-10">
+      <div className="flex-1 overflow-y-auto p-6">
         {activeTab === 'firewall' && <FirewallTab call={call} />}
         {activeTab === 'users' && <UsersTab call={call} />}
         {activeTab === 'defender' && <DefenderTab call={call} />}

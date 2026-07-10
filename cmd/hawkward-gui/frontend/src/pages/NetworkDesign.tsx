@@ -55,49 +55,49 @@ function PropertiesPanel({
   onClose: () => void
 }) {
   return (
-    <div className="w-72 bg-panel border border-border rounded-lg p-4 space-y-3 shrink-0 overflow-y-auto">
+    <div className="w-72 bg-[var(--color-panel)] border border-[var(--color-border)] rounded-lg p-4 space-y-3 shrink-0 overflow-y-auto">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-text">Device Properties</h3>
-        <button onClick={onClose} className="text-text-faint hover:text-text transition-colors">
+        <h3 className="text-sm font-semibold text-[var(--color-text)]">Device Properties</h3>
+        <button onClick={onClose} className="text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-colors">
           <X size={16} />
         </button>
       </div>
 
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         <div>
-          <label className="text-[10px] text-text-faint uppercase tracking-wider block mb-1">Name</label>
+          <label className="text-xs text-[var(--color-text-faint)] uppercase tracking-wider font-medium block mb-1.5">Name</label>
           <input
             type="text"
             value={device.label}
             onChange={(e) => onUpdate(device.id, { label: e.target.value })}
-            className="w-full bg-panel-2 border border-border rounded px-2.5 py-1.5 text-xs text-text placeholder:text-text-faint focus:outline-none focus:ring-1 focus:ring-accent"
+            className="w-full bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded px-2.5 py-2 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
           />
         </div>
 
         <div>
-          <label className="text-[10px] text-text-faint uppercase tracking-wider block mb-1">Type</label>
-          <p className="text-xs text-text font-medium capitalize">{device.type}</p>
+          <label className="text-xs text-[var(--color-text-faint)] uppercase tracking-wider font-medium block mb-1.5">Type</label>
+          <p className="text-sm text-[var(--color-text)] font-medium capitalize">{device.type}</p>
         </div>
 
         <div>
-          <label className="text-[10px] text-text-faint uppercase tracking-wider block mb-1">IP Address</label>
+          <label className="text-xs text-[var(--color-text-faint)] uppercase tracking-wider font-medium block mb-1.5">IP Address</label>
           <input
             type="text"
             value={device.ip || ''}
             onChange={(e) => onUpdate(device.id, { ip: e.target.value })}
             placeholder="e.g., 192.168.1.1"
-            className="w-full bg-panel-2 border border-border rounded px-2.5 py-1.5 text-xs text-text placeholder:text-text-faint focus:outline-none focus:ring-1 focus:ring-accent"
+            className="w-full bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded px-2.5 py-2 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
           />
         </div>
 
         <div>
-          <label className="text-[10px] text-text-faint uppercase tracking-wider block mb-1">Subnet</label>
+          <label className="text-xs text-[var(--color-text-faint)] uppercase tracking-wider font-medium block mb-1.5">Subnet</label>
           <input
             type="text"
             value={device.subnet || ''}
             onChange={(e) => onUpdate(device.id, { subnet: e.target.value })}
             placeholder="e.g., 255.255.255.0"
-            className="w-full bg-panel-2 border border-border rounded px-2.5 py-1.5 text-xs text-text placeholder:text-text-faint focus:outline-none focus:ring-1 focus:ring-accent"
+            className="w-full bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded px-2.5 py-2 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
           />
         </div>
 

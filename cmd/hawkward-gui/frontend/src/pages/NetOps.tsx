@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
+import { useSettingsStore } from '@/stores/useSettingsStore'
 import {
   Activity,
   Globe,
@@ -62,18 +63,18 @@ function ProtocolReference() {
     { p: 53, n: 'DNS', d: 'Domain Resolution' },
   ]
   return (
-    <div className="bg-panel border border-border rounded-[24px] p-8 shadow-xl">
+    <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl">
       <div className="flex items-center gap-4 mb-6">
         <BookOpen size={24} className="text-accent" />
-        <h3 className="text-xl font-black text-text uppercase tracking-widest">Protocol Intel</h3>
+        <h3 className="text-xl font-bold text-text uppercase tracking-widest">Protocol Intel</h3>
       </div>
       <div className="space-y-4">
         {commonPorts.map(port => (
           <div key={port.p} className="flex items-center justify-between p-3 bg-panel-3 rounded-xl border border-border group hover:border-accent/30 transition-all">
             <div className="flex items-center gap-4">
-              <span className="w-12 text-lg font-black text-accent">{port.p}</span>
+              <span className="w-12 text-lg font-bold text-accent">{port.p}</span>
               <div className="flex flex-col">
-                <span className="text-sm font-black text-text uppercase tracking-tighter">{port.n}</span>
+                <span className="text-sm font-bold text-text uppercase tracking-tighter">{port.n}</span>
                 <span className="text-xs text-text-faint font-medium">{port.d}</span>
               </div>
             </div>
@@ -86,10 +87,10 @@ function ProtocolReference() {
 
 function SectionBriefing({ title, objective, checklist }: { title: string, objective: string, checklist: string[] }) {
   return (
-    <div className="bg-panel-2 border border-border rounded-[24px] p-8 shadow-xl mb-8">
+    <div className="bg-panel-2 border border-border rounded-[var(--radius-lg)] p-8 shadow-xl mb-8">
       <div className="flex items-center gap-4 mb-4">
         <Info size={24} className="text-accent" />
-        <h3 className="text-2xl font-black text-text uppercase tracking-widest">{title}</h3>
+        <h3 className="text-2xl font-bold text-text uppercase tracking-widest">{title}</h3>
       </div>
       <p className="text-lg text-text-dim leading-relaxed mb-6 italic">{objective}</p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -112,7 +113,7 @@ function StatusBadge({ status }: { status: string }) {
     established: 'bg-accent/15 text-accent border-accent/30',
   }
   return (
-    <span className={cn('inline-block px-3 py-1 text-xs font-black uppercase tracking-widest rounded-full border shadow-sm', colorMap[status.toLowerCase()] || 'bg-text-faint/20 text-text-faint border-border')}>
+    <span className={cn('inline-block px-3 py-1 text-xs font-bold uppercase tracking-widest rounded-full border shadow-sm', colorMap[status.toLowerCase()] || 'bg-text-faint/20 text-text-faint border-border')}>
       {status.replace('_', ' ')}
     </span>
   )
@@ -126,7 +127,7 @@ function MiniStat({ label, value, icon, unit }: { label: string; value: string |
       </div>
       <div>
         <p className="text-sm font-bold text-text-faint uppercase tracking-widest mb-1">{label}</p>
-        <p className="text-3xl font-black text-text tabular-nums leading-none">
+        <p className="text-2xl font-bold text-text tabular-nums leading-none">
           {value}{unit && <span className="text-base text-text-faint ml-1 font-medium">{unit}</span>}
         </p>
       </div>
@@ -137,6 +138,7 @@ function MiniStat({ label, value, icon, unit }: { label: string; value: string |
 // ── Main Page ──
 export function NetOps() {
   const { call } = useBackend()
+  const { pingCount, refreshInterval, dnsTimeout } = useSettingsStore()
   const [activeTab, setActiveTab] = useState<NetOpsTab>('ping')
   const [pingTarget, setPingTarget] = useState('8.8.8.8')
   const [pingRunning, setPingRunning] = useState(false)
@@ -160,7 +162,7 @@ export function NetOps() {
       const res = await call('NetOps.GetConnections')
       return (res as ConnectionInfo[]) || []
     },
-    refetchInterval: activeTab === 'connections' ? 2000 : false,
+    refetchInterval: activeTab === 'connections' ? refreshInterval : false,
   })
 
   // Interfaces — polled via react-query
@@ -170,7 +172,7 @@ export function NetOps() {
       const res = await call('NetOps.GetInterfaces') as InterfaceInfo[]
       return res || []
     },
-    refetchInterval: (activeTab === 'interfaces' || activeTab === 'bandwidth') ? 2000 : false,
+    refetchInterval: (activeTab === 'interfaces' || activeTab === 'bandwidth') ? refreshInterval : false,
   })
 
   const initialLoading = connectionsLoading && interfacesLoading
@@ -178,7 +180,7 @@ export function NetOps() {
   const executePing = useCallback(async () => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Wails bridge returns dynamic type
-      const res = await call('NetOps.Ping', pingTarget, 1) as any
+      const res = await call('NetOps.Ping', pingTarget, pingCount) as any
       if (res?.error) {
         setPingEntries(prev => [...prev.slice(-49), {
           seq: prev.length + 1,
@@ -208,7 +210,7 @@ export function NetOps() {
     } catch (err) {
       console.error('Ping failed:', err)
     }
-  }, [call, pingTarget])
+  }, [call, pingTarget, pingCount])
 
   useEffect(() => {
     if (pingRunning) {
@@ -220,7 +222,7 @@ export function NetOps() {
   const handleDns = async () => {
     setDnsLoading(true); setDnsResult(null)
     try {
-      const res = await call('NetOps.DNSLookup', dnsHost, dnsServer) as DNSResult
+      const res = await call('NetOps.DNSLookup', dnsHost, dnsServer, dnsTimeout) as DNSResult
       setDnsResult(res)
     } catch (err) {
       console.error('DNS lookup failed:', err)
@@ -272,7 +274,7 @@ export function NetOps() {
     <div className="flex flex-col h-full bg-[var(--color-bg)]">
       <div className="p-8 border-b border-border bg-panel-2 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black text-text flex items-center gap-4">
+          <h1 className="text-2xl font-bold text-text flex items-center gap-4">
             <Network size={32} className="text-accent" /> NETWORK OPERATIONS
           </h1>
           <p className="text-text-dim text-lg mt-2">Fabric probes, resolver triage, and cumulative traffic heuristics.</p>
@@ -297,7 +299,7 @@ export function NetOps() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-10 space-y-12">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {activeTab === 'ping' && (
           <div className="space-y-8 animate-in fade-in duration-500">
             <SectionBriefing
@@ -310,20 +312,20 @@ export function NetOps() {
                 "Packet Loss: 0% is the target for stable links."
               ]}
             />
-            <div className="flex items-center gap-6 bg-panel-2 border border-border p-6 rounded-[24px] shadow-inner">
+            <div className="flex items-center gap-6 bg-panel-2 border border-border p-6 rounded-[var(--radius-lg)] shadow-inner">
               <div className="relative group flex-1">
                 <Globe size={24} className="absolute left-5 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-accent transition-colors" />
                 <input
                   type="text"
                   value={pingTarget}
                   onChange={(e) => setPingTarget(e.target.value)}
-                  className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-5 text-2xl font-bold text-text placeholder-text-faint focus:outline-none focus:border-accent shadow-xl"
+                  className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-3 text-sm font-medium text-[var(--color-text)] placeholder-[var(--color-text-faint)] focus:outline-none focus:border-accent shadow-xl"
                 />
               </div>
               <button onClick={() => {
                 if (!pingRunning) setPingEntries([])
                 setPingRunning(!pingRunning)
-              }} className={cn("flex items-center gap-3 px-10 py-5 text-xl font-black rounded-2xl transition-all shadow-xl", pingRunning ? "bg-danger text-white hover:bg-danger/90" : "bg-accent text-white hover:bg-accent/90")}>
+              }} className={cn("flex items-center gap-3 px-5 py-2.5 text-sm font-semibold rounded-xl transition-all shadow-xl", pingRunning ? "bg-danger text-white hover:bg-danger/90" : "bg-accent text-white hover:bg-accent/90")}>
                 {pingRunning ? <Square size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
                 {pingRunning ? 'STOP PROBE' : 'START PROBE'}
               </button>
@@ -344,9 +346,9 @@ export function NetOps() {
             </div>
 
             {/* Latency Chart */}
-            <div className="bg-panel border border-border rounded-[24px] p-8 shadow-xl">
+            <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl">
               <div className="flex items-center justify-between mb-8">
-                <h3 className="text-xl font-black text-text uppercase tracking-widest flex items-center gap-3">
+                <h3 className="text-xl font-bold text-text uppercase tracking-widest flex items-center gap-3">
                   <Activity size={20} className="text-accent" /> Latency History
                 </h3>
                 <div className="flex items-center gap-4 text-xs font-bold text-text-faint">
@@ -406,7 +408,7 @@ export function NetOps() {
                 "MX-Records: Confirm mail routing topology."
               ]}
             />
-            <div className="flex items-center gap-6 bg-panel-2 border border-border p-6 rounded-[24px] shadow-inner">
+            <div className="flex items-center gap-6 bg-panel-2 border border-border p-6 rounded-[var(--radius-lg)] shadow-inner">
               <div className="relative group flex-[2]">
                 <Search size={24} className="absolute left-5 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-accent transition-colors" />
                 <input
@@ -414,7 +416,7 @@ export function NetOps() {
                   value={dnsHost}
                   onChange={(e) => setDnsHost(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleDns()}
-                  className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-5 text-2xl font-bold text-text placeholder-text-faint focus:outline-none focus:border-accent shadow-xl"
+                  className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-3 text-sm font-medium text-[var(--color-text)] placeholder-[var(--color-text-faint)] focus:outline-none focus:border-accent shadow-xl"
                   placeholder="Hostname (e.g. google.com)"
                 />
               </div>
@@ -429,7 +431,7 @@ export function NetOps() {
                   placeholder="Resolver (e.g. 8.8.8.8)"
                 />
               </div>
-              <button onClick={handleDns} disabled={dnsLoading} className="flex items-center gap-3 px-10 py-5 bg-accent text-white text-xl font-black rounded-2xl hover:bg-accent/90 shadow-xl transition-all">
+              <button onClick={handleDns} disabled={dnsLoading} className="flex items-center gap-3 px-5 py-2.5 bg-[var(--color-accent)] text-white text-sm font-semibold rounded-xl hover:bg-accent/90 shadow-xl transition-all">
                 {dnsLoading ? <RefreshCw size={24} className="animate-spin" /> : <Search size={24} />}
                 {dnsLoading ? 'RESOLVING...' : 'RESOLVE'}
               </button>
@@ -437,7 +439,7 @@ export function NetOps() {
 
             {/* Loading skeleton */}
             {dnsLoading && (
-              <div className="bg-panel border border-border rounded-[24px] p-10 shadow-xl animate-pulse">
+              <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-10 shadow-xl animate-pulse">
                 <div className="h-6 bg-panel-3 rounded w-1/3 mb-6" />
                 <div className="space-y-4">
                   <div className="h-4 bg-panel-3 rounded w-3/4" />
@@ -450,14 +452,14 @@ export function NetOps() {
 
             {/* DNS Results */}
             {dnsResult && !dnsLoading && (
-              <div className="bg-panel border border-border rounded-[24px] p-10 shadow-xl">
+              <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-10 shadow-xl">
                 <div className="flex items-center gap-4 mb-8">
                   <Globe size={28} className={dnsResult.error ? 'text-danger' : 'text-success'} />
-                  <h3 className="text-2xl font-black text-text uppercase tracking-tight">
+                  <h3 className="text-2xl font-bold text-text uppercase tracking-tight">
                     {dnsResult.hostname}
                   </h3>
                   {dnsResult.error && (
-                    <span className="px-4 py-1 text-sm font-black text-danger bg-danger/10 rounded-full border border-danger/30 uppercase tracking-widest">
+                    <span className="px-4 py-1 text-sm font-bold text-danger bg-danger/10 rounded-full border border-danger/30 uppercase tracking-widest">
                       Failed
                     </span>
                   )}
@@ -480,12 +482,12 @@ export function NetOps() {
                       <div key={section.label} className="bg-panel-2 border border-border rounded-2xl p-6">
                         <div className="flex items-center gap-2 mb-4">
                           <span className="text-accent">{section.icon}</span>
-                          <span className="text-sm font-black text-text-dim uppercase tracking-widest">{section.label}</span>
+                          <span className="text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">{section.label}</span>
                         </div>
                         {section.values.length > 0 ? (
                           <div className="space-y-2">
                             {section.values.map((v, i) => (
-                              <div key={i} className="px-4 py-2 bg-panel-3 border border-border rounded-xl text-lg font-bold text-text tabular-nums font-[JetBrains_Mono]">
+                              <div key={i} className="px-4 py-2 bg-panel-3 border border-border rounded-xl text-lg font-bold text-text tabular-nums font-[Geist_Mono]">
                                 {v}
                               </div>
                             ))}
@@ -518,30 +520,37 @@ export function NetOps() {
               <ProtocolReference />
             </div>
             <div className="lg:col-span-3">
-              <div className="bg-panel border border-border rounded-[28px] overflow-hidden shadow-2xl">
+              <div className="bg-panel border border-border rounded-[var(--radius-lg)] overflow-hidden shadow-2xl">
                 <div className="max-h-[800px] overflow-y-auto">
                   <table className="w-full text-left border-collapse">
                     <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border">
                       <tr>
-                        <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Protocol</th>
-                        <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Endpoint Node</th>
-                        <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Process Origin</th>
-                        <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest text-right">State</th>
+                        <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Protocol</th>
+                        <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Endpoint Node</th>
+                        <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Process Origin</th>
+                        <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider text-right">State</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {connections.map((c, i) => (
+                      {connections.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="px-8 py-16 text-center">
+                            <p className="text-sm font-semibold text-[var(--color-text-dim)]">No active connections detected.</p>
+                            <p className="text-xs text-[var(--color-text-faint)] mt-1">Connections will appear as network activity is observed.</p>
+                          </td>
+                        </tr>
+                      ) : connections.map((c, i) => (
                         <tr key={i} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all group">
-                          <td className="px-8 py-4 font-black text-accent">{c.protocol}</td>
+                          <td className="px-8 py-4 font-bold text-accent">{c.protocol}</td>
                           <td className="px-8 py-4">
                             <div className="flex flex-col">
-                              <span className="text-lg font-black text-text">{c.remote_addr}:{c.remote_port}</span>
+                              <span className="text-lg font-bold text-text">{c.remote_addr}:{c.remote_port}</span>
                               <span className="text-sm font-bold text-text-faint uppercase tabular-nums">LOCAL: {c.local_addr}:{c.local_port}</span>
                             </div>
                           </td>
                           <td className="px-8 py-4">
                             <div className="flex flex-col">
-                              <span className="text-xl font-black text-text">{c.process_name || 'System Core'}</span>
+                              <span className="text-sm font-medium text-[var(--color-text)]">{c.process_name || 'System Core'}</span>
                               <span className="text-xs font-bold text-text-faint uppercase tracking-widest">PID: {c.pid}</span>
                             </div>
                           </td>
@@ -558,42 +567,52 @@ export function NetOps() {
 
         {activeTab === 'interfaces' && (
           <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {interfaces.map(iface => (
-                <div key={iface.name} className="bg-panel border border-border rounded-[24px] p-10 shadow-xl relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 rounded-bl-full pointer-events-none" />
-                  <div className="flex items-center gap-6 mb-8">
-                    <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center border shadow-inner transition-all", iface.is_up ? "bg-success/10 border-success/30 text-success" : "bg-danger/10 border-danger/30 text-danger")}>
-                      <Wifi size={32} />
-                    </div>
-                    <div>
-                      <h3 className="text-3xl font-black text-text uppercase tracking-tighter">{iface.name}</h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={cn("w-2 h-2 rounded-full", iface.is_up ? "bg-success shadow-[0_0_8px_var(--color-success)]" : "bg-danger")} />
-                        <span className="text-sm font-black text-text-faint uppercase tracking-widest">{iface.is_up ? 'ACTIVE NODE' : 'DISCONNECTED'}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-8">
-                    <div>
-                      <p className="text-xs font-black text-text-faint uppercase mb-2">Physical MAC</p>
-                      <p className="text-xl font-bold text-text tabular-nums">{iface.mac}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-black text-text-faint uppercase mb-2">Link Capacity</p>
-                      <p className="text-xl font-bold text-accent">{iface.speed}</p>
-                    </div>
-                  </div>
-                  <div className="mt-8 pt-8 border-t border-border flex items-center gap-4 flex-wrap">
-                    {iface.ips.map((ip, idx) => (
-                      <div key={idx} className="px-4 py-1.5 bg-panel-3 border border-border rounded-full text-sm font-black text-accent tabular-nums flex items-center gap-2">
-                        <Globe size={14} /> {ip}
-                      </div>
-                    ))}
-                  </div>
+            {interfaces.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-faint)] mb-4">
+                  <Wifi size={28} />
                 </div>
-              ))}
-            </div>
+                <h3 className="text-base font-bold text-[var(--color-text)] mb-1">No Interfaces Found</h3>
+                <p className="text-sm text-[var(--color-text-dim)]">Network interfaces will appear once detected by the system.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {interfaces.map(iface => (
+                  <div key={iface.name} className="bg-panel border border-border rounded-[var(--radius-lg)] p-10 shadow-xl relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 rounded-bl-full pointer-events-none" />
+                    <div className="flex items-center gap-6 mb-8">
+                      <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center border shadow-inner transition-all", iface.is_up ? "bg-success/10 border-success/30 text-success" : "bg-danger/10 border-danger/30 text-danger")}>
+                        <Wifi size={32} />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-bold text-text uppercase tracking-tighter">{iface.name}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={cn("w-2 h-2 rounded-full", iface.is_up ? "bg-success shadow-[0_0_8px_var(--color-success)]" : "bg-danger")} />
+                          <span className="text-sm font-bold text-text-faint uppercase tracking-widest">{iface.is_up ? 'ACTIVE NODE' : 'DISCONNECTED'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-8">
+                      <div>
+                        <p className="text-xs font-bold text-text-faint uppercase mb-2">Physical MAC</p>
+                        <p className="text-sm font-medium text-[var(--color-text)] tabular-nums">{iface.mac}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-text-faint uppercase mb-2">Link Capacity</p>
+                        <p className="text-xl font-bold text-accent">{iface.speed}</p>
+                      </div>
+                    </div>
+                    <div className="mt-8 pt-8 border-t border-border flex items-center gap-4 flex-wrap">
+                      {iface.ips.map((ip, idx) => (
+                        <div key={idx} className="px-4 py-1.5 bg-panel-3 border border-border rounded-full text-sm font-bold text-accent tabular-nums flex items-center gap-2">
+                          <Globe size={14} /> {ip}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -611,7 +630,7 @@ export function NetOps() {
             />
 
             {/* Input + Execute */}
-            <div className="flex items-center gap-6 bg-panel-2 border border-border p-6 rounded-[24px] shadow-inner">
+            <div className="flex items-center gap-6 bg-panel-2 border border-border p-6 rounded-[var(--radius-lg)] shadow-inner">
               <div className="relative group flex-1">
                 <Globe size={24} className="absolute left-5 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-accent transition-colors" />
                 <input
@@ -620,10 +639,10 @@ export function NetOps() {
                   onChange={(e) => setTraceTarget(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && executeTrace()}
                   placeholder="Target hostname or IP"
-                  className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-5 text-2xl font-bold text-text placeholder-text-faint focus:outline-none focus:border-accent shadow-xl"
+                  className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-3 text-sm font-medium text-[var(--color-text)] placeholder-[var(--color-text-faint)] focus:outline-none focus:border-accent shadow-xl"
                 />
               </div>
-              <button onClick={executeTrace} disabled={traceRunning} className="flex items-center gap-3 px-10 py-5 bg-accent text-white text-xl font-black rounded-2xl hover:bg-accent/90 shadow-xl transition-all disabled:opacity-50">
+              <button onClick={executeTrace} disabled={traceRunning} className="flex items-center gap-3 px-5 py-2.5 bg-[var(--color-accent)] text-white text-sm font-semibold rounded-xl hover:bg-accent/90 shadow-xl transition-all disabled:opacity-50">
                 {traceRunning ? <RefreshCw size={24} className="animate-spin" /> : <Map size={24} />}
                 {traceRunning ? 'TRACING...' : 'TRACE ROUTE'}
               </button>
@@ -631,13 +650,13 @@ export function NetOps() {
 
             {/* Results Table */}
             {traceResult && !traceRunning && (
-              <div className="bg-panel border border-border rounded-[28px] overflow-hidden shadow-2xl">
+              <div className="bg-panel border border-border rounded-[var(--radius-lg)] overflow-hidden shadow-2xl">
                 <div className="px-8 py-6 bg-panel-2 border-b border-border flex items-center justify-between">
-                  <h3 className="text-xl font-black text-text uppercase tracking-widest flex items-center gap-3">
+                  <h3 className="text-xl font-bold text-text uppercase tracking-widest flex items-center gap-3">
                     <Globe size={20} className="text-accent" /> {traceResult.target}
                   </h3>
                   {traceResult.error && (
-                    <span className="px-4 py-1.5 text-sm font-black text-danger bg-danger/10 rounded-full border border-danger/30 uppercase tracking-widest">
+                    <span className="px-4 py-1.5 text-sm font-bold text-danger bg-danger/10 rounded-full border border-danger/30 uppercase tracking-widest">
                       FAILED
                     </span>
                   )}
@@ -646,30 +665,30 @@ export function NetOps() {
                   <table className="w-full text-left border-collapse">
                     <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border">
                       <tr>
-                        <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest w-24">Hop</th>
-                        <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Host / IP</th>
-                        <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest text-right">RTT (ms)</th>
-                        <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest text-right w-28">Status</th>
+                        <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider w-24">Hop</th>
+                        <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Host / IP</th>
+                        <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider text-right">RTT (ms)</th>
+                        <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider text-right w-28">Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {traceResult.hops.map((hop) => (
                         <tr key={hop.number} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all group">
-                          <td className="px-8 py-5 text-2xl font-black text-accent tabular-nums">{hop.number}</td>
+                          <td className="px-8 py-5 text-sm font-semibold text-[var(--color-accent)] tabular-nums">{hop.number}</td>
                           <td className="px-8 py-5">
                             <div className="flex flex-col">
-                              <span className="text-xl font-black text-text">{hop.host || 'Unknown'}</span>
+                              <span className="text-sm font-medium text-[var(--color-text)]">{hop.host || 'Unknown'}</span>
                               <span className="text-sm font-bold text-text-faint uppercase">{hop.ip || '—'}</span>
                             </div>
                           </td>
                           <td className="px-8 py-5 text-right">
-                            <span className="text-xl font-black text-text tabular-nums">
+                            <span className="text-sm font-medium text-[var(--color-text)] tabular-nums">
                               {hop.rtts_ms.length > 0 ? hop.rtts_ms.join(', ') : '—'}
                             </span>
                           </td>
                           <td className="px-8 py-5 text-right">
                             <span className={cn(
-                              "px-4 py-1.5 rounded-full text-sm font-black uppercase tracking-widest",
+                              "px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-widest",
                               hop.timed ? "bg-warning/10 text-warning border border-warning/30" : "bg-success/10 text-success border border-success/30"
                             )}>
                               {hop.timed ? 'TIMED' : 'REACHED'}
@@ -699,7 +718,7 @@ export function NetOps() {
             />
 
             {/* Input + Scan Button */}
-            <div className="flex items-center gap-6 bg-panel-2 border border-border p-6 rounded-[24px] shadow-inner">
+            <div className="flex items-center gap-6 bg-panel-2 border border-border p-6 rounded-[var(--radius-lg)] shadow-inner">
               <div className="relative group flex-1">
                 <Globe size={24} className="absolute left-5 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-accent transition-colors" />
                 <input
@@ -708,7 +727,7 @@ export function NetOps() {
                   onChange={(e) => setPortScanTarget(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handlePortScan()}
                   placeholder="Target hostname or IP"
-                  className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-5 text-2xl font-bold text-text placeholder-text-faint focus:outline-none focus:border-accent shadow-xl"
+                  className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-3 text-sm font-medium text-[var(--color-text)] placeholder-[var(--color-text-faint)] focus:outline-none focus:border-accent shadow-xl"
                 />
               </div>
               <div className="relative group w-96">
@@ -721,7 +740,7 @@ export function NetOps() {
                   className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-5 text-lg font-bold text-text placeholder-text-faint focus:outline-none focus:border-accent shadow-xl"
                 />
               </div>
-              <button onClick={handlePortScan} disabled={portScanLoading} className="flex items-center gap-3 px-10 py-5 bg-accent text-white text-xl font-black rounded-2xl hover:bg-accent/90 shadow-xl transition-all disabled:opacity-50">
+              <button onClick={handlePortScan} disabled={portScanLoading} className="flex items-center gap-3 px-5 py-2.5 bg-[var(--color-accent)] text-white text-sm font-semibold rounded-xl hover:bg-accent/90 shadow-xl transition-all disabled:opacity-50">
                 {portScanLoading ? <RefreshCw size={24} className="animate-spin" /> : <Search size={24} />}
                 {portScanLoading ? 'SCANNING...' : 'SCAN'}
               </button>
@@ -729,12 +748,12 @@ export function NetOps() {
 
             {/* Results Table */}
             {portScanResults.length > 0 && !portScanLoading && (
-              <div className="bg-panel border border-border rounded-[28px] overflow-hidden shadow-2xl">
+              <div className="bg-panel border border-border rounded-[var(--radius-lg)] overflow-hidden shadow-2xl">
                 <div className="px-8 py-6 bg-panel-2 border-b border-border flex items-center justify-between">
-                  <h3 className="text-xl font-black text-text uppercase tracking-widest flex items-center gap-3">
+                  <h3 className="text-xl font-bold text-text uppercase tracking-widest flex items-center gap-3">
                     <Globe size={20} className="text-accent" /> {portScanTarget}
                   </h3>
-                  <span className="px-4 py-1.5 text-sm font-black text-text-dim bg-panel-3 rounded-full border border-border/30 uppercase tracking-widest">
+                  <span className="px-4 py-1.5 text-sm font-bold text-text-dim bg-panel-3 rounded-full border border-border/30 uppercase tracking-widest">
                     {portScanResults.filter(p => p.open).length}/{portScanResults.length} OPEN
                   </span>
                 </div>
@@ -742,23 +761,23 @@ export function NetOps() {
                   <table className="w-full text-left border-collapse">
                     <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border">
                       <tr>
-                        <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Port</th>
-                        <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Service</th>
-                        <th className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest text-right">Status</th>
+                        <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Port</th>
+                        <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Service</th>
+                        <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider text-right">Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {portScanResults.map((p, i) => (
                         <tr key={i} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all group">
                           <td className="px-8 py-5">
-                            <span className="text-2xl font-black text-accent tabular-nums">{p.port}</span>
+                            <span className="text-2xl font-bold text-accent tabular-nums">{p.port}</span>
                           </td>
                           <td className="px-8 py-5">
-                            <span className="text-xl font-black text-text">{p.service || 'Unknown'}</span>
+                            <span className="text-sm font-medium text-[var(--color-text)]">{p.service || 'Unknown'}</span>
                           </td>
                           <td className="px-8 py-5 text-right">
                             <span className={cn(
-                              "px-4 py-1.5 rounded-full text-sm font-black uppercase tracking-widest",
+                              "px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-widest",
                               p.open
                                 ? "bg-success/10 text-success border border-success/30"
                                 : "bg-danger/10 text-danger border border-danger/30"
@@ -776,9 +795,9 @@ export function NetOps() {
 
             {/* Empty state */}
             {portScanResults.length === 0 && !portScanLoading && (
-              <div className="bg-panel border border-border rounded-[24px] p-12 shadow-xl text-center">
+              <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-12 shadow-xl text-center">
                 <Search size={48} className="mx-auto mb-4 text-text-faint" />
-                <p className="text-xl font-bold text-text-dim">
+                <p className="text-sm font-medium text-[var(--color-text-dim)]">
                   Enter a target host and click SCAN to begin.
                 </p>
               </div>
@@ -800,9 +819,9 @@ export function NetOps() {
             />
 
             {interfaces.length === 0 ? (
-              <div className="bg-panel border border-border rounded-[24px] p-12 shadow-xl text-center">
+              <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-12 shadow-xl text-center">
                 <Signal size={48} className="mx-auto mb-4 text-text-faint" />
-                <p className="text-xl font-bold text-text-dim">
+                <p className="text-sm font-medium text-[var(--color-text-dim)]">
                   No interface data available. Visit the Hardware tab first.
                 </p>
               </div>
@@ -841,9 +860,9 @@ export function NetOps() {
                     const gradId = `bw-${iface.name.replace(/[^a-zA-Z0-9]/g, '')}`
 
                     return (
-                      <div key={iface.name} className="bg-panel border border-border rounded-[24px] p-6 md:p-8 shadow-xl">
+                      <div key={iface.name} className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 md:p-8 shadow-xl">
                         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-                          <h3 className="text-lg font-black text-text uppercase tracking-wider">{iface.name}</h3>
+                          <h3 className="text-lg font-bold text-text uppercase tracking-wider">{iface.name}</h3>
                           <div className="flex items-center gap-4 text-sm font-bold tabular-nums">
                             <span className="flex items-center gap-1.5">
                               <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-success)]" />

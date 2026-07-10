@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import * as Tooltip from '@radix-ui/react-tooltip'
 import {
   LayoutDashboard,
   Monitor,
@@ -19,21 +21,22 @@ interface NavItem {
   id: Page
   label: string
   icon: React.ReactNode
+  shortcut?: number
 }
 
 const opsItems: NavItem[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={22} /> },
-  { id: 'sysops', label: 'System Ops', icon: <Monitor size={22} /> },
-  { id: 'netops', label: 'Network Ops', icon: <Network size={22} /> },
-  { id: 'secops', label: 'Security Ops', icon: <Shield size={22} /> },
-  { id: 'devops', label: 'DevOps', icon: <Terminal size={22} /> },
-  { id: 'aiops', label: 'AI Ops', icon: <Bot size={22} /> },
+  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, shortcut: 1 },
+  { id: 'sysops', label: 'System Ops', icon: <Monitor size={20} />, shortcut: 2 },
+  { id: 'netops', label: 'Network Ops', icon: <Network size={20} />, shortcut: 3 },
+  { id: 'secops', label: 'Security Ops', icon: <Shield size={20} />, shortcut: 4 },
+  { id: 'devops', label: 'DevOps', icon: <Terminal size={20} />, shortcut: 5 },
+  { id: 'aiops', label: 'AI Ops', icon: <Bot size={20} />, shortcut: 6 },
 ]
 
 const toolsItems: NavItem[] = [
-  { id: 'network-design', label: 'Network Design', icon: <GitBranch size={22} /> },
-  { id: 'logs', label: 'Logs', icon: <ScrollText size={22} /> },
-  { id: 'settings', label: 'Settings', icon: <Settings size={22} /> },
+  { id: 'network-design', label: 'Network Design', icon: <GitBranch size={20} />, shortcut: 7 },
+  { id: 'logs', label: 'Logs', icon: <ScrollText size={20} />, shortcut: 8 },
+  { id: 'settings', label: 'Settings', icon: <Settings size={20} />, shortcut: 9 },
 ]
 
 interface SidebarProps {
@@ -85,68 +88,102 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-8">
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6" role="navigation" aria-label="Main navigation">
         {/* Operations section */}
-        <ul className={cn('space-y-2')}>
+        <ul className="space-y-1">
           {opsItems.map((item) => (
-            <li key={item.id}>
+            <li key={item.id} className="relative">
               <button
                 onClick={() => onNavigate(item.id)}
                 className={cn(
-                  'flex items-center w-full rounded-xl transition-all font-bold',
-                  collapsed ? 'justify-center p-3' : 'gap-4 px-4 py-3 text-lg',
+                  'group flex items-center w-full rounded-xl transition-all duration-150',
+                  collapsed ? 'justify-center p-3' : 'gap-3 px-3 py-2.5 text-sm',
                   currentPage === item.id
-                    ? 'bg-accent text-white shadow-lg'
-                    : 'text-[var(--color-text-dim)] hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-text)]'
+                    ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] font-semibold'
+                    : 'text-[var(--color-text-dim)] hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-text)] font-medium'
                 )}
                 title={collapsed ? item.label : undefined}
+                aria-current={currentPage === item.id ? 'page' : undefined}
               >
                 <span className="flex-shrink-0">{item.icon}</span>
-                {!collapsed && <span className="truncate">{item.label}</span>}
+                {!collapsed && (
+                  <span className="flex items-center justify-between flex-1 min-w-0">
+                    <span className="truncate">{item.label}</span>
+                    {item.shortcut && (
+                      <kbd className="text-[10px] font-[Geist_Mono] text-[var(--color-text-faint)] bg-[var(--color-panel-3)] border border-[var(--color-border)] rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                        {item.shortcut}
+                      </kbd>
+                    )}
+                  </span>
+                )}
               </button>
+              {currentPage === item.id && !collapsed && (
+                <motion.div
+                  layoutId="sidebar-active"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-[var(--color-accent)] rounded-r"
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                />
+              )}
             </li>
           ))}
         </ul>
 
-        <div className="h-px bg-border mx-2 opacity-50" />
+        <div className="h-px bg-[var(--color-border)] mx-2 opacity-50" />
 
         {/* Tools section */}
-        <ul className={cn('space-y-2')}>
+        <ul className="space-y-1">
           {toolsItems.map((item) => (
-            <li key={item.id}>
+            <li key={item.id} className="relative">
               <button
                 onClick={() => onNavigate(item.id)}
                 className={cn(
-                  'flex items-center w-full rounded-xl transition-all font-bold',
-                  collapsed ? 'justify-center p-3' : 'gap-4 px-4 py-3 text-lg',
+                  'group flex items-center w-full rounded-xl transition-all duration-150',
+                  collapsed ? 'justify-center p-3' : 'gap-3 px-3 py-2.5 text-sm',
                   currentPage === item.id
-                    ? 'bg-accent text-white shadow-lg'
-                    : 'text-[var(--color-text-dim)] hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-text)]'
+                    ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] font-semibold'
+                    : 'text-[var(--color-text-dim)] hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-text)] font-medium'
                 )}
                 title={collapsed ? item.label : undefined}
+                aria-current={currentPage === item.id ? 'page' : undefined}
               >
                 <span className="flex-shrink-0">{item.icon}</span>
-                {!collapsed && <span className="truncate">{item.label}</span>}
+                {!collapsed && (
+                  <span className="flex items-center justify-between flex-1 min-w-0">
+                    <span className="truncate">{item.label}</span>
+                    {item.shortcut && (
+                      <kbd className="text-[10px] font-[Geist_Mono] text-[var(--color-text-faint)] bg-[var(--color-panel-3)] border border-[var(--color-border)] rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                        {item.shortcut}
+                      </kbd>
+                    )}
+                  </span>
+                )}
               </button>
+              {currentPage === item.id && !collapsed && (
+                <motion.div
+                  layoutId="sidebar-active"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-[var(--color-accent)] rounded-r"
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                />
+              )}
             </li>
           ))}
         </ul>
       </nav>
 
       {/* Collapse toggle */}
-      <div className="px-4 py-3 border-t border-[var(--color-border)]">
+      <div className="px-3 py-3 border-t border-[var(--color-border)]">
         <button
           onClick={() => setCollapsed(!collapsed)}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="flex items-center justify-center w-full gap-2 px-4 py-3 rounded-xl text-[var(--color-text-dim)] hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-text)] transition-all font-bold"
+          className="flex items-center justify-center w-full gap-2 px-3 py-2.5 rounded-xl text-[var(--color-text-dim)] hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-text)] transition-all font-medium text-sm"
         >
-          {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-          {!collapsed && <span className="text-sm">Collapse</span>}
+          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          {!collapsed && <span>Collapse</span>}
         </button>
       </div>
 
       {/* Footer */}
-      <div className="px-[14px] py-3 border-t border-[var(--color-border)]">
+      <div className="px-3 pb-4 pt-1">
         <p className="text-[11px] text-[var(--color-text-faint)]">Hawkward v1.3.0</p>
       </div>
     </aside>

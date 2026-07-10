@@ -7,24 +7,26 @@ import {
   Moon,
   Sun,
   ExternalLink,
+  RotateCcw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import * as Slider from '@radix-ui/react-slider'
 import { useBackend } from '@/hooks/useBackend'
 import { useThemeStore, useSettingsStore } from '@/stores/useSettingsStore'
+import { toast } from 'sonner'
 
 // ── Section Card (aligned with Squib design system) ──
 
 function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="bg-panel border border-border rounded-[24px] p-8 shadow-xl">
-      <div className="flex items-center gap-4 mb-6 pb-4 border-b border-border/50">
-        <div className="w-10 h-10 rounded-xl bg-accent-soft flex items-center justify-center text-accent">
+    <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6 shadow-lg">
+      <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--color-border)]/50">
+        <div className="w-8 h-8 rounded-lg bg-[var(--color-accent-soft)] flex items-center justify-center text-[var(--color-accent)]">
           {icon}
         </div>
-        <h2 className="text-sm font-black text-text uppercase tracking-[0.2em]">{title}</h2>
+        <h2 className="text-xs font-semibold text-[var(--color-text)] uppercase tracking-wider">{title}</h2>
       </div>
-      <div className="space-y-6">{children}</div>
+      <div className="space-y-4">{children}</div>
     </div>
   )
 }
@@ -35,8 +37,8 @@ function SettingRow({ label, description, children }: { label: string; descripti
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="min-w-0">
-        <p className="text-base font-bold text-text">{label}</p>
-        {description && <p className="text-sm text-text-faint mt-1">{description}</p>}
+        <p className="text-sm font-medium text-[var(--color-text)]">{label}</p>
+        {description && <p className="text-xs text-[var(--color-text-faint)] mt-0.5">{description}</p>}
       </div>
       <div className="shrink-0">{children}</div>
     </div>
@@ -54,6 +56,12 @@ const intervalOptions = [
   { value: 10000, label: '10s' },
   { value: 30000, label: '30s' },
 ]
+
+const DEFAULT_SETTINGS = {
+  refreshInterval: 5000,
+  pingCount: 4,
+  dnsTimeout: 2000,
+}
 
 interface AppInfo {
   name: string
@@ -103,12 +111,12 @@ export function Settings() {
   const isDark = theme === 'dark'
 
   return (
-    <div className="h-full overflow-y-auto p-8 space-y-6 max-w-3xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-text flex items-center gap-4">
-          <Monitor size={32} className="text-accent" /> Settings
+    <div className="h-full overflow-y-auto p-6 space-y-5 max-w-3xl">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-3">
+          <Monitor size={24} className="text-[var(--color-accent)]" /> Settings
         </h1>
-        <p className="text-lg text-text-dim mt-2 font-medium">
+        <p className="text-sm text-[var(--color-text-dim)] mt-1">
           Configure theme, collection intervals, and network parameters.
         </p>
       </div>
@@ -155,8 +163,9 @@ export function Settings() {
               const val = Number(e.target.value)
               setRefreshInterval(val)
               call('PipelineAPI.UpdateSettings', val, 0)
+              toast.success(`Refresh interval set to ${val / 1000}s`)
             }}
-            className="bg-panel-2 border border-border rounded-xl px-4 py-2.5 text-base font-bold text-text focus:outline-none focus:border-accent transition-colors"
+            className="bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
           >
             {intervalOptions.map((o) => (
               <option key={o.value} value={o.value}>
@@ -176,7 +185,7 @@ export function Settings() {
           <div className="flex items-center gap-3 w-44">
             <Slider.Root
               value={[pingCount]}
-              onValueChange={([v]: number[]) => { setPingCount(v) }}
+              onValueChange={([v]: number[]) => { setPingCount(v); toast.success(`Ping count set to ${v}`) }}
               min={1}
               max={20}
               step={1}
@@ -187,7 +196,7 @@ export function Settings() {
               </Slider.Track>
               <Slider.Thumb className="block w-4 h-4 bg-text rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-accent" />
             </Slider.Root>
-            <span className="text-sm font-bold font-[JetBrains_Mono] text-text w-6 text-right">{pingCount}</span>
+            <span className="text-xs font-semibold font-[Geist_Mono] text-[var(--color-text)] w-6 text-right tabular-nums">{pingCount}</span>
           </div>
         </SettingRow>
 
@@ -198,7 +207,7 @@ export function Settings() {
           <div className="flex items-center gap-3 w-44">
             <Slider.Root
               value={[dnsTimeout]}
-              onValueChange={([v]: number[]) => { setDnsTimeout(v) }}
+              onValueChange={([v]: number[]) => { setDnsTimeout(v); toast.success(`DNS timeout set to ${v}ms`) }}
               min={500}
               max={10000}
               step={100}
@@ -209,29 +218,56 @@ export function Settings() {
               </Slider.Track>
               <Slider.Thumb className="block w-4 h-4 bg-text rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-accent" />
             </Slider.Root>
-            <span className="text-sm font-bold font-[JetBrains_Mono] text-text w-14 text-right">{dnsTimeout}ms</span>
+            <span className="text-xs font-semibold font-[Geist_Mono] text-[var(--color-text)] w-14 text-right tabular-nums">{dnsTimeout}ms</span>
           </div>
         </SettingRow>
       </Section>
 
+      {/* ── Reset ── */}
+      <Section title="Management" icon={<Monitor size={20} />}>
+        <div className="space-y-4">
+          <p className="text-sm text-text-faint">
+            Reset all settings to their factory defaults.
+          </p>
+          <button
+            onClick={() => {
+              setRefreshInterval(DEFAULT_SETTINGS.refreshInterval)
+              setPingCount(DEFAULT_SETTINGS.pingCount)
+              setDnsTimeout(DEFAULT_SETTINGS.dnsTimeout)
+              // Overwrite localStorage directly
+              localStorage.setItem('hawkward_refreshInterval', JSON.stringify(DEFAULT_SETTINGS.refreshInterval))
+              localStorage.setItem('hawkward_pingCount', JSON.stringify(DEFAULT_SETTINGS.pingCount))
+              localStorage.setItem('hawkward_dnsTimeout', JSON.stringify(DEFAULT_SETTINGS.dnsTimeout))
+              // Also push the new interval to backend
+              call('PipelineAPI.UpdateSettings', DEFAULT_SETTINGS.refreshInterval, 0)
+              toast.success('All settings reset to defaults')
+            }}
+            className="px-5 py-2.5 bg-[var(--color-danger)]/10 hover:bg-[var(--color-danger)]/20 text-[var(--color-danger)] text-sm font-semibold rounded-lg border border-[var(--color-danger)]/30 hover:border-[var(--color-danger)]/50 transition-all"
+          >
+            <RotateCcw size={16} className="inline mr-2" />
+            Reset to Defaults
+          </button>
+        </div>
+      </Section>
+
       {/* ── About ── */}
       <Section title="About" icon={<Info size={20} />}>
-        <div className="grid grid-cols-2 gap-6 text-base">
+        <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-xs font-black text-text-faint uppercase tracking-[0.2em] mb-1">Application</p>
-            <p className="text-text font-bold">{appInfo.name}</p>
+            <p className="text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-wider mb-1">Application</p>
+            <p className="text-[var(--color-text)] font-medium">{appInfo.name}</p>
           </div>
           <div>
-            <p className="text-xs font-black text-text-faint uppercase tracking-[0.2em] mb-1">Version</p>
-            <p className="text-text font-bold font-[JetBrains_Mono]">{appInfo.version}</p>
+            <p className="text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-wider mb-1">Version</p>
+            <p className="text-[var(--color-text)] font-medium font-[Geist_Mono]">{appInfo.version}</p>
           </div>
           <div>
-            <p className="text-xs font-black text-text-faint uppercase tracking-[0.2em] mb-1">Go Version</p>
-            <p className="text-text font-bold font-[JetBrains_Mono]">{appInfo.go_version}</p>
+            <p className="text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-wider mb-1">Go Version</p>
+            <p className="text-[var(--color-text)] font-medium font-[Geist_Mono]">{appInfo.go_version}</p>
           </div>
           <div>
-            <p className="text-xs font-black text-text-faint uppercase tracking-[0.2em] mb-1">Uptime</p>
-            <p className="text-text font-bold font-[JetBrains_Mono]">{appInfo.uptime}</p>
+            <p className="text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-wider mb-1">Uptime</p>
+            <p className="text-[var(--color-text)] font-medium font-[Geist_Mono]">{appInfo.uptime}</p>
           </div>
         </div>
         <div className="pt-6 border-t border-border/50 mt-6">
