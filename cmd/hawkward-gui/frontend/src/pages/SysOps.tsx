@@ -17,11 +17,21 @@ import {
   PauseCircle,
   AlertTriangle,
 } from 'lucide-react'
+import {
+  AreaChart as RechartsAreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from 'recharts'
+import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
-import type { CPUInfo, MemoryInfo, ProcessInfo, SystemInfo, DiskInfo } from '@/types'
+import type { CPUInfo, MemoryInfo, ProcessInfo, SystemInfo, DiskInfo, MetricDataPoint } from '@/types'
 import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 
 // ── Types ──
@@ -161,6 +171,33 @@ export function SysOps() {
     queryClient.invalidateQueries({ queryKey: ['sysops-processes'] })
     setKillTarget(null)
   }
+
+  const { data: cpuHistory = [] } = useQuery<MetricDataPoint[]>({
+    queryKey: ['sysops-cpu-history'],
+    queryFn: async () => {
+      const r = await call('PipelineAPI.GetMetricHistoryWithTimestamps', 'cpu.percent', 60)
+      return (r as MetricDataPoint[]) || []
+    },
+    refetchInterval: refreshInterval,
+  })
+
+  const { data: memHistory = [] } = useQuery<MetricDataPoint[]>({
+    queryKey: ['sysops-mem-history'],
+    queryFn: async () => {
+      const r = await call('PipelineAPI.GetMetricHistoryWithTimestamps', 'memory.percent', 60)
+      return (r as MetricDataPoint[]) || []
+    },
+    refetchInterval: refreshInterval,
+  })
+
+  const { data: diskHistory = [] } = useQuery<MetricDataPoint[]>({
+    queryKey: ['sysops-disk-history'],
+    queryFn: async () => {
+      const r = await call('PipelineAPI.GetMetricHistoryWithTimestamps', 'disk.percent', 60)
+      return (r as MetricDataPoint[]) || []
+    },
+    refetchInterval: refreshInterval,
+  })
 
   if (!cpuInfo || !memInfo || !sysInfo || !diskInfo) {
     return (
@@ -326,6 +363,96 @@ export function SysOps() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Metric History Trends */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+                <h3 className="text-xl font-bold text-text uppercase tracking-widest flex items-center gap-3">
+                  <Cpu size={24} className="text-accent" /> CPU Trend
+                </h3>
+                <div className="mt-6 min-h-[200px]">
+                  <ResponsiveContainer width="100%" height={200}>
+                    <RechartsAreaChart data={cpuHistory.map(d => ({ time: format(new Date(d.Time), 'HH:mm'), value: d.Value }))}>
+                      <defs>
+                        <linearGradient id="sysopsCpuGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--color-accent)" stopOpacity={0.3} />
+                          <stop offset="100%" stopColor="var(--color-accent)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="4 4" stroke="var(--color-border)" vertical={false} strokeOpacity={0.5} />
+                      <XAxis dataKey="time" hide />
+                      <YAxis hide domain={[0, 100]} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'var(--color-panel-3)', border: 'none', borderRadius: '12px' }}
+                        formatter={(value: number) => [`${value.toFixed(1)}%`, 'CPU']}
+                      />
+                      <Area type="monotone" dataKey="value" stroke="var(--color-accent)" strokeWidth={2} fill="url(#sysopsCpuGrad)" isAnimationActive={false} />
+                    </RechartsAreaChart>
+                  </ResponsiveContainer>
+                </div>
+                {cpuHistory.length === 0 && (
+                  <p className="text-text-faint text-sm text-center py-4">No history data</p>
+                )}
+              </div>
+
+              <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+                <h3 className="text-xl font-bold text-text uppercase tracking-widest flex items-center gap-3">
+                  <MemoryStick size={24} className="text-success" /> Memory Trend
+                </h3>
+                <div className="mt-6 min-h-[200px]">
+                  <ResponsiveContainer width="100%" height={200}>
+                    <RechartsAreaChart data={memHistory.map(d => ({ time: format(new Date(d.Time), 'HH:mm'), value: d.Value }))}>
+                      <defs>
+                        <linearGradient id="sysopsMemGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--color-success)" stopOpacity={0.3} />
+                          <stop offset="100%" stopColor="var(--color-success)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="4 4" stroke="var(--color-border)" vertical={false} strokeOpacity={0.5} />
+                      <XAxis dataKey="time" hide />
+                      <YAxis hide domain={[0, 100]} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'var(--color-panel-3)', border: 'none', borderRadius: '12px' }}
+                        formatter={(value: number) => [`${value.toFixed(1)}%`, 'Memory']}
+                      />
+                      <Area type="monotone" dataKey="value" stroke="var(--color-success)" strokeWidth={2} fill="url(#sysopsMemGrad)" isAnimationActive={false} />
+                    </RechartsAreaChart>
+                  </ResponsiveContainer>
+                </div>
+                {memHistory.length === 0 && (
+                  <p className="text-text-faint text-sm text-center py-4">No history data</p>
+                )}
+              </div>
+
+              <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+                <h3 className="text-xl font-bold text-text uppercase tracking-widest flex items-center gap-3">
+                  <Disc size={24} className="text-warning" /> Disk Trend
+                </h3>
+                <div className="mt-6 min-h-[200px]">
+                  <ResponsiveContainer width="100%" height={200}>
+                    <RechartsAreaChart data={diskHistory.map(d => ({ time: format(new Date(d.Time), 'HH:mm'), value: d.Value }))}>
+                      <defs>
+                        <linearGradient id="sysopsDiskGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--color-warning)" stopOpacity={0.3} />
+                          <stop offset="100%" stopColor="var(--color-warning)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="4 4" stroke="var(--color-border)" vertical={false} strokeOpacity={0.5} />
+                      <XAxis dataKey="time" hide />
+                      <YAxis hide domain={[0, 100]} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'var(--color-panel-3)', border: 'none', borderRadius: '12px' }}
+                        formatter={(value: number) => [`${value.toFixed(1)}%`, 'Disk']}
+                      />
+                      <Area type="monotone" dataKey="value" stroke="var(--color-warning)" strokeWidth={2} fill="url(#sysopsDiskGrad)" isAnimationActive={false} />
+                    </RechartsAreaChart>
+                  </ResponsiveContainer>
+                </div>
+                {diskHistory.length === 0 && (
+                  <p className="text-text-faint text-sm text-center py-4">No history data</p>
+                )}
               </div>
             </div>
 

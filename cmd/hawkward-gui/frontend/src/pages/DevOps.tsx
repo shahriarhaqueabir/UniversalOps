@@ -24,10 +24,23 @@ import {
   FileCheck,
   TerminalSquare,
   Lock,
+  GitBranch,
+  Box,
+  Code,
+  Wrench,
+  Container,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Package,
+  Variable,
+  Cpu,
+  Lightbulb,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import * as Tabs from '@radix-ui/react-tabs'
 import { useBackend } from '@/hooks/useBackend'
+import { useSettingsStore } from '@/stores/useSettingsStore'
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 
@@ -37,9 +50,9 @@ function stripAnsi(text: string): string {
   // eslint-disable-next-line no-control-regex
   return text.replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, '')
 }
-import type { CommandResult, ServiceEntry, FileEntry } from '@/types'
+import type { CommandResult, ServiceEntry, FileEntry, ToolInfo, ContainerSummary, GitSummary, LocalServer, EnvironmentInfo, DevOpsSuggestion } from '@/types'
 
-type TabId = 'terminal' | 'powershell-pro' | 'services' | 'file-browser'
+type TabId = 'terminal' | 'powershell-pro' | 'services' | 'file-browser' | 'toolbox' | 'containers' | 'git' | 'servers' | 'environment'
 
 // ── Inline helpers ──
 
@@ -83,7 +96,13 @@ export function DevOps() {
             { id: 'terminal', label: 'Interactive Terminal', icon: <Terminal size={20} /> },
             { id: 'powershell-pro', label: 'PowerShell Pro', icon: <Zap size={20} className="text-warning" /> },
             { id: 'services', label: 'System Services', icon: <Server size={20} /> },
+            { id: 'containers', label: 'Containers', icon: <Container size={20} /> },
+            { id: 'git', label: 'Git', icon: <GitBranch size={20} /> },
+            { id: 'servers', label: 'Servers', icon: <Globe size={20} /> },
+            { id: 'ai-suggestions', label: 'AI Insights', icon: <Lightbulb size={20} className="text-warning" /> },
+            { id: 'environment', label: 'Environment', icon: <Variable size={20} /> },
             { id: 'file-browser', label: 'File Explorer', icon: <Folder size={20} /> },
+            { id: 'toolbox', label: 'Toolbox', icon: <Wrench size={20} /> },
           ].map((tab) => (
             <Tabs.Trigger
               key={tab.id}
@@ -111,6 +130,24 @@ export function DevOps() {
           </Tabs.Content>
           <Tabs.Content value="file-browser" className="h-full">
             <FileBrowserTab />
+          </Tabs.Content>
+          <Tabs.Content value="toolbox" className="h-full">
+            <ToolboxTab />
+          </Tabs.Content>
+          <Tabs.Content value="containers" className="h-full">
+            <ContainersTab />
+          </Tabs.Content>
+          <Tabs.Content value="git" className="h-full">
+            <GitTab />
+          </Tabs.Content>
+          <Tabs.Content value="servers" className="h-full">
+            <ServersTab />
+          </Tabs.Content>
+          <Tabs.Content value="ai-suggestions" className="h-full">
+            <AISuggestionsTab />
+          </Tabs.Content>
+          <Tabs.Content value="environment" className="h-full">
+            <EnvironmentTab />
           </Tabs.Content>
         </div>
       </Tabs.Root>
@@ -274,6 +311,7 @@ function TerminalTab() {
 
 function PowerShellProTab() {
   const { call } = useBackend()
+  const { refreshInterval } = useSettingsStore()
   const [isRunning, setIsRunning] = useState(false)
   const [output, setOutput] = useState('')
   const [selectedWorkflow, setSelectedWorkflow] = useState('')
@@ -285,6 +323,7 @@ function PowerShellProTab() {
       const res = await call('DevOps.GetPowerShellWorkflows')
       return (res as string[]) || []
     },
+    refetchInterval: refreshInterval,
   })
 
   const runWorkflow = async (name: string) => {
@@ -386,6 +425,7 @@ function PowerShellProTab() {
 
 function ServicesTab() {
   const { call } = useBackend()
+  const { refreshInterval } = useSettingsStore()
   const [search, setSearch] = useState('')
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState<{ name: string; action: string } | null>(null)
@@ -397,6 +437,7 @@ function ServicesTab() {
       const res = await call('DevOps.GetServices')
       return (res as ServiceEntry[]) || []
     },
+    refetchInterval: refreshInterval,
   })
 
   const controlService = async (name: string, action: string) => {
@@ -730,6 +771,678 @@ function FileBrowserTab() {
                 {fileContent || '// No readable content or file is empty.'}
               </pre>
             )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════
+//  AI Suggestions Tab
+// ══════════════════════════════════════════════
+
+function AISuggestionsTab() {
+  const { call } = useBackend()
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const { data: suggestions, isLoading } = useQuery<DevOpsSuggestion[]>({
+    queryKey: ['devops-ai-suggestions', refreshKey],
+    queryFn: async () => {
+      const res = await call<DevOpsSuggestion[]>('DevOps.GetAISuggestions')
+      return res ?? []
+    },
+  })
+
+  const severityConfig: Record<string, { icon: React.ReactNode; color: string; bg: string; border: string }> = {
+    critical: {
+      icon: <XCircle size={20} className="text-danger" />,
+      color: 'text-danger',
+      bg: 'bg-danger/5',
+      border: 'border-danger/30',
+    },
+    warning: {
+      icon: <AlertTriangle size={20} className="text-warning" />,
+      color: 'text-warning',
+      bg: 'bg-warning/5',
+      border: 'border-warning/30',
+    },
+    info: {
+      icon: <CheckCircle2 size={20} className="text-success" />,
+      color: 'text-success',
+      bg: 'bg-success/5',
+      border: 'border-success/30',
+    },
+  }
+
+  const categoryIcon: Record<string, React.ReactNode> = {
+    docker: <Container size={16} className="text-accent" />,
+    git: <GitBranch size={16} className="text-accent" />,
+    node: <Code size={16} className="text-success" />,
+    general: <Wrench size={16} className="text-text-dim" />,
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <RefreshCw size={32} className="text-text-dim animate-spin" />
+      </div>
+    )
+  }
+
+  const items = suggestions ?? []
+  const critical = items.filter((s) => s.severity === 'critical').length
+  const warnings = items.filter((s) => s.severity === 'warning').length
+  const infos = items.filter((s) => s.severity === 'info').length
+
+  return (
+    <div className="flex flex-col h-full p-8 space-y-6">
+      <div className="flex items-center gap-6 flex-wrap">
+        <div className="flex items-center gap-8 bg-panel border border-border px-6 py-3 rounded-2xl">
+          <div className="flex items-center gap-3">
+            <Lightbulb size={20} className="text-warning" />
+            <span className="text-lg font-bold">{items.length} Suggestion{items.length !== 1 ? 's' : ''}</span>
+          </div>
+          {critical > 0 && <div className="text-text-faint text-lg font-medium">| &nbsp; <span className="text-danger">{critical} Critical</span></div>}
+          {warnings > 0 && <div className="text-text-faint text-lg font-medium">| &nbsp; <span className="text-warning">{warnings} Warning{warnings !== 1 ? 's' : ''}</span></div>}
+          {infos > 0 && <div className="text-text-faint text-lg font-medium">| &nbsp; <span className="text-success">{infos} Info</span></div>}
+        </div>
+        <div className="flex-1" />
+        <button
+          onClick={() => setRefreshKey((k) => k + 1)}
+          className="p-3.5 bg-panel border border-border rounded-xl hover:bg-panel-3 text-text-dim hover:text-text transition-all shadow-md active:rotate-180 duration-500"
+        >
+          <RefreshCw size={24} />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto space-y-3">
+        {items.length === 0 ? (
+          <div className="py-16">
+            <EmptyState
+              icon={<Lightbulb size={28} />}
+              title="No Suggestions"
+              description="Everything looks good across Docker, Git, and development tools."
+            />
+          </div>
+        ) : (
+          items.map((s, i) => {
+            const cfg = severityConfig[s.severity] ?? severityConfig.info
+            return (
+              <div
+                key={`${s.category}-${s.message}-${i}`}
+                className={cn('flex items-start gap-4 p-5 rounded-xl border bg-panel transition-colors hover:bg-panel-2', cfg.border)}
+              >
+                <div className="flex-shrink-0 mt-0.5">{cfg.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    {categoryIcon[s.category]}
+                    <span className="text-xs font-bold uppercase tracking-wider text-text-faint">{s.category}</span>
+                    <span className={cn('px-2 py-0.5 rounded text-[10px] font-bold uppercase', cfg.bg, cfg.color)}>
+                      {s.severity}
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold text-text">{s.message}</p>
+                  <p className="text-sm text-text-dim mt-1">{s.action}</p>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════
+//  Toolbox Tab
+// ══════════════════════════════════════════════
+
+const toolIcons: Record<string, React.ReactNode> = {
+  Git: <GitBranch size={24} className="text-accent" />,
+  Docker: <Box size={24} className="text-accent" />,
+  'Node.js': <Code size={24} className="text-success" />,
+  Go: <Code size={24} className="text-info" />,
+  Python: <Code size={24} className="text-warning" />,
+  Java: <Code size={24} className="text-danger" />,
+  Rust: <Code size={24} className="text-accent" />,
+  '.NET': <TerminalSquare size={24} className="text-info" />,
+}
+
+function ToolboxTab() {
+  const { call } = useBackend()
+
+  const { data: tools, isLoading } = useQuery<ToolInfo[]>({
+    queryKey: ['devops-tools'],
+    queryFn: async () => {
+      const res = await call<ToolInfo[]>('DevOps.GetInstalledTools')
+      return res
+    },
+    staleTime: 30_000,
+  })
+
+  const installed = tools?.filter((t) => t.status === 'installed') ?? []
+  const others = tools?.filter((t) => t.status !== 'installed') ?? []
+  const sorted = [...installed, ...others]
+
+  const statusBadge = (status: string) => {
+    const colors: Record<string, string> = {
+      installed: 'bg-success/20 text-success',
+      'not-found': 'bg-text-faint/20 text-text-faint',
+      error: 'bg-danger/20 text-danger',
+    }
+    const labels: Record<string, string> = {
+      installed: 'Installed',
+      'not-found': 'Not installed',
+      error: 'Error',
+    }
+    return (
+      <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold', colors[status])}>
+        <span className={cn('w-2 h-2 rounded-full', {
+          'bg-success': status === 'installed',
+          'bg-text-faint': status === 'not-found',
+          'bg-danger': status === 'error',
+        })} />
+        {labels[status]}
+      </span>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <RefreshCw size={32} className="text-text-dim animate-spin" />
+      </div>
+    )
+  }
+
+  if (!tools || tools.length === 0) {
+    return <EmptyState icon={<Wrench size={48} />} title="No tools detected" description="Unable to detect installed development tools." />
+  }
+
+  return (
+    <div className="p-8 space-y-8 overflow-y-auto h-full">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-text">Installed Development Tools</h2>
+          <p className="text-text-dim text-sm mt-1">
+            {installed.length} of {tools.length} tools detected on this system.
+          </p>
+        </div>
+        <ToolsRefreshButton />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {sorted.map((tool) => (
+          <div
+            key={tool.name}
+            className={cn(
+              'flex flex-col gap-3 p-5 rounded-[var(--radius-lg)] border border-border bg-panel transition-all',
+              tool.status === 'installed' && 'hover:border-accent/30',
+              tool.status === 'not-found' && 'opacity-60',
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {toolIcons[tool.name] ?? <Code size={24} className="text-text-dim" />}
+                <span className="text-base font-bold text-text">{tool.name}</span>
+              </div>
+              {statusBadge(tool.status)}
+            </div>
+            {tool.status === 'installed' && (
+              <div className="space-y-1">
+                <p className="text-sm text-text-dim font-mono">{tool.version}</p>
+                {tool.path && (
+                  <p className="text-xs text-text-faint truncate" title={tool.path}>
+                    {tool.path}
+                  </p>
+                )}
+              </div>
+            )}
+            {tool.status === 'error' && (
+              <p className="text-sm text-danger font-mono">{tool.version}</p>
+            )}
+            {tool.status === 'not-found' && (
+              <p className="text-sm text-text-faint">Not found in PATH</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Simple refresh trigger for the tools query
+function ToolsRefreshButton()
+const queryClient = useQueryClient()
+return (
+  <button
+    onClick={() => queryClient.invalidateQueries({ queryKey: ['devops-tools'] })}
+    className="flex items-center gap-2 px-4 py-2 rounded-[var(--radius-lg)] border border-border bg-panel hover:bg-[var(--color-sidebar-hover)] text-text-dim hover:text-text transition-all text-sm font-bold"
+  >
+    <RefreshCw size={16} />
+    Refresh
+  </button>
+)
+}
+
+// ══════════════════════════════════════════════
+//  Containers Tab
+// ══════════════════════════════════════════════
+
+function ContainersTab() {
+  const { call } = useBackend()
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const { data, isLoading } = useQuery<ContainerSummary>({
+    queryKey: ['devops-containers', refreshKey],
+    queryFn: async () => {
+      const res = await call('DevOps.GetContainers')
+      return (res as ContainerSummary) || { running: 0, stopped: 0, failed: 0, total: 0, containers: [] }
+    },
+  })
+
+  const stateBadge = (state: string) => {
+    const colors: Record<string, string> = {
+      running: 'bg-success/20 text-success',
+      exited: 'bg-danger/20 text-danger',
+      created: 'bg-warning/20 text-warning',
+      paused: 'bg-warning/20 text-warning',
+    }
+    return (
+      <span className={cn('px-2 py-0.5 rounded text-xs font-medium border border-current opacity-80', colors[state.toLowerCase()] || 'bg-text-faint/20 text-text-faint')}>
+        {state}
+      </span>
+    )
+  }
+
+  return (
+    <div className="flex flex-col h-full p-8 space-y-6">
+      <div className="flex items-center gap-6 flex-wrap">
+        <div className="flex items-center gap-8 bg-panel border border-border px-6 py-3 rounded-2xl">
+          <div className="flex items-center gap-3">
+            <span className="w-3 h-3 rounded-full bg-success shadow-[0_0_8px_var(--color-success)]" />
+            <span className="text-lg font-bold"><span className="text-success">{data?.running ?? 0}</span> Running</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="w-3 h-3 rounded-full bg-text-faint shadow-[0_0_8px_var(--color-text-faint)]" />
+            <span className="text-lg font-bold"><span className="text-text-faint">{data?.stopped ?? 0}</span> Stopped</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="w-3 h-3 rounded-full bg-danger shadow-[0_0_8px_var(--color-danger)]" />
+            <span className="text-lg font-bold"><span className="text-danger">{data?.failed ?? 0}</span> Failed</span>
+          </div>
+          <div className="text-text-faint text-lg font-medium">| &nbsp; {data?.total ?? 0} Total</div>
+        </div>
+        <div className="flex-1" />
+        <button
+          onClick={() => setRefreshKey(k => k + 1)}
+          className="p-3.5 bg-panel border border-border rounded-xl hover:bg-panel-3 text-text-dim hover:text-text transition-all shadow-md active:rotate-180 duration-500"
+        >
+          <RefreshCw size={24} />
+        </button>
+      </div>
+
+      <div className="flex-1 bg-[var(--color-bg)] border border-border rounded-2xl overflow-hidden shadow-inner">
+        <div className="overflow-y-auto h-full">
+          {isLoading ? (
+            <div className="flex flex-col items-center gap-3 py-16">
+              <RefreshCw size={20} className="text-[var(--color-text-faint)] animate-spin" />
+              <p className="text-sm font-semibold text-[var(--color-text-dim)]">Loading containers...</p>
+            </div>
+          ) : (data?.containers ?? []).length === 0 ? (
+            <div className="py-16">
+              <EmptyState
+                icon={<Container size={28} />}
+                title="No Containers Found"
+                description="Docker is not installed or no containers are present."
+              />
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse">
+              <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border">
+                <tr>
+                  <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Image</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">State</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Ports</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data?.containers.map((c) => (
+                  <tr key={c.id} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-colors">
+                    <td className="px-6 py-4 font-[Geist_Mono] text-sm text-accent font-medium">{c.name}</td>
+                    <td className="px-6 py-4 text-sm text-[var(--color-text)] font-[Geist_Mono]">{c.image}</td>
+                    <td className="px-6 py-4">{stateBadge(c.state)}</td>
+                    <td className="px-6 py-4 text-sm text-[var(--color-text-dim)]">{c.status}</td>
+                    <td className="px-6 py-4 text-sm text-[var(--color-text-dim)] font-[Geist_Mono] max-w-xs truncate">{c.ports || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════
+//  Git Tab
+// ══════════════════════════════════════════════
+
+function GitTab() {
+  const { call } = useBackend()
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const { data, isLoading } = useQuery<GitSummary>({
+    queryKey: ['devops-git', refreshKey],
+    queryFn: async () => {
+      const res = await call('DevOps.GetGitSummary')
+      return (res as GitSummary) || { repositories: [], total_repos: 0 }
+    },
+  })
+
+  const totalModified = (data?.repositories ?? []).reduce((s, r) => s + r.modified_files, 0)
+  const totalUntracked = (data?.repositories ?? []).reduce((s, r) => s + r.untracked_files, 0)
+
+  const truncatePath = (p: string, maxLen = 50) => (p.length > maxLen ? '...' + p.slice(-(maxLen - 3)) : p)
+
+  return (
+    <div className="flex flex-col h-full p-8 space-y-6">
+      <div className="flex items-center gap-6 flex-wrap">
+        <div className="flex items-center gap-8 bg-panel border border-border px-6 py-3 rounded-2xl">
+          <div className="flex items-center gap-3">
+            <GitBranch size={18} className="text-accent" />
+            <span className="text-lg font-bold"><span className="text-accent">{data?.total_repos ?? 0}</span> Repos</span>
+          </div>
+          <div className="text-text-faint text-lg font-medium">| &nbsp; <span className="text-warning">{totalModified}</span> Modified</div>
+          <div className="text-text-faint text-lg font-medium">| &nbsp; <span className="text-text-dim">{totalUntracked}</span> Untracked</div>
+        </div>
+        <div className="flex-1" />
+        <button
+          onClick={() => setRefreshKey(k => k + 1)}
+          className="p-3.5 bg-panel border border-border rounded-xl hover:bg-panel-3 text-text-dim hover:text-text transition-all shadow-md active:rotate-180 duration-500"
+        >
+          <RefreshCw size={24} />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto space-y-4">
+        {isLoading ? (
+          <div className="flex flex-col items-center gap-3 py-16">
+            <RefreshCw size={20} className="text-[var(--color-text-faint)] animate-spin" />
+            <p className="text-sm font-semibold text-[var(--color-text-dim)]">Scanning repositories...</p>
+          </div>
+        ) : (data?.repositories ?? []).length === 0 ? (
+          <div className="py-16">
+            <EmptyState
+              icon={<GitBranch size={28} />}
+              title="No Git Repositories Found"
+              description="No git repositories were detected in common locations."
+            />
+          </div>
+        ) : (
+          (data?.repositories ?? []).map((repo) => (
+            <div key={repo.path} className="bg-panel border border-border rounded-xl p-5 hover:border-accent/30 transition-colors">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-sm font-[Geist_Mono] text-accent truncate" title={repo.path}>{truncatePath(repo.path)}</span>
+                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-accent/20 text-accent border border-accent/30">
+                      {repo.branch}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-text-dim">
+                    <span>{repo.modified_files} modified</span>
+                    <span>{repo.untracked_files} untracked</span>
+                    {repo.ahead > 0 && <span className="text-success">{repo.ahead} ahead</span>}
+                    {repo.behind > 0 && <span className="text-danger">{repo.behind} behind</span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {repo.clean ? (
+                    <CheckCircle2 size={20} className="text-success" />
+                  ) : (
+                    <AlertTriangle size={20} className="text-warning" />
+                  )}
+                  <span className={cn('text-sm font-medium', repo.clean ? 'text-success' : 'text-warning')}>
+                    {repo.clean ? 'Clean' : 'Dirty'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════
+//  Servers Tab
+// ══════════════════════════════════════════════
+
+function ServersTab() {
+  const { call } = useBackend()
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const { data, isLoading } = useQuery<LocalServer[]>({
+    queryKey: ['devops-servers', refreshKey],
+    queryFn: async () => {
+      const res = await call('DevOps.GetLocalServers')
+      return (res as LocalServer[]) || []
+    },
+  })
+
+  const healthBadge = (health: string) => {
+    const colors: Record<string, string> = {
+      healthy: 'bg-success/20 text-success',
+      unknown: 'bg-warning/20 text-warning',
+      error: 'bg-danger/20 text-danger',
+    }
+    const icons: Record<string, React.ReactNode> = {
+      healthy: <CheckCircle2 size={14} />,
+      unknown: <AlertTriangle size={14} />,
+      error: <XCircle size={14} />,
+    }
+    return (
+      <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium', colors[health] || 'bg-text-faint/20 text-text-faint')}>
+        {icons[health] || null}
+        {health}
+      </span>
+    )
+  }
+
+  return (
+    <div className="flex flex-col h-full p-8 space-y-6">
+      <div className="flex items-center gap-6 flex-wrap">
+        <div className="bg-panel border border-border px-6 py-3 rounded-2xl">
+          <span className="text-lg font-bold"><span className="text-accent">{data?.length ?? 0}</span> Listening Servers</span>
+        </div>
+        <div className="flex-1" />
+        <button
+          onClick={() => setRefreshKey(k => k + 1)}
+          className="p-3.5 bg-panel border border-border rounded-xl hover:bg-panel-3 text-text-dim hover:text-text transition-all shadow-md active:rotate-180 duration-500"
+        >
+          <RefreshCw size={24} />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto space-y-4">
+        {isLoading ? (
+          <div className="flex flex-col items-center gap-3 py-16">
+            <RefreshCw size={20} className="text-[var(--color-text-faint)] animate-spin" />
+            <p className="text-sm font-semibold text-[var(--color-text-dim)]">Scanning listening ports...</p>
+          </div>
+        ) : (data ?? []).length === 0 ? (
+          <div className="py-16">
+            <EmptyState
+              icon={<Globe size={28} />}
+              title="No Local Servers Found"
+              description="No listening servers detected on localhost."
+            />
+          </div>
+        ) : (
+          (data ?? []).map((srv) => (
+            <div key={`${srv.port}-${srv.pid}`} className="bg-panel border border-border rounded-xl p-5 hover:border-accent/30 transition-colors">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-5">
+                  <div className="w-14 h-14 rounded-xl bg-accent/10 flex items-center justify-center">
+                    <Globe size={24} className="text-accent" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-3 mb-1">
+                      <span className="text-lg font-bold text-text">:{srv.port}</span>
+                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-panel-3 text-text-dim border border-border">
+                        {srv.protocol.toUpperCase()}
+                      </span>
+                      {srv.framework && (
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-accent/20 text-accent border border-accent/30">
+                          {srv.framework}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-text-dim">
+                      <span className="font-[Geist_Mono]">{srv.process || 'unknown'}</span>
+                      {srv.pid > 0 && <span>PID {srv.pid}</span>}
+                    </div>
+                  </div>
+                </div>
+                {healthBadge(srv.health)}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════
+//  Environment Tab
+// ══════════════════════════════════════════════
+
+function EnvironmentTab() {
+  const { call } = useBackend()
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const { data, isLoading } = useQuery<EnvironmentInfo>({
+    queryKey: ['devops-environment', refreshKey],
+    queryFn: async () => {
+      const res = await call('DevOps.GetEnvironment')
+      return (res as EnvironmentInfo) || { path_dirs: [], key_vars: [], sdks: [], package_managers: [] }
+    },
+  })
+
+  const truncatePath = (p: string, maxLen = 70) => (p.length > maxLen ? p.slice(0, maxLen - 3) + '...' : p)
+
+  return (
+    <div className="flex flex-col h-full p-8 space-y-6 overflow-y-auto">
+      <div className="flex items-center gap-6">
+        <h2 className="text-xl font-bold text-text flex items-center gap-2">
+          <Variable size={22} className="text-accent" />
+          System Environment
+        </h2>
+        <div className="flex-1" />
+        <button
+          onClick={() => setRefreshKey(k => k + 1)}
+          className="p-3.5 bg-panel border border-border rounded-xl hover:bg-panel-3 text-text-dim hover:text-text transition-all shadow-md active:rotate-180 duration-500"
+        >
+          <RefreshCw size={24} />
+        </button>
+      </div>
+
+      {isLoading ? (
+        <div className="flex flex-col items-center gap-3 py-16">
+          <RefreshCw size={20} className="text-[var(--color-text-faint)] animate-spin" />
+          <p className="text-sm font-semibold text-[var(--color-text-dim)]">Loading environment...</p>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {/* PATH Directories */}
+          <section>
+            <h3 className="text-lg font-bold text-text mb-3 flex items-center gap-2">
+              <Folder size={18} className="text-accent" />
+              PATH Directories
+              <span className="text-sm font-normal text-text-faint">({(data?.path_dirs ?? []).length})</span>
+            </h3>
+            <div className="bg-panel border border-border rounded-xl max-h-64 overflow-y-auto">
+              {(data?.path_dirs ?? []).map((dir, i) => (
+                <div key={i} className={cn('px-5 py-2.5 text-sm font-[Geist_Mono] text-text-dim hover:bg-[var(--color-sidebar-hover)] transition-colors', i > 0 && 'border-t border-border/20')} title={dir}>
+                  {truncatePath(dir)}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Key Variables */}
+          <section>
+            <h3 className="text-lg font-bold text-text mb-3 flex items-center gap-2">
+              <Lock size={18} className="text-warning" />
+              Key Variables
+              <span className="text-sm font-normal text-text-faint">({(data?.key_vars ?? []).length})</span>
+            </h3>
+            <div className="bg-panel border border-border rounded-xl overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-panel-2 border-b border-border">
+                  <tr>
+                    <th className="px-5 py-3 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Name</th>
+                    <th className="px-5 py-3 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(data?.key_vars ?? []).map((v) => (
+                    <tr key={v.name} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-colors">
+                      <td className="px-5 py-3 font-[Geist_Mono] text-sm text-accent font-medium">{v.name}</td>
+                      <td className="px-5 py-3 font-[Geist_Mono] text-sm text-text-dim max-w-md truncate" title={v.value}>{truncatePath(v.value, 80)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* SDKs & Package Managers side by side */}
+          <div className="grid grid-cols-2 gap-6">
+            <section>
+              <h3 className="text-lg font-bold text-text mb-3 flex items-center gap-2">
+                <Cpu size={18} className="text-success" />
+                SDKs
+              </h3>
+              <div className="space-y-2">
+                {(data?.sdks ?? []).length === 0 ? (
+                  <p className="text-sm text-text-faint py-4">No SDKs detected</p>
+                ) : (
+                  (data?.sdks ?? []).map((sdk) => (
+                    <div key={sdk.name} className="flex items-center justify-between bg-panel border border-border rounded-lg px-5 py-3">
+                      <span className="text-sm font-bold text-text">{sdk.name}</span>
+                      <span className="text-sm font-[Geist_Mono] text-success bg-success/10 px-2.5 py-0.5 rounded">{sdk.version}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+
+            <section>
+              <h3 className="text-lg font-bold text-text mb-3 flex items-center gap-2">
+                <Package size={18} className="text-warning" />
+                Package Managers
+              </h3>
+              <div className="space-y-2">
+                {(data?.package_managers ?? []).length === 0 ? (
+                  <p className="text-sm text-text-faint py-4">No package managers detected</p>
+                ) : (
+                  (data?.package_managers ?? []).map((pm) => (
+                    <div key={pm.name} className="flex items-center justify-between bg-panel border border-border rounded-lg px-5 py-3">
+                      <span className="text-sm font-bold text-text">{pm.name}</span>
+                      <span className="text-sm font-[Geist_Mono] text-warning bg-warning/10 px-2.5 py-0.5 rounded">{pm.version}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
           </div>
         </div>
       )}

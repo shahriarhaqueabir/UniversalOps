@@ -566,3 +566,11 @@ type NetworkChange struct {
 	Detail    string            `json:"detail"`    // e.g. new IP address
 	Timestamp string            `json:"timestamp"` // RFC3339
 }
+
+// DevOpsSuggestion is an actionable suggestion derived from DevOps data.
+type DevOpsSuggestion struct {
+	Category string `json:"category"` // "docker", "git", "node", "general"
+	Severity string `json:"severity"` // "info", "warning", "critical"
+	Message  string `json:"message"`
+	Action   string `json:"action"` // suggested action
+}

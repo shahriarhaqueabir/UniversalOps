@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -1025,4 +1026,158 @@ func (d *DevOps) GetEnvironment() EnvironmentInfo {
 		SDKs:            sdks,
 		PackageManagers: pkgMgrs,
 	}
+}
+
+// ══════════════════════════════════════════════
+//  AI Suggestions
+// ══════════════════════════════════════════════
+
+// severityRank returns a numeric rank for sorting (higher = more severe).
+func severityRank(s string) int {
+	switch s {
+	case "critical":
+		return 3
+	case "warning":
+		return 2
+	case "info":
+		return 1
+	default:
+		return 0
+	}
+}
+
+// GetAISuggestions synthesizes Docker, Git, and tool data into actionable suggestions.
+func (d *DevOps) GetAISuggestions() []DevOpsSuggestion {
+	var suggestions []DevOpsSuggestion
+
+	// ── Docker checks ──
+	containers := d.GetContainers()
+	if containers.Total > 0 {
+		if containers.Failed > 0 {
+			suggestions = append(suggestions, DevOpsSuggestion{
+				Category: "docker",
+				Severity: "critical",
+				Message:  fmt.Sprintf("%d container(s) in failed state", containers.Failed),
+				Action:   "Check container logs with 'docker logs <name>' and restart failed containers.",
+			})
+		}
+		if containers.Stopped > 0 && containers.Failed == 0 {
+			suggestions = append(suggestions, DevOpsSuggestion{
+				Category: "docker",
+				Severity: "warning",
+				Message:  fmt.Sprintf("%d container(s) stopped (not running)", containers.Stopped),
+				Action:   "Review if stopped containers should be running. Start with 'docker start <name>'.",
+			})
+		}
+	} else {
+		// Docker binary not found or no containers
+		tools := d.GetInstalledTools()
+		for _, t := range tools {
+			if t.Name == "Docker" && t.Status == "not-found" {
+				suggestions = append(suggestions, DevOpsSuggestion{
+					Category: "docker",
+					Severity: "info",
+					Message:  "Docker is not installed on this system",
+					Action:   "Install Docker Desktop or Docker Engine for container management.",
+				})
+			}
+		}
+	}
+
+	// ── Git checks ──
+	gitSummary := d.GetGitSummary()
+	for _, repo := range gitSummary.Repositories {
+		if repo.Behind > 0 {
+			suggestions = append(suggestions, DevOpsSuggestion{
+				Category: "git",
+				Severity: "warning",
+				Message:  fmt.Sprintf("Repo '%s' is %d commit(s) behind upstream", filepath.Base(repo.Path), repo.Behind),
+				Action:   "Run 'git pull' to sync with upstream.",
+			})
+		}
+		if repo.Ahead > 0 && repo.Behind > 0 {
+			suggestions = append(suggestions, DevOpsSuggestion{
+				Category: "git",
+				Severity: "critical",
+				Message:  fmt.Sprintf("Repo '%s' has diverged from upstream (ahead %d, behind %d) — possible merge conflicts", filepath.Base(repo.Path), repo.Ahead, repo.Behind),
+				Action:   "Run 'git fetch' then 'git log --oneline HEAD...@{upstream}' to inspect divergence.",
+			})
+		}
+		if repo.ModifiedFiles > 5 {
+			suggestions = append(suggestions, DevOpsSuggestion{
+				Category: "git",
+				Severity: "warning",
+				Message:  fmt.Sprintf("Repo '%s' has %d modified uncommitted files", filepath.Base(repo.Path), repo.ModifiedFiles),
+				Action:   "Review changes and commit or stash them.",
+			})
+		}
+		if repo.UntrackedFiles > 10 {
+			suggestions = append(suggestions, DevOpsSuggestion{
+				Category: "git",
+				Severity: "info",
+				Message:  fmt.Sprintf("Repo '%s' has %d untracked files", filepath.Base(repo.Path), repo.UntrackedFiles),
+				Action:   "Add to .gitignore or stage them with 'git add'.",
+			})
+		}
+	}
+
+	// ── Node.js checks ──
+	tools := d.GetInstalledTools()
+	for _, t := range tools {
+		if t.Name == "Node.js" {
+			if t.Status == "not-found" {
+				suggestions = append(suggestions, DevOpsSuggestion{
+					Category: "node",
+					Severity: "warning",
+					Message:  "Node.js is not installed",
+					Action:   "Install Node.js from https://nodejs.org/ for frontend builds and tooling.",
+				})
+			} else if t.Status == "installed" {
+				// Parse major version from e.g. "v20.12.0"
+				ver := strings.TrimPrefix(t.Version, "v")
+				parts := strings.Split(ver, ".")
+				if len(parts) >= 1 {
+					major := 0
+					fmt.Sscanf(parts[0], "%d", &major)
+					if major > 0 && major < 18 {
+						suggestions = append(suggestions, DevOpsSuggestion{
+							Category: "node",
+							Severity: "warning",
+							Message:  fmt.Sprintf("Node.js v%d is outdated (EOL). Current LTS is v22+.", major),
+							Action:   "Upgrade to the latest LTS release from https://nodejs.org/.",
+						})
+					}
+				}
+			}
+		}
+	}
+
+	// ── General tool checks ──
+	for _, t := range tools {
+		if t.Status == "error" {
+			suggestions = append(suggestions, DevOpsSuggestion{
+				Category: "general",
+				Severity: "info",
+				Message:  fmt.Sprintf("Tool '%s' returned an error: %s", t.Name, t.Version),
+				Action:   fmt.Sprintf("Reinstall or update '%s' and verify it works from the command line.", t.Name),
+			})
+		}
+	}
+
+	// ── Sort by severity (critical first) ──
+	sort.Slice(suggestions, func(i, j int) bool {
+		return severityRank(suggestions[i].Severity) > severityRank(suggestions[j].Severity)
+	})
+
+	// If nothing found, add a healthy status
+	if len(suggestions) == 0 {
+		suggestions = append(suggestions, DevOpsSuggestion{
+			Category: "general",
+			Severity: "info",
+			Message:  "All checks passed — no issues detected",
+			Action:   "Everything looks good!",
+		})
+	}
+
+	return suggestions
 }
