@@ -13,11 +13,12 @@ import {
   Lightbulb,
   ShieldCheck,
   UserCheck,
+  CheckCircle2,
+  Clock,
   ShieldAlert,
   History,
   Zap,
   FileText,
-  CheckCircle2,
 } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
@@ -32,6 +33,7 @@ import type {
   SecurityScore,
   FirewallStatus,
   RiskInfo,
+  SecuritySummary,
 } from '@/types'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Wails bridge type
@@ -690,6 +692,109 @@ function SecurityScoreCard({ call }: { call: BackendCall }) {
   )
 }
 
+// ── AI Security Summary Panel ──
+
+function SecuritySummaryPanel({ call }: { call: BackendCall }) {
+  const { refreshInterval } = useSettingsStore()
+  const { data, isLoading } = useQuery<SecuritySummary>({
+    queryKey: ['secops-security-summary'],
+    queryFn: async () => {
+      const res = await call('SecOps.GetSecuritySummary')
+      return res as SecuritySummary
+    },
+    refetchInterval: refreshInterval,
+  })
+
+  const scoreColor =
+    (data?.score ?? 0) >= 75
+      ? 'var(--color-success)'
+      : (data?.score ?? 0) >= 50
+        ? 'var(--color-warning)'
+        : 'var(--color-danger)'
+
+  return (
+    <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+      <h3 className="text-xl font-bold text-text uppercase tracking-widest mb-6 flex items-center gap-4">
+        <Lightbulb size={24} className="text-warning" /> AI Security Summary
+      </h3>
+
+      {isLoading || !data ? (
+        <div className="flex items-center justify-center py-10">
+          <div className="w-10 h-10 rounded-xl bg-panel-2 border border-border flex items-center justify-center text-accent">
+            <Shield size={20} className="animate-pulse" />
+          </div>
+          <p className="ml-4 text-sm font-semibold text-text-dim">Analyzing security posture…</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* ── Summary header ── */}
+          <div className="flex items-start gap-4">
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 text-2xl font-black shadow-lg"
+              style={{ backgroundColor: `${scoreColor}15`, color: scoreColor, border: `2px solid ${scoreColor}40` }}
+            >
+              {data.score}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-text-dim leading-relaxed">{data.summary}</p>
+              <div className="flex items-center gap-2 mt-2 text-[11px] text-text-faint">
+                <Clock size={12} />
+                <span>
+                  Last analyzed{' '}
+                  {new Date(data.analyzedAt).toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Risks ── */}
+          {data.risks.length > 0 && (
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-text-dim mb-3">Risks Detected</h4>
+              <div className="space-y-2">
+                {data.risks.map((risk, i) => (
+                  <div key={i} className="flex items-start gap-3 bg-panel-2 border border-border rounded-xl px-4 py-3">
+                    <AlertTriangle size={14} className="text-danger mt-0.5 shrink-0" />
+                    <span className="text-sm text-text-dim leading-snug">{risk}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Recommendations ── */}
+          {data.recommendations.length > 0 && (
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-text-dim mb-3">Recommendations</h4>
+              <div className="space-y-2">
+                {data.recommendations.map((rec, i) => (
+                  <div key={i} className="flex items-start gap-3 bg-panel-2 border border-border rounded-xl px-4 py-3">
+                    <Lightbulb size={14} className="text-warning mt-0.5 shrink-0" />
+                    <span className="text-sm text-text-dim leading-snug">{rec}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Empty state ── */}
+          {data.risks.length === 0 && data.recommendations.length === 0 && (
+            <div className="flex items-center gap-4 py-4">
+              <div className="w-12 h-12 rounded-2xl bg-success/10 border border-success/30 flex items-center justify-center">
+                <CheckCircle2 size={24} className="text-success" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-success">All Clear</h4>
+                <p className="text-xs text-text-dim">No actionable risks or recommendations at this time.</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Risk Assessment Panel ──
 
 function RiskAssessmentPanel({ call }: { call: BackendCall }) {
@@ -817,6 +922,7 @@ export function SecOps() {
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         <SecurityScoreCard call={call} />
+        <SecuritySummaryPanel call={call} />
         <RiskAssessmentPanel call={call} />
         {activeTab === 'firewall' && <FirewallTab call={call} />}
         {activeTab === 'users' && <UsersTab call={call} />}

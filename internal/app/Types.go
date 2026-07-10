@@ -33,6 +33,8 @@ type DashboardData struct {
 	CPU         GaugeMetric   `json:"cpu"`
 	Memory      GaugeMetric   `json:"memory"`
 	Disk        GaugeMetric   `json:"disk"`
+	GPU         GPUData       `json:"gpu"`
+	Battery     BatteryData   `json:"battery"`
 	Network     NetworkMetric `json:"network"`
 	Processes   int           `json:"processes"`
 	Connections int           `json:"connections"`
@@ -307,6 +309,15 @@ type RiskInfo struct {
 	Recommendation string `json:"recommendation"`
 }
 
+// SecuritySummary holds a unified security posture overview for the AI summary panel.
+type SecuritySummary struct {
+	Score           int      `json:"score"`
+	Summary         string   `json:"summary"`
+	Risks           []string `json:"risks"`
+	Recommendations []string `json:"recommendations"`
+	AnalyzedAt      string   `json:"analyzedAt"`
+}
+
 // ── DevOps Types ─────────────────────────────────────────────────────────────
 
 // CommandResult holds the result of a shell command.
@@ -565,6 +576,42 @@ type NetworkChange struct {
 	Interface string            `json:"interface"`
 	Detail    string            `json:"detail"`    // e.g. new IP address
 	Timestamp string            `json:"timestamp"` // RFC3339
+}
+
+// GPUData holds GPU information for the dashboard.
+type GPUData struct {
+	Name     string  `json:"name"`
+	Vendor   string  `json:"vendor"`
+	MemoryGB float64 `json:"memory_gb"`
+	Driver   string  `json:"driver"`
+	Detected bool    `json:"detected"`
+}
+
+// BatteryData holds battery information for the dashboard.
+type BatteryData struct {
+	Percent     float64 `json:"percent"`
+	Charging    bool    `json:"charging"`
+	TimeLeftSec int64   `json:"time_left_sec"`
+	Status      string  `json:"status"`
+	Detected    bool    `json:"detected"`
+}
+
+// GPUInfo holds detailed GPU information.
+type GPUInfo struct {
+	Name     string  `json:"name"`
+	Vendor   string  `json:"vendor"`
+	MemoryGB float64 `json:"memory_gb"`
+	Driver   string  `json:"driver"`
+	Detected bool    `json:"detected"`
+}
+
+// BatteryInfo holds detailed battery information.
+type BatteryInfo struct {
+	Percent     float64 `json:"percent"`
+	Charging    bool    `json:"charging"`
+	TimeLeftSec int64   `json:"time_left_sec"`
+	Status      string  `json:"status"`
+	Detected    bool    `json:"detected"`
 }
 
 // DevOpsSuggestion is an actionable suggestion derived from DevOps data.

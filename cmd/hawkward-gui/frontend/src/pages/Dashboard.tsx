@@ -5,6 +5,8 @@ import {
   Cpu,
   MemoryStick,
   HardDrive,
+  Gpu,
+  Battery,
   Activity,
   LayoutDashboard,
   Network,
@@ -506,6 +508,22 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
             status={data.disk.value > 90 ? 'warning' : 'healthy'}
             description="Local disk occupancy. Low headroom impacts filesystem performance and paging efficiency."
             onClick={() => onNavigate?.('sysops')}
+          />
+          <KpiCard
+            icon={<Gpu size={24} />}
+            label="GPU"
+            value={data.gpu.detected ? data.gpu.vendor : '—'}
+            unit={data.gpu.detected ? (data.gpu.memory_gb > 0 ? `${Math.round(data.gpu.memory_gb)} GB` : '') : ''}
+            status={data.gpu.detected ? 'healthy' : 'healthy'}
+            description={data.gpu.detected ? `${data.gpu.name} — Driver ${data.gpu.driver}` : 'No GPU detected on this system.'}
+          />
+          <KpiCard
+            icon={<Battery size={24} />}
+            label="Battery"
+            value={data.battery.detected ? Math.round(data.battery.percent).toString() : '—'}
+            unit={data.battery.detected ? '%' : ''}
+            status={data.battery.detected ? (data.battery.percent < 20 && !data.battery.charging ? 'warning' : 'healthy') : 'healthy'}
+            description={data.battery.detected ? `${data.battery.status}${data.battery.time_left_sec > 0 ? ` — ~${Math.round(data.battery.time_left_sec / 60)}m remaining` : ''}` : 'No battery detected — desktop or AC-powered system.'}
           />
         </div>
       </div>

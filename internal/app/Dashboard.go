@@ -115,6 +115,9 @@ func (d *Dashboard) GetDashboardData() DashboardData {
 	netTXMF := p.GetMetricWithForecast(common.MetricNetTX)
 	procMF := p.GetMetricWithForecast(common.MetricProcCnt)
 
+	gpuInfo := d.app.SysOps.GetGPUInfo()
+	battInfo := d.app.SysOps.GetBatteryInfo()
+
 	return DashboardData{
 		CPU: GaugeMetric{
 			Value:    cpuMF.LastValue,
@@ -136,6 +139,20 @@ func (d *Dashboard) GetDashboardData() DashboardData {
 			History:  safeLastN(diskMF.Values, 120),
 			Forecast: diskMF.Forecast,
 			Trend:    trendDirectionString(diskMF.Trend.Direction),
+		},
+		GPU: GPUData{
+			Name:     gpuInfo.Name,
+			Vendor:   gpuInfo.Vendor,
+			MemoryGB: gpuInfo.MemoryGB,
+			Driver:   gpuInfo.Driver,
+			Detected: gpuInfo.Detected,
+		},
+		Battery: BatteryData{
+			Percent:     battInfo.Percent,
+			Charging:    battInfo.Charging,
+			TimeLeftSec: battInfo.TimeLeftSec,
+			Status:      battInfo.Status,
+			Detected:    battInfo.Detected,
 		},
 		Network: NetworkMetric{
 			RXRate: netRXMF.LastValue,

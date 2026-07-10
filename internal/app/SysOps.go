@@ -129,6 +129,36 @@ func (s *SysOps) GetSystemInfo() SystemInfo {
 	}
 }
 
+// GetGPUInfo returns GPU hardware information.
+func (s *SysOps) GetGPUInfo() GPUInfo {
+	gpu := sysops.GetGPUInfo()
+	if gpu == nil || !gpu.Detected {
+		return GPUInfo{Detected: false}
+	}
+	return GPUInfo{
+		Name:     gpu.Name,
+		Vendor:   gpu.Vendor,
+		MemoryGB: float64(gpu.Memory) / (1024 * 1024 * 1024),
+		Driver:   gpu.Driver,
+		Detected: true,
+	}
+}
+
+// GetBatteryInfo returns battery status information.
+func (s *SysOps) GetBatteryInfo() BatteryInfo {
+	bat := sysops.GetBatteryInfo()
+	if bat == nil || !bat.Detected {
+		return BatteryInfo{Detected: false}
+	}
+	return BatteryInfo{
+		Percent:     bat.Percent,
+		Charging:    bat.Charging,
+		TimeLeftSec: bat.TimeLeftSec,
+		Status:      bat.Status,
+		Detected:    true,
+	}
+}
+
 // ── sysopsFacade ─────────────────────────────────────────────────────────────
 
 // CollectAllStats wraps sysops.CollectAllStats for App's tick loop.
