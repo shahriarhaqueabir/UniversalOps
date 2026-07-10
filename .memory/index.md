@@ -1,7 +1,7 @@
 # Hawkward — Workspace Memory
 
 ## Active Session
-- **Sprint 21.5: Dashboard Functionality, Prometheus Integration, CI Hardening** ✅ DONE
+- **Sprint 22: AI Model Default, UI/UX Fixes, Library Audit, CI Hardening** ✅ DONE
 
 ## Completed Work
 
@@ -15,24 +15,27 @@
 | T-23 | README badges fixed for private repo | ✅ |
 | T-24 | npm lockfile synced (typescript reinstalled) | ✅ |
 | T-25 | Compute Logic Analysis now dynamic with real data | ✅ |
+| T-26 | Default AI model set to `agentic-coder` (was `llama3.2`) | ✅ |
+| T-27 | `healthColor()` inverted logic fixed in Dashboard | ✅ |
+| T-28 | Settings page version corrected (1.1.1 → 1.3.0) | ✅ |
+| T-29 | eslint-plugin-react-hooks lockfile synced (5.2.0 → 7.1.1) | ✅ |
+| T-30 | CLAUDE.md updated with agentic-coder model reference | ✅ |
+| T-31 | Library audit: all recommended libs already present | ✅ |
 
 ## Git State (Current)
-- **Branch**: `main` — has uncommitted changes
-- **HEAD**: `b060cee` — `fix: missing comma in wails.json blocking wails build`
+- **Branch**: `main` ✅ pushed to origin
+- **HEAD**: `8519ba3` — `Fix UI color logic, set default AI model to agentic-coder, update version`
 - **Tags**: `v1.3.0` (pushed), `v1.2.0`, `v1.1.1`, `v1.1.0`, `v1.0.0`
 
 ## Fixes Applied This Session
 
 | # | Issue | File | Fix |
 |---|-------|------|-----|
-| 1 | Dashboard "Quick Diag" button just navigated to SysOps | `Dashboard.tsx`, `Dashboard.go` | Added `RunQuickDiag()` backend call + results overlay |
-| 2 | Dashboard "Generate Briefing" button just navigated to AIOps | `Dashboard.tsx`, `Dashboard.go` | Added `GenerateDashboardBriefing()` backend call + briefing overlay |
-| 3 | Compute Logic Analysis was 100% hardcoded text | `Dashboard.tsx` | Added `computeRedFlags()` that uses real pipeline data |
-| 4 | TestPing fails on Linux CI | `netops_test.go`, `ping.go` | Added `exec.LookPath` check, fixed Linux ping flags (`-c`/`-W` vs `-n`) |
-| 5 | Typescript not installed in node_modules | `package.json` | Reinstalled typescript (`npm install typescript@~5.7.2`) |
-| 6 | No Prometheus metrics endpoint | `metrics_exporter.go`, `App.go` | Added minimal HTTP server on :9210 with `/metrics`, wired into tick loop |
-| 7 | `GetAlerts()` not exposed on AlertEngine | `alerts.go` | Added `GetAlerts()` method for dashboard briefing |
-| 8 | README badges unclear for private repo | `README.md` | Added private repo notice, added platform badge |
+| 1 | `healthColor()` inverted — low CPU showed red, high CPU showed green | `Dashboard.tsx` | Reversed: <80% → success(green), >=80% → warning(amber), >=90% → danger(red) |
+| 2 | Settings DEFAULT_APP_INFO version hardcoded as `1.1.1` | `Settings.tsx` | Updated to `1.3.0` |
+| 3 | Default AI model was `llama3.2` (not found locally) | `ollama.go` | Changed to `agentic-coder` (Qwopus3.5-9B-Coder based) |
+| 4 | CLAUDE.md referenced old `llama3.2` model | `CLAUDE.md` | Updated known issue #2 |
+| 5 | eslint-plugin-react-hooks@5.2.0 had peer dep conflict with eslint@10 | lockfile | Synced lockfile to 7.1.1 (supports eslint ^10) |
 
 ## Library Inventory
 

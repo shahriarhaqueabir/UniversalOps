@@ -129,4 +129,6 @@ jobs:
             macos-release/*
           generate_release_notes: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Note: on private repos, the built-in GITHUB_TOKEN cannot create releases.
+          # Create a classic PAT with `repo` scope and save it as GH_TOKEN in repo secrets.
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}

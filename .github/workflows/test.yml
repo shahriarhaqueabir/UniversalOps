@@ -30,6 +30,9 @@ jobs:
       - name: Build frontend (needed for go vet //go:embed)
         run: cd cmd/hawkward-gui/frontend && npm run build
 
+      - name: Allow ping (setcap CAP_NET_RAW)
+        run: sudo setcap cap_net_raw+ep /bin/ping || true
+
       - name: Vet
         run: go vet ./...
 
