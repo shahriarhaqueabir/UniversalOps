@@ -3,6 +3,10 @@
 ![Version](https://img.shields.io/badge/version-v1.3.0-7c6cff)
 ![Go](https://img.shields.io/badge/Go-1.26.5-00ADD8)
 ![License](https://img.shields.io/badge/license-MIT-2ea44f)
+![Platform](https://img.shields.io/badge/platform-Windows%20|%20macOS%20|%20Linux-6366f1)
+
+> ⚠️ **Private Repository**: Release assets are built via CI but the repository is private.
+> Download the latest release from the [Releases](https://github.com/shahriarhaqueabir/AllOpsFull/releases) page (requires access).
 
 A premium native desktop operations platform — **no programming skills required**.
 

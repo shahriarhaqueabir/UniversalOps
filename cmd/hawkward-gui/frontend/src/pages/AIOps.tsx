@@ -140,7 +140,7 @@ export function AIOps() {
               value={tab.id}
               className={cn(
                 'flex items-center gap-3 px-8 py-5 text-base font-bold transition-all border-b-2 border-transparent',
-                activeTab === tab.id ? 'border-accent text-text bg-accent-soft' : 'text-text-faint hover:text-text hover:bg-white/5',
+                activeTab === tab.id ? 'border-accent text-text bg-accent-soft' : 'text-text-faint hover:text-text hover:bg-[var(--color-sidebar-hover)]',
               )}
             >
               {tab.icon}
@@ -341,7 +341,7 @@ function ReportsTab() {
             disabled={isGenerating}
             className={cn(
               "w-full text-left border rounded-2xl p-6 transition-all group disabled:opacity-50",
-              reportType === t.label ? "bg-accent-soft border-accent/50" : "bg-panel border-border hover:bg-white/5"
+              reportType === t.label ? "bg-accent-soft border-accent/50" : "bg-panel border-border hover:bg-[var(--color-sidebar-hover)]"
             )}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -447,7 +447,7 @@ function AnomaliesTab() {
                 </tr>
               ) : (
                 anomalies.map((a, i) => (
-                  <tr key={i} className="border-b border-border/20 hover:bg-white/5 transition-colors group">
+                  <tr key={i} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-colors group">
                     <td className="px-10 py-6 font-bold text-xl text-text group-hover:text-accent transition-colors flex items-center gap-4">
                       <Zap size={20} className="text-warning" />
                       {a.metric.replace('.percent', '').toUpperCase()}

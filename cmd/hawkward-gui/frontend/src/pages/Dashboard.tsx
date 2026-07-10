@@ -15,6 +15,11 @@ import {
   Zap,
   Target,
   FileSearch,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Loader2,
+  ScrollText,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import {
@@ -31,6 +36,22 @@ import { useEvents } from '@/hooks/useEvents'
 import { cn } from '@/lib/utils'
 import type { DashboardData, TimeSeriesPoint } from '@/types'
 import type { Page } from '@/App'
+
+/* ── Dashboard Backend Types ── */
+
+interface DiagnosticResult {
+  category: string
+  status: 'pass' | 'warn' | 'fail' | 'info'
+  message: string
+  value: number
+  unit: string
+}
+
+interface BriefingSection {
+  title: string
+  content: string
+  level: 'info' | 'warning' | 'critical'
+}
 
 /* ───────────────────────────────────────────
    Helpers
@@ -201,12 +222,52 @@ function KpiCard({ icon, label, value, unit, status, description, onClick }: { i
    Main Dashboard
    ─────────────────────────────────────────── */
 
+function diagIcon(status: string) {
+  switch (status) {
+    case 'pass': return <CheckCircle2 size={20} className="text-success" />
+    case 'warn': return <AlertCircle size={20} className="text-warning" />
+    case 'fail': return <XCircle size={20} className="text-danger" />
+    default: return <Info size={20} className="text-accent" />
+  }
+}
+
+function diagColor(status: string) {
+  switch (status) {
+    case 'pass': return 'border-success/30 bg-success/5'
+    case 'warn': return 'border-warning/30 bg-warning/5'
+    case 'fail': return 'border-danger/30 bg-danger/5'
+    default: return 'border-accent/30 bg-accent/5'
+  }
+}
+
+function computeRedFlags(stats: DashboardData): string[] {
+  const flags: string[] = []
+  if (stats.cpu.value > 90) flags.push(`CPU usage at ${Math.round(stats.cpu.value)}% — critically high for sustained periods`)
+  else if (stats.cpu.trend === 'rising' && stats.cpu.value > 70) flags.push(`CPU trend rising at ${Math.round(stats.cpu.value)}% — monitor for potential bottlenecks`)
+  if (stats.memory.value > 92) flags.push(`Memory at ${Math.round(stats.memory.value)}% — swap pressure likely`)
+  else if (stats.memory.trend === 'rising' && stats.memory.value > 80) flags.push(`Memory usage climbing at ${Math.round(stats.memory.value)}% — possible leak`)
+  if (stats.disk.value > 95) flags.push(`Disk at ${Math.round(stats.disk.value)}% — critical, immediate cleanup needed`)
+  else if (stats.disk.value > 85) flags.push(`Disk at ${Math.round(stats.disk.value)}% — low headroom affects performance`)
+  if (stats.alerts > 0) flags.push(`${stats.alerts} active alert(s) require attention`)
+  if (flags.length === 0) flags.push('All metrics within normal operating parameters')
+  return flags
+}
+
 export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void }) {
   const { call } = useBackend()
   const [data, setData] = useState<DashboardData | null>(null)
   const [cpuHistory, setCpuHistory] = useState<TimeSeriesPoint[]>([])
-  // Refs for accumulating event data (no need to re-render on every alert)
-  const alertCount = useRef(0);
+  const alertCount = useRef(0)
+
+  // Quick Diag state
+  const [diagOpen, setDiagOpen] = useState(false)
+  const [diagResults, setDiagResults] = useState<DiagnosticResult[]>([])
+  const [diagLoading, setDiagLoading] = useState(false)
+
+  // Briefing state
+  const [briefingOpen, setBriefingOpen] = useState(false)
+  const [briefingSections, setBriefingSections] = useState<BriefingSection[]>([])
+  const [briefingLoading, setBriefingLoading] = useState(false)
 
   // Initial data load via react-query (cached, deduped)
   useQuery<DashboardData>({
@@ -232,6 +293,34 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
     alertCount.current++
     // handler signature matches useEvents hook
   }, []))
+
+  const runQuickDiag = async () => {
+    setDiagOpen(true)
+    setDiagLoading(true)
+    setDiagResults([])
+    try {
+      const res = await call('Dashboard.RunQuickDiag') as DiagnosticResult[]
+      setDiagResults(res)
+    } catch (err) {
+      setDiagResults([{ category: 'Error', status: 'fail', message: String(err), value: 0, unit: '' }])
+    } finally {
+      setDiagLoading(false)
+    }
+  }
+
+  const generateBriefing = async () => {
+    setBriefingOpen(true)
+    setBriefingLoading(true)
+    setBriefingSections([])
+    try {
+      const res = await call('Dashboard.GenerateDashboardBriefing') as BriefingSection[]
+      setBriefingSections(res)
+    } catch (err) {
+      setBriefingSections([{ title: 'Error', content: String(err), level: 'critical' }])
+    } finally {
+      setBriefingLoading(false)
+    }
+  }
 
   if (!data) return (
     <div className="p-10 space-y-12 overflow-y-auto h-full">
@@ -259,10 +348,10 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
           <p className="text-xl text-text-dim mt-2 font-medium">Strategic overview of system-wide heuristics and critical subsystems.</p>
         </div>
         <div className="flex gap-4">
-          <button onClick={() => onNavigate?.('sysops')} className="flex items-center gap-3 px-6 py-3 rounded-xl bg-panel-2 border border-border text-text font-bold hover:bg-panel-3 transition-all shadow-lg active:scale-95">
+          <button onClick={runQuickDiag} className="flex items-center gap-3 px-6 py-3 rounded-xl bg-panel-2 border border-border text-text font-bold hover:bg-panel-3 transition-all shadow-lg active:scale-95">
             <Zap size={18} className="text-warning" /> QUICK DIAGNOSTIC
           </button>
-          <button onClick={() => onNavigate?.('aiops')} className="flex items-center gap-3 px-6 py-3 rounded-xl bg-accent text-white font-bold hover:bg-accent/90 transition-all shadow-[0_10px_20px_rgba(124,108,255,0.2)] active:scale-95">
+          <button onClick={generateBriefing} className="flex items-center gap-3 px-6 py-3 rounded-xl bg-accent text-white font-bold hover:bg-accent/90 transition-all shadow-[0_10px_20px_rgba(124,108,255,0.2)] active:scale-95">
             <FileSearch size={18} /> GENERATE BRIEFING
           </button>
         </div>
@@ -314,12 +403,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
         <AnalystBriefing
           title="Compute Logic Analysis"
           objective="Monitor the relationship between CPU Spikes and RAM occupancy to identify potential memory leaks or runaway background services."
-          redFlags={[
-            "CPU > 90% for more than 60s",
-            "RAM usage climbing without CPU activity",
-            "System handle count exceeding 100k",
-            "NTP drift greater than 500ms"
-          ]}
+          redFlags={computeRedFlags(data)}
         />
 
         <div className="bg-panel border border-border rounded-[28px] p-8 shadow-2xl flex flex-col">
@@ -380,6 +464,81 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
           ))}
         </div>
       </div>
+
+      {/* ── Quick Diagnostic Overlay ── */}
+      {diagOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setDiagOpen(false)}>
+          <div className="bg-panel border border-border rounded-[24px] p-8 w-full max-w-2xl max-h-[80vh] overflow-y-auto shadow-2xl mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-black text-text flex items-center gap-3">
+                <Zap size={24} className="text-warning" /> Quick Diagnostic Results
+              </h2>
+              <button onClick={() => setDiagOpen(false)} className="text-text-faint hover:text-text transition-colors">
+                <XCircle size={24} />
+              </button>
+            </div>
+            {diagLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 size={32} className="text-accent animate-spin" />
+                <span className="ml-4 text-lg font-bold text-text-faint">Running diagnostics...</span>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {diagResults.map((r, i) => (
+                  <div key={i} className={`flex items-start gap-4 p-4 rounded-xl border ${diagColor(r.status)}`}>
+                    <div className="mt-1">{diagIcon(r.status)}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className="text-sm font-black text-text uppercase tracking-widest">{r.category}</span>
+                        <span className="text-xs font-bold text-text-faint">{r.value.toFixed(1)}{r.unit}</span>
+                      </div>
+                      <p className="text-sm text-text-dim">{r.message}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Briefing Overlay ── */}
+      {briefingOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setBriefingOpen(false)}>
+          <div className="bg-panel border border-border rounded-[24px] p-8 w-full max-w-3xl max-h-[80vh] overflow-y-auto shadow-2xl mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-black text-text flex items-center gap-3">
+                <ScrollText size={24} className="text-accent" /> Operations Briefing
+              </h2>
+              <button onClick={() => setBriefingOpen(false)} className="text-text-faint hover:text-text transition-colors">
+                <XCircle size={24} />
+              </button>
+            </div>
+            {briefingLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 size={32} className="text-accent animate-spin" />
+                <span className="ml-4 text-lg font-bold text-text-faint">Synthesizing briefing...</span>
+              </div>
+            ) : briefingSections.length === 0 ? (
+              <p className="text-text-faint text-center py-8">No briefing data available.</p>
+            ) : (
+              <div className="space-y-6">
+                {briefingSections.map((s, i) => (
+                  <div key={i} className="p-5 rounded-xl border border-border bg-panel-2">
+                    <div className="flex items-center gap-3 mb-2">
+                      {s.level === 'critical' ? <AlertTriangle size={18} className="text-danger" /> :
+                        s.level === 'warning' ? <AlertCircle size={18} className="text-warning" /> :
+                          <Info size={18} className="text-accent" />}
+                      <h3 className="text-base font-black text-text uppercase tracking-widest">{s.title}</h3>
+                    </div>
+                    <p className="text-sm text-text-dim whitespace-pre-wrap leading-relaxed">{s.content}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

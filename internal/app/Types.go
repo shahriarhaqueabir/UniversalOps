@@ -12,6 +12,22 @@ type AppInfo struct {
 
 // ── Dashboard Types ──────────────────────────────────────────────────────────
 
+// DiagnosticResult holds a quick diagnostic check result.
+type DiagnosticResult struct {
+	Category string  `json:"category"`
+	Status   string  `json:"status"` // "pass", "warn", "fail"
+	Message  string  `json:"message"`
+	Value    float64 `json:"value"`
+	Unit     string  `json:"unit"`
+}
+
+// BriefingSection holds a single section of a generated briefing.
+type BriefingSection struct {
+	Title   string `json:"title"`
+	Content string `json:"content"`
+	Level   string `json:"level"` // "info", "warning", "critical"
+}
+
 // DashboardData is the top-level dashboard snapshot.
 type DashboardData struct {
 	CPU         GaugeMetric   `json:"cpu"`

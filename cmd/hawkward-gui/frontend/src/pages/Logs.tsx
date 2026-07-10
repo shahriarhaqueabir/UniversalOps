@@ -252,7 +252,7 @@ export function Logs() {
                     onClick={() => handleRowClick(virtualItem.index)}
                     className={cn(
                       'grid grid-cols-[160px_130px_1fr_160px_40px] border-b border-border/20 cursor-pointer transition-colors group',
-                      'hover:bg-white/[0.03]',
+                      'hover:bg-[var(--color-sidebar-hover)]',
                       isExpanded && 'bg-accent/5',
                     )}
                     style={{ height: ROW_HEIGHT }}

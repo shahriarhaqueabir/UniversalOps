@@ -293,6 +293,20 @@ func (ae *AlertEngine) ResolveAlert(id string) {
 	}
 }
 
+// GetAlerts returns all unresolved alerts.
+func (ae *AlertEngine) GetAlerts() []Alert {
+	ae.mu.RLock()
+	defer ae.mu.RUnlock()
+
+	var active []Alert
+	for _, a := range ae.alerts {
+		if !a.Resolved {
+			active = append(active, a)
+		}
+	}
+	return active
+}
+
 // AlertCount returns the number of unresolved alerts.
 func (ae *AlertEngine) AlertCount() int {
 	ae.mu.RLock()

@@ -155,8 +155,13 @@ func pingICMP(target string, count int) (*PingResult, error) {
 
 // pingExec uses the system ping command as a fallback.
 func pingExec(target string, count int) (*PingResult, error) {
-	// Windows ping flags
-	args := []string{"-n", fmt.Sprintf("%d", count), target}
+	// Platform-specific ping flags
+	var args []string
+	if runtime.GOOS == "windows" {
+		args = []string{"-n", fmt.Sprintf("%d", count), target}
+	} else {
+		args = []string{"-c", fmt.Sprintf("%d", count), "-W", "5", target}
+	}
 
 	// Ping needs network access, so use custom config with DenyNetworkAccess: false
 	cfg := common.SystemQuerySandbox()
