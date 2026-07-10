@@ -151,3 +151,13 @@ func (a *AIOps) AskAI(ctx context.Context, prompt string) (string, error) {
 func (a *AIOps) WithTimeout(d time.Duration) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), d)
 }
+
+// QuerySystemState answers a natural-language system-state question using live metrics.
+func (a *AIOps) QuerySystemState(query string) string {
+	stats, err := a.app.SysOps.collector.CollectAllStats()
+	if err != nil {
+		common.LogWarn("QuerySystemState: CollectAllStats failed: %v", err)
+	}
+
+	return aiops.AnswerSystemStateQuery(query, stats, nil, nil)
+}
