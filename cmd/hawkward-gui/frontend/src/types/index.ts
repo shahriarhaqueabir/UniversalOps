@@ -105,6 +105,11 @@ export interface TimeSeriesPoint {
   value: number
 }
 
+export interface MetricDataPoint {
+  Time: string
+  Value: number
+}
+
 // ── NetOps Types ──
 
 export interface PingEntry {
@@ -351,6 +356,13 @@ export interface ToolInfo {
   version: string
   path: string
   status: 'installed' | 'not-found' | 'error'
+}
+
+export interface DevOpsSuggestion {
+  category: 'docker' | 'git' | 'node' | 'general'
+  severity: 'info' | 'warning' | 'critical'
+  message: string
+  action: string
 }
 
 export interface CommandResult {
