@@ -24,6 +24,22 @@ const mockWails = {
 Object.defineProperty(window, 'go', { value: mockWails.go })
 Object.defineProperty(window, 'runtime', { value: mockWails.runtime })
 
+// Polyfill localStorage if not available in test environment
+if (typeof window !== 'undefined' && !window.localStorage) {
+  const store: Record<string, string> = {}
+  Object.defineProperty(window, 'localStorage', {
+    value: {
+      getItem: (key: string) => store[key] ?? null,
+      setItem: (key: string, value: string) => { store[key] = value },
+      removeItem: (key: string) => { delete store[key] },
+      clear: () => { Object.keys(store).forEach(k => delete store[k]) },
+      get length() { return Object.keys(store).length },
+      key: (i: number) => Object.keys(store)[i] ?? null,
+    },
+    writable: true,
+  })
+}
+
 // Polyfill ResizeObserver for Radix UI components
 class ResizeObserverMock {
   observe() { }

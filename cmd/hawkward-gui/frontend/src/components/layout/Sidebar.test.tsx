@@ -24,7 +24,7 @@ describe('Sidebar', () => {
     render(<Sidebar currentPage="sysops" onNavigate={onNavigate} />)
 
     const sysopsBtn = screen.getByText('System Ops').closest('button')
-    expect(sysopsBtn).toHaveClass('bg-accent')
+    expect(sysopsBtn?.className).toContain('bg-[var(--color-accent)]/15')
   })
 
   it('calls onNavigate when clicking a nav item', () => {

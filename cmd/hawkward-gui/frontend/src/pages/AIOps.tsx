@@ -16,10 +16,14 @@ import {
   ShieldCheck,
   Zap,
   Globe,
+  Copy,
+  Check,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
+import { useSettingsStore } from '@/stores/useSettingsStore'
+import { EmptyState } from '@/components/ui/EmptyState'
 import * as Tabs from '@radix-ui/react-tabs'
 import { useOllamaStore } from '@/stores/useOllamaStore'
 import type { ChatMessage, AnomalyInfo, OllamaStatus } from '@/types'
@@ -30,33 +34,54 @@ type TabId = 'ai-chat' | 'reports' | 'anomalies'
 
 function ChatBubble({ role, content }: { role: string; content: string }) {
   const isAssistant = role === 'assistant' || role === 'system'
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // clipboard API may fail in some contexts
+    }
+  }
+
   return (
     <div className={cn('flex gap-6 max-w-[90%] animate-in fade-in slide-in-from-bottom-2 duration-300', !isAssistant ? 'ml-auto flex-row-reverse' : '')}>
       <div
         className={cn(
           'w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg border',
-          !isAssistant ? 'bg-accent border-accent/20' : 'bg-panel-3 border-accent/20',
+          !isAssistant ? 'bg-[var(--color-accent)] border-[var(--color-accent)]/20' : 'bg-[var(--color-panel-3)] border-[var(--color-accent)]/20',
         )}
       >
         {!isAssistant ? (
           <User size={24} className="text-white" />
         ) : (
-          <Bot size={24} className="text-accent" />
+          <Bot size={24} className="text-[var(--color-accent)]" />
         )}
       </div>
       <div className="flex flex-col space-y-2">
         <div
           className={cn(
-            'rounded-2xl px-6 py-4 text-lg shadow-xl',
+            'rounded-2xl px-6 py-4 text-lg shadow-xl relative group',
             !isAssistant
-              ? 'bg-accent text-white rounded-tr-none'
-              : 'bg-panel-2 border border-border text-text rounded-tl-none',
+              ? 'bg-[var(--color-accent)] text-white rounded-tr-none'
+              : 'bg-[var(--color-panel-2)] border border-[var(--color-border)] text-[var(--color-text)] rounded-tl-none',
           )}
         >
           <div className="whitespace-pre-wrap leading-relaxed tabular-nums">{content}</div>
+          {isAssistant && (
+            <button
+              onClick={handleCopy}
+              className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[var(--color-panel-3)] text-[var(--color-text-faint)] hover:text-[var(--color-text)]"
+              aria-label="Copy message"
+            >
+              {copied ? <Check size={14} className="text-[var(--color-success)]" /> : <Copy size={14} />}
+            </button>
+          )}
         </div>
-        <span className={cn("text-xs font-bold uppercase tracking-widest text-text-faint px-1", !isAssistant ? "text-right" : "text-left")}>
-          {role} • {format(new Date(), 'HH:mm')}
+        <span className={cn("text-xs font-semibold text-[var(--color-text-faint)] px-1", !isAssistant ? "text-right" : "text-left")}>
+          {role} \u2022 {format(new Date(), 'HH:mm')}
         </span>
       </div>
     </div>
@@ -87,6 +112,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export function AIOps() {
   const { call } = useBackend()
+  const { refreshInterval } = useSettingsStore()
   const [activeTab, setActiveTab] = useState<TabId>('ai-chat')
   const setOllamaStatus = useOllamaStore((s) => s.setStatus)
 
@@ -98,7 +124,7 @@ export function AIOps() {
       setOllamaStatus(res)
       return res
     },
-    refetchInterval: 10000,
+    refetchInterval: refreshInterval,
     retry: false,
   })
 
@@ -106,7 +132,7 @@ export function AIOps() {
     <div className="flex flex-col h-full bg-[var(--color-bg)]">
       <div className="p-8 border-b border-border bg-panel-2 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-text flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-text flex items-center gap-3">
             <BrainCircuit size={32} className="text-accent" />
             AI Operations Analyst
           </h1>
@@ -270,7 +296,7 @@ function ChatTab() {
                 onKeyDown={handleKeyDown}
                 placeholder="Ask about system health, anomalies, or network state..."
                 rows={1}
-                className="w-full bg-[#0f172a] border border-border rounded-2xl px-6 py-5 text-xl text-text placeholder-text-faint focus:outline-none focus:border-accent transition-all shadow-inner resize-none min-h-[64px] max-h-40"
+                className="w-full bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-2xl px-6 py-5 text-xl text-text placeholder-text-faint focus:outline-none focus:border-accent transition-all shadow-inner resize-none min-h-[64px] max-h-40"
                 style={{ height: 'auto' }}
               />
               <div className="absolute right-4 bottom-4 flex items-center gap-3 text-text-faint">
@@ -372,7 +398,7 @@ function ReportsTab() {
             </div>
           )}
         </div>
-        <div className="flex-1 bg-[var(--color-bg)] border border-border rounded-2xl p-10 overflow-y-auto font-[JetBrains_Mono] text-lg leading-relaxed whitespace-pre shadow-inner">
+        <div className="flex-1 bg-[var(--color-bg)] border border-border rounded-2xl p-10 overflow-y-auto font-[Geist_Mono] text-lg leading-relaxed whitespace-pre shadow-inner">
           {reportContent || (isGenerating ? 'Collecting system metrics and performing heuristic analysis...' : 'Select a template to generate a professional intelligence report.')}
         </div>
       </div>
@@ -398,25 +424,25 @@ function AnomaliesTab() {
 
   return (
     <div className="flex flex-col h-full p-8 space-y-8">
-      <div className="flex items-center justify-between bg-panel border border-border px-8 py-6 rounded-2xl shadow-lg">
+      <div className="flex items-center justify-between bg-panel border border-border px-6 py-4 rounded-xl shadow-lg">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-4">
-            <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center border shadow-xl", anomalies.length > 0 ? "bg-danger/10 border-danger/30 text-danger" : "bg-success/10 border-success/30 text-success")}>
+            <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center border", anomalies.length > 0 ? "bg-danger/10 border-danger/30 text-danger" : "bg-success/10 border-success/30 text-success")}>
               {anomalies.length > 0 ? <AlertTriangle size={32} /> : <ShieldCheck size={32} />}
             </div>
             <div>
-              <p className="text-3xl font-black text-text">{anomalies.length}</p>
+              <p className="text-2xl font-bold text-[var(--color-text)] tabular-nums">{anomalies.length}</p>
               <p className="text-sm font-bold text-text-dim uppercase tracking-widest">Detected Anomalies</p>
             </div>
           </div>
           <div className="w-px h-12 bg-border" />
-          <div className="text-text-dim text-lg leading-relaxed max-w-xl italic">
+          <div className="text-text-dim text-sm leading-relaxed max-w-md italic">
             Statistical deviation tracking compares current live metrics against a 12-minute rolling window of history.
           </div>
         </div>
         <button
           onClick={() => refetch()}
-          className="flex items-center gap-3 px-8 py-4 bg-panel-3 border border-border rounded-xl hover:bg-panel hover:border-accent/40 text-text font-bold transition-all shadow-lg active:scale-95"
+          className="flex items-center gap-3 px-5 py-2.5 bg-[var(--color-panel-3)] border border-[var(--color-border)] rounded-lg hover:bg-panel hover:border-accent/40 text-text font-bold transition-all shadow-lg active:scale-95"
         >
           <RefreshCw size={20} className={cn(isLoading && "animate-spin")} />
           Deep Scan Now
@@ -428,34 +454,35 @@ function AnomaliesTab() {
           <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border">
               <tr>
-                <th className="px-10 py-6 text-sm font-bold text-text-dim uppercase tracking-widest">Heuristic Signal</th>
-                <th className="px-10 py-6 text-sm font-bold text-text-dim uppercase tracking-widest">Observed</th>
-                <th className="px-10 py-6 text-sm font-bold text-text-dim uppercase tracking-widest">Expected (Mean)</th>
-                <th className="px-10 py-6 text-sm font-bold text-text-dim uppercase tracking-widest">Deviation</th>
-                <th className="px-10 py-6 text-sm font-bold text-text-dim uppercase tracking-widest">Severity</th>
+                <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Heuristic Signal</th>
+                <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Observed</th>
+                <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Expected (Mean)</th>
+                <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Deviation</th>
+                <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Severity</th>
               </tr>
             </thead>
             <tbody>
               {anomalies.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-10 py-32 text-center">
-                    <div className="flex flex-col items-center gap-6 opacity-30">
-                      <ShieldCheck size={80} className="text-success" />
-                      <p className="text-2xl font-medium text-text-faint italic">System operating within established statistical baseline.</p>
-                    </div>
+                  <td colSpan={5} className="px-6 py-16 text-center">
+                    <EmptyState
+                      icon={<ShieldCheck size={28} />}
+                      title="No Anomalies Detected"
+                      description="System operating within established statistical baseline. All metrics are within normal operating parameters."
+                    />
                   </td>
                 </tr>
               ) : (
                 anomalies.map((a, i) => (
                   <tr key={i} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-colors group">
-                    <td className="px-10 py-6 font-bold text-xl text-text group-hover:text-accent transition-colors flex items-center gap-4">
+                    <td className="px-6 py-4 font-semibold text-sm text-[var(--color-text)] group-hover:text-[var(--color-accent)] transition-colors flex items-center gap-4">
                       <Zap size={20} className="text-warning" />
                       {a.metric.replace('.percent', '').toUpperCase()}
                     </td>
-                    <td className="px-10 py-6 text-2xl font-black text-text tabular-nums">{a.value.toFixed(2)}%</td>
-                    <td className="px-10 py-6 text-xl text-text-faint tabular-nums">{a.expected.toFixed(2)}%</td>
-                    <td className="px-10 py-6 text-2xl font-bold text-danger tabular-nums">+{a.deviation.toFixed(1)}σ</td>
-                    <td className="px-10 py-6"><StatusBadge status={a.severity} /></td>
+                    <td className="px-10 py-6 text-sm font-semibold text-[var(--color-text)] tabular-nums">{a.value.toFixed(2)}%</td>
+                    <td className="px-6 py-4 text-sm text-[var(--color-text-faint)] tabular-nums">{a.expected.toFixed(2)}%</td>
+                    <td className="px-6 py-4 text-sm font-semibold text-[var(--color-danger)] tabular-nums">+{a.deviation.toFixed(1)}σ</td>
+                    <td className="px-6 py-4"><StatusBadge status={a.severity} /></td>
                   </tr>
                 ))
               )}

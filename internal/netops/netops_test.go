@@ -4,6 +4,8 @@ import (
 	"os/exec"
 	"runtime"
 	"testing"
+
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
 func TestPing(t *testing.T) {
@@ -15,10 +17,12 @@ func TestPing(t *testing.T) {
 		if _, err := exec.LookPath("ping"); err != nil {
 			t.Skipf("Skipping ping test: ping binary not found on this system: %v", err)
 		}
-		// Check if we can execute a simple ping to localhost without error
-		// Use -c 1 with a short timeout
-		if err := exec.Command("ping", "-c", "1", "-W", "1", "127.0.0.1").Run(); err != nil {
-			t.Skipf("Skipping ping test: ping requires elevated privileges on this system: %v", err)
+		// Use the same sandbox configuration as the real Ping() function
+		cfg := common.SystemQuerySandbox()
+		cfg.DenyNetworkAccess = false
+		cmd := common.SandboxedCommandWithConfig(cfg, "ping", "-c", "1", "-W", "1", "127.0.0.1")
+		if err := cmd.Run(); err != nil {
+			t.Skipf("Skipping ping test: ping sandbox exec failed on this system: %v", err)
 		}
 	}
 

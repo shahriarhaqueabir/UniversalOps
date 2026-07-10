@@ -76,7 +76,15 @@ interface ThemeState {
 const THEME_KEY = 'hawkward-theme'
 
 export const useThemeStore = create<ThemeState>((set) => ({
-  theme: (typeof window !== 'undefined' ? (localStorage.getItem(THEME_KEY) as Theme) : null) || 'dark',
+  theme: (() => {
+    try {
+      const stored = typeof window !== 'undefined' && typeof localStorage !== 'undefined'
+        ? localStorage.getItem(THEME_KEY)
+        : null
+      if (stored === 'dark' || stored === 'light') return stored as Theme
+    } catch { /* localStorage unavailable */ }
+    return 'dark' as Theme
+  })(),
 
   toggle: () => set((state) => {
     const next = state.theme === 'dark' ? 'light' : 'dark'

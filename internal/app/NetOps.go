@@ -60,9 +60,12 @@ func (n *NetOps) Ping(host string, count int) PingResult {
 	}
 }
 
-// DNSLookup performs DNS lookups for a given hostname with a 10-second timeout.
-func (n *NetOps) DNSLookup(hostname string, server string) DNSResult {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+// DNSLookup performs DNS lookups for a given hostname with the specified timeout (ms).
+func (n *NetOps) DNSLookup(hostname string, server string, timeoutMs int) DNSResult {
+	if timeoutMs <= 0 {
+		timeoutMs = 10000
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMs)*time.Millisecond)
 	defer cancel()
 
 	var servers []string

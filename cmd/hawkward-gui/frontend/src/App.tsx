@@ -28,6 +28,22 @@ function App() {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
 
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const pages: Page[] = ['dashboard', 'sysops', 'netops', 'secops', 'devops', 'aiops', 'network-design', 'logs', 'settings']
+    const handler = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey) {
+        const num = parseInt(e.key)
+        if (num >= 1 && num <= pages.length) {
+          e.preventDefault()
+          setCurrentPage(pages[num - 1])
+        }
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
   // Subscribe to Wails alert events → sonner toasts
   const handleAlertEvent = useCallback((...args: unknown[]) => {
     const data = args[0] as Record<string, unknown> | undefined
@@ -63,7 +79,7 @@ function App() {
   }, [handleAlertEvent])
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[var(--color-bg)]">
+    <div className="flex h-screen w-screen overflow-hidden bg-[var(--color-bg)] noise-overlay">
       <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar currentPage={currentPage} />

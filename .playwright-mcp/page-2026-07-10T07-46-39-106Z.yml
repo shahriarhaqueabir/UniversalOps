@@ -1,0 +1,432 @@
+- generic [ref=f2e1]:
+  - link [ref=f2e2] [cursor=pointer]: Zu den Hauptinhalten springen
+  - link [ref=f2e3] [cursor=pointer]:
+    - /url: https://support.google.com/websearch/answer/181196?hl=de
+    - text: Hilfe zur Barrierefreiheit
+  - dialog "Bevor Sie zur Google Suche weitergehen" [active]:
+    - generic [ref=f2e10]:
+      - generic [ref=f2e12]:
+        - img "Google" [ref=f2e13]
+        - generic [ref=f2e14]:
+          - 'button "Sprache: ‪Deutsch‬" [ref=f2e16] [cursor=pointer]':
+            - generic [ref=f2e17]: de
+          - link "Anmelden" [ref=f2e19] [cursor=pointer]
+      - generic [ref=f2e20]:
+        - heading "Bevor Sie zu Google weitergehen" [level=1] [ref=f2e21]
+        - generic [ref=f2e22]:
+          - generic [ref=f2e23]:
+            - text: Wir verwenden
+            - link "Cookies" [ref=f2e24] [cursor=pointer]:
+              - /url: https://policies.google.com/technologies/cookies?utm_source=ucbs&hl=de
+            - text: und Daten, um
+            - list [ref=f2e25]:
+              - listitem [ref=f2e26]: Google-Dienste zu erbringen und zu betreiben
+              - listitem [ref=f2e27]: Ausfälle zu prüfen und Maßnahmen gegen Spam, Betrug und Missbrauch zu ergreifen
+              - listitem [ref=f2e28]: Daten zu Zielgruppeninteraktionen und Websitestatistiken zu erheben. Mit den gewonnenen Informationen möchten wir verstehen, wie unsere Dienste verwendet werden, und die Qualität dieser Dienste verbessern.
+          - generic [ref=f2e29]:
+            - text: Wenn Sie „Alle akzeptieren“ auswählen, verwenden wir Cookies und Daten auch, um
+            - list [ref=f2e30]:
+              - listitem [ref=f2e31]: neue Dienste zu entwickeln und zu verbessern
+              - listitem [ref=f2e32]: Werbung auszuliefern und ihre Effektivität zu messen
+              - listitem [ref=f2e33]: je nach Ihren Einstellungen personalisierte Inhalte anzuzeigen
+              - listitem [ref=f2e34]: personalisierte Werbung anzuzeigen, abhängig von Ihren Einstellungen
+            - generic [ref=f2e35]: Wenn Sie „Alle ablehnen“ auswählen, verwenden wir Cookies nicht für diese zusätzlichen Zwecke.
+          - generic [ref=f2e36]: Nicht personalisierte Inhalte werden u. a. von Inhalten, die Sie sich gerade ansehen, Aktivitäten in Ihrer aktiven Suchsitzung und Ihrem Standort beeinflusst. Nicht personalisierte Werbung wird von den Inhalten, die Sie sich gerade ansehen, und Ihrem allgemeinen Standort beeinflusst. Personalisierte Inhalte und Werbung können auch relevantere Ergebnisse, Empfehlungen und individuelle Werbung enthalten, die auf früheren Aktivitäten in diesem Browser, etwa Suchanfragen bei Google, beruhen. Sofern relevant, verwenden wir Cookies und Daten außerdem, um Inhalte und Werbung altersgerecht zu gestalten.
+          - generic [ref=f2e37]: Wählen Sie „Weitere Optionen“ aus, um sich zusätzliche Informationen anzusehen, einschließlich Details zum Verwalten Ihrer Datenschutzeinstellungen. Sie können auch jederzeit g.co/privacytools besuchen.
+      - generic [ref=f2e38]:
+        - generic [ref=f2e39]:
+          - button "Alle ablehnen" [ref=f2e40] [cursor=pointer]
+          - button "Alle akzeptieren" [ref=f2e41] [cursor=pointer]
+        - link "Weitere Optionen für Personalisierungseinstellungen und Cookies" [ref=f2e43] [cursor=pointer]:
+          - generic "Weitere Optionen für Personalisierungseinstellungen und Cookies" [ref=f2e44]: Weitere Optionen
+      - generic [ref=f2e45]:
+        - link "Datenschutz" [ref=f2e46] [cursor=pointer]:
+          - /url: https://policies.google.com/privacy?hl=de&fg=1&utm_source=ucbs
+        - generic [ref=f2e47]: ·
+        - link "Nutzungsbedingungen" [ref=f2e48] [cursor=pointer]:
+          - /url: https://policies.google.com/terms?hl=de&fg=1&utm_source=ucbs
+  - generic [ref=f2e53]:
+    - search [ref=f2e54]:
+      - generic [ref=f2e56]:
+        - link [ref=f2e58] [cursor=pointer]:
+          - /url: https://www.google.com/webhp?hl=de&ictx=2&sa=X&ved=0ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQPQhq
+        - generic [ref=f2e60]:
+          - generic [ref=f2e61]:
+            - combobox [ref=f2e64]: ollama "agentic-coder" model ollama "agentic-coder" model
+            - generic [ref=f2e65]:
+              - button [ref=f2e67] [cursor=pointer]
+              - generic [ref=f2e72]:
+                - button [ref=f2e73] [cursor=pointer]
+                - button [ref=f2e76] [cursor=pointer]
+          - button [ref=f2e79] [cursor=pointer]
+    - generic [ref=f2e84]:
+      - button [ref=f2e86] [cursor=pointer]
+      - button [ref=f2e87] [cursor=pointer]
+      - generic [ref=f2e93]:
+        - button [ref=f2e95] [cursor=pointer]
+        - link [ref=f2e100] [cursor=pointer]:
+          - /url: https://accounts.google.com/ServiceLogin?hl=de&passive=true&continue=https://www.google.com/search%3Fq%3Dollama%2B%2522agentic-coder%2522%2Bmodel%26sei%3DXqNQapjqBpWP7NYPza3I2Ao&ec=futura_srp_og_si_72236_p
+          - text: Anmelden
+  - generic [ref=f2e102]:
+    - navigation [ref=f2e108]:
+      - list [ref=f2e111]:
+        - listitem [ref=f2e112]:
+          - link [ref=f2e115] [cursor=pointer]:
+            - /url: /search?q=ollama+%22agentic-coder%22+model&sca_esv=a58e26e22b62a0d5&udm=50&fbs=ABfTbFUyxjQn9bne4DuflY2dNqqKupTsDwp6RXwpQFJxPysO9IZ-OcP6xq64A4yNP8lBdpag2OoVBrRko5Qus8zWYvjLRieGf47VOX91mZpBmSyNJmh7QgKMWf2hQy-xHr-Bnr1UwRVxENjN1JJhgn65dDOZJnnnpVXOELYsqoHQrMVrIFsRu7etThaExXj-vehq6y9lPGcHsxvYUnpkMDhdevmY1U5rZQ&vsint=&aep=1&ntc=1&sa=X&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQ2J8OegQIDRAD
+            - generic [ref=f2e116]: KI‑Modus
+        - listitem [ref=f2e119]:
+          - link [disabled] [ref=f2e120]:
+            - generic [ref=f2e121]: Alle
+        - listitem [ref=f2e123]:
+          - link [ref=f2e124] [cursor=pointer]:
+            - /url: /search?sca_esv=a58e26e22b62a0d5&udm=2&fbs=ABfTbFUyxjQn9bne4DuflY2dNqqKupTsDwp6RXwpQFJxPysO9IZ-OcP6xq64A4yNP8lBdpag2OoVBrRko5Qus8zWYvjLRieGf47VOX91mZpBmSyNJmh7QgKMWf2hQy-xHr-Bnr1UwRVxENjN1JJhgn65dDOZJnnnpVXOELYsqoHQrMVrIFsRu7etThaExXj-vehq6y9lPGcHsxvYUnpkMDhdevmY1U5rZQ&q=ollama+%22agentic-coder%22+model&sa=X&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQtKgLegQIDxAB
+            - generic [ref=f2e125]: Bilder
+        - listitem [ref=f2e127]:
+          - link [ref=f2e128] [cursor=pointer]:
+            - /url: /search?sca_esv=a58e26e22b62a0d5&udm=7&fbs=ABfTbFUyxjQn9bne4DuflY2dNqqKupTsDwp6RXwpQFJxPysO9IZ-OcP6xq64A4yNP8lBdpag2OoVBrRko5Qus8zWYvjLRieGf47VOX91mZpBmSyNJmh7QgKMWf2hQy-xHr-Bnr1UwRVxENjN1JJhgn65dDOZJnnnpVXOELYsqoHQrMVrIFsRu7etThaExXj-vehq6y9lPGcHsxvYUnpkMDhdevmY1U5rZQ&q=ollama+%22agentic-coder%22+model&sa=X&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQtKgLegQIEBAB
+            - generic [ref=f2e129]: Videos
+        - listitem [ref=f2e131]:
+          - link [ref=f2e132] [cursor=pointer]:
+            - /url: /search?sca_esv=a58e26e22b62a0d5&q=ollama+%22agentic-coder%22+model&tbm=nws&source=lnms&fbs=ABfTbFUyxjQn9bne4DuflY2dNqqKupTsDwp6RXwpQFJxPysO9IZ-OcP6xq64A4yNP8lBdpag2OoVBrRko5Qus8zWYvjLRieGf47VOX91mZpBmSyNJmh7QgKMWf2hQy-xHr-Bnr1UwRVxENjN1JJhgn65dDOZJnnnpVXOELYsqoHQrMVrIFsRu7etThaExXj-vehq6y9lPGcHsxvYUnpkMDhdevmY1U5rZQ&sa=X&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQ0pQJegQIERAB
+            - generic [ref=f2e133]: News
+        - listitem [ref=f2e135]:
+          - link [ref=f2e136] [cursor=pointer]:
+            - /url: /search?sca_esv=a58e26e22b62a0d5&udm=3&fbs=ABfTbFUyxjQn9bne4DuflY2dNqqKupTsDwp6RXwpQFJxPysO9IZ-OcP6xq64A4yNP8lBdpag2OoVBrRko5Qus8zWYvjLRieGf47VOX91mZpBmSyNJmh7QgKMWf2hQy-xHr-Bnr1UwRVxENjN1JJhgn65dDOZJnnnpVXOELYsqoHQrMVrIFsRu7etThaExXj-vehq6y9lPGcHsxvYUnpkMDhdevmY1U5rZQ&q=ollama+%22agentic-coder%22+model&sa=X&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQs6gLegQIEhAB
+            - generic [ref=f2e137]: Produkte
+        - listitem [ref=f2e139]:
+          - link [ref=f2e140] [cursor=pointer]:
+            - /url: /search?sca_esv=a58e26e22b62a0d5&udm=39&fbs=ABfTbFUyxjQn9bne4DuflY2dNqqKupTsDwp6RXwpQFJxPysO9IZ-OcP6xq64A4yNP8lBdpag2OoVBrRko5Qus8zWYvjLRieGf47VOX91mZpBmSyNJmh7QgKMWf2hQy-xHr-Bnr1UwRVxENjN1JJhgn65dDOZJnnnpVXOELYsqoHQrMVrIFsRu7etThaExXj-vehq6y9lPGcHsxvYUnpkMDhdevmY1U5rZQ&q=ollama+%22agentic-coder%22+model&sa=X&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQs6gLegQIFBAB
+            - generic [ref=f2e141]: Kurze Videos
+        - listitem [ref=f2e143]:
+          - button [ref=f2e144] [cursor=pointer]:
+            - generic [ref=f2e145]: Mehr
+    - heading [level=1] [ref=f2e151]: Suchergebnisse
+    - generic [ref=f2e157]:
+      - generic [ref=f2e158]: Looking for results in English?
+      - link [ref=f2e159] [cursor=pointer]:
+        - /url: "#"
+      - link [ref=f2e163] [cursor=pointer]:
+        - /url: /setprefs?sig=0_9SHAltlOMdXyJUPpNQNsbTuAUNA%3D&source=en_ignored_notification&prev=https://www.google.com/search?q%3Dollama%2B%2522agentic-coder%2522%2Bmodel%26sei%3DXqNQapjqBpWP7NYPza3I2Ao&hl=en&sa=X&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQhoQCKAF6BAgMEAQ
+        - text: Change to English
+      - link [ref=f2e164] [cursor=pointer]:
+        - /url: "#"
+        - text: Weiter auf Deutsch anzeigen
+      - link [ref=f2e166] [cursor=pointer]:
+        - /url: /preferences?lang=1&hl=de&sa=X&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQiIQCKAN6BAgMEAY#languages
+        - text: Spracheinstellungen
+    - main [ref=f2e168]:
+      - generic [ref=f2e172]:
+        - generic [ref=f2e175]:
+          - heading [level=2] [ref=f2e176]: Web results
+          - generic [ref=f2e177]:
+            - generic [ref=f2e180]:
+              - link [ref=f2e182] [cursor=pointer]:
+                - /url: https://www.reddit.com/r/ollama/comments/1o831a8/looking_for_a_good_agentic_coding_model_that_fits/
+                - heading [level=3] [ref=f2e183]: Looking for a good agentic coding model that fits into Apple ...
+                - generic [ref=f2e189]:
+                  - generic [ref=f2e190]: Reddit · r/ollama
+                  - generic [ref=f2e192]: Ca. 30 Kommentare · vor 8 Monaten
+              - button [ref=f2e196] [cursor=pointer]
+            - generic [ref=f2e203]:
+              - text: GPT-OSS-20B is the best
+              - emphasis [ref=f2e204]: agentic coder
+              - text: ", after Devstral Small 2507 for the size category <40B. Qwen3 30B 2507 series were my favorite but noticed ..."
+            - generic [ref=f2e207]:
+              - generic [ref=f2e208]:
+                - link [ref=f2e211] [cursor=pointer]:
+                  - /url: https://www.reddit.com/r/LocalLLM/comments/1tpve1k/models_under_15b_that_can_actually_do_agentic/
+                  - generic [ref=f2e212]:
+                    - emphasis [ref=f2e213]: Models
+                    - text: under 15B that can actually do agentic coding ...
+                - generic [ref=f2e214]: 59 Posts
+                - generic [ref=f2e216]: 28. Mai 2026
+              - generic [ref=f2e218]:
+                - link [ref=f2e221] [cursor=pointer]:
+                  - /url: https://www.reddit.com/r/LocalLLaMA/comments/1ppwylg/whats_your_favourite_local_coding_model/
+                  - generic [ref=f2e222]:
+                    - text: What's your favourite local coding
+                    - emphasis [ref=f2e223]: model
+                    - text: "? : r ..."
+                - generic [ref=f2e224]: 74 Posts
+                - generic [ref=f2e226]: 18. Dez. 2025
+              - link [ref=f2e231] [cursor=pointer]:
+                - /url: /search?q=ollama+%22agentic-coder%22+model+site:www.reddit.com&sca_esv=a58e26e22b62a0d5&sa=X&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQrQIoAnoECCIQAw
+                - text: Weitere Ergebnisse von www.reddit.com
+        - generic [ref=f2e235]:
+          - generic [ref=f2e238]:
+            - link [ref=f2e240] [cursor=pointer]:
+              - /url: https://ollama.com/faruqologundudu/agentic-coder:latest
+              - heading [level=3] [ref=f2e241]: faruqologundudu/agentic-coder
+              - generic [ref=f2e247]:
+                - generic [ref=f2e248]: Ollama
+                - generic [ref=f2e250]: https://ollama.com › agentic-cod...
+            - generic [ref=f2e252]:
+              - generic [ref=f2e253]: ·
+              - link [ref=f2e254] [cursor=pointer]:
+                - /url: https://translate.google.com/translate?u=https://ollama.com/faruqologundudu/agentic-coder:latest&hl=de&sl=en&tl=de&client=search
+                - text: Diese Seite übersetzen
+            - button [ref=f2e257] [cursor=pointer]
+          - generic [ref=f2e263]:
+            - generic [ref=f2e264]: vor 4 Tagen —
+            - generic [ref=f2e265]:
+              - text: You are
+              - emphasis [ref=f2e266]: Agentic Coder
+              - text: ", an advanced AI software engineering assistant. Your purpose is to help users. 1.2kB."
+        - generic [ref=f2e270]:
+          - generic [ref=f2e273]:
+            - link [ref=f2e275] [cursor=pointer]:
+              - /url: https://www.morphllm.com/best-ollama-models
+              - heading [level=3] [ref=f2e276]: "Best Ollama Models 2026: Ranked for Coding, RAG & Agents ..."
+              - generic [ref=f2e282]:
+                - generic [ref=f2e283]: morphllm.com
+                - generic [ref=f2e285]: https://www.morphllm.com › be...
+            - generic [ref=f2e287]:
+              - generic [ref=f2e288]: ·
+              - link [ref=f2e289] [cursor=pointer]:
+                - /url: https://translate.google.com/translate?u=https://www.morphllm.com/best-ollama-models&hl=de&sl=en&tl=de&client=search
+                - text: Diese Seite übersetzen
+            - button [ref=f2e292] [cursor=pointer]
+          - generic [ref=f2e298]:
+            - generic [ref=f2e299]: 28.06.2026 —
+            - generic [ref=f2e300]:
+              - text: Best local coder for a 24-32GB GPU or 32GB Mac. Best benchmarked
+              - emphasis [ref=f2e301]: agentic coder
+              - text: ": devstral:24b. 24B dense, 14GB, 128K context, Apache 2.0. 46.8% ..."
+        - generic [ref=f2e305]:
+          - generic [ref=f2e308]:
+            - link [ref=f2e310] [cursor=pointer]:
+              - /url: https://ollama.com/faruqologundudu/agentic-coder:latest/blobs/af63361d2ac3
+              - heading [level=3] [ref=f2e311]: faruqologundudu/agentic-coder/model
+              - generic [ref=f2e317]:
+                - generic [ref=f2e318]: Ollama
+                - generic [ref=f2e320]: https://ollama.com › blobs
+            - generic [ref=f2e322]:
+              - generic [ref=f2e323]: ·
+              - link [ref=f2e324] [cursor=pointer]:
+                - /url: https://translate.google.com/translate?u=https://ollama.com/faruqologundudu/agentic-coder:latest/blobs/af63361d2ac3&hl=de&sl=en&tl=de&client=search
+                - text: Diese Seite übersetzen
+            - button [ref=f2e327] [cursor=pointer]
+          - generic [ref=f2e334]:
+            - emphasis [ref=f2e335]: Models
+            - text: Download Docs Pricing Sign in · faruqologundudu/
+            - emphasis [ref=f2e336]: agentic-coder
+            - text: :latest. 1 Download Updated 7 hours ago. Cancel.
+            - emphasis [ref=f2e337]: agentic-coder
+            - text: :latest ... /.
+        - generic [ref=f2e341]:
+          - generic [ref=f2e344]:
+            - link [ref=f2e346] [cursor=pointer]:
+              - /url: https://ollama.com/mannix/gemma4-98e-v7-coder
+              - heading [level=3] [ref=f2e347]: mannix/gemma4-98e-v7-coder
+              - generic [ref=f2e353]:
+                - generic [ref=f2e354]: Ollama
+                - generic [ref=f2e356]: https://ollama.com › mannix
+            - generic [ref=f2e358]:
+              - generic [ref=f2e359]: ·
+              - link [ref=f2e360] [cursor=pointer]:
+                - /url: https://translate.google.com/translate?u=https://ollama.com/mannix/gemma4-98e-v7-coder&hl=de&sl=en&tl=de&client=search
+                - text: Diese Seite übersetzen
+            - button [ref=f2e363] [cursor=pointer]
+          - generic [ref=f2e370]:
+            - text: An
+            - emphasis [ref=f2e371]: agentic coder
+            - text: ", fixed at the weights, that traded chemistry for stability. v7-coder holds a top-tier code/agentic profile — HumanEval 98.17%, HumanEval+ ..."
+        - generic [ref=f2e375]:
+          - generic [ref=f2e378]:
+            - link [ref=f2e380] [cursor=pointer]:
+              - /url: https://ollama.com/faruqologundudu/agentic-coder:latest/blobs/fd931919eb27
+              - heading [level=3] [ref=f2e381]: faruqologundudu/agentic-coder/system
+              - generic [ref=f2e387]:
+                - generic [ref=f2e388]: Ollama
+                - generic [ref=f2e390]: https://ollama.com › blobs
+            - generic [ref=f2e392]:
+              - generic [ref=f2e393]: ·
+              - link [ref=f2e394] [cursor=pointer]:
+                - /url: https://translate.google.com/translate?u=https://ollama.com/faruqologundudu/agentic-coder:latest/blobs/fd931919eb27&hl=de&sl=en&tl=de&client=search
+                - text: Diese Seite übersetzen
+            - button [ref=f2e397] [cursor=pointer]
+          - generic [ref=f2e403]:
+            - generic [ref=f2e404]: vor 4 Tagen —
+            - generic [ref=f2e405]:
+              - text: You are
+              - emphasis [ref=f2e406]: Agentic Coder
+              - text: ", an advanced AI software engineering assistant. Your purpose is to help users design, debug, and build complete working ..."
+        - generic [ref=f2e410]:
+          - generic [ref=f2e413]:
+            - link [ref=f2e415] [cursor=pointer]:
+              - /url: https://localaimaster.com/blog/best-ollama-models
+              - heading [level=3] [ref=f2e416]: "Best Ollama Models 2026: 15 Ranked (Coding, Reasoning ..."
+              - generic [ref=f2e422]:
+                - generic [ref=f2e423]: Local AI Master
+                - generic [ref=f2e425]: https://localaimaster.com › blog
+            - generic [ref=f2e427]:
+              - generic [ref=f2e428]: ·
+              - link [ref=f2e429] [cursor=pointer]:
+                - /url: https://translate.google.com/translate?u=https://localaimaster.com/blog/best-ollama-models&hl=de&sl=en&tl=de&client=search
+                - text: Diese Seite übersetzen
+            - button [ref=f2e432] [cursor=pointer]
+          - generic [ref=f2e438]:
+            - generic [ref=f2e439]: 17.03.2026 —
+            - generic [ref=f2e440]:
+              - text: Devstral is purpose-built for the read-edit-coordinate loop across multiple files, making it a better day-to-day
+              - emphasis [ref=f2e441]: agentic coder
+              - text: than a general ...
+        - generic [ref=f2e445]:
+          - generic [ref=f2e448]:
+            - link [ref=f2e450] [cursor=pointer]:
+              - /url: https://ollama.com/baytout3/gemma4-v2
+              - heading [level=3] [ref=f2e451]: baytout3/gemma4-v2
+              - generic [ref=f2e457]:
+                - generic [ref=f2e458]: Ollama
+                - generic [ref=f2e460]: https://ollama.com › baytout3
+            - generic [ref=f2e462]:
+              - generic [ref=f2e463]: ·
+              - link [ref=f2e464] [cursor=pointer]:
+                - /url: https://translate.google.com/translate?u=https://ollama.com/baytout3/gemma4-v2&hl=de&sl=en&tl=de&client=search
+                - text: Diese Seite übersetzen
+            - button [ref=f2e467] [cursor=pointer]
+          - generic [ref=f2e473]:
+            - generic [ref=f2e474]: 28.06.2026 —
+            - generic [ref=f2e475]:
+              - text: Gemma-4-12B
+              - emphasis [ref=f2e476]: Agentic Coder
+              - text: (v2) — GGUF. This collection hosts highly optimized GGUF formats of the fine-tuned Gemma-4-12B-it
+              - emphasis [ref=f2e477]: model
+              - text: ", ..."
+        - generic [ref=f2e481]:
+          - generic [ref=f2e484]:
+            - link [ref=f2e486] [cursor=pointer]:
+              - /url: https://ollama.com/satgeze/ornith-9b-1m
+              - heading [level=3] [ref=f2e487]: satgeze/ornith-9b-1m
+              - generic [ref=f2e493]:
+                - generic [ref=f2e494]: Ollama
+                - generic [ref=f2e496]: https://ollama.com › satgeze
+            - generic [ref=f2e498]:
+              - generic [ref=f2e499]: ·
+              - link [ref=f2e500] [cursor=pointer]:
+                - /url: https://translate.google.com/translate?u=https://ollama.com/satgeze/ornith-9b-1m&hl=de&sl=en&tl=de&client=search
+                - text: Diese Seite übersetzen
+            - button [ref=f2e503] [cursor=pointer]
+          - generic [ref=f2e510]:
+            - text: Ornith-1.0-9B
+            - emphasis [ref=f2e511]: agentic coder
+            - text: ": 1M context, vision, MTP baked in. Needle-verified. · Applications ·"
+            - emphasis [ref=f2e512]: Models
+            - text: · Readme ...
+        - generic [ref=f2e516]:
+          - generic [ref=f2e519]:
+            - link [ref=f2e521] [cursor=pointer]:
+              - /url: https://ollama.com/faruqologundudu/agentic-coder
+              - heading [level=3] [ref=f2e522]: faruqologundudu/agentic-coder
+              - generic [ref=f2e528]:
+                - generic [ref=f2e529]: Ollama
+                - generic [ref=f2e531]: https://ollama.com › agentic-coder
+            - generic [ref=f2e533]:
+              - generic [ref=f2e534]: ·
+              - link [ref=f2e535] [cursor=pointer]:
+                - /url: https://translate.google.com/translate?u=https://ollama.com/faruqologundudu/agentic-coder&hl=de&sl=en&tl=de&client=search
+                - text: Diese Seite übersetzen
+            - button [ref=f2e538] [cursor=pointer]
+          - generic [ref=f2e544]:
+            - generic [ref=f2e545]: vor 4 Tagen —
+            - generic [ref=f2e546]:
+              - emphasis [ref=f2e547]: Models
+              - text: . View all →. Name. 1
+              - emphasis [ref=f2e548]: model
+              - text: . Size / Usage. Context. Input.
+              - emphasis [ref=f2e549]: agentic-coder
+              - text: :latest. 5.6GB · 256K context window · Text · 23 hours ago.
+        - region [ref=f2e553]:
+          - generic [ref=f2e554]:
+            - heading [level=2] [ref=f2e561]: Gesponserte Ergebnisse
+            - generic [ref=f2e562]:
+              - generic [ref=f2e569]:
+                - generic [ref=f2e574]:
+                  - link [ref=f2e576] [cursor=pointer]:
+                    - /url: https://www.google.com/aclk?sa=L&ai=DChsSEwjM2L2Gz8eVAxWkhWgJHVf6Ej4YACICCAIQARoCd2Y&co=1&ase=2&gclid=EAIaIQobChMIzNi9hs_HlQMVpIVoCR1X-hI-EAMYASABEgIWSvD_BwE&category=acrcp_v1_32&sig=AOD64_1N46Ifp2f8WjTZL6CPmtyP6qSCCA&q=&nis=4&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQh78CegQIRhAB&adurl=
+                  - generic [ref=f2e579]:
+                    - link [ref=f2e580] [cursor=pointer]:
+                      - /url: https://www.axway.com/en/lp/fusion-reinventing-integration-for-the-ai-era
+                      - heading [level=3] [ref=f2e582]: Agentic AI Platform - Enable AI-Driven Automation
+                      - generic [ref=f2e588]:
+                        - generic [ref=f2e589]: Axway
+                        - generic [ref=f2e591]: https://www.axway.com › agentic_ai › integration
+                    - button [ref=f2e598] [cursor=pointer]
+                  - generic [ref=f2e602]: Fusion is an enterprise integration platform connecting cloud, legacy and AI...
+                - generic [ref=f2e609]:
+                  - generic [ref=f2e610]:
+                    - link [ref=f2e611] [cursor=pointer]:
+                      - /url: https://www.uipath.com/de/resources/automation-whitepapers/automation-trends-report
+                      - heading [level=3] [ref=f2e612]: Agentische Automatisierung - KI & Agentische Trends 2026
+                      - generic [ref=f2e618]:
+                        - generic [ref=f2e619]: UiPath
+                        - generic [ref=f2e621]: https://www.uipath.com
+                    - button [ref=f2e628] [cursor=pointer]
+                  - generic [ref=f2e632]: "78 % der Führungskräfte wollen Modelle neu gestalten, um den vollen Wert zu nutzen. UiPath 2026: KI & Agentische Automatisierungstrends – Karte entdecken."
+                  - generic [ref=f2e636]:
+                    - text: ‎
+                    - link [ref=f2e637] [cursor=pointer]:
+                      - /url: https://www.uipath.com/de/resources/automation-analyst-reports/gartner-magic-quadrant-robotic-process-automation
+                      - text: Magic Quadrant™ RPA
+                    - text: · ‎
+                    - link [ref=f2e638] [cursor=pointer]:
+                      - /url: /aclk?sa=L&ai=DChsSEwjM2L2Gz8eVAxWkhWgJHVf6Ej4YACICCAIQBRoCd2Y&co=1&ase=2&gclid=EAIaIQobChMIzNi9hs_HlQMVpIVoCR1X-hI-EAMYAiADEgKTe_D_BwE&category=acrcp_v1_37&sig=AOD64_15gI4F8o7W-V1Py6UVzVsGvU068g&adurl=&q=
+                      - text: KI Wachstumsbereiche 2026
+                    - text: · ‎
+                    - link [ref=f2e639] [cursor=pointer]:
+                      - /url: https://www.uipath.com/de/company/contact-us
+                      - text: Kontakt
+                    - text: · ‎
+                    - link [ref=f2e640] [cursor=pointer]:
+                      - /url: /aclk?sa=L&ai=DChsSEwjM2L2Gz8eVAxWkhWgJHVf6Ej4YACICCAIQBhoCd2Y&co=1&ase=2&gclid=EAIaIQobChMIzNi9hs_HlQMVpIVoCR1X-hI-EAMYAiAEEgJYa_D_BwE&category=acrcp_v1_37&sig=AOD64_0oSV6xVTSCVSNTPdt_oq2ARTsKcw&adurl=&q=
+                      - text: UiPath Automatisierung 2026
+                  - generic [ref=f2e641]: Mehr als 100.000 Besuche im letzten Monat
+              - button [ref=f2e647] [cursor=pointer]:
+                - separator [ref=f2e648]
+                - generic [ref=f2e649]: Gesponserte Ergebnisse ausblenden
+      - generic [ref=f2e655]:
+        - generic [ref=f2e660]:
+          - heading [level=2] [ref=f2e662]: Wird auch oft gesucht
+          - generic [ref=f2e664]:
+            - link [ref=f2e669] [cursor=pointer]:
+              - /url: /search?sca_esv=a58e26e22b62a0d5&q=Ollama+Qwen2+5+Coder+32B&sa=X&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQ1QJ6BAguEAE
+              - generic [ref=f2e670]: Ollama Qwen2 5 Coder 32B
+            - link [ref=f2e684] [cursor=pointer]:
+              - /url: /search?sca_esv=a58e26e22b62a0d5&q=Ollama+deepseek+coder+v2+16b&sa=X&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQ1QJ6BAgvEAE
+              - generic [ref=f2e685]: Ollama deepseek coder v2 16b
+        - navigation [ref=f2e695]:
+          - heading [level=1] [ref=f2e696]: Seitennavigation
+          - text: "1"
+          - link [ref=f2e699] [cursor=pointer]:
+            - /url: /search?q=ollama+%22agentic-coder%22+model&sca_esv=a58e26e22b62a0d5&ei=XqNQatrGEIuPxc8PioTvmQ8&start=10&sa=N&sstk=AU9db-DKjsHWgmfPKZ_3U5fpLkG6y6iZhlRBHj42TgdyzvIYWMEiIj59W9GwsFqGU509LySPIKGOHzY1Jhr6li-nR5nIgdzz6bF8Og&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQ8tMDegQILBAE
+            - text: "2"
+          - link [ref=f2e701] [cursor=pointer]:
+            - /url: /search?q=ollama+%22agentic-coder%22+model&sca_esv=a58e26e22b62a0d5&ei=XqNQatrGEIuPxc8PioTvmQ8&start=20&sa=N&sstk=AU9db-DKjsHWgmfPKZ_3U5fpLkG6y6iZhlRBHj42TgdyzvIYWMEiIj59W9GwsFqGU509LySPIKGOHzY1Jhr6li-nR5nIgdzz6bF8Og&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQ8tMDegQILBAG
+            - text: "3"
+          - link [ref=f2e703] [cursor=pointer]:
+            - /url: /search?q=ollama+%22agentic-coder%22+model&sca_esv=a58e26e22b62a0d5&ei=XqNQatrGEIuPxc8PioTvmQ8&start=30&sa=N&sstk=AU9db-DKjsHWgmfPKZ_3U5fpLkG6y6iZhlRBHj42TgdyzvIYWMEiIj59W9GwsFqGU509LySPIKGOHzY1Jhr6li-nR5nIgdzz6bF8Og&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQ8tMDegQILBAI
+            - text: "4"
+          - link [ref=f2e705] [cursor=pointer]:
+            - /url: /search?q=ollama+%22agentic-coder%22+model&sca_esv=a58e26e22b62a0d5&ei=XqNQatrGEIuPxc8PioTvmQ8&start=40&sa=N&sstk=AU9db-DKjsHWgmfPKZ_3U5fpLkG6y6iZhlRBHj42TgdyzvIYWMEiIj59W9GwsFqGU509LySPIKGOHzY1Jhr6li-nR5nIgdzz6bF8Og&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQ8tMDegQILBAK
+            - text: "5"
+          - link [ref=f2e707] [cursor=pointer]:
+            - /url: /search?q=ollama+%22agentic-coder%22+model&sca_esv=a58e26e22b62a0d5&ei=XqNQatrGEIuPxc8PioTvmQ8&start=50&sa=N&sstk=AU9db-DKjsHWgmfPKZ_3U5fpLkG6y6iZhlRBHj42TgdyzvIYWMEiIj59W9GwsFqGU509LySPIKGOHzY1Jhr6li-nR5nIgdzz6bF8Og&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQ8tMDegQILBAM
+            - text: "6"
+          - link [ref=f2e709] [cursor=pointer]:
+            - /url: /search?q=ollama+%22agentic-coder%22+model&sca_esv=a58e26e22b62a0d5&ei=XqNQatrGEIuPxc8PioTvmQ8&start=60&sa=N&sstk=AU9db-DKjsHWgmfPKZ_3U5fpLkG6y6iZhlRBHj42TgdyzvIYWMEiIj59W9GwsFqGU509LySPIKGOHzY1Jhr6li-nR5nIgdzz6bF8Og&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQ8tMDegQILBAO
+            - text: "7"
+          - link [ref=f2e711] [cursor=pointer]:
+            - /url: /search?q=ollama+%22agentic-coder%22+model&sca_esv=a58e26e22b62a0d5&ei=XqNQatrGEIuPxc8PioTvmQ8&start=70&sa=N&sstk=AU9db-DKjsHWgmfPKZ_3U5fpLkG6y6iZhlRBHj42TgdyzvIYWMEiIj59W9GwsFqGU509LySPIKGOHzY1Jhr6li-nR5nIgdzz6bF8Og&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQ8tMDegQILBAQ
+            - text: "8"
+          - link [ref=f2e713] [cursor=pointer]:
+            - /url: /search?q=ollama+%22agentic-coder%22+model&sca_esv=a58e26e22b62a0d5&ei=XqNQatrGEIuPxc8PioTvmQ8&start=80&sa=N&sstk=AU9db-DKjsHWgmfPKZ_3U5fpLkG6y6iZhlRBHj42TgdyzvIYWMEiIj59W9GwsFqGU509LySPIKGOHzY1Jhr6li-nR5nIgdzz6bF8Og&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQ8tMDegQILBAS
+            - text: "9"
+          - link [ref=f2e715] [cursor=pointer]:
+            - /url: /search?q=ollama+%22agentic-coder%22+model&sca_esv=a58e26e22b62a0d5&ei=XqNQatrGEIuPxc8PioTvmQ8&start=90&sa=N&sstk=AU9db-DKjsHWgmfPKZ_3U5fpLkG6y6iZhlRBHj42TgdyzvIYWMEiIj59W9GwsFqGU509LySPIKGOHzY1Jhr6li-nR5nIgdzz6bF8Og&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQ8tMDegQILBAU
+            - text: "10"
+          - heading [level=2] [ref=f2e717]:
+            - link [ref=f2e718] [cursor=pointer]:
+              - /url: /search?q=ollama+%22agentic-coder%22+model&sca_esv=a58e26e22b62a0d5&ei=XqNQatrGEIuPxc8PioTvmQ8&start=10&sa=N&sstk=AU9db-DKjsHWgmfPKZ_3U5fpLkG6y6iZhlRBHj42TgdyzvIYWMEiIj59W9GwsFqGU509LySPIKGOHzY1Jhr6li-nR5nIgdzz6bF8Og&ved=2ahUKEwja7bSGz8eVAxWLR_EDHQrCO_MQ8NMDegQILBAW
+              - generic [ref=f2e720]: Weiter
+    - contentinfo [ref=f2e721]:
+      - heading [level=1] [ref=f2e722]: Fußzeilenlinks

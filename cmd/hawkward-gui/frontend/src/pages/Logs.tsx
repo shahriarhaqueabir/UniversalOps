@@ -17,6 +17,7 @@ import {
 
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
+import { useSettingsStore } from '@/stores/useSettingsStore'
 import type { LogEntry } from '@/types'
 
 // ── Constants ──
@@ -36,7 +37,7 @@ const levelStyle: Record<string, { bg: string; text: string; icon: React.ReactNo
 function LogBadge({ level }: { level: string }) {
   const s = levelStyle[level] || levelStyle.DEBUG
   return (
-    <span className={cn('inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest border border-current opacity-80', s.bg, s.text)}>
+    <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border border-current/20', s.bg, s.text)}>
       {s.icon}
       {level}
     </span>
@@ -52,10 +53,10 @@ function DetailPanel({ entry, idx }: { entry: LogEntry; idx: number }) {
         <div className="absolute top-0 right-0 w-40 h-40 bg-accent/5 rounded-bl-full pointer-events-none" />
         <div className="flex items-center gap-6 mb-6">
           <LogBadge level={entry.level} />
-          <span className="text-lg font-black text-text-faint uppercase tracking-[0.2em]">{entry.module || 'System Core'}</span>
+          <span className="text-sm font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">{entry.module || 'System Core'}</span>
         </div>
-        <h4 className="text-2xl font-black text-text leading-relaxed mb-6">{entry.message}</h4>
-        <div className="p-5 bg-panel-3 border border-border rounded-xl font-[JetBrains_Mono] text-base text-text-dim">
+        <h4 className="text-lg font-bold text-[var(--color-text)] leading-relaxed mb-6">{entry.message}</h4>
+        <div className="p-5 bg-panel-3 border border-border rounded-xl font-[Geist_Mono] text-base text-text-dim">
           {entry.line || 'No additional context available.'}
         </div>
         <div className="mt-6 flex items-center gap-6 text-sm font-bold text-text-faint">
@@ -88,6 +89,7 @@ export function Logs() {
     })
   }
 
+  const { refreshInterval } = useSettingsStore()
   // ── React Query for polling ──
   const { data: allLogs = [], isLoading, refetch } = useQuery<LogEntry[]>({
     queryKey: ['logs'],
@@ -95,7 +97,7 @@ export function Logs() {
       const res = await call('Logs.GetLogs', '', '', 200) as LogEntry[]
       return res || []
     },
-    refetchInterval: 2000,
+    refetchInterval: refreshInterval,
   })
 
   // ── Filtering ──
@@ -144,64 +146,71 @@ export function Logs() {
   return (
     <div className="flex flex-col h-full bg-[var(--color-bg)]">
       {/* ── Header ── */}
-      <div className="p-8 border-b border-border bg-panel-2 flex items-center justify-between">
+      <div className="p-6 border-b border-[var(--color-border)] bg-[var(--color-panel-2)] flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-text flex items-center gap-4">
-            <LayoutList size={32} className="text-accent" />
+          <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-3">
+            <LayoutList size={24} className="text-[var(--color-accent)]" />
             Live Event Aggregator
           </h1>
-          <p className="text-text-dim text-lg mt-2">
+          <p className="text-[var(--color-text-dim)] text-sm mt-1">
             Real-time audit trail of all system, network, and AI operations.
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-panel border border-border px-4 py-2 rounded-xl">
-            <span className="w-2 h-2 rounded-full bg-success animate-pulse shadow-[0_0_8px_var(--color-success)]" />
-            <span className="text-sm font-black text-text-dim uppercase tracking-widest">Streaming</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-[var(--color-panel)] border border-[var(--color-border)] px-3 py-1.5 rounded-lg">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)] animate-pulse shadow-[0_0_8px_var(--color-success)]" />
+            <span className="text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Streaming</span>
           </div>
-          <button onClick={() => refetch()} className="p-3 bg-panel border border-border rounded-xl hover:bg-panel-3 text-text-dim hover:text-text transition-all shadow-md">
-            <RefreshCw size={24} className={cn(isLoading && "animate-spin")} />
+          <button onClick={() => refetch()} className="p-2 bg-[var(--color-panel)] border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-panel-3)] text-[var(--color-text-dim)] hover:text-[var(--color-text)] transition-all">
+            <RefreshCw size={18} className={cn(isLoading && "animate-spin")} />
           </button>
         </div>
       </div>
 
       {/* ── Toolbar ── */}
-      <div className="border-b border-border p-8 bg-panel flex items-center gap-6 flex-wrap">
-        <div className="relative group w-96">
-          <Search size={24} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-accent transition-colors" />
+      <div className="border-b border-[var(--color-border)] px-6 py-3 bg-[var(--color-panel)] flex items-center gap-4 flex-wrap">
+        <div className="relative group flex-1 max-w-md">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)] group-focus-within:text-[var(--color-accent)] transition-colors" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search live stream..."
-            className="w-full bg-panel border border-border rounded-xl pl-14 pr-4 py-4 text-xl text-text placeholder-text-faint focus:outline-none focus:border-accent shadow-inner"
+            className="w-full bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-lg pl-10 pr-3 py-2 text-sm text-[var(--color-text)] placeholder-[var(--color-text-faint)] focus:outline-none focus:border-[var(--color-accent)]"
           />
         </div>
 
-        <div className="flex items-center gap-3">
-          {LEVELS.map((level) => (
-            <button
-              key={level}
-              onClick={() => toggleLevel(level)}
-              className={cn(
-                'transition-all hover:scale-105 active:scale-95',
-                activeLevels.has(level) ? 'opacity-100' : 'opacity-20 grayscale'
-              )}
-            >
-              <LogBadge level={level} />
-            </button>
-          ))}
+        <div className="flex items-center gap-1.5">
+          {LEVELS.map((level) => {
+            const count = allLogs.filter(l => l.level === level).length
+            return (
+              <button
+                key={level}
+                onClick={() => toggleLevel(level)}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all border',
+                  activeLevels.has(level)
+                    ? `${levelStyle[level].bg} ${levelStyle[level].text} border-current/30`
+                    : 'bg-[var(--color-panel-2)] text-[var(--color-text-faint)] border-transparent opacity-40'
+                )}
+              >
+                {levelStyle[level].icon}
+                {level}
+                <span className="text-[10px] opacity-60">{count}</span>
+              </button>
+            )
+          })}
         </div>
         <div className="flex-1" />
 
         <button
           onClick={() => setAutoScroll((p) => !p)}
           className={cn(
-            'flex items-center gap-3 px-6 py-4 text-lg font-bold rounded-xl border transition-all',
-            autoScroll ? 'bg-accent/10 border-accent text-accent shadow-lg' : 'text-text-faint border-border hover:text-text'
+            'flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg border transition-all',
+            autoScroll ? 'bg-[var(--color-accent)]/10 border-[var(--color-accent)]/30 text-[var(--color-accent)]' : 'text-[var(--color-text-faint)] border-[var(--color-border)] hover:text-[var(--color-text)]'
           )}
         >
-          <ArrowDownToDot size={20} />
+          <ArrowDownToDot size={14} />
           {autoScroll ? 'Follow Stream' : 'Freeze View'}
         </button>
       </div>
@@ -213,20 +222,23 @@ export function Logs() {
       >
         {/* ── Column headers (sticky) ── */}
         <div
-          className="sticky top-0 z-10 grid grid-cols-[160px_130px_1fr_160px_40px] bg-panel-2 border-b border-border shadow-md"
+          className="sticky top-0 z-10 grid grid-cols-[140px_100px_1fr_140px_36px] bg-[var(--color-panel-2)] border-b border-[var(--color-border)]"
           style={{ height: ROW_HEIGHT }}
         >
-          <div className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Timestamp</div>
-          <div className="px-4 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Level</div>
-          <div className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest">Event Message</div>
-          <div className="px-8 py-6 text-sm font-black text-text-dim uppercase tracking-widest text-right">Module</div>
+          <div className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Timestamp</div>
+          <div className="px-3 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Level</div>
+          <div className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Event Message</div>
+          <div className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider text-right">Module</div>
           <div />
         </div>
 
         {count === 0 ? (
-          <div className="flex flex-col items-center justify-center text-text-faint opacity-20 py-40">
-            <LayoutList size={120} className="mb-8" />
-            <p className="text-4xl font-black uppercase tracking-[0.2em]">Idle Stream</p>
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-20 h-20 rounded-2xl bg-[var(--color-panel-2)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-faint)] mb-4">
+              <LayoutList size={32} />
+            </div>
+            <h3 className="text-lg font-bold text-[var(--color-text)] mb-1">No Logs Found</h3>
+            <p className="text-sm text-[var(--color-text-dim)]">{search ? 'Try adjusting your search query or filters' : 'Waiting for log entries...'}</p>
           </div>
         ) : (
           <div
@@ -251,26 +263,26 @@ export function Logs() {
                   <div
                     onClick={() => handleRowClick(virtualItem.index)}
                     className={cn(
-                      'grid grid-cols-[160px_130px_1fr_160px_40px] border-b border-border/20 cursor-pointer transition-colors group',
+                      'grid grid-cols-[140px_100px_1fr_140px_36px] border-b border-[var(--color-border)]/20 cursor-pointer transition-colors group',
                       'hover:bg-[var(--color-sidebar-hover)]',
-                      isExpanded && 'bg-accent/5',
+                      isExpanded && 'bg-[var(--color-accent)]/5',
                     )}
                     style={{ height: ROW_HEIGHT }}
                   >
-                    <div className="px-8 py-5 text-lg text-text-faint font-bold font-[JetBrains_Mono] whitespace-nowrap truncate self-center">
+                    <div className="px-6 py-5 text-sm text-[var(--color-text-faint)] font-medium font-[Geist_Mono] whitespace-nowrap truncate self-center">
                       {entry.timestamp ? entry.timestamp.split(' ').pop() : format(new Date(), 'HH:mm:ss')}
                     </div>
-                    <div className="px-4 py-5 self-center">
+                    <div className="px-3 py-5 self-center">
                       <LogBadge level={entry.level} />
                     </div>
-                    <div className="px-8 py-5 text-xl font-bold text-text truncate self-center">
+                    <div className="px-6 py-5 text-sm font-medium text-[var(--color-text)] truncate self-center">
                       {entry.message}
                     </div>
-                    <div className="px-8 py-5 text-sm text-text-faint font-black uppercase tracking-widest text-right self-center group-hover:text-accent transition-colors">
+                    <div className="px-6 py-5 text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-wider text-right self-center group-hover:text-[var(--color-accent)] transition-colors">
                       {entry.module || 'SYSTEM'}
                     </div>
-                    <div className="px-6 py-5 text-text-faint self-center">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                    <div className="px-4 py-5 text-[var(--color-text-faint)] self-center">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                         className={cn('transition-transform', isExpanded && 'rotate-180')}>
                         <polyline points="6 9 12 15 18 9" />
                       </svg>
