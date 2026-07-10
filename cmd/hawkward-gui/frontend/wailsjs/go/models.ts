@@ -818,6 +818,34 @@ export namespace app {
 	        this.virtualization = source["virtualization"];
 	    }
 	}
+	export class TimelineEvent {
+	    id: string;
+	    timestamp: string;
+	    category: string;
+	    level: string;
+	    title: string;
+	    detail: string;
+	    module: string;
+	    related?: string[];
+	    metadata?: Record<string, string>;
+	
+	    static createFrom(source: any = {}) {
+	        return new TimelineEvent(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.timestamp = source["timestamp"];
+	        this.category = source["category"];
+	        this.level = source["level"];
+	        this.title = source["title"];
+	        this.detail = source["detail"];
+	        this.module = source["module"];
+	        this.related = source["related"];
+	        this.metadata = source["metadata"];
+	    }
+	}
 	export class TraceHop {
 	    number: number;
 	    host: string;

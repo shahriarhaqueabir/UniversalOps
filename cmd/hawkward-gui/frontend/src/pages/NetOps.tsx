@@ -484,7 +484,7 @@ export function NetOps() {
                           <span className="text-accent">{section.icon}</span>
                           <span className="text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">{section.label}</span>
                         </div>
-                        {section.values.length > 0 ? (
+                        {section.values && section.values.length > 0 ? (
                           <div className="space-y-2">
                             {section.values.map((v, i) => (
                               <div key={i} className="px-4 py-2 bg-panel-3 border border-border rounded-xl text-lg font-bold text-text tabular-nums font-[Geist_Mono]">

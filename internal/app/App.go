@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"sync"
@@ -22,6 +23,7 @@ type App struct {
 
 	pipeline *common.DataPipeline
 	alerts   *common.AlertEngine
+	eventBus *common.EventBus
 
 	// Ops layer facades
 	SysOps      *SysOps
@@ -33,6 +35,7 @@ type App struct {
 	PipelineAPI *PipelineAPI
 	AlertAPI    *AlertAPI
 	Logs        *Logs
+	Timeline    *Timeline
 
 	// Tick loop control
 	tickQuit       chan struct{}
@@ -50,6 +53,7 @@ func NewApp() *App {
 	a := &App{
 		pipeline:       pipeline,
 		alerts:         alertEngine,
+		eventBus:       common.NewEventBus(1000),
 		startedAt:      time.Now(),
 		tickQuit:       make(chan struct{}),
 		tickIntervalCh: make(chan time.Duration, 1),
@@ -65,6 +69,21 @@ func NewApp() *App {
 	a.PipelineAPI = NewPipelineAPI(a)
 	a.AlertAPI = NewAlertAPI(a)
 	a.Logs = NewLogs(a)
+	a.Timeline = NewTimeline(a)
+
+	// Subscribe the event bus to persist events and emit to frontend
+	a.eventBus.Subscribe(func(evt common.TimelineEvent) {
+		// Persist to database
+		if s := common.GetStorage(); s != nil {
+			s.InsertEvent(evt)
+		}
+
+		// Emit to frontend via Wails runtime
+		if a.ctx != nil {
+			converted := convertTimelineEvent(evt)
+			runtime.EventsEmit(a.ctx, EventTimeline, converted)
+		}
+	})
 
 	return a
 }
@@ -205,6 +224,11 @@ func (a *App) collectAndEmit() {
 		return
 	}
 
+	// Collect previous values for threshold change detection
+	prevCPU := a.pipeline.GetMetricWithForecast(common.MetricCPU).LastValue
+	prevMem := a.pipeline.GetMetricWithForecast(common.MetricMem).LastValue
+	prevDisk := a.pipeline.GetMetricWithForecast(common.MetricDisk).LastValue
+
 	// Collect network rates at the same time
 	var rxTotal, txTotal float64
 	ifaces, err := a.NetOps.collectInterfaces()
@@ -285,6 +309,52 @@ func (a *App) collectAndEmit() {
 			Alert:      convertAlert(alert),
 			AlertCount: a.alerts.AlertCount(),
 		})
+
+		// Emit timeline event for alert
+		a.eventBus.Emit(common.NewEventWithMeta(
+			common.CatAlert,
+			common.EventCritical,
+			"alerts",
+			alert.Metric+" alert fired",
+			alert.Message,
+			map[string]string{"threshold": fmt.Sprintf("%.1f", alert.Threshold), "value": fmt.Sprintf("%.1f", alert.Value)},
+		))
+	}
+
+	// Emit timeline event for significant CPU change (>15% jump)
+	if stats != nil && stats.CPUPercent > prevCPU+15 && prevCPU > 0 {
+		a.eventBus.Emit(common.NewEventWithMeta(
+			common.CatSystem,
+			common.EventWarning,
+			"sysops",
+			"CPU spiked",
+			fmt.Sprintf("CPU usage jumped from %.0f%% to %.0f%%", prevCPU, stats.CPUPercent),
+			map[string]string{"from": fmt.Sprintf("%.1f", prevCPU), "to": fmt.Sprintf("%.1f", stats.CPUPercent)},
+		))
+	}
+
+	// Emit timeline event for significant memory change (>10% jump)
+	if stats != nil && stats.MemoryUsed > prevMem+10 && prevMem > 0 {
+		a.eventBus.Emit(common.NewEventWithMeta(
+			common.CatSystem,
+			common.EventWarning,
+			"sysops",
+			"Memory pressure increasing",
+			fmt.Sprintf("Memory usage increased from %.0f%% to %.0f%%", prevMem, stats.MemoryUsed),
+			map[string]string{"from": fmt.Sprintf("%.1f", prevMem), "to": fmt.Sprintf("%.1f", stats.MemoryUsed)},
+		))
+	}
+
+	// Emit timeline event for significant disk change (>10% jump)
+	if stats != nil && stats.DiskUsed > prevDisk+10 && prevDisk > 0 {
+		a.eventBus.Emit(common.NewEventWithMeta(
+			common.CatSystem,
+			common.EventWarning,
+			"sysops",
+			"Disk usage increasing",
+			fmt.Sprintf("Disk usage increased from %.0f%% to %.0f%%", prevDisk, stats.DiskUsed),
+			map[string]string{"from": fmt.Sprintf("%.1f", prevDisk), "to": fmt.Sprintf("%.1f", stats.DiskUsed)},
+		))
 	}
 }
 

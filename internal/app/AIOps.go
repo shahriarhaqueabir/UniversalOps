@@ -1,7 +1,9 @@
 package app
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/aiops"
 
@@ -23,15 +25,12 @@ func (a *AIOps) Chat(message string) string {
 	storage := common.GetStorage()
 	var historyContext string
 	if storage != nil {
-		// Fetch last 10 CPU and RAM metrics to give AI historical context
-		// We use a strictly capped window to keep the prompt lightweight
 		cpuHistory, _ := storage.GetMetricHistory(common.MetricCPU, 10)
 		memHistory, _ := storage.GetMetricHistory(common.MetricMem, 10)
 		if len(cpuHistory) > 0 {
 			historyContext = fmt.Sprintf("\nHistorical Context (10s window):\nCPU usage patterns: %v\nRAM occupancy patterns: %v\n", cpuHistory, memHistory)
 		}
 	}
-
 
 	messages := []aiops.ChatMessage{
 		{Role: "system", Content: "You are the Hawkward AI Assistant. Use current stats and historical context provided to answer accurately." + historyContext},
@@ -45,13 +44,10 @@ func (a *AIOps) Chat(message string) string {
 	return response
 }
 
-
 // GenerateReport creates a formatted text report from the given sections.
-// Sections are provided as a list of section title strings (content is auto-generated).
 func (a *AIOps) GenerateReport(sections []string) string {
 	var reportSections []aiops.ReportSection
 	for _, title := range sections {
-		// Build a prompt to generate content for this section using Ollama
 		prompt := "Generate a brief operations report section for: " + title +
 			". Include key metrics and observations based on recent system data."
 		resp, err := aiops.Chat([]aiops.ChatMessage{
@@ -91,7 +87,6 @@ func (a *AIOps) GetOllamaStatus() OllamaStatus {
 }
 
 // DetectAnomalies performs anomaly detection on pipeline metrics.
-// Compares current values against rolling window statistics.
 func (a *AIOps) DetectAnomalies() []AnomalyInfo {
 	var anomalies []AnomalyInfo
 
@@ -107,7 +102,7 @@ func (a *AIOps) DetectAnomalies() []AnomalyInfo {
 	for _, name := range metrics {
 		mf := a.app.pipeline.GetMetricWithForecast(name)
 		if len(mf.Values) < 10 {
-			continue // need enough data
+			continue
 		}
 
 		lastVal := mf.LastValue
@@ -139,4 +134,20 @@ func (a *AIOps) DetectAnomalies() []AnomalyInfo {
 	}
 
 	return anomalies
+}
+
+// ── AI Methods for Timeline Integration ──────────────────────────────────────
+
+// AskAI sends a prompt to the AI with the given context and returns the response.
+func (a *AIOps) AskAI(ctx context.Context, prompt string) (string, error) {
+	messages := []aiops.ChatMessage{
+		{Role: "system", Content: "You are the Hawkward AI assistant, an expert operations analyst. Be concise and specific."},
+		{Role: "user", Content: prompt},
+	}
+	return aiops.Chat(messages)
+}
+
+// WithTimeout returns a context with the given timeout.
+func (a *AIOps) WithTimeout(d time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), d)
 }

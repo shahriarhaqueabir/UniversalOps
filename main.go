@@ -39,6 +39,7 @@ func main() {
 			application.PipelineAPI,
 			application.AlertAPI,
 			application.Logs,
+			application.Timeline,
 		},
 	})
 

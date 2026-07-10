@@ -1,6 +1,6 @@
 # Hawkward — Development Standards
 
-## Go Conventions
+## Go Conventions (Backend)
 
 ### Naming
 
@@ -17,72 +17,62 @@
 
 ### Code Style
 
-- Follow `gofmt` / `goimports` (enforced by CI)
-- Use `golangci-lint` with strict rules
-- Max line length: 120 characters
-- Error handling: always check errors, wrap with context using `fmt.Errorf("context: %w", err)`
-- No panics in production code
-- No global state
+- Follow `gofmt` / `goimports` (enforced by CI).
+- Use `go vet` and `staticcheck` for static analysis.
+- Error handling: Always check errors. Wrap with context using `fmt.Errorf("context: %w", err)`.
+- **Wails Bindings**: Methods bound to the UI must be exported (`PascalCase`) and should return `(result, error)` for automatic JS Promise rejection handling.
 
 ### Imports Ordering
 
 ```go
 import (
     // Standard library
+    "context"
     "fmt"
-    "os"
     "time"
 
     // External dependencies
-    tea "charm.land/bubbletea/v2"
-    "charm.land/lipgloss/v2"
     "github.com/shirou/gopsutil/v4/cpu"
+    "github.com/wailsapp/wails/v2/pkg/runtime"
 
     // Internal packages
-    "hawkward/internal/common"
-    "hawkward/internal/ui"
+    "github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+    "github.com/shahriarhaqueabir/AllOpsFull/internal/app"
 )
 ```
 
-### Testing
+## React & TypeScript Conventions (Frontend)
 
-- All packages must have at least 80% test coverage
-- Table-driven tests preferred
-- Use `testing.T` for unit tests
-- Mock external dependencies (gopsutil, OS calls) with interfaces
-- Example test structure:
+### Naming
 
-```go
-func TestGetCPUUsage(t *testing.T) {
-    tests := []struct {
-        name string
-        mock func()
-        want float64
-    }{
-        {"normal usage", func() { /* setup mock */ }, 45.2},
-        {"zero usage", func() { /* setup mock */ }, 0.0},
-    }
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            tt.mock()
-            got := GetCPUUsage()
-            if got != tt.want {
-                t.Errorf("GetCPUUsage() = %v, want %v", got, tt.want)
-            }
-        })
-    }
-}
-```
+- **Components**: `PascalCase` (e.g., `DashboardCard.tsx`).
+- **Hooks**: `camelCase` with `use` prefix (e.g., `useBackend.ts`).
+- **Stores**: `camelCase` with `use` prefix and `Store` suffix (e.g., `useSettingsStore.ts`).
+- **Styles**: Tailwind classes preferred. Custom CSS variables in `globals.css` must use the `--color-*` pattern.
+
+### Styling (Tailwind v4)
+
+- **No Hardcoded Colors**: Use CSS variables (e.g., `text-[var(--color-text)]`, `bg-[var(--color-bg)]`).
+- **Design Consistency**: Follow the Squib-inspired dark theme. Use `var(--color-accent)` for primary actions.
+- **States**: Use `hover:bg-[var(--color-sidebar-hover)]` instead of arbitrary opacity (e.g., `bg-white/5`).
+
+### State Management (Zustand)
+
+- Keep stores atomic and focused.
+- Use selectors to prevent unnecessary re-renders:
+  ```typescript
+  const refreshInterval = useSettingsStore((s) => s.refreshInterval);
+  ```
+
+## Wails & IPC Standards
+
+- **Events**: Use `useEvents('event-name')` hook for backend-to-frontend updates.
+- **Bindings**: All Go binding calls should be wrapped in `useQuery` or `useMutation` from TanStack Query for caching and loading states.
+- **Type Safety**: Run `wails generate module` to update TypeScript definitions whenever Go structs in `internal/app/` change.
 
 ## Commit Conventions
 
 We use [Conventional Commits](https://www.conventionalcommits.org/):
-
-```
-<type>(<scope>): <description>
-
-[optional body]
-```
 
 ### Types
 
@@ -91,7 +81,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 | `feat` | A new feature |
 | `fix` | A bug fix |
 | `docs` | Documentation changes |
-| `style` | Formatting, whitespace |
+| `style` | Formatting, CSS variables, Tailwind |
 | `refactor` | Code restructuring |
 | `test` | Adding/updating tests |
 | `chore` | Build, CI, dependencies |
@@ -100,62 +90,31 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 
 | Scope | Area |
 |-------|------|
-| `ui` | TUI components, styling |
-| `sysops` | System operations layer |
-| `netops` | Network operations layer |
-| `secops` | Security operations layer |
-| `devops` | DevOps layer |
-| `aiops` | AI Ops layer |
-| `common` | Shared utilities |
-| `docs` | Documentation |
-
-### Examples
-
-```
-feat(sysops): add CPU usage dashboard panel
-fix(netops): handle DNS timeout gracefully
-docs: update installation instructions
-test(sysops): add table-driven tests for memory stats
-```
-
-## Branch Strategy
-
-```
-main           # Production-ready releases
-├── develop    # Integration branch
-│   ├── feat/*       # New features
-│   ├── fix/*        # Bug fixes
-│   ├── refactor/*   # Code refactoring
-│   └── docs/*       # Documentation
-```
-
-- Feature branches branch from `develop`
-- Pull requests merge into `develop`
-- `main` is updated via release PRs from `develop`
-- Branch naming: `feat/sysops-cpu-dashboard`, `fix/dns-timeout`
+| `ui` | React components, hooks, stores |
+| `sysops` | System operations backend |
+| `netops` | Network operations backend |
+| `secops` | Security operations backend |
+| `devops` | DevOps/Shell backend |
+| `aiops` | AI/Ollama integration |
+| `common` | Pipeline, storage, shared utils |
 
 ## Code Review Checklist
 
 Before submitting a PR:
 
-- [ ] Tests pass (`go test ./...`)
-- [ ] Lint passes (`golangci-lint run`)
-- [ ] No debug code or commented-out code
-- [ ] All public functions documented with godoc comments
-- [ ] Error handling is complete (no ignored errors)
-- [ ] No hardcoded paths or secrets
-- [ ] Cross-platform considerations addressed
-- [ ] Keyboard navigation works (no dead ends)
-- [ ] Terminal resize handling correct
+- [ ] Tests pass (`go test ./...` and `npm test`).
+- [ ] No hardcoded hex/RGB colors in components (use CSS vars).
+- [ ] No `any` types in TypeScript (unless strictly necessary for Wails generic events).
+- [ ] `wails.json` version matches `App.go` and `package.json`.
+- [ ] Accessibility: All interactive elements have focus states and labels.
+- [ ] No debug `console.log` or `fmt.Printf` (use `common.LogInfo` or `zerolog`).
 
 ## Performance Guidelines
 
-- Keep message handling in `Update()` under 1ms (keyboard responsiveness)
-- Offload blocking operations (DNS, ping, port scan) to goroutines
-- Use `tea.Batch` to run parallel operations
-- Refresh dashboards at 1-5 second intervals (configurable)
-- Profile with `pprof` before optimizing
+- **Tick Loop**: Keep the `DataPipeline` tick interval at 3 seconds to balance real-time feel with CPU overhead.
+- **React Rendering**: Memoize expensive charts or large tables using `React.memo` or `useMemo`.
+- **Virtualization**: Use `@tanstack/react-virtual` for any list/table exceeding 50 rows (e.g., Log Viewer, Process List).
 
 ---
 
-*Last updated: 2026-07-01*
+*Last updated: 2025-05-22 (Sprint 24)*

@@ -1,6 +1,8 @@
 package app
 
 import (
+	"fmt"
+
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/secops"
 )
@@ -154,6 +156,17 @@ func (s *SecOps) SetFirewallRuleState(name string, enable bool) bool {
 		common.LogWarn("SetFirewallRuleState failed: %v", err)
 		return false
 	}
+
+	action := "disabled"
+	if enable {
+		action = "enabled"
+	}
+	s.app.eventBus.Emit(common.NewEvent(
+		common.CatSecurity,
+		common.EventInfo,
+		"secops",
+		"Firewall rule changed",
+		fmt.Sprintf("Firewall rule '%s' %s", name, action),
+	))
 	return true
 }
-

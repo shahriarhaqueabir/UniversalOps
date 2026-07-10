@@ -1,17 +1,19 @@
 # Active State
 
 ## Current Goal
-Complete TUI remnants cleanup and tag/publish v1.0.0 release
+Sprint 24: Quality Polish & Documentation Sync
+
+## Active Task
+Finalizing Sprint 24 (T-41 remaining for P2 components)
 
 ## Last Actions
-- Ran full verification baseline: go build ✅, go vet ✅, go test (8/8) ✅, staticcheck ✅, npm build ✅
-- Discovered 25 TUI remnant files (~5,754 lines) still in domain packages
-- Created project graph documentation
-- Confirmed Sprint 11 dead functions were all removed
+- Completed T-38: Overhauled docs/ARCHITECTURE.md and docs/STANDARDS.md.
+- Completed T-42: Fixed flaky Storage tests.
+- Completed T-39: 100% coverage for Settings, Alerts, Theme, and Ollama stores.
+- Completed T-40: High-fidelity tests for TopBar and NetOps pages.
+- Fixed `NetOps.tsx` null-pointer exception discovered during testing.
 
 ## Next Steps
-1. Remove TUI view/model/update files from all 5 domain packages
-2. Remove charts package and Lipgloss styles
-3. Run `go mod tidy`
-4. Fix 3 failing frontend tests
-5. Tag & publish v1.0.0
+1. Add tests for SecOps, DevOps, AIOps (T-41).
+2. Add tests for NetworkDesign (T-41).
+3. Review all tests and run full suite baseline.

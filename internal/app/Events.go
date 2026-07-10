@@ -36,6 +36,19 @@ type PipelineEvent struct {
 	Error       string `json:"error,omitempty"`
 }
 
+// TimelineEvent is emitted for the unified operations timeline.
+type TimelineEvent struct {
+	ID        string            `json:"id"`
+	Timestamp string            `json:"timestamp"`
+	Category  string            `json:"category"`
+	Level     string            `json:"level"`
+	Title     string            `json:"title"`
+	Detail    string            `json:"detail"`
+	Module    string            `json:"module"`
+	Related   []string          `json:"related,omitempty"`
+	Metadata  map[string]string `json:"metadata,omitempty"`
+}
+
 // Event names used with runtime.EventsEmit.
 const (
 	EventMetrics  = "metrics"  // payload: MetricsEvent
@@ -44,4 +57,5 @@ const (
 	EventPipeline = "pipeline" // payload: PipelineEvent
 	EventCmdLine  = "cmd:line" // payload: string (live command output)
 	EventCmdDone  = "cmd:done" // payload: string (command id)
+	EventTimeline = "timeline" // payload: TimelineEvent — new event on the timeline
 )
