@@ -29,7 +29,7 @@ var effectiveModel string // resolved by CheckOllama, used by Chat
 
 const (
 	defaultOllamaURL   = "http://localhost:11434"
-	defaultOllamaModel = "llama3.2"
+	defaultOllamaModel = "agentic-coder"
 	httpTimeout        = 30 * time.Second
 )
 

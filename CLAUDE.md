@@ -72,7 +72,7 @@
 
 ## Known Issues
 1. **App.go version** must match `wails.json` productVersion and `package.json` version (currently v1.3.0).
-2. **AIOps model sync**: `ollama.go` defaults to `llama3.2` — set `OLLAMA_MODEL` env var to override. Falls back to first available model if default not found.
+2. **AIOps model**: `ollama.go` defaults to `agentic-coder` (Qwopus3.5-9B-Coder based) — set `OLLAMA_MODEL` env var to override. Falls back to first available model if default not found.
 3. **TestPing** may fail on Linux CI (no root for raw sockets + ping binary CAP_NET_RAW) — test has lazy skip logic.
 4. **TestInsertLogAndQuery** is flaky when run in full suite — SQLite DB leaks between tests.
 5. **Recharts ResponsiveContainer** stderr in jsdom tests — cosmetic, jsdom has no layout.
