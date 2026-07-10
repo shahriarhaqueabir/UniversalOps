@@ -62,9 +62,9 @@ function clamp(v: number, min = 0, max = 100) {
 }
 
 function healthColor(pct: number) {
-  if (pct >= 90) return 'var(--color-success)'
+  if (pct >= 90) return 'var(--color-danger)'
   if (pct >= 80) return 'var(--color-warning)'
-  return 'var(--color-danger)'
+  return 'var(--color-success)'
 }
 
 /* ───────────────────────────────────────────

@@ -66,6 +66,22 @@ export namespace app {
 	        this.uptime = source["uptime"];
 	    }
 	}
+	export class BriefingSection {
+	    title: string;
+	    content: string;
+	    level: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new BriefingSection(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.title = source["title"];
+	        this.content = source["content"];
+	        this.level = source["level"];
+	    }
+	}
 	export class CPUInfo {
 	    percent: number;
 	    per_cpu: number[];
@@ -276,6 +292,26 @@ export namespace app {
 	        this.nis_enabled = source["nis_enabled"];
 	        this.quick_scan_age = source["quick_scan_age"];
 	        this.full_scan_age = source["full_scan_age"];
+	    }
+	}
+	export class DiagnosticResult {
+	    category: string;
+	    status: string;
+	    message: string;
+	    value: number;
+	    unit: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DiagnosticResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.category = source["category"];
+	        this.status = source["status"];
+	        this.message = source["message"];
+	        this.value = source["value"];
+	        this.unit = source["unit"];
 	    }
 	}
 	export class DiskPartition {
