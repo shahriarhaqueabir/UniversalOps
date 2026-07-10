@@ -3,7 +3,7 @@ module github.com/shahriarhaqueabir/AllOpsFull
 go 1.26.5
 
 require (
-	github.com/miekg/dns v1.1.63
+	github.com/miekg/dns v1.1.72
 	github.com/ollama/ollama v0.31.2
 	github.com/prometheus/client_golang v1.23.2
 	github.com/rs/zerolog v1.35.1
