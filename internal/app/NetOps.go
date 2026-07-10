@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -16,9 +17,10 @@ type NetOps struct {
 }
 
 type netOpsModel struct {
-	lastCounters map[string]netops.BandwidthCounter
-	lastCapture  time.Time
-	lastIfaces   []InterfaceInfo
+	lastCounters  map[string]netops.BandwidthCounter
+	lastCapture   time.Time
+	lastIfaces    []InterfaceInfo
+	recentChanges []NetworkChange
 }
 
 // BandwidthCounter captures a snapshot of interface byte counters.
@@ -209,7 +211,11 @@ func (n *NetOps) GetInterfaces() []InterfaceInfo {
 	return ifaces
 }
 
-// collectInterfaces gathers interface data with bandwidth rate calculation.
+// maxRecentChanges is the ring-buffer capacity for network state changes.
+const maxRecentChanges = 20
+
+// collectInterfaces gathers interface data with bandwidth rate calculation
+// and diffs against the previous snapshot to detect state changes.
 func (n *NetOps) collectInterfaces() ([]InterfaceInfo, error) {
 	elapsed := time.Since(n.model.lastCapture)
 
@@ -242,6 +248,114 @@ func (n *NetOps) collectInterfaces() ([]InterfaceInfo, error) {
 		})
 	}
 
+	// Diff against previous snapshot to detect state changes.
+	if prev := n.model.lastIfaces; len(prev) > 0 {
+		n.diffInterfaces(prev, out)
+	}
+
 	n.model.lastIfaces = out
 	return out, nil
+}
+
+// diffInterfaces compares two interface snapshots and appends changes to the ring buffer.
+func (n *NetOps) diffInterfaces(prev, curr []InterfaceInfo) {
+	prevByName := make(map[string]InterfaceInfo, len(prev))
+	for _, iface := range prev {
+		prevByName[iface.Name] = iface
+	}
+
+	currByName := make(map[string]InterfaceInfo, len(curr))
+	for _, iface := range curr {
+		currByName[iface.Name] = iface
+	}
+
+	now := time.Now().Format(time.RFC3339)
+
+	// Check for changed or disappeared interfaces.
+	for name, old := range prevByName {
+		cur, exists := currByName[name]
+		if !exists {
+			n.appendChange(NetworkChange{
+				Type:      ChangeDisappeared,
+				Interface: name,
+				Detail:    "Interface removed",
+				Timestamp: now,
+			})
+			continue
+		}
+
+		// Up/down transition.
+		if old.IsUp != cur.IsUp {
+			ct := ChangeDown
+			if cur.IsUp {
+				ct = ChangeUp
+			}
+			n.appendChange(NetworkChange{
+				Type:      ct,
+				Interface: name,
+				Detail:    fmt.Sprintf("State changed to %s", map[bool]string{true: "up", false: "down"}[cur.IsUp]),
+				Timestamp: now,
+			})
+		}
+
+		// IP address changes.
+		oldIPs := make(map[string]bool, len(old.IPs))
+		for _, ip := range old.IPs {
+			oldIPs[ip] = true
+		}
+		curIPs := make(map[string]bool, len(cur.IPs))
+		for _, ip := range cur.IPs {
+			curIPs[ip] = true
+		}
+		for _, ip := range cur.IPs {
+			if !oldIPs[ip] {
+				n.appendChange(NetworkChange{
+					Type:      ChangeIPAdded,
+					Interface: name,
+					Detail:    fmt.Sprintf("New IP: %s", ip),
+					Timestamp: now,
+				})
+			}
+		}
+		for _, ip := range old.IPs {
+			if !curIPs[ip] {
+				n.appendChange(NetworkChange{
+					Type:      ChangeIPRemoved,
+					Interface: name,
+					Detail:    fmt.Sprintf("Removed IP: %s", ip),
+					Timestamp: now,
+				})
+			}
+		}
+	}
+
+	// Check for newly appeared interfaces.
+	for name := range currByName {
+		if _, exists := prevByName[name]; !exists {
+			n.appendChange(NetworkChange{
+				Type:      ChangeAppeared,
+				Interface: name,
+				Detail:    "Interface appeared",
+				Timestamp: now,
+			})
+		}
+	}
+}
+
+// appendChange adds a change to the ring buffer, evicting the oldest when full.
+func (n *NetOps) appendChange(c NetworkChange) {
+	if len(n.model.recentChanges) >= maxRecentChanges {
+		n.model.recentChanges = n.model.recentChanges[1:]
+	}
+	n.model.recentChanges = append(n.model.recentChanges, c)
+}
+
+// GetRecentChanges returns the last N network state changes, most recent first.
+func (n *NetOps) GetRecentChanges() []NetworkChange {
+	changes := n.model.recentChanges
+	out := make([]NetworkChange, len(changes))
+	copy(out, changes)
+	// Reverse so most recent is first.
+	sort.Slice(out, func(i, j int) bool { return i > j })
+	return out
 }

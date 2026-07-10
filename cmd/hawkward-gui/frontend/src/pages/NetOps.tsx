@@ -21,6 +21,12 @@ import {
   ChevronRight,
   BookOpen,
   Map,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  PlusCircle,
+  MinusCircle,
+  CircleDot,
+  CircleOff,
 } from 'lucide-react'
 import {
   AreaChart,
@@ -38,6 +44,7 @@ import type {
   InterfaceInfo,
   TraceResult,
   PortResult,
+  NetworkChange,
 } from '@/types'
 import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 
@@ -294,6 +301,16 @@ export function NetOps() {
       return res || []
     },
     refetchInterval: (activeTab === 'interfaces' || activeTab === 'bandwidth') ? refreshInterval : false,
+  })
+
+  // Recent network state changes — polled alongside interfaces
+  const { data: recentChanges = [] } = useQuery<NetworkChange[]>({
+    queryKey: ['netops-recent-changes'],
+    queryFn: async () => {
+      const res = await call('NetOps.GetRecentChanges') as NetworkChange[]
+      return res || []
+    },
+    refetchInterval: activeTab === 'interfaces' ? refreshInterval : false,
   })
 
   const initialLoading = connectionsLoading && interfacesLoading
@@ -742,6 +759,64 @@ export function NetOps() {
                 ))}
               </div>
             )}
+
+            {/* Recent Network Changes */}
+            <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl">
+              <div className="flex items-center gap-4 mb-6">
+                <Network size={20} className="text-accent" />
+                <h3 className="text-lg font-bold text-text uppercase tracking-widest">Recent State Changes</h3>
+                {recentChanges.length > 0 && (
+                  <span className="ml-auto px-2.5 py-0.5 text-xs font-bold rounded-full bg-accent/15 text-accent border border-accent/30">
+                    {recentChanges.length}
+                  </span>
+                )}
+              </div>
+              {recentChanges.length === 0 ? (
+                <p className="text-sm font-medium text-text-faint">No interface changes detected yet. Changes appear after the first two polling cycles.</p>
+              ) : (
+                <div className="space-y-3">
+                  {recentChanges.map((change, idx) => {
+                    const iconMap: Record<string, React.ReactNode> = {
+                      up: <ArrowUpCircle size={16} className="text-success" />,
+                      down: <ArrowDownCircle size={16} className="text-danger" />,
+                      ip_added: <PlusCircle size={16} className="text-accent" />,
+                      ip_removed: <MinusCircle size={16} className="text-warning" />,
+                      appeared: <CircleDot size={16} className="text-success" />,
+                      disappeared: <CircleOff size={16} className="text-danger" />,
+                    }
+                    const labelMap: Record<string, string> = {
+                      up: 'UP',
+                      down: 'DOWN',
+                      ip_added: 'IP ADDED',
+                      ip_removed: 'IP REMOVED',
+                      appeared: 'APPEARED',
+                      disappeared: 'GONE',
+                    }
+                    const colorMap: Record<string, string> = {
+                      up: 'bg-success/15 text-success border-success/30',
+                      down: 'bg-danger/15 text-danger border-danger/30',
+                      ip_added: 'bg-accent/15 text-accent border-accent/30',
+                      ip_removed: 'bg-warning/15 text-warning border-warning/30',
+                      appeared: 'bg-success/15 text-success border-success/30',
+                      disappeared: 'bg-danger/15 text-danger border-danger/30',
+                    }
+                    return (
+                      <div key={idx} className="flex items-center gap-4 p-4 bg-panel-3 border border-border rounded-xl">
+                        {iconMap[change.type]}
+                        <span className={cn('px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest rounded-full border', colorMap[change.type] || 'bg-text-faint/20 text-text-faint border-border')}>
+                          {labelMap[change.type] || change.type}
+                        </span>
+                        <span className="text-sm font-bold text-text uppercase tracking-tight">{change.interface}</span>
+                        <span className="text-sm font-medium text-text-dim flex-1">{change.detail}</span>
+                        <span className="text-[11px] font-medium text-text-faint tabular-nums whitespace-nowrap">
+                          {new Date(change.timestamp).toLocaleTimeString()}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

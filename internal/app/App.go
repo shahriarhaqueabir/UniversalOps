@@ -10,6 +10,7 @@ import (
 
 	goruntime "runtime"
 
+	"github.com/shirou/gopsutil/v4/sensors"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -247,6 +248,10 @@ func (a *App) collectAndEmit() {
 		a.pipeline.PushMetric(common.MetricProcCnt, "count", float64(stats.ProcessCount))
 		a.pipeline.PushMetric(common.MetricNetRX, "bps", rxTotal)
 		a.pipeline.PushMetric(common.MetricNetTX, "bps", txTotal)
+
+		if temps, err := sensors.SensorsTemperatures(); err == nil && len(temps) > 0 {
+			a.pipeline.PushMetric(common.MetricCPUTemp, "°C", temps[0].Temperature)
+		}
 	}
 
 	// Snapshot active alert IDs before evaluation (for resolve detection)

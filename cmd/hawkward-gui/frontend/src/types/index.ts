@@ -186,6 +186,15 @@ export interface InterfaceInfo {
   tx_history: number[]
 }
 
+export type NetworkChangeType = 'up' | 'down' | 'ip_added' | 'ip_removed' | 'appeared' | 'disappeared'
+
+export interface NetworkChange {
+  type: NetworkChangeType
+  interface: string
+  detail: string
+  timestamp: string
+}
+
 // ── SecOps Types ──
 
 export interface FirewallRule {

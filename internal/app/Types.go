@@ -546,3 +546,23 @@ type SystemRecommendation struct {
 	Severity string `json:"severity"` // info, warning, critical
 	Message  string `json:"message"`
 }
+
+// NetworkChangeType enumerates the kinds of interface state changes.
+type NetworkChangeType string
+
+const (
+	ChangeUp          NetworkChangeType = "up"
+	ChangeDown        NetworkChangeType = "down"
+	ChangeIPAdded     NetworkChangeType = "ip_added"
+	ChangeIPRemoved   NetworkChangeType = "ip_removed"
+	ChangeAppeared    NetworkChangeType = "appeared"
+	ChangeDisappeared NetworkChangeType = "disappeared"
+)
+
+// NetworkChange records a single detected interface state change.
+type NetworkChange struct {
+	Type      NetworkChangeType `json:"type"` // up, down, ip_added, ip_removed, appeared, disappeared
+	Interface string            `json:"interface"`
+	Detail    string            `json:"detail"`    // e.g. new IP address
+	Timestamp string            `json:"timestamp"` // RFC3339
+}
