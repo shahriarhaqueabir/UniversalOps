@@ -42,6 +42,7 @@ export interface MemoryInfo {
   available_bytes: number
   used_bytes: number
   used_percent: number
+  cached_bytes: number
   total_gb: number
   used_gb: number
   swap_total: number
@@ -230,6 +231,7 @@ export interface DefenderStatus {
   nis_enabled: boolean
   quick_scan_age: number
   full_scan_age: number
+  threats_detected: number
 }
 
 export interface ScheduledTask {
@@ -250,7 +252,97 @@ export interface SecurityEvent {
   important: boolean
 }
 
+export interface SecurityScore {
+  score: number
+  grade: string
+  breakdown: Record<string, number>
+  recommendations: string[]
+}
+
+export interface FirewallProfile {
+  name: string
+  enabled: boolean
+}
+
+export interface FirewallStatus {
+  enabled: boolean
+  profiles: FirewallProfile[]
+}
+
+export interface RiskInfo {
+  category: string
+  severity: string
+  title: string
+  description: string
+  recommendation: string
+}
+
 // ── DevOps Types ──
+
+export interface ContainerInfo {
+  id: string
+  name: string
+  image: string
+  state: string
+  status: string
+  ports: string
+}
+
+export interface ContainerSummary {
+  running: number
+  stopped: number
+  failed: number
+  total: number
+  containers: ContainerInfo[]
+}
+
+export interface GitRepoInfo {
+  path: string
+  branch: string
+  modified_files: number
+  untracked_files: number
+  ahead: number
+  behind: number
+  clean: boolean
+}
+
+export interface GitSummary {
+  repositories: GitRepoInfo[]
+  total_repos: number
+}
+
+export interface LocalServer {
+  port: number
+  protocol: string
+  process: string
+  pid: number
+  framework: string
+  health: string
+}
+
+export interface EnvVarInfo {
+  name: string
+  value: string
+}
+
+export interface ToolVersion {
+  name: string
+  version: string
+}
+
+export interface EnvironmentInfo {
+  path_dirs: string[]
+  key_vars: EnvVarInfo[]
+  sdks: ToolVersion[]
+  package_managers: ToolVersion[]
+}
+
+export interface ToolInfo {
+  name: string
+  version: string
+  path: string
+  status: 'installed' | 'not-found' | 'error'
+}
 
 export interface CommandResult {
   command: string
@@ -287,6 +379,29 @@ export interface LogEntry {
   message: string
   line: string
   source: string
+}
+
+export interface LogSourceCount {
+  source: string
+  count: number
+}
+
+export interface TrendingError {
+  message: string
+  count: number
+  lastSeen: string
+}
+
+export interface LogStats {
+  totalToday: number
+  totalThisHour: number
+  totalLastMin: number
+  errorCount: number
+  warningCount: number
+  infoCount: number
+  debugCount: number
+  topSources: LogSourceCount[]
+  trendingErrors: TrendingError[]
 }
 
 // ── AIOps Types ──

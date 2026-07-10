@@ -23,6 +23,61 @@ type FirewallRule struct {
 	IsHighRisk bool
 }
 
+// FirewallProfile represents a single firewall profile (Domain/Private/Public).
+type FirewallProfile struct {
+	Name    string
+	Enabled bool
+}
+
+// GetFirewallProfiles retrieves firewall profile status (Domain, Private, Public).
+func GetFirewallProfiles() ([]FirewallProfile, error) {
+	if common.IsWindows() {
+		cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-NoProfile", "-Command",
+			"Get-NetFirewallProfile -ErrorAction SilentlyContinue | Select-Object Name,Enabled | ConvertTo-Json -As Array -Depth 1")
+		output, err := cmd.Output()
+		if err != nil {
+			return nil, fmt.Errorf("Get-NetFirewallProfile failed: %w", err)
+		}
+
+		cleaned := common.CleanJSON(string(output))
+		if cleaned == "" || cleaned == "null" {
+			return nil, fmt.Errorf("empty firewall profile output")
+		}
+
+		var raw []map[string]interface{}
+		if err := json.Unmarshal([]byte(cleaned), &raw); err != nil {
+			return nil, fmt.Errorf("parse firewall profile json: %w", err)
+		}
+
+		profiles := make([]FirewallProfile, 0, len(raw))
+		for _, item := range raw {
+			var p FirewallProfile
+			if name, ok := getJSONString(item, "Name"); ok {
+				p.Name = name
+			} else {
+				continue
+			}
+			if enabled, ok := getJSONString(item, "Enabled"); ok {
+				p.Enabled = strings.EqualFold(enabled, "True")
+			}
+			profiles = append(profiles, p)
+		}
+
+		return profiles, nil
+	}
+
+	// On Linux, return default profiles (iptables/nft doesn't have the same concept)
+	if common.IsLinux() {
+		return []FirewallProfile{
+			{Name: "Domain", Enabled: true},
+			{Name: "Private", Enabled: true},
+			{Name: "Public", Enabled: true},
+		}, nil
+	}
+
+	return nil, fmt.Errorf("firewall profile query not supported on this platform")
+}
+
 // GetFirewallRules retrieves firewall rules from the current platform.
 func GetFirewallRules() ([]FirewallRule, error) {
 	if common.IsWindows() {

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -55,6 +56,7 @@ func (s *SysOps) GetMemoryInfo() MemoryInfo {
 		AvailableBytes: stats.AvailableBytes,
 		UsedBytes:      stats.UsedBytes,
 		UsedPercent:    stats.UsedPercent,
+		CachedBytes:    stats.CachedBytes,
 		TotalGB:        float64(stats.TotalBytes) / (1024 * 1024 * 1024),
 		UsedGB:         float64(stats.UsedBytes) / (1024 * 1024 * 1024),
 		SwapTotal:      stats.SwapTotal,
@@ -148,4 +150,84 @@ func (s *SysOps) GetProcessTree() []ProcessInfo {
 		return procs[i].CPU > procs[j].CPU
 	})
 	return procs
+}
+
+// GetRecommendations returns heuristic system health recommendations.
+func (s *SysOps) GetRecommendations() []SystemRecommendation {
+	var recs []SystemRecommendation
+
+	// CPU check
+	cpu := s.GetCPUInfo()
+	if cpu.Percent > 90 {
+		recs = append(recs, SystemRecommendation{
+			Category: "cpu",
+			Severity: "critical",
+			Message:  fmt.Sprintf("CPU usage at %.0f%% — investigate high-CPU processes", cpu.Percent),
+		})
+	} else if cpu.Percent > 80 {
+		recs = append(recs, SystemRecommendation{
+			Category: "cpu",
+			Severity: "warning",
+			Message:  fmt.Sprintf("CPU usage elevated at %.0f%%", cpu.Percent),
+		})
+	}
+
+	// Memory check
+	mem := s.GetMemoryInfo()
+	if mem.UsedPercent > 90 {
+		recs = append(recs, SystemRecommendation{
+			Category: "memory",
+			Severity: "critical",
+			Message:  fmt.Sprintf("Memory usage at %.0f%% — consider closing applications or adding RAM", mem.UsedPercent),
+		})
+	} else if mem.UsedPercent > 85 {
+		recs = append(recs, SystemRecommendation{
+			Category: "memory",
+			Severity: "warning",
+			Message:  fmt.Sprintf("Memory usage elevated at %.0f%%", mem.UsedPercent),
+		})
+	}
+
+	// Disk check (per partition)
+	disk := s.GetDiskInfo()
+	for _, p := range disk.Partitions {
+		if p.UsedPercent > 95 {
+			recs = append(recs, SystemRecommendation{
+				Category: "disk",
+				Severity: "critical",
+				Message:  fmt.Sprintf("Disk %s at %.0f%% — critical space shortage", p.Mountpoint, p.UsedPercent),
+			})
+		} else if p.UsedPercent > 85 {
+			recs = append(recs, SystemRecommendation{
+				Category: "disk",
+				Severity: "warning",
+				Message:  fmt.Sprintf("Disk %s at %.0f%% — running low on space", p.Mountpoint, p.UsedPercent),
+			})
+		}
+	}
+
+	// Uptime check
+	sysInfo := s.GetSystemInfo()
+	if sysInfo.Uptime != "" {
+		// Parse uptime string — format is "3d 5h 12m"
+		days := 0
+		fmt.Sscanf(sysInfo.Uptime, "%dd", &days)
+		if days > 7 {
+			recs = append(recs, SystemRecommendation{
+				Category: "uptime",
+				Severity: "info",
+				Message:  fmt.Sprintf("System has been up for %s — consider rebooting for updates", sysInfo.Uptime),
+			})
+		}
+	}
+
+	if len(recs) == 0 {
+		recs = append(recs, SystemRecommendation{
+			Category: "general",
+			Severity: "info",
+			Message:  "System is healthy — no issues detected",
+		})
+	}
+
+	return recs
 }

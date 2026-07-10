@@ -3,6 +3,7 @@ package app
 import (
 	"os"
 	"strings"
+	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 
@@ -92,4 +93,57 @@ func (l *Logs) SaveLogsToFile(path string, format string) string {
 		return "Failed to save logs: " + err.Error()
 	}
 	return "Logs saved to " + path
+}
+
+// GetLogStats returns aggregated log statistics for the Overview tab.
+func (l *Logs) GetLogStats() LogStats {
+	storage := common.GetStorage()
+	if storage == nil {
+		return LogStats{TopSources: []LogSourceCount{}, TrendingErrors: []TrendingError{}}
+	}
+
+	stats := LogStats{}
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	hourStart := now.Add(-time.Hour)
+	minStart := now.Add(-time.Minute)
+
+	// Time-window counts
+	stats.TotalToday = storage.CountLogsAfter(todayStart)
+	stats.TotalThisHour = storage.CountLogsAfter(hourStart)
+	stats.TotalLastMin = storage.CountLogsAfter(minStart)
+
+	// Level counts
+	stats.ErrorCount = storage.CountLogsByLevel("ERROR")
+	stats.WarningCount = storage.CountLogsByLevel("WARN")
+	stats.InfoCount = storage.CountLogsByLevel("INFO")
+	stats.DebugCount = storage.CountLogsByLevel("DEBUG")
+
+	// Top 5 sources
+	sources, err := storage.TopLogSources(5)
+	if err == nil {
+		stats.TopSources = make([]LogSourceCount, len(sources))
+		for i, s := range sources {
+			stats.TopSources[i] = LogSourceCount{Source: s.Source, Count: s.Count}
+		}
+	} else {
+		stats.TopSources = []LogSourceCount{}
+	}
+
+	// Top 5 trending errors
+	errs, err := storage.TrendingLogErrors(5)
+	if err == nil {
+		stats.TrendingErrors = make([]TrendingError, len(errs))
+		for i, e := range errs {
+			stats.TrendingErrors[i] = TrendingError{
+				Message:  e.Message,
+				Count:    e.Count,
+				LastSeen: e.LastSeen.Format("2006/01/02 15:04:05"),
+			}
+		}
+	} else {
+		stats.TrendingErrors = []TrendingError{}
+	}
+
+	return stats
 }

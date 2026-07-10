@@ -29,6 +29,19 @@ func (p *PipelineAPI) GetMetricHistory(name string, n int) []float64 {
 	return values
 }
 
+// GetMetricHistoryWithTimestamps returns the last n values with timestamps for a named metric.
+func (p *PipelineAPI) GetMetricHistoryWithTimestamps(name string, n int) []common.DataPoint {
+	ts := p.app.pipeline.GetTimeSeries(name)
+	if ts == nil {
+		return nil
+	}
+	points := ts.DataPoints()
+	if n > 0 && len(points) > n {
+		points = points[len(points)-n:]
+	}
+	return points
+}
+
 // GetForecast returns predicted values for a named metric.
 func (p *PipelineAPI) GetForecast(name string, steps int) []float64 {
 	return p.app.pipeline.GetForecast(name, steps)

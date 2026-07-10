@@ -249,8 +249,43 @@ func (a *App) collectAndEmit() {
 		a.pipeline.PushMetric(common.MetricNetTX, "bps", txTotal)
 	}
 
+	// Snapshot active alert IDs before evaluation (for resolve detection)
+	prevActive := make(map[string]bool)
+	for _, al := range a.alerts.ActiveAlerts() {
+		prevActive[al.ID] = true
+	}
+
 	// Evaluate alerts
 	newAlerts := a.alerts.Evaluate()
+
+	// Persist fired alerts to SQLite
+	if store := common.GetStorage(); store != nil {
+		for _, alert := range newAlerts {
+			store.InsertAlert(common.AlertRecord{
+				ID:        alert.ID,
+				Timestamp: alert.Timestamp,
+				Level:     alert.Level.String(),
+				Metric:    alert.Metric,
+				Message:   alert.Message,
+				Value:     alert.Value,
+				Threshold: alert.Threshold,
+			})
+		}
+
+		// Detect and persist resolved alerts
+		for id := range prevActive {
+			found := false
+			for _, al := range a.alerts.ActiveAlerts() {
+				if al.ID == id {
+					found = true
+					break
+				}
+			}
+			if !found {
+				_ = store.UpdateAlertResolved(id)
+			}
+		}
+	}
 
 	// Get current values for the dashboard event
 	cpuMF := a.pipeline.GetMetricWithForecast(common.MetricCPU)

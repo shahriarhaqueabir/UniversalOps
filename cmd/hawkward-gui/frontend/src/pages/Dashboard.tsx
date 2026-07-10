@@ -21,6 +21,7 @@ import {
   AlertCircle,
   Loader2,
   ScrollText,
+  Clock,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import {
@@ -34,7 +35,9 @@ import {
 } from 'recharts'
 import { useBackend } from '@/hooks/useBackend'
 import { useEvents } from '@/hooks/useEvents'
+import { useSettingsStore } from '@/stores/useSettingsStore'
 import { cn } from '@/lib/utils'
+import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 import type { DashboardData, TimeSeriesPoint } from '@/types'
 import type { Page } from '@/App'
 
@@ -52,6 +55,16 @@ interface BriefingSection {
   title: string
   content: string
   level: 'info' | 'warning' | 'critical'
+}
+
+interface TimelineEvent {
+  id: string
+  timestamp: string
+  category: string
+  level: string
+  title: string
+  detail: string
+  module: string
 }
 
 /* ───────────────────────────────────────────
@@ -102,7 +115,7 @@ function AnalystBriefing({ title, objective, redFlags }: { title: string, object
   )
 }
 
-function HeroSection({ stats }: { stats: DashboardData }) {
+function HeroSection({ stats, alertBreakdown }: { stats: DashboardData, alertBreakdown?: { critical: number, warning: number, info: number } }) {
   const avgHealth = clamp(((stats.cpu?.value ?? 0) + (stats.memory?.value ?? 0) + (stats.disk?.value ?? 0)) / 3)
   const r = 44
   const circumference = 2 * Math.PI * r
@@ -153,8 +166,31 @@ function HeroSection({ stats }: { stats: DashboardData }) {
           <div className="flex items-center gap-4">
             <span className="px-3 py-1 rounded-full bg-[var(--color-success)]/10 border border-[var(--color-success)]/30 text-xs font-semibold text-[var(--color-success)] uppercase tracking-wider">System Nominal</span>
             {stats.alerts > 0 && (
-              <div className="px-4 py-1.5 rounded-full bg-warning/10 border border-warning/30 text-xs font-bold text-warning uppercase tracking-widest flex items-center gap-2">
-                <AlertTriangle size={12} /> {stats.alerts} Active Alerts
+              <div className="flex items-center gap-2">
+                {alertBreakdown && (
+                  <>
+                    {alertBreakdown.critical > 0 && (
+                      <div className="px-3 py-1.5 rounded-full bg-danger/10 border border-danger/30 text-xs font-bold text-danger uppercase tracking-wider flex items-center gap-1.5">
+                        <AlertTriangle size={11} /> {alertBreakdown.critical} Critical
+                      </div>
+                    )}
+                    {alertBreakdown.warning > 0 && (
+                      <div className="px-3 py-1.5 rounded-full bg-warning/10 border border-warning/30 text-xs font-bold text-warning uppercase tracking-wider flex items-center gap-1.5">
+                        <AlertCircle size={11} /> {alertBreakdown.warning} Warning
+                      </div>
+                    )}
+                    {alertBreakdown.info > 0 && (
+                      <div className="px-3 py-1.5 rounded-full bg-accent/10 border border-accent/30 text-xs font-bold text-accent uppercase tracking-wider flex items-center gap-1.5">
+                        <Info size={11} /> {alertBreakdown.info} Info
+                      </div>
+                    )}
+                  </>
+                )}
+                {!alertBreakdown && (
+                  <div className="px-4 py-1.5 rounded-full bg-warning/10 border border-warning/30 text-xs font-bold text-warning uppercase tracking-widest flex items-center gap-2">
+                    <AlertTriangle size={12} /> {stats.alerts} Active Alerts
+                  </div>
+                )}
               </div>
             )}
             <span className="text-2xl font-bold text-[var(--color-text)]">System Health Score</span>
@@ -241,12 +277,22 @@ function diagColor(status: string) {
   }
 }
 
-function computeRedFlags(stats: DashboardData): string[] {
+function computeRedFlags(stats: DashboardData, topProcs?: { cpuProcs: Array<{ name: string, cpu: number }>, memProcs: Array<{ name: string, mem_pct: number }> }): string[] {
   const flags: string[] = []
   if (!stats) return ['No system data available for analysis']
-  if (stats.cpu?.value > 90) flags.push(`CPU usage at ${Math.round(stats.cpu.value)}% — critically high for sustained periods`)
+  if (stats.cpu?.value > 90) {
+    const top = topProcs?.cpuProcs?.[0]
+    flags.push(top
+      ? `CPU at ${Math.round(stats.cpu.value)}% — ${top.name} (${Math.round(top.cpu)}%)`
+      : `CPU usage at ${Math.round(stats.cpu.value)}% — critically high for sustained periods`)
+  }
   else if (stats.cpu?.trend === 'rising' && stats.cpu?.value > 70) flags.push(`CPU trend rising at ${Math.round(stats.cpu.value)}% — monitor for potential bottlenecks`)
-  if (stats.memory?.value > 92) flags.push(`Memory at ${Math.round(stats.memory.value)}% — swap pressure likely`)
+  if (stats.memory?.value > 92) {
+    const top = topProcs?.memProcs?.[0]
+    flags.push(top
+      ? `Memory at ${Math.round(stats.memory.value)}% — ${top.name} (${Math.round(top.mem_pct)}%)`
+      : `Memory at ${Math.round(stats.memory.value)}% — swap pressure likely`)
+  }
   else if (stats.memory?.trend === 'rising' && stats.memory?.value > 80) flags.push(`Memory usage climbing at ${Math.round(stats.memory.value)}% — possible leak`)
   if (stats.disk?.value > 95) flags.push(`Disk at ${Math.round(stats.disk.value)}% — critical, immediate cleanup needed`)
   else if (stats.disk?.value > 85) flags.push(`Disk at ${Math.round(stats.disk.value)}% — low headroom affects performance`)
@@ -257,9 +303,21 @@ function computeRedFlags(stats: DashboardData): string[] {
 
 export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void }) {
   const { call } = useBackend()
+  const { refreshInterval } = useSettingsStore()
   const [data, setData] = useState<DashboardData | null>(null)
   const [cpuHistory, setCpuHistory] = useState<TimeSeriesPoint[]>([])
   const alertCount = useRef(0)
+
+  // Alert breakdown state
+  const [alertBreakdown, setAlertBreakdown] = useState<{ critical: number, warning: number, info: number }>({ critical: 0, warning: 0, info: 0 })
+
+  // Timeline events state
+  const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([])
+
+  // Top processes state
+  const [topProcs, setTopProcs] = useState<{ cpuProcs: Array<{ name: string, cpu: number }>, memProcs: Array<{ name: string, mem_pct: number }> }>({ cpuProcs: [], memProcs: [] })
+
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   // Quick Diag state
   const [diagOpen, setDiagOpen] = useState(false)
@@ -277,9 +335,10 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
     queryFn: async () => {
       const res = await call('Dashboard.GetDashboardData') as DashboardData
       setData(res)
+      setLastUpdated(new Date())
       return res
     },
-    staleTime: 10000,
+    staleTime: refreshInterval,
     refetchOnWindowFocus: false,
   })
 
@@ -291,6 +350,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
       return
     }
     setData(d)
+    setLastUpdated(new Date())
     const t = format(new Date(), 'HH:mm:ss')
     setCpuHistory(prev => [...prev.slice(-59), { time: t, value: d.cpu.value }])
   }, []))
@@ -299,6 +359,51 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
     alertCount.current++
     // handler signature matches useEvents hook
   }, []))
+
+  // Fetch alert breakdown on load and when alerts change
+  useQuery({
+    queryKey: ['alertBreakdown'],
+    queryFn: async () => {
+      const res = await call('AlertAPI.GetActiveAlerts') as Array<{ level: string }>
+      const breakdown = { critical: 0, warning: 0, info: 0 }
+      for (const a of res ?? []) {
+        if (a.level === 'CRITICAL') breakdown.critical++
+        else if (a.level === 'WARNING') breakdown.warning++
+        else if (a.level === 'INFO') breakdown.info++
+      }
+      setAlertBreakdown(breakdown)
+      return breakdown
+    },
+    staleTime: refreshInterval,
+    refetchOnWindowFocus: false,
+  })
+
+  // Fetch timeline events
+  useQuery({
+    queryKey: ['timelineEvents'],
+    queryFn: async () => {
+      const res = await call('Timeline.GetTimelineEvents', '', '', 20, 0) as TimelineEvent[]
+      setTimelineEvents(res ?? [])
+      return res
+    },
+    staleTime: refreshInterval,
+    refetchOnWindowFocus: false,
+  })
+
+  // Fetch top processes for red-flag enrichment
+  useQuery({
+    queryKey: ['topProcs'],
+    queryFn: async () => {
+      const res = await call('SysOps.GetTopProcesses', 5) as Array<{ name: string, cpu: number, mem_pct: number }>
+      const procs = res ?? []
+      const cpuProcs = [...procs].sort((a, b) => b.cpu - a.cpu).map(p => ({ name: p.name, cpu: p.cpu }))
+      const memProcs = [...procs].sort((a, b) => b.mem_pct - a.mem_pct).map(p => ({ name: p.name, mem_pct: p.mem_pct }))
+      setTopProcs({ cpuProcs, memProcs })
+      return { cpuProcs, memProcs }
+    },
+    staleTime: refreshInterval,
+    refetchOnWindowFocus: false,
+  })
 
   const runQuickDiag = async () => {
     setDiagOpen(true)
@@ -352,6 +457,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
             <LayoutDashboard size={32} className="text-[var(--color-accent)]" /> OPERATIONAL INTELLIGENCE
           </h1>
           <p className="text-sm text-[var(--color-text-dim)] mt-1">Strategic overview of system-wide heuristics and critical subsystems.</p>
+          <DataFreshnessIndicator lastUpdated={lastUpdated} className="mt-2" />
         </div>
         <div className="flex gap-3">
           <button onClick={runQuickDiag} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)] text-[var(--color-text)] text-sm font-semibold hover:bg-[var(--color-panel-3)] transition-all active:scale-95">
@@ -363,7 +469,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
         </div>
       </div>
 
-      <HeroSection stats={data} />
+      <HeroSection stats={data} alertBreakdown={alertBreakdown} />
 
       {/* Structural Categories */}
       <div className="space-y-6">
@@ -409,7 +515,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
         <AnalystBriefing
           title="Compute Logic Analysis"
           objective="Monitor the relationship between CPU Spikes and RAM occupancy to identify potential memory leaks or runaway background services."
-          redFlags={computeRedFlags(data)}
+          redFlags={computeRedFlags(data, topProcs)}
         />
 
         <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6 shadow-lg flex flex-col">
@@ -437,6 +543,50 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
             <Info size={14} /> Statistical Trend: {data.cpu.trend.toUpperCase()}
           </p>
         </div>
+      </div>
+
+      {/* Recent Events Timeline */}
+      <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6 shadow-lg">
+        <h3 className="text-base font-bold text-[var(--color-text)] uppercase tracking-wider mb-4 flex items-center gap-2">
+          <Clock size={18} className="text-[var(--color-accent)]" /> Recent Events
+        </h3>
+        {timelineEvents.length === 0 ? (
+          <p className="text-sm text-[var(--color-text-faint)] italic py-6 text-center">No recent events recorded.</p>
+        ) : (
+          <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+            {timelineEvents.map((evt) => (
+              <div key={evt.id} className="flex items-start gap-3 p-3 rounded-lg bg-[var(--color-panel-2)] border border-[var(--color-border)]/50">
+                <div className="shrink-0 mt-0.5">
+                  {evt.level === 'critical' ? <AlertTriangle size={14} className="text-[var(--color-danger)]" /> :
+                    evt.level === 'warning' ? <AlertCircle size={14} className="text-[var(--color-warning)]" /> :
+                      <Info size={14} className="text-[var(--color-accent)]" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[var(--color-panel-3)] text-[var(--color-text-faint)] border border-[var(--color-border)]/50">
+                      {evt.category}
+                    </span>
+                    {evt.level && (
+                      <span className={cn(
+                        'px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
+                        evt.level === 'critical' ? 'bg-[var(--color-danger)]/10 text-[var(--color-danger)]' :
+                          evt.level === 'warning' ? 'bg-[var(--color-warning)]/10 text-[var(--color-warning)]' :
+                            'bg-[var(--color-accent)]/10 text-[var(--color-accent)]'
+                      )}>
+                        {evt.level}
+                      </span>
+                    )}
+                    <span className="text-[10px] text-[var(--color-text-faint)] tabular-nums ml-auto">
+                      {evt.timestamp ? format(new Date(evt.timestamp), 'HH:mm:ss') : ''}
+                    </span>
+                  </div>
+                  <p className="text-xs font-semibold text-[var(--color-text)] leading-snug">{evt.title}</p>
+                  {evt.detail && <p className="text-[11px] text-[var(--color-text-dim)] leading-relaxed mt-0.5 truncate">{evt.detail}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Layer Launchpad */}

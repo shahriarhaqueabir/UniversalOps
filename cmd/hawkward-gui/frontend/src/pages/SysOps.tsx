@@ -10,12 +10,19 @@ import {
   Trash2,
   Disc,
   Box,
+  Clock,
+  Timer,
+  HardDrive,
+  Play,
+  PauseCircle,
+  AlertTriangle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
 import type { CPUInfo, MemoryInfo, ProcessInfo, SystemInfo, DiskInfo } from '@/types'
+import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 
 // ── Types ──
 
@@ -113,7 +120,7 @@ export function SysOps() {
   const [search, setSearch] = useState('')
   const [killTarget, setKillTarget] = useState<{ pid: number, name: string } | null>(null)
 
-  const { data: cpuInfo } = useQuery<CPUInfo>({
+  const { data: cpuInfo, dataUpdatedAt: cpuUpdatedAt } = useQuery<CPUInfo>({
     queryKey: ['sysops-cpu'],
     queryFn: async () => { const r = await call('SysOps.GetCPUInfo'); return r as CPUInfo },
     refetchInterval: refreshInterval,
@@ -140,6 +147,12 @@ export function SysOps() {
   const { data: processes = [] } = useQuery<ProcessInfo[]>({
     queryKey: ['sysops-processes'],
     queryFn: async () => { const r = await call('SysOps.ListAllProcesses', 100); return (r as ProcessInfo[]) || [] },
+    refetchInterval: refreshInterval,
+  })
+
+  const { data: topProcesses = [] } = useQuery<ProcessInfo[]>({
+    queryKey: ['sysops-top-processes'],
+    queryFn: async () => { const r = await call('SysOps.GetTopProcesses', 20); return (r as ProcessInfo[]) || [] },
     refetchInterval: refreshInterval,
   })
 
@@ -179,6 +192,7 @@ export function SysOps() {
             <Cpu size={32} className="text-accent" /> SYSTEM OPERATIONS
           </h1>
           <p className="text-text-dim text-lg mt-2">Architecture monitoring, runtime thread audit, and resource inventory.</p>
+          <DataFreshnessIndicator lastUpdated={cpuUpdatedAt ? new Date(cpuUpdatedAt) : null} className="mt-1" />
         </div>
         <div className="flex gap-1 bg-panel border border-border rounded-2xl p-1.5 shadow-inner">
           {tabs.map((tab) => (
@@ -202,88 +216,209 @@ export function SysOps() {
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            <div className="lg:col-span-1 space-y-8">
-              <SectionBriefing
-                title="Compute Audit"
-                steps={[
-                  "Identify CPU spikes (>80%) that correlate with specific tasks.",
-                  "Verify Load Average stability across 1/5/15 minute windows.",
-                  "Check RAM Occupancy for evidence of memory exhaustion.",
-                  "Audit swap partition if physical RAM is > 90%."
-                ]}
-              />
-            </div>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+              <div className="lg:col-span-1 space-y-8">
+                <SectionBriefing
+                  title="Compute Audit"
+                  steps={[
+                    "Identify CPU spikes (>80%) that correlate with specific tasks.",
+                    "Verify Load Average stability across 1/5/15 minute windows.",
+                    "Check RAM Occupancy for evidence of memory exhaustion.",
+                    "Audit swap partition if physical RAM is > 90%."
+                  ]}
+                />
+              </div>
 
-            <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* CPU Card */}
-              <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex flex-col">
-                    <h3 className="text-xl font-bold text-text uppercase tracking-widest flex items-center gap-3"><Cpu size={24} className="text-accent" /> Processor Health</h3>
-                    <p className="text-sm font-bold text-text-faint mt-1 uppercase tracking-tighter">
-                      {cpuInfo.physical_cores} Physical • {cpuInfo.logical_cores} Logical Cores
-                    </p>
+              <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* CPU Card */}
+                <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex flex-col">
+                      <h3 className="text-xl font-bold text-text uppercase tracking-widest flex items-center gap-3"><Cpu size={24} className="text-accent" /> Processor Health</h3>
+                      <p className="text-sm font-bold text-text-faint mt-1 uppercase tracking-tighter">
+                        {cpuInfo.physical_cores} Physical • {cpuInfo.logical_cores} Logical Cores
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-2xl font-bold text-text">{cpuInfo.percent.toFixed(1)}%</span>
+                      <span className={cn(
+                        "text-[10px] font-bold px-2 py-0.5 rounded border mt-1 uppercase tracking-widest",
+                        (cpuInfo.load_avg_1 / cpuInfo.logical_cores) > 0.8 ? "bg-danger/20 text-danger border-danger/30" : "bg-success/20 text-success border-success/30"
+                      )}>
+                        {((cpuInfo.load_avg_1 / cpuInfo.logical_cores) * 100).toFixed(0)}% Saturation
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-col items-end">
-                    <span className="text-2xl font-bold text-text">{cpuInfo.percent.toFixed(1)}%</span>
-                    <span className={cn(
-                      "text-[10px] font-bold px-2 py-0.5 rounded border mt-1 uppercase tracking-widest",
-                      (cpuInfo.load_avg_1 / cpuInfo.logical_cores) > 0.8 ? "bg-danger/20 text-danger border-danger/30" : "bg-success/20 text-success border-success/30"
-                    )}>
-                      {((cpuInfo.load_avg_1 / cpuInfo.logical_cores) * 100).toFixed(0)}% Saturation
+                  <div className="grid grid-cols-2 gap-x-10 gap-y-4 max-h-[300px] overflow-y-auto pr-4 custom-scrollbar">
+                    {cpuInfo.per_cpu.map((p, i) => <Bar key={i} label={`Core ${i}`} value={p} />)}
+                  </div>
+                </div>
+
+                {/* Memory Card */}
+                <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+                  <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-xl font-bold text-text uppercase tracking-widest flex items-center gap-3"><MemoryStick size={24} className="text-success" /> Volatile RAM</h3>
+                    <span className="text-2xl font-bold text-[var(--color-success)] tabular-nums">{memInfo.used_percent.toFixed(1)}%</span>
+                  </div>
+                  <Bar label="Physical Allocation" value={memInfo.used_percent} color="#2dd4a7" showLabel={false} />
+                  <div className="mt-8 pt-8 border-t border-border grid grid-cols-3 gap-6">
+                    <div>
+                      <p className="text-xs font-bold text-text-faint uppercase mb-1">Available</p>
+                      <p className="text-sm font-bold text-[var(--color-text)]">{(memInfo.total_gb - memInfo.used_gb).toFixed(2)} GB</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-text-faint uppercase mb-1">Cached</p>
+                      <p className="text-sm font-bold text-[var(--color-text)]">{(memInfo.cached_bytes / (1024 * 1024 * 1024)).toFixed(2)} GB</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-text-faint uppercase mb-1">Swap Usage</p>
+                      <p className="text-sm font-bold text-[var(--color-warning)] tabular-nums">{memInfo.swap_percent.toFixed(1)}%</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Disk Card */}
+                <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+                  <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-xl font-bold text-text uppercase tracking-widest flex items-center gap-3"><Disc size={24} className="text-accent" /> Storage Analysis</h3>
+                    <span className="text-2xl font-bold text-[var(--color-accent)] tabular-nums">
+                      {diskInfo.partitions.length > 0
+                        ? (diskInfo.partitions.reduce((a, p) => a + p.used_bytes, 0) / Math.max(diskInfo.partitions.reduce((a, p) => a + p.total_bytes, 0), 1) * 100).toFixed(1)
+                        : 0}%
                     </span>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-x-10 gap-y-4 max-h-[300px] overflow-y-auto pr-4 custom-scrollbar">
-                  {cpuInfo.per_cpu.map((p, i) => <Bar key={i} label={`Core ${i}`} value={p} />)}
-                </div>
-              </div>
-
-              {/* Memory Card */}
-              <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
-                <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-xl font-bold text-text uppercase tracking-widest flex items-center gap-3"><MemoryStick size={24} className="text-success" /> Volatile RAM</h3>
-                  <span className="text-2xl font-bold text-[var(--color-success)] tabular-nums">{memInfo.used_percent.toFixed(1)}%</span>
-                </div>
-                <Bar label="Physical Allocation" value={memInfo.used_percent} color="#2dd4a7" showLabel={false} />
-                <div className="mt-8 pt-8 border-t border-border grid grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-xs font-bold text-text-faint uppercase mb-1">Available</p>
-                    <p className="text-sm font-bold text-[var(--color-text)]">{(memInfo.total_gb - memInfo.used_gb).toFixed(2)} GB</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-text-faint uppercase mb-1">Swap Usage</p>
-                    <p className="text-sm font-bold text-[var(--color-warning)] tabular-nums">{memInfo.swap_percent.toFixed(1)}%</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Disk Card */}
-              <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
-                <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-xl font-bold text-text uppercase tracking-widest flex items-center gap-3"><Disc size={24} className="text-accent" /> Storage Analysis</h3>
-                  <span className="text-2xl font-bold text-[var(--color-accent)] tabular-nums">
-                    {diskInfo.partitions.length > 0
-                      ? (diskInfo.partitions.reduce((a, p) => a + p.used_bytes, 0) / Math.max(diskInfo.partitions.reduce((a, p) => a + p.total_bytes, 0), 1) * 100).toFixed(1)
-                      : 0}%
-                  </span>
-                </div>
-                <div className="space-y-6">
-                  {diskInfo.partitions.map((p, i) => (
-                    <div key={i}>
-                      <Bar label={p.mountpoint.length > 20 ? p.mountpoint.slice(0, 20) + '…' : p.mountpoint} value={p.used_percent} />
-                      <div className="flex items-center justify-between text-sm mt-1">
-                        <span className="text-text-dim">
-                          {(p.total_bytes / 1e9).toFixed(1)} GB total · {(p.free_bytes / 1e9).toFixed(1)} GB free · {(p.used_bytes / 1e9).toFixed(1)} GB used
-                        </span>
-                        <span className="text-text-faint text-xs">{p.fs_type} · {p.device}</span>
+                  <div className="space-y-6">
+                    {diskInfo.partitions.map((p, i) => (
+                      <div key={i}>
+                        <Bar label={p.mountpoint.length > 20 ? p.mountpoint.slice(0, 20) + '…' : p.mountpoint} value={p.used_percent} />
+                        <div className="flex items-center justify-between text-sm mt-1">
+                          <span className="text-text-dim">
+                            {(p.total_bytes / 1e9).toFixed(1)} GB total · {(p.free_bytes / 1e9).toFixed(1)} GB free · {(p.used_bytes / 1e9).toFixed(1)} GB used
+                          </span>
+                          <span className="text-text-faint text-xs">{p.fs_type} · {p.device}</span>
+                        </div>
                       </div>
+                    ))}
+                    {diskInfo.partitions.length === 0 && (
+                      <p className="text-text-dim text-center py-4">No partitions detected.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Uptime Card */}
+                <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+                  <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-xl font-bold text-text uppercase tracking-widest flex items-center gap-3"><Clock size={24} className="text-success" /> System Uptime</h3>
+                  </div>
+                  <div className="flex flex-col items-center justify-center py-6">
+                    <p className="text-3xl font-bold text-text tabular-nums">{sysInfo.uptime}</p>
+                    <p className="text-sm font-bold text-text-faint mt-3 uppercase tracking-widest">Continuous Operation</p>
+                  </div>
+                  <div className="mt-6 pt-6 border-t border-border grid grid-cols-2 gap-6">
+                    <div>
+                      <p className="text-xs font-bold text-text-faint uppercase mb-1">Processes</p>
+                      <p className="text-sm font-bold text-[var(--color-text)] tabular-nums">{sysInfo.process_count}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-text-faint uppercase mb-1">Hostname</p>
+                      <p className="text-sm font-bold text-[var(--color-text)]">{sysInfo.hostname}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Process Count Cards */}
+            <div className="grid grid-cols-3 gap-6">
+              <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-2xl flex items-center gap-5">
+                <div className="w-12 h-12 rounded-xl bg-success/20 border border-success/30 flex items-center justify-center">
+                  <Play size={20} className="text-success" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-text tabular-nums">
+                    {processes.filter(p => {
+                      const s = p.status.toLowerCase()
+                      return s !== 'stopped' && s !== 'zombie'
+                    }).length}
+                  </p>
+                  <p className="text-xs font-bold text-text-faint uppercase tracking-widest">Running</p>
+                </div>
+              </div>
+              <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-2xl flex items-center gap-5">
+                <div className="w-12 h-12 rounded-xl bg-warning/20 border border-warning/30 flex items-center justify-center">
+                  <PauseCircle size={20} className="text-warning" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-text tabular-nums">
+                    {processes.filter(p => p.status.toLowerCase() === 'stopped').length}
+                  </p>
+                  <p className="text-xs font-bold text-text-faint uppercase tracking-widest">Stopped</p>
+                </div>
+              </div>
+              <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-2xl flex items-center gap-5">
+                <div className="w-12 h-12 rounded-xl bg-danger/20 border border-danger/30 flex items-center justify-center">
+                  <AlertTriangle size={20} className="text-danger" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-text tabular-nums">
+                    {processes.filter(p => p.status.toLowerCase() === 'zombie').length}
+                  </p>
+                  <p className="text-xs font-bold text-text-faint uppercase tracking-widest">Zombie</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Top Consumers */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Top CPU */}
+              <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+                <div className="flex items-center gap-3 mb-6">
+                  <Timer size={20} className="text-accent" />
+                  <h3 className="text-lg font-bold text-text uppercase tracking-widest">Top CPU</h3>
+                </div>
+                <div className="space-y-4">
+                  {[...topProcesses].sort((a, b) => b.cpu - a.cpu).slice(0, 5).map(p => (
+                    <div key={p.pid} className="flex items-center justify-between">
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-sm font-medium text-text truncate">{p.name}</span>
+                        <span className="text-xs font-bold text-text-faint">PID {p.pid}</span>
+                      </div>
+                      <span className="text-sm font-bold text-accent tabular-nums ml-4">{p.cpu.toFixed(1)}%</span>
                     </div>
                   ))}
-                  {diskInfo.partitions.length === 0 && (
-                    <p className="text-text-dim text-center py-4">No partitions detected.</p>
-                  )}
+                  {topProcesses.length === 0 && <p className="text-text-dim text-sm text-center py-4">No data</p>}
+                </div>
+              </div>
+
+              {/* Top RAM */}
+              <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+                <div className="flex items-center gap-3 mb-6">
+                  <MemoryStick size={20} className="text-success" />
+                  <h3 className="text-lg font-bold text-text uppercase tracking-widest">Top RAM</h3>
+                </div>
+                <div className="space-y-4">
+                  {[...topProcesses].sort((a, b) => b.mem_pct - a.mem_pct).slice(0, 5).map(p => (
+                    <div key={p.pid} className="flex items-center justify-between">
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-sm font-medium text-text truncate">{p.name}</span>
+                        <span className="text-xs font-bold text-text-faint">PID {p.pid}</span>
+                      </div>
+                      <span className="text-sm font-bold text-success tabular-nums ml-4">{p.mem_pct.toFixed(1)}%</span>
+                    </div>
+                  ))}
+                  {topProcesses.length === 0 && <p className="text-text-dim text-sm text-center py-4">No data</p>}
+                </div>
+              </div>
+
+              {/* Top Disk IO */}
+              <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+                <div className="flex items-center gap-3 mb-6">
+                  <HardDrive size={20} className="text-warning" />
+                  <h3 className="text-lg font-bold text-text uppercase tracking-widest">Top Disk IO</h3>
+                </div>
+                <div className="flex items-center justify-center py-12">
+                  <p className="text-sm font-bold text-text-faint uppercase tracking-widest">Coming Soon</p>
                 </div>
               </div>
             </div>

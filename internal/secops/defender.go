@@ -24,6 +24,7 @@ type DefenderStatus struct {
 	NISEnabled         bool
 	QuickScanAge       int
 	FullScanAge        int
+	ThreatsDetected    int
 }
 
 // GetDefenderStatus retrieves Windows Defender status via PowerShell.
@@ -43,7 +44,7 @@ func GetDefenderStatus() (*DefenderStatus, error) {
 
 	// Approach 1: Standard Get-MpComputerStatus
 	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-NoProfile", "-Command",
-		"$r=Get-MpComputerStatus -ErrorAction SilentlyContinue; if($r){$r|ConvertTo-Json -Depth 2}else{echo '{}'}")
+		"$r=Get-MpComputerStatus -ErrorAction SilentlyContinue; if($r){$r|ConvertTo-Json -Depth 2}else{echo '{}'}}")
 	output, err := cmd.Output()
 	if err != nil {
 		errs = append(errs, fmt.Errorf("Get-MpComputerStatus: %w", err))
@@ -52,6 +53,7 @@ func GetDefenderStatus() (*DefenderStatus, error) {
 		if parseErr != nil {
 			errs = append(errs, fmt.Errorf("Get-MpComputerStatus parse: %w", parseErr))
 		} else if status != nil && (status.AMServiceEnabled || status.AntispywareEnabled) {
+			status.ThreatsDetected = getDefenderThreatCount()
 			return status, nil
 		} else {
 			errs = append(errs, fmt.Errorf("Get-MpComputerStatus returned empty or inactive status"))
@@ -69,6 +71,7 @@ func GetDefenderStatus() (*DefenderStatus, error) {
 		if parseErr != nil {
 			errs = append(errs, fmt.Errorf("Get-MpPreference parse: %w", parseErr))
 		} else if status != nil {
+			status.ThreatsDetected = getDefenderThreatCount()
 			return status, nil
 		}
 	}
@@ -78,10 +81,24 @@ func GetDefenderStatus() (*DefenderStatus, error) {
 	if wmicErr != nil {
 		errs = append(errs, fmt.Errorf("WMIC: %w", wmicErr))
 	} else {
+		status.ThreatsDetected = getDefenderThreatCount()
 		return status, nil
 	}
 
 	return nil, fmt.Errorf("failed to query Windows Defender: all approaches failed: %v", errs)
+}
+
+// getDefenderThreatCount queries Get-MpThreatDetection to count recent threats.
+func getDefenderThreatCount() int {
+	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-NoProfile", "-Command",
+		"(Get-MpThreatDetection -ErrorAction SilentlyContinue | Measure-Object).Count")
+	output, err := cmd.Output()
+	if err != nil {
+		return 0
+	}
+	count := 0
+	fmt.Sscanf(strings.TrimSpace(string(output)), "%d", &count)
+	return count
 }
 
 // defenderWMICFallback queries Windows Defender via WMIC as a fallback

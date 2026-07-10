@@ -194,6 +194,7 @@ func convertTimelineEvent(e common.TimelineEvent) TimelineEvent {
 		Detail:    e.Detail,
 		Module:    e.Module,
 		Related:   related,
+		Metadata:  e.Metadata,
 	}
 }
 

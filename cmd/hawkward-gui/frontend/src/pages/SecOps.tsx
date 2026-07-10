@@ -17,15 +17,21 @@ import {
   History,
   Zap,
   FileText,
+  CheckCircle2,
 } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
+import { useSettingsStore } from '@/stores/useSettingsStore'
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
+import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 import type {
   FirewallRule,
   UserInfo,
   DefenderStatus,
   SecurityEvent,
   ListeningPort,
+  SecurityScore,
+  FirewallStatus,
+  RiskInfo,
 } from '@/types'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Wails bridge type
@@ -80,6 +86,7 @@ function SecurityStatusBadge({ status }: { status: string }) {
 // ── Firewall Tab ──
 
 function FirewallTab({ call }: { call: BackendCall }) {
+  const { refreshInterval } = useSettingsStore()
   const [search, setSearch] = useState('')
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState<{ index: number, name: string } | null>(null)
@@ -91,6 +98,16 @@ function FirewallTab({ call }: { call: BackendCall }) {
       const data = await call('SecOps.GetFirewallRules')
       return (data as FirewallRule[]) || []
     },
+    refetchInterval: refreshInterval,
+  })
+
+  const { data: fwStatus } = useQuery<FirewallStatus | null>({
+    queryKey: ['secops-firewall-status'],
+    queryFn: async () => {
+      const res = await call('SecOps.GetFirewallStatus')
+      return (res as FirewallStatus) || null
+    },
+    refetchInterval: refreshInterval,
   })
 
   const toggleRule = async (index: number) => {
@@ -119,6 +136,35 @@ function FirewallTab({ call }: { call: BackendCall }) {
         title="Perimeter Defense"
         content="The Host Firewall is your first line of defense. Rules marked 'Allow' from 'Any' IP are high-risk nodes. Always prefer 'Block' by default and only allow specific protocols on trusted interfaces."
       />
+
+      {fwStatus && (
+        <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+          <h3 className="text-xl font-bold text-text uppercase tracking-widest mb-6 flex items-center gap-4">
+            <Shield size={24} className="text-accent" /> Firewall Status
+          </h3>
+          <div className="flex items-center gap-8 mb-6">
+            <div className="flex items-center gap-4">
+              <div className={cn("w-4 h-4 rounded-full shadow-lg", fwStatus.enabled ? "bg-success" : "bg-danger")} />
+              <span className="text-2xl font-bold text-text">Global: {fwStatus.enabled ? 'ON' : 'OFF'}</span>
+            </div>
+          </div>
+          {fwStatus.profiles.length > 0 && (
+            <div className="flex items-center gap-4">
+              {fwStatus.profiles.map(p => (
+                <div key={p.name} className="flex items-center gap-2">
+                  <span className={cn("px-3 py-1 text-xs font-bold uppercase tracking-widest rounded-full border shadow-sm",
+                    p.enabled
+                      ? 'bg-success/20 text-success border-success/30'
+                      : 'bg-danger/20 text-danger border-danger/30'
+                  )}>
+                    {p.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center gap-6 bg-panel-2 border border-border p-6 rounded-2xl shadow-inner">
         <div className="relative group w-96">
@@ -209,12 +255,14 @@ function FirewallTab({ call }: { call: BackendCall }) {
 // ── Users Tab ──
 
 function UsersTab({ call }: { call: BackendCall }) {
+  const { refreshInterval } = useSettingsStore()
   const { data: users = [] } = useQuery<UserInfo[]>({
     queryKey: ['secops-users'],
     queryFn: async () => {
       const res = await call('SecOps.GetUsers')
       return (res as UserInfo[]) || []
     },
+    refetchInterval: refreshInterval,
   })
 
   return (
@@ -260,12 +308,14 @@ function UsersTab({ call }: { call: BackendCall }) {
 // ── Defender Tab ──
 
 function DefenderTab({ call }: { call: BackendCall }) {
+  const { refreshInterval } = useSettingsStore()
   const { data: status } = useQuery<DefenderStatus | null>({
     queryKey: ['secops-defender'],
     queryFn: async () => {
       const res = await call('SecOps.GetDefenderStatus')
       return (res as DefenderStatus) || null
     },
+    refetchInterval: refreshInterval,
   })
 
   if (!status) return null
@@ -275,6 +325,7 @@ function DefenderTab({ call }: { call: BackendCall }) {
     { label: 'Real-time Protection', active: status.real_time_protection, icon: <Activity size={24} /> },
     { label: 'Cloud-delivered Protection', active: status.cloud_protection, icon: <Zap size={24} /> },
     { label: 'Signature Baseline', active: status.up_to_date, icon: <ShieldCheck size={24} /> },
+    { label: 'Threats', active: status.threats_detected === 0, icon: <AlertTriangle size={24} />, count: status.threats_detected, countDangerous: status.threats_detected > 0 },
   ]
 
   return (
@@ -284,16 +335,22 @@ function DefenderTab({ call }: { call: BackendCall }) {
         content="Windows Defender provides multiple layers of protection. Ensure 'Real-time' and 'Cloud' protection are both active to detect modern zero-day threats through heuristic analysis."
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         {metrics.map(m => (
           <div key={m.label} className={cn("bg-panel border rounded-[var(--radius-lg)] p-8 shadow-xl transition-all border-l-[8px]", m.active ? "border-l-success border-border" : "border-l-danger border-danger/30")}>
             <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-6 border shadow-inner", m.active ? "bg-success/10 border-success/30 text-success" : "bg-danger/10 border-danger/30 text-danger")}>
               {m.icon}
             </div>
             <h4 className="text-lg font-bold text-text mb-2">{m.label}</h4>
-            <span className={cn("text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full", m.active ? "bg-success text-white" : "bg-danger text-white")}>
-              {m.active ? 'Operational' : 'Disabled'}
-            </span>
+            {'countDangerous' in m && m.countDangerous ? (
+              <span className="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-danger text-white">
+                {m.count} detected
+              </span>
+            ) : (
+              <span className={cn("text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full", m.active ? "bg-success text-white" : "bg-danger text-white")}>
+                {m.active ? 'Operational' : 'Disabled'}
+              </span>
+            )}
           </div>
         ))}
       </div>
@@ -324,12 +381,14 @@ function DefenderTab({ call }: { call: BackendCall }) {
 // ── Listening Tab ──
 
 function ListeningTab({ call }: { call: BackendCall }) {
+  const { refreshInterval } = useSettingsStore()
   const { data: ports = [], isLoading: loading, error: fetchError } = useQuery<ListeningPort[]>({
     queryKey: ['secops-listening'],
     queryFn: async () => {
       const res = await call('SecOps.GetListeningPorts')
       return (res as ListeningPort[]) || []
     },
+    refetchInterval: refreshInterval,
   })
 
   const error = fetchError ? 'Failed to retrieve listening ports.' : null
@@ -416,23 +475,64 @@ function ListeningTab({ call }: { call: BackendCall }) {
 // ── Events Tab ──
 
 function EventsTab({ call }: { call: BackendCall }) {
+  const { refreshInterval } = useSettingsStore()
+  const [activeFilter, setActiveFilter] = useState<string>('all')
   const { data: events = [] } = useQuery<SecurityEvent[]>({
     queryKey: ['secops-events'],
     queryFn: async () => {
       const res = await call('SecOps.GetSecurityEvents')
       return (res as SecurityEvent[]) || []
     },
+    refetchInterval: refreshInterval,
   })
+
+  const categories = [
+    { id: 'all', label: 'All', ids: null },
+    { id: 'failed-logins', label: 'Failed Logins', ids: [4625] },
+    { id: 'elevation', label: 'Elevation', ids: [4672, 4673] },
+    { id: 'policy', label: 'Policy Changes', ids: [1102, 4719] },
+    { id: 'account', label: 'Account Changes', ids: [4720, 4722, 4725, 4726] },
+    { id: 'usb', label: 'USB', ids: [6416, 6417, 4663] },
+  ]
+
+  const filtered = activeFilter === 'all'
+    ? events
+    : events.filter(e => {
+      const cat = categories.find(c => c.id === activeFilter)
+      return cat?.ids?.includes(e.id)
+    })
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex items-center gap-3 flex-wrap">
+        {categories.map(c => (
+          <button
+            key={c.id}
+            onClick={() => setActiveFilter(c.id)}
+            className={cn(
+              'px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider border transition-all',
+              activeFilter === c.id
+                ? 'bg-accent text-white border-accent shadow-lg'
+                : 'bg-panel border-border text-text-dim hover:text-text hover:bg-[var(--color-sidebar-hover)]'
+            )}
+          >
+            {c.label}
+            {c.ids && (
+              <span className="ml-2 text-xs tabular-nums">
+                {events.filter(e => c.ids.includes(e.id)).length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
       <div className="bg-panel border border-border rounded-[var(--radius-lg)] overflow-hidden shadow-2xl">
         <div className="max-h-[700px] overflow-y-auto">
-          {events.length === 0 ? (
+          {filtered.length === 0 ? (
             <EmptyState
               icon={<FileText size={28} />}
               title="No Security Events"
-              description="No security events have been recorded yet. Events will appear here as they occur."
+              description={activeFilter === 'all' ? "No security events have been recorded yet. Events will appear here as they occur." : "No events match the selected filter."}
             />
           ) : (
             <table className="w-full text-left border-collapse">
@@ -445,7 +545,7 @@ function EventsTab({ call }: { call: BackendCall }) {
                 </tr>
               </thead>
               <tbody>
-                {events.map((e, i) => (
+                {filtered.map((e, i) => (
                   <tr key={i} className={cn("border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all group", e.level === 'Error' ? "bg-danger/5" : "")}>
                     <td className="px-8 py-5 font-bold text-lg text-text-faint tabular-nums">{e.id}</td>
                     <td className="px-8 py-5">
@@ -466,11 +566,224 @@ function EventsTab({ call }: { call: BackendCall }) {
   )
 }
 
+// ── Security Score Card ──
+
+function securityGradeColor(grade: string) {
+  switch (grade) {
+    case 'A': return 'var(--color-success)'
+    case 'B': return '#3b82f6'
+    case 'C': return 'var(--color-warning)'
+    case 'D': return '#f97316'
+    default: return 'var(--color-danger)'
+  }
+}
+
+const maxBreakdownValues: Record<string, number> = {
+  Defender: 35,
+  Firewall: 20,
+  Users: 10,
+  Ports: 10,
+  Events: 10,
+}
+
+function SecurityScoreCard({ call }: { call: BackendCall }) {
+  const { refreshInterval } = useSettingsStore()
+  const { data, isLoading } = useQuery<SecurityScore>({
+    queryKey: ['secops-security-score'],
+    queryFn: async () => {
+      const res = await call('SecOps.GetSecurityScore')
+      return res as SecurityScore
+    },
+    refetchInterval: refreshInterval,
+  })
+
+  if (isLoading || !data) {
+    return (
+      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 flex items-center justify-center">
+        <div className="w-10 h-10 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-accent)]">
+          <Shield size={20} className="animate-pulse" />
+        </div>
+        <p className="ml-4 text-sm font-semibold text-[var(--color-text-dim)]">Computing security score…</p>
+      </div>
+    )
+  }
+
+  const color = securityGradeColor(data.grade)
+  const r = 48
+  const circumference = 2 * Math.PI * r
+  const dash = (data.score / 100) * circumference
+  const gap = circumference - dash
+
+  return (
+    <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 flex flex-col lg:flex-row items-center gap-8 shadow-2xl relative overflow-hidden group">
+      <div className="absolute top-0 right-0 w-48 h-48 rounded-bl-full pointer-events-none transition-all" style={{ backgroundColor: `${color}08` }} />
+
+      {/* ── SVG Score Donut ── */}
+      <div className="relative shrink-0">
+        <svg width={140} height={140} viewBox="0 0 120 120" className="tabular-nums">
+          <circle cx="60" cy="60" r={r} fill="none" stroke="var(--color-border)" strokeWidth="10" />
+          <circle
+            cx="60" cy="60" r={r}
+            fill="none"
+            stroke={color}
+            strokeWidth="10"
+            strokeLinecap="round"
+            strokeDasharray={`${dash} ${gap}`}
+            transform="rotate(-90 60 60)"
+            style={{ transition: 'stroke-dasharray 1s ease' }}
+          />
+          <text x="60" y="54" textAnchor="middle" fill="var(--color-text)" fontSize="28" fontWeight="900" dominantBaseline="middle">
+            {data.score}
+          </text>
+          <text x="60" y="78" textAnchor="middle" fill="var(--color-text-faint)" fontSize="11" fontWeight="bold" style={{ textTransform: 'uppercase' }} dominantBaseline="middle">
+            SECURITY
+          </text>
+        </svg>
+      </div>
+
+      <div className="flex-1 min-w-0 w-full">
+        <div className="flex items-center gap-4 mb-4">
+          <span className="text-2xl font-bold text-[var(--color-text)]">Security Score</span>
+          <span
+            className="px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-widest"
+            style={{ borderColor: `${color}50`, color, backgroundColor: `${color}15` }}
+          >
+            Grade {data.grade}
+          </span>
+        </div>
+
+        {/* Breakdown bars */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+          {Object.entries(data.breakdown).map(([category, value]) => {
+            const maxVal = maxBreakdownValues[category] || 20
+            const pct = Math.max(0, Math.min(100, (value / maxVal) * 100))
+            return (
+              <div key={category} className="flex flex-col gap-1">
+                <div className="flex justify-between text-xs">
+                  <span className="font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">{category}</span>
+                  <span className="font-bold tabular-nums text-[var(--color-text)]">{value}/{maxVal}</span>
+                </div>
+                <div className="h-1.5 bg-panel-3 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{ width: `${pct}%`, backgroundColor: pct >= 70 ? 'var(--color-success)' : pct >= 40 ? 'var(--color-warning)' : 'var(--color-danger)' }}
+                  />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Recommendations */}
+        {data.recommendations.length > 0 && (
+          <div className="flex flex-col gap-2">
+            {data.recommendations.map((rec, i) => (
+              <div key={i} className="flex items-start gap-3 text-sm">
+                <Lightbulb size={14} className="text-warning mt-0.5 shrink-0" />
+                <span className="text-[var(--color-text-dim)]">{rec}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Risk Assessment Panel ──
+
+function RiskAssessmentPanel({ call }: { call: BackendCall }) {
+  const { refreshInterval } = useSettingsStore()
+  const { data: risks = [], isLoading } = useQuery<RiskInfo[]>({
+    queryKey: ['secops-risks'],
+    queryFn: async () => {
+      const res = await call('SecOps.GetRisks')
+      return (res as RiskInfo[]) || []
+    },
+    refetchInterval: refreshInterval,
+  })
+
+  const severityColors: Record<string, string> = {
+    critical: 'bg-danger/20 text-danger border-danger/30',
+    high: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+    medium: 'bg-warning/20 text-warning border-warning/30',
+    low: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  }
+
+  const severityDots: Record<string, string> = {
+    critical: 'bg-danger',
+    high: 'bg-orange-400',
+    medium: 'bg-warning',
+    low: 'bg-blue-400',
+  }
+
+  return (
+    <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+      <h3 className="text-xl font-bold text-text uppercase tracking-widest mb-6 flex items-center gap-4">
+        <ShieldAlert size={24} className="text-danger" /> Risk Assessment
+      </h3>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-10">
+          <div className="w-10 h-10 rounded-xl bg-panel-2 border border-border flex items-center justify-center text-accent">
+            <Shield size={20} className="animate-pulse" />
+          </div>
+          <p className="ml-4 text-sm font-semibold text-text-dim">Analyzing risks…</p>
+        </div>
+      ) : risks.length === 0 ? (
+        <div className="flex items-center gap-4 py-6">
+          <div className="w-14 h-14 rounded-2xl bg-success/10 border border-success/30 flex items-center justify-center">
+            <CheckCircle2 size={32} className="text-success" />
+          </div>
+          <div>
+            <h4 className="text-lg font-bold text-success">No Risks Detected</h4>
+            <p className="text-text-dim">Your system appears to be in a healthy security posture.</p>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {risks.map((risk, i) => (
+            <div key={i} className="bg-panel-2 border border-border rounded-xl p-6 flex gap-6">
+              <div className="flex flex-col items-center gap-2 shrink-0">
+                <div className={cn("w-3 h-3 rounded-full shadow-lg", severityDots[risk.severity] || 'bg-text-faint')} />
+                <span className={cn('px-2 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full border', severityColors[risk.severity] || 'bg-text-faint/20 text-text-faint border-border')}>
+                  {risk.severity}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-1">
+                  <span className="px-2 py-0.5 rounded-md bg-panel-3 border border-border text-[10px] font-bold uppercase tracking-widest text-text-dim">{risk.category}</span>
+                  <h4 className="text-lg font-bold text-text">{risk.title}</h4>
+                </div>
+                <p className="text-sm text-text-dim mb-2">{risk.description}</p>
+                <div className="flex items-start gap-2">
+                  <Lightbulb size={14} className="text-warning mt-0.5 shrink-0" />
+                  <span className="text-sm text-text-faint">{risk.recommendation}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main Page ──
 
 export function SecOps() {
   const { call } = useBackend()
   const [activeTab, setActiveTab] = useState<SecOpsTab>('firewall')
+
+  const { dataUpdatedAt: secUpdatedAt } = useQuery({
+    queryKey: ['secops-health'],
+    queryFn: async () => {
+      const res = await call('SecOps.GetSecurityScore')
+      return res
+    },
+    refetchInterval: 30000,
+    staleTime: 15000,
+  })
 
   return (
     <div className="flex flex-col h-full bg-[var(--color-bg)]">
@@ -480,6 +793,7 @@ export function SecOps() {
             <Shield size={32} className="text-danger" /> Security Operations
           </h1>
           <p className="text-text-dim text-lg mt-2">Threat surface analysis, access control, and endpoint protection status.</p>
+          <DataFreshnessIndicator lastUpdated={secUpdatedAt ? new Date(secUpdatedAt) : null} className="mt-1" />
         </div>
         <div className="flex gap-1 bg-panel border border-border rounded-2xl p-1.5 shadow-inner">
           {tabs.map((tab) => (
@@ -501,7 +815,9 @@ export function SecOps() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <SecurityScoreCard call={call} />
+        <RiskAssessmentPanel call={call} />
         {activeTab === 'firewall' && <FirewallTab call={call} />}
         {activeTab === 'users' && <UsersTab call={call} />}
         {activeTab === 'defender' && <DefenderTab call={call} />}
