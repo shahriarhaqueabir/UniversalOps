@@ -18,6 +18,10 @@ import {
   Globe,
   Copy,
   Check,
+  Lightbulb,
+  TrendingUp,
+  Clock,
+  BarChart3,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -26,9 +30,9 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { EmptyState } from '@/components/ui/EmptyState'
 import * as Tabs from '@radix-ui/react-tabs'
 import { useOllamaStore } from '@/stores/useOllamaStore'
-import type { ChatMessage, AnomalyInfo, OllamaStatus } from '@/types'
+import type { ChatMessage, AnomalyInfo, OllamaStatus, AIInsight, AIConfidence, LearnedBaseline } from '@/types'
 
-type TabId = 'ai-chat' | 'reports' | 'anomalies'
+type TabId = 'ai-chat' | 'reports' | 'anomalies' | 'insights' | 'confidence'
 
 // ── Inline helpers ──
 
@@ -160,6 +164,8 @@ export function AIOps() {
             { id: 'ai-chat', label: 'Analyst Chat', icon: <MessageSquare size={20} /> },
             { id: 'reports', label: 'Intelligence Reports', icon: <FileText size={20} /> },
             { id: 'anomalies', label: 'Anomaly Detection', icon: <Activity size={20} /> },
+            { id: 'insights', label: 'AI Insights', icon: <Lightbulb size={20} /> },
+            { id: 'confidence', label: 'Confidence', icon: <BarChart3 size={20} /> },
           ].map((tab) => (
             <Tabs.Trigger
               key={tab.id}
@@ -185,6 +191,12 @@ export function AIOps() {
           <Tabs.Content value="anomalies" className="h-full">
             <AnomaliesTab />
           </Tabs.Content>
+          <Tabs.Content value="insights" className="h-full">
+            <InsightsTab />
+          </Tabs.Content>
+          <Tabs.Content value="confidence" className="h-full">
+            <ConfidenceTab />
+          </Tabs.Content>
         </div>
       </Tabs.Root>
     </div>
@@ -197,12 +209,35 @@ export function AIOps() {
 
 function ChatTab() {
   const { call } = useBackend()
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', content: 'Greeting, Operator. I am the Hawkward AI Analyst. I have full visibility into your system metrics, network state, and security logs. How can I assist you with your operations today?' }
-  ])
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const [loaded, setLoaded] = useState(false)
   const chatRef = useRef<HTMLDivElement>(null)
+  const sessionRef = useRef<string>(`sess-${Date.now()}`)
+
+  // Load persisted messages on mount
+  useEffect(() => {
+    let cancelled = false
+    const loadMessages = async () => {
+      try {
+        const msgs = await call('AIOps.GetMessages', sessionRef.current) as ChatMessage[]
+        if (!cancelled && msgs && msgs.length > 0) {
+          setMessages(msgs)
+        } else if (!cancelled) {
+          setMessages([{ role: 'assistant', content: 'Greeting, Operator. I am the Hawkward AI Analyst. I have full visibility into your system metrics, network state, and security logs. How can I assist you with your operations today?' }])
+        }
+      } catch {
+        if (!cancelled) {
+          setMessages([{ role: 'assistant', content: 'Greeting, Operator. I am the Hawkward AI Analyst. I have full visibility into your system metrics, network state, and security logs. How can I assist you with your operations today?' }])
+        }
+      } finally {
+        if (!cancelled) setLoaded(true)
+      }
+    }
+    loadMessages()
+    return () => { cancelled = true }
+  }, [call])
 
   const handleSend = async () => {
     if (!input.trim() || isTyping) return
@@ -212,14 +247,33 @@ function ChatTab() {
     setInput('')
     setIsTyping(true)
 
+    // Persist user message
+    try {
+      await call('AIOps.SaveMessage', sessionRef.current, 'user', userMsg.content)
+    } catch { /* non-critical */ }
+
     try {
       const response = await call('AIOps.Chat', input) as string
-      setMessages(prev => [...prev, { role: 'assistant', content: response }])
+      const assistantMsg: ChatMessage = { role: 'assistant', content: response }
+      setMessages(prev => [...prev, assistantMsg])
+      // Persist assistant message
+      try {
+        await call('AIOps.SaveMessage', sessionRef.current, 'assistant', response)
+      } catch { /* non-critical */ }
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'assistant', content: `Analyst Error: ${String(err)}` }])
+      const errMsg = `Analyst Error: ${String(err)}`
+      setMessages(prev => [...prev, { role: 'assistant', content: errMsg }])
+      try {
+        await call('AIOps.SaveMessage', sessionRef.current, 'assistant', errMsg)
+      } catch { /* non-critical */ }
     } finally {
       setIsTyping(false)
     }
+  }
+
+  const handleClear = () => {
+    sessionRef.current = `sess-${Date.now()}`
+    setMessages([{ role: 'assistant', content: 'New session started. How can I assist you?' }])
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -234,6 +288,17 @@ function ChatTab() {
       chatRef.current.scrollTop = chatRef.current.scrollHeight
     }
   }, [messages, isTyping])
+
+  if (!loaded) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="flex items-center gap-3 text-text-dim">
+          <RefreshCw size={20} className="animate-spin" />
+          <span className="text-sm font-bold uppercase tracking-widest">Loading conversation...</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col h-full bg-[var(--color-bg)] relative">
@@ -271,15 +336,10 @@ function ChatTab() {
           {/* Suggested Prompts */}
           {messages.length < 3 && (
             <div className="flex flex-wrap gap-3">
-              {[
-                "Analyze recent system health",
-                "Check for security anomalies",
-                "Review network connection density",
-                "Summarize resource usage trends"
-              ].map(prompt => (
+              {["Analyze recent system health", "Check for security anomalies", "Review network connection density", "Summarize resource usage trends"].map(prompt => (
                 <button
                   key={prompt}
-                  onClick={() => { setInput(prompt); }}
+                  onClick={() => { setInput(prompt) }}
                   className="px-4 py-2 bg-panel border border-border rounded-full text-sm font-bold text-text-dim hover:text-accent hover:border-accent/40 transition-all"
                 >
                   {prompt}
@@ -313,9 +373,9 @@ function ChatTab() {
               <Send size={28} />
             </button>
             <button
-              onClick={() => setMessages([])}
+              onClick={handleClear}
               className="h-16 w-16 flex items-center justify-center text-text-faint border border-border rounded-2xl hover:bg-danger/10 hover:text-danger transition-all"
-              title="Clear History"
+              title="New Session"
             >
               <Trash2 size={24} />
             </button>
@@ -412,6 +472,7 @@ function ReportsTab() {
 
 function AnomaliesTab() {
   const { call } = useBackend()
+  const { refreshInterval } = useSettingsStore()
 
   const { data: anomalies = [], isLoading, refetch } = useQuery<AnomalyInfo[]>({
     queryKey: ['anomalies'],
@@ -419,7 +480,7 @@ function AnomaliesTab() {
       const res = await call('AIOps.DetectAnomalies') as AnomalyInfo[]
       return res || []
     },
-    refetchInterval: 10000,
+    refetchInterval: refreshInterval,
   })
 
   return (
@@ -490,6 +551,334 @@ function AnomaliesTab() {
           </table>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════
+//  Insights Tab
+// ══════════════════════════════════════════════
+
+function InsightsTab() {
+  const { call } = useBackend()
+  const { refreshInterval } = useSettingsStore()
+
+  const { data: insights = [], isLoading, refetch } = useQuery<AIInsight[]>({
+    queryKey: ['ai-insights'],
+    queryFn: async () => {
+      const res = await call('AIOps.GetAIInsights') as AIInsight[]
+      return res || []
+    },
+    refetchInterval: refreshInterval,
+  })
+
+  const severityConfig: Record<string, { icon: typeof Zap; color: string; border: string; bg: string }> = {
+    critical: { icon: AlertTriangle, color: 'text-danger', border: 'border-danger/30', bg: 'bg-danger/10' },
+    warning: { icon: Zap, color: 'text-warning', border: 'border-warning/30', bg: 'bg-warning/10' },
+    info: { icon: ShieldCheck, color: 'text-accent', border: 'border-accent/30', bg: 'bg-accent/10' },
+  }
+
+  const categoryColors: Record<string, string> = {
+    performance: 'bg-warning/15 text-warning border-warning/20',
+    storage: 'bg-accent/15 text-accent border-accent/20',
+    network: 'bg-success/15 text-success border-success/20',
+    alerts: 'bg-danger/15 text-danger border-danger/20',
+    general: 'bg-text-faint/15 text-text-faint border-border',
+  }
+
+  return (
+    <div className="flex flex-col h-full p-8 space-y-8">
+      <div className="flex items-center justify-between bg-panel border border-border px-6 py-4 rounded-xl shadow-lg">
+        <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4">
+            <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center border", insights.length > 0 ? "bg-warning/10 border-warning/30 text-warning" : "bg-success/10 border-success/30 text-success")}>
+              <Lightbulb size={32} />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-[var(--color-text)] tabular-nums">{insights.length}</p>
+              <p className="text-sm font-bold text-text-dim uppercase tracking-widest">Active Insights</p>
+            </div>
+          </div>
+          <div className="w-px h-12 bg-border" />
+          <div className="text-text-dim text-sm leading-relaxed max-w-md italic">
+            Synthesized from anomaly detection, metric trends, and active alert analysis.
+          </div>
+        </div>
+        <button
+          onClick={() => refetch()}
+          className="flex items-center gap-3 px-5 py-2.5 bg-[var(--color-panel-3)] border border-[var(--color-border)] rounded-lg hover:bg-panel hover:border-accent/40 text-text font-bold transition-all shadow-lg active:scale-95"
+        >
+          <RefreshCw size={20} className={cn(isLoading && "animate-spin")} />
+          Refresh
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto space-y-4">
+        {insights.length === 0 ? (
+          <div className="flex items-center justify-center h-64">
+            <EmptyState
+              icon={<Lightbulb size={28} />}
+              title="No Insights Available"
+              description="System is operating within normal parameters. Insights will appear when anomalies, trends, or alerts require attention."
+            />
+          </div>
+        ) : (
+          insights.map((insight, i) => {
+            const cfg = severityConfig[insight.severity] || severityConfig.info
+            const SevIcon = cfg.icon
+            return (
+              <div
+                key={i}
+                className={cn(
+                  'bg-panel border rounded-xl p-6 transition-all hover:shadow-lg group',
+                  cfg.border,
+                )}
+              >
+                <div className="flex items-start gap-4">
+                  <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center border shrink-0', cfg.bg, cfg.border)}>
+                    <SevIcon size={22} className={cfg.color} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-base font-bold text-[var(--color-text)] group-hover:text-[var(--color-accent)] transition-colors">
+                        {insight.title}
+                      </h3>
+                      <span className={cn('px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tighter border', categoryColors[insight.category] || categoryColors.general)}>
+                        {insight.category}
+                      </span>
+                      <StatusBadge status={insight.severity} />
+                    </div>
+                    <p className="text-sm text-[var(--color-text-dim)] leading-relaxed mb-3">{insight.message}</p>
+                    <div className="flex items-center gap-2 text-xs text-[var(--color-accent)] font-semibold">
+                      <ChevronRight size={14} />
+                      {insight.action}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════
+//  Confidence Tab
+// ══════════════════════════════════════════════
+
+function ConfidenceTab() {
+  const { call } = useBackend()
+  const { refreshInterval } = useSettingsStore()
+
+  const { data: confidence, isLoading, refetch } = useQuery<AIConfidence>({
+    queryKey: ['ai-confidence'],
+    queryFn: async () => {
+      const res = await call('AIOps.GetConfidenceScore') as AIConfidence
+      return res
+    },
+    refetchInterval: refreshInterval,
+  })
+
+  const { data: baselines = [] } = useQuery<LearnedBaseline[]>({
+    queryKey: ['learned-baselines'],
+    queryFn: async () => {
+      const res = await call('AIOps.GetLearnedBaselines') as LearnedBaseline[]
+      return res || []
+    },
+    refetchInterval: refreshInterval,
+  })
+
+  const scoreColor = (score: number) => {
+    if (score >= 70) return 'text-success'
+    if (score >= 40) return 'text-warning'
+    return 'text-danger'
+  }
+
+  const scoreRingColor = (score: number) => {
+    if (score >= 70) return 'stroke-success'
+    if (score >= 40) return 'stroke-warning'
+    return 'stroke-danger'
+  }
+
+  const barColor = (score: number) => {
+    if (score >= 70) return 'bg-success'
+    if (score >= 40) return 'bg-warning'
+    return 'bg-danger'
+  }
+
+  const factorLabels: Record<string, string> = {
+    data_freshness: 'Data Freshness',
+    metric_stability: 'Metric Stability',
+    anomaly_count: 'Anomaly Score',
+    alert_health: 'Alert Health',
+  }
+
+  const factorWeights: Record<string, string> = {
+    data_freshness: '30%',
+    metric_stability: '25%',
+    anomaly_count: '25%',
+    alert_health: '20%',
+  }
+
+  const overall = confidence?.overall ?? 0
+  const circumference = 2 * Math.PI * 54
+  const dashOffset = circumference * (1 - overall / 100)
+
+  return (
+    <div className="flex flex-col h-full p-8 space-y-8">
+      <div className="flex items-center justify-between bg-panel border border-border px-6 py-4 rounded-xl shadow-lg">
+        <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center border bg-accent/10 border-accent/30 text-accent">
+              <BarChart3 size={32} />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-[var(--color-text)]">System Confidence</p>
+              <p className="text-sm font-bold text-text-dim uppercase tracking-widest">Composite Health Score</p>
+            </div>
+          </div>
+          <div className="w-px h-12 bg-border" />
+          <div className="text-text-dim text-sm leading-relaxed max-w-md italic">
+            Weighted score across data freshness, metric stability, anomaly count, and alert health.
+          </div>
+        </div>
+        <button
+          onClick={() => refetch()}
+          className="flex items-center gap-3 px-5 py-2.5 bg-[var(--color-panel-3)] border border-[var(--color-border)] rounded-lg hover:bg-panel hover:border-accent/40 text-text font-bold transition-all shadow-lg active:scale-95"
+        >
+          <RefreshCw size={20} className={cn(isLoading && "animate-spin")} />
+          Refresh
+        </button>
+      </div>
+
+      <div className="flex-1 flex flex-col lg:flex-row gap-8">
+        {/* Overall Score Ring */}
+        <div className="flex flex-col items-center justify-center bg-panel border border-border rounded-2xl p-10 shadow-lg min-w-[280px]">
+          {isLoading ? (
+            <div className="w-[140px] h-[140px] rounded-full border-4 border-border animate-pulse" />
+          ) : (
+            <div className="relative w-[140px] h-[140px]">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="54" fill="none" stroke="var(--color-border)" strokeWidth="8" />
+                <circle
+                  cx="60" cy="60" r="54"
+                  fill="none"
+                  className={cn('transition-all duration-700', scoreRingColor(overall))}
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={dashOffset}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className={cn('text-4xl font-bold tabular-nums', scoreColor(overall))}>{overall.toFixed(0)}</span>
+                <span className="text-xs font-bold text-text-dim uppercase tracking-widest">/ 100</span>
+              </div>
+            </div>
+          )}
+          <div className="mt-6 text-center">
+            <p className={cn('text-lg font-bold', scoreColor(overall))}>
+              {overall >= 70 ? 'Healthy' : overall >= 40 ? 'Degraded' : 'Critical'}
+            </p>
+            <div className="flex items-center gap-2 mt-2 text-xs text-text-dim">
+              <Clock size={12} />
+              {confidence?.updatedAt ? format(new Date(confidence.updatedAt), 'HH:mm:ss') : '—'}
+            </div>
+          </div>
+        </div>
+
+        {/* Factor Breakdown */}
+        <div className="flex-1 bg-panel border border-border rounded-2xl p-8 shadow-lg">
+          <h3 className="text-lg font-bold text-[var(--color-text)] mb-6 flex items-center gap-3">
+            <TrendingUp size={20} className="text-accent" />
+            Factor Breakdown
+          </h3>
+          <div className="space-y-6">
+            {confidence?.factors && Object.entries(confidence.factors).map(([key, value]) => (
+              <div key={key} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-[var(--color-text)]">
+                      {factorLabels[key] || key}
+                    </span>
+                    <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider bg-text-faint/10 px-2 py-0.5 rounded-full">
+                      weight {factorWeights[key] || '—'}
+                    </span>
+                  </div>
+                  <span className={cn('text-sm font-bold tabular-nums', scoreColor(value))}>
+                    {value.toFixed(0)}%
+                  </span>
+                </div>
+                <div className="h-2.5 bg-[var(--color-bg)] rounded-full overflow-hidden">
+                  <div
+                    className={cn('h-full rounded-full transition-all duration-700', barColor(value))}
+                    style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {!confidence?.factors && !isLoading && (
+            <div className="flex items-center justify-center h-40">
+              <EmptyState
+                icon={<BarChart3 size={28} />}
+                title="No Confidence Data"
+                description="Confidence score requires active metric collection. Start the pipeline to begin scoring."
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Learned Baselines */}
+      {baselines.length > 0 && (
+        <div className="bg-panel border border-border rounded-2xl p-8 shadow-lg">
+          <h3 className="text-lg font-bold text-[var(--color-text)] mb-6 flex items-center gap-3">
+            <Activity size={20} className="text-accent" />
+            Learned Baselines
+            <span className="text-xs font-bold text-text-dim uppercase tracking-wider bg-text-faint/10 px-2.5 py-0.5 rounded-full">
+              rolling window
+            </span>
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="px-4 py-3 text-xs font-semibold text-text-dim uppercase tracking-wider">Metric</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-text-dim uppercase tracking-wider text-right">Normal Range</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-text-dim uppercase tracking-wider text-right">Mean</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-text-dim uppercase tracking-wider text-right">Std Dev</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-text-dim uppercase tracking-wider text-right">Samples</th>
+                </tr>
+              </thead>
+              <tbody>
+                {baselines.map((b) => (
+                  <tr key={b.metric} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-colors">
+                    <td className="px-4 py-3 text-sm font-semibold text-[var(--color-text)]">
+                      {b.metric.replace('.percent', '').replace('_', ' ').toUpperCase()}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-[var(--color-text-dim)] text-right tabular-nums">
+                      {b.min.toFixed(1)}% — {b.max.toFixed(1)}%
+                    </td>
+                    <td className="px-4 py-3 text-sm font-semibold text-[var(--color-text)] text-right tabular-nums">
+                      {b.mean.toFixed(1)}%
+                    </td>
+                    <td className="px-4 py-3 text-sm text-[var(--color-text-faint)] text-right tabular-nums">
+                      ±{b.stdDev.toFixed(1)}%
+                    </td>
+                    <td className="px-4 py-3 text-sm text-text-dim text-right tabular-nums">
+                      {b.count}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -358,4 +359,101 @@ func (n *NetOps) GetRecentChanges() []NetworkChange {
 	// Reverse so most recent is first.
 	sort.Slice(out, func(i, j int) bool { return i > j })
 	return out
+}
+
+// GetNetworkSummary returns a deterministic summary of the current network state.
+func (n *NetOps) GetNetworkSummary() NetworkSummary {
+	ifaces := n.GetInterfaces()
+	conns := n.GetConnections()
+	issues := []string{}
+
+	// Find top interface by traffic (highest TX+RX bytes)
+	topIface := ""
+	var topTraffic uint64
+	upCount := 0
+	downCount := 0
+	var totalRX, totalTX uint64
+
+	for _, iface := range ifaces {
+		traffic := iface.RXBytes + iface.TXBytes
+		totalRX += iface.RXBytes
+		totalTX += iface.TXBytes
+		if traffic > topTraffic {
+			topTraffic = traffic
+			topIface = iface.Name
+		}
+		if iface.IsUp {
+			upCount++
+		} else {
+			downCount++
+			issues = append(issues, fmt.Sprintf("%s is down", iface.Name))
+		}
+	}
+
+	// Count connection states
+	established := 0
+	listening := 0
+	for _, c := range conns {
+		switch c.State {
+		case "ESTABLISHED":
+			established++
+		case "LISTEN", "LISTENING":
+			listening++
+		}
+	}
+
+	// Check for high connection count as a potential issue
+	if established > 200 {
+		issues = append(issues, fmt.Sprintf("high established connection count: %d", established))
+	}
+
+	// Build summary text
+	parts := []string{}
+	parts = append(parts, fmt.Sprintf("%d/%d interfaces up.", upCount, upCount+downCount))
+	if topIface != "" {
+		parts = append(parts, fmt.Sprintf("Primary interface: %s.", topIface))
+	}
+	parts = append(parts, fmt.Sprintf("%d active connections (%d listening).", established, listening))
+	parts = append(parts, fmt.Sprintf("Traffic: %s RX / %s TX.", formatBytes(totalRX), formatBytes(totalTX)))
+
+	summaryText := strings.Join(parts, " ")
+
+	return NetworkSummary{
+		SummaryText:  summaryText,
+		TopInterface: topIface,
+		Issues:       issues,
+	}
+}
+
+// formatBytes formats byte counts into human-readable strings.
+func formatBytes(bytes uint64) string {
+	const (
+		KB = 1024
+		MB = KB * 1024
+		GB = MB * 1024
+	)
+	switch {
+	case bytes >= GB:
+		return fmt.Sprintf("%.1f GB", float64(bytes)/float64(GB))
+	case bytes >= MB:
+		return fmt.Sprintf("%.1f MB", float64(bytes)/float64(MB))
+	case bytes >= KB:
+		return fmt.Sprintf("%.1f KB", float64(bytes)/float64(KB))
+	default:
+		return fmt.Sprintf("%d B", bytes)
+	}
+}
+
+// GetDefaultGateway returns information about the system default gateway.
+func (n *NetOps) GetDefaultGateway() GatewayInfo {
+	gw := netops.GetDefaultGateway()
+	reachable := false
+	if gw.IP != "" {
+		reachable = netops.CheckReachable(gw.IP)
+	}
+	return GatewayInfo{
+		IP:        gw.IP,
+		Interface: gw.Interface,
+		Reachable: reachable,
+	}
 }

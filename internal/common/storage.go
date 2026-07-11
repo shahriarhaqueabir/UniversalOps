@@ -176,6 +176,14 @@ func (s *Storage) migrate() error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_alerts_time ON alerts(timestamp)`,
 		`CREATE INDEX IF NOT EXISTS idx_alerts_metric ON alerts(metric)`,
+		`CREATE TABLE IF NOT EXISTS conversations (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			session_id TEXT NOT NULL,
+			role TEXT NOT NULL,
+			content TEXT NOT NULL,
+			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_conv_session ON conversations(session_id, timestamp)`,
 	}
 
 	for _, q := range queries {
@@ -467,6 +475,67 @@ func (s *Storage) TopLogSources(limit int) ([]SourceCount, error) {
 	return results, nil
 }
 
+// CountLogsByLevelInRange returns the count of logs with the given level within a time range.
+func (s *Storage) CountLogsByLevelInRange(level string, from, to time.Time) int {
+	var count int
+	s.db.QueryRow(`SELECT COUNT(*) FROM logs WHERE level = ? AND timestamp >= ? AND timestamp < ?`, level, from, to).Scan(&count)
+	return count
+}
+
+// LogTimelineBucket holds a time-bucketed log count row.
+type LogTimelineBucket struct {
+	Bucket   string
+	Total    int
+	Errors   int
+	Warnings int
+	Info     int
+}
+
+// QueryLogTimeline returns time-bucketed log counts for charting.
+// hours >= 24 buckets by hour; hours < 24 buckets by 5 minutes.
+func (s *Storage) QueryLogTimeline(hours int) ([]LogTimelineBucket, error) {
+	var bucketExpr string
+	if hours >= 24 {
+		bucketExpr = `strftime('%Y-%m-%d %H:00:00', timestamp)`
+	} else {
+		// 5-minute buckets via epoch rounding
+		bucketExpr = `datetime(CAST(CAST(strftime('%s', timestamp) AS INTEGER) / 300 AS INTEGER) * 300, 'unixepoch')`
+	}
+
+	timeArg := fmt.Sprintf(`-%d hours`, hours)
+	query := fmt.Sprintf(`
+		SELECT
+			%s as bucket,
+			COUNT(*) as total,
+			SUM(CASE WHEN level = 'ERROR' THEN 1 ELSE 0 END) as errors,
+			SUM(CASE WHEN level = 'WARN' THEN 1 ELSE 0 END) as warnings,
+			SUM(CASE WHEN level = 'INFO' THEN 1 ELSE 0 END) as info
+		FROM logs
+		WHERE timestamp > datetime('now', ?)
+		GROUP BY bucket
+		ORDER BY bucket ASC
+	`, bucketExpr)
+
+	rows, err := s.db.Query(query, timeArg)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []LogTimelineBucket
+	for rows.Next() {
+		var b LogTimelineBucket
+		if err := rows.Scan(&b.Bucket, &b.Total, &b.Errors, &b.Warnings, &b.Info); err != nil {
+			return nil, err
+		}
+		results = append(results, b)
+	}
+	if results == nil {
+		results = []LogTimelineBucket{}
+	}
+	return results, nil
+}
+
 // TrendingLogErrors returns the top N most frequent error messages.
 func (s *Storage) TrendingLogErrors(limit int) ([]TrendingLogError, error) {
 	rows, err := s.db.Query(
@@ -702,6 +771,88 @@ func (s *Storage) QueryAlertHistory(limit int) ([]AlertRecord, error) {
 		alerts = []AlertRecord{}
 	}
 	return alerts, nil
+}
+
+// ── Conversations ───────────────────────────────────────────────────────────
+
+// ConversationMessage represents a single chat message.
+type ConversationMessage struct {
+	ID        int64     `json:"id"`
+	SessionID string    `json:"session_id"`
+	Role      string    `json:"role"`
+	Content   string    `json:"content"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+// InsertMessage persists a chat message to the conversations table.
+func (s *Storage) InsertMessage(sessionID, role, content string) error {
+	_, err := s.db.Exec(
+		`INSERT INTO conversations (session_id, role, content) VALUES (?, ?, ?)`,
+		sessionID, role, content,
+	)
+	return err
+}
+
+// GetMessages returns all messages for a given session, ordered by time.
+func (s *Storage) GetMessages(sessionID string) ([]ConversationMessage, error) {
+	rows, err := s.db.Query(
+		`SELECT id, session_id, role, content, timestamp FROM conversations WHERE session_id = ? ORDER BY id ASC`,
+		sessionID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var msgs []ConversationMessage
+	for rows.Next() {
+		var m ConversationMessage
+		if err := rows.Scan(&m.ID, &m.SessionID, &m.Role, &m.Content, &m.Timestamp); err != nil {
+			return nil, err
+		}
+		msgs = append(msgs, m)
+	}
+	if msgs == nil {
+		msgs = []ConversationMessage{}
+	}
+	return msgs, nil
+}
+
+// ListSessions returns distinct session IDs with their latest timestamp and message count.
+func (s *Storage) ListSessions() ([]map[string]interface{}, error) {
+	rows, err := s.db.Query(
+		`SELECT session_id, MAX(timestamp) as last_active, COUNT(*) as msg_count
+		 FROM conversations GROUP BY session_id ORDER BY last_active DESC`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var sessions []map[string]interface{}
+	for rows.Next() {
+		var sid string
+		var lastActive time.Time
+		var count int
+		if err := rows.Scan(&sid, &lastActive, &count); err != nil {
+			return nil, err
+		}
+		sessions = append(sessions, map[string]interface{}{
+			"session_id":  sid,
+			"last_active": lastActive,
+			"msg_count":   count,
+		})
+	}
+	if sessions == nil {
+		sessions = []map[string]interface{}{}
+	}
+	return sessions, nil
+}
+
+// DeleteSession removes all messages for a given session.
+func (s *Storage) DeleteSession(sessionID string) error {
+	_, err := s.db.Exec(`DELETE FROM conversations WHERE session_id = ?`, sessionID)
+	return err
 }
 
 func boolToInt(b bool) int {

@@ -20,7 +20,9 @@ import {
   FileJson,
   Save,
   FolderOpen,
+  Radar,
 } from 'lucide-react'
+import { AnalysisSidebar } from './networkdesign/AnalysisSidebar'
 import type { TopologyDevice, TopologyConnection, DeviceType, TopologyStatus, ConnectionType } from '@/types'
 import { SaveFileDialog, OpenFileDialog } from '../../wailsjs/go/app/App'
 import { WriteFile, ReadFile } from '../../wailsjs/go/app/DevOps'
@@ -264,6 +266,7 @@ export function NetworkDesign() {
   const [mode, setMode] = useState<CanvasMode>('select')
   const [connectSourceId, setConnectSourceId] = useState<string | null>(null)
   const [zoom, setZoom] = useState(1)
+  const [analysisOpen, setAnalysisOpen] = useState(true)
   const canvasRef = useRef<HTMLDivElement>(null)
 
   const selectedDevice = useMemo(
@@ -539,7 +542,20 @@ export function NetworkDesign() {
           </button>
         </div>
 
-        {/* Clear */}
+        {/* Analysis toggle */}
+        <div className="flex items-center gap-1 border-r border-border pr-2">
+          <button
+            onClick={() => setAnalysisOpen(!analysisOpen)}
+            className={cn(
+              'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors',
+              analysisOpen ? 'bg-accent/10 text-accent' : 'text-text-faint hover:text-text hover:bg-sidebar-hover',
+            )}
+            title="Toggle Analysis Panel"
+          >
+            <Radar size={14} /> Analyze
+          </button>
+        </div>
+
         <button
           onClick={clearCanvas}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-text-faint hover:text-danger hover:bg-danger/10 transition-colors"
@@ -569,7 +585,7 @@ export function NetworkDesign() {
       </div>
 
       {/* Main canvas area */}
-      <div className="flex gap-4">
+      <div className="flex gap-4 h-[calc(100vh-280px)] min-h-[500px]">
         <div
           ref={canvasRef}
           className="flex-1 bg-panel border border-border rounded-lg overflow-auto relative min-h-[600px]"
@@ -659,6 +675,22 @@ export function NetworkDesign() {
             onClose={() => setSelectedConnectionId(null)}
           />
         )}
+
+        {/* Analysis sidebar */}
+        <AnalysisSidebar
+          devices={devices}
+          connections={connections}
+          isOpen={analysisOpen}
+          onToggle={() => setAnalysisOpen(!analysisOpen)}
+          onDevicesDiscovered={(discovered) => {
+            // Merge discovered devices with existing, avoiding duplicates
+            setDevices((prev) => {
+              const existingIds = new Set(prev.map((d) => d.id))
+              const newDevices = discovered.filter((d) => !existingIds.has(d.id))
+              return [...prev, ...newDevices]
+            })
+          }}
+        />
       </div>
     </div>
   )

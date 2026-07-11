@@ -40,6 +40,7 @@ func main() {
 			application.AlertAPI,
 			application.Logs,
 			application.Timeline,
+			application.NetDesign,
 		},
 	})
 

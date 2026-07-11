@@ -13,12 +13,23 @@ import {
   LayoutList,
   Clock,
   Zap,
+  Brain,
 } from 'lucide-react'
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts'
 
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
-import type { LogEntry, LogStats } from '@/types'
+import type { LogEntry, LogStats, LogTimelinePoint, LogSummary } from '@/types'
 import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 
 // ── Constants ──
@@ -30,17 +41,20 @@ type TabId = 'overview' | 'live'
 
 // ── Helpers ──
 
-const levelStyle: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
-  INFO: { bg: 'bg-blue-500/15', text: 'text-blue-400', icon: <Info size={14} /> },
-  WARN: { bg: 'bg-amber-500/15', text: 'text-amber-400', icon: <AlertTriangle size={14} /> },
-  ERROR: { bg: 'bg-red-500/15', text: 'text-red-400', icon: <AlertOctagon size={14} /> },
-  DEBUG: { bg: 'bg-gray-500/15', text: 'text-gray-400', icon: <Bug size={14} /> },
+const levelStyle: Record<string, { bgColor: string; textColor: string; icon: React.ReactNode }> = {
+  INFO: { bgColor: 'color-mix(in srgb, var(--color-accent) 15%, transparent)', textColor: 'var(--color-accent)', icon: <Info size={14} /> },
+  WARN: { bgColor: 'color-mix(in srgb, var(--color-warning) 15%, transparent)', textColor: 'var(--color-warning)', icon: <AlertTriangle size={14} /> },
+  ERROR: { bgColor: 'color-mix(in srgb, var(--color-danger) 15%, transparent)', textColor: 'var(--color-danger)', icon: <AlertOctagon size={14} /> },
+  DEBUG: { bgColor: 'color-mix(in srgb, var(--color-text-faint) 15%, transparent)', textColor: 'var(--color-text-faint)', icon: <Bug size={14} /> },
 }
 
 function LogBadge({ level }: { level: string }) {
   const s = levelStyle[level] || levelStyle.DEBUG
   return (
-    <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border border-current/20', s.bg, s.text)}>
+    <span
+      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border border-current/20"
+      style={{ backgroundColor: s.bgColor, color: s.textColor }}
+    >
       {s.icon}
       {level}
     </span>
@@ -93,6 +107,24 @@ function OverviewTab() {
     refetchInterval: refreshInterval,
   })
 
+  const { data: timeline = [] } = useQuery<LogTimelinePoint[]>({
+    queryKey: ['logs', 'timeline'],
+    queryFn: async () => {
+      const res = await call('Logs.GetLogTimeline', 24) as LogTimelinePoint[]
+      return res || []
+    },
+    refetchInterval: refreshInterval,
+  })
+
+  const { data: logSummary } = useQuery<LogSummary>({
+    queryKey: ['logs', 'summary'],
+    queryFn: async () => {
+      const res = await call('Logs.GenerateLogSummary') as LogSummary
+      return res || { summaryText: '', topSource: '', trend: '' }
+    },
+    refetchInterval: 120000,
+  })
+
   const maxLevel = Math.max(stats?.errorCount ?? 0, stats?.warningCount ?? 0, stats?.infoCount ?? 0, stats?.debugCount ?? 0, 1)
 
   if (isLoading) {
@@ -128,6 +160,87 @@ function OverviewTab() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* ── Timeline Chart ── */}
+      <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-xl p-6">
+        <h3 className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider mb-4">Log Volume Timeline (24h)</h3>
+        {timeline.length === 0 ? (
+          <p className="text-sm text-[var(--color-text-faint)] italic text-center py-8">No timeline data available.</p>
+        ) : (
+          <div className="min-h-[240px]">
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={timeline}>
+                <defs>
+                  <linearGradient id="logTimelineErrors" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--color-danger)" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="var(--color-danger)" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="logTimelineWarnings" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--color-warning)" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="var(--color-warning)" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="logTimelineInfo" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--color-accent)" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="var(--color-accent)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="4 4" stroke="var(--color-border)" vertical={false} strokeOpacity={0.5} />
+                <XAxis
+                  dataKey="timestamp"
+                  tickFormatter={(v: string) => format(new Date(v), 'HH:mm')}
+                  stroke="var(--color-text-faint)"
+                  tick={{ fontSize: 11 }}
+                />
+                <YAxis stroke="var(--color-text-faint)" tick={{ fontSize: 11 }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'var(--color-panel-3)',
+                    border: 'none',
+                    borderRadius: '12px',
+                    color: 'var(--color-text)',
+                  }}
+                  labelFormatter={(v: string) => format(new Date(v), 'MMM d, HH:mm')}
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: 12, color: 'var(--color-text-dim)' }}
+                />
+                <Area type="monotone" dataKey="errors" name="Errors" stroke="var(--color-danger)" strokeWidth={2} fill="url(#logTimelineErrors)" isAnimationActive={false} />
+                <Area type="monotone" dataKey="warnings" name="Warnings" stroke="var(--color-warning)" strokeWidth={2} fill="url(#logTimelineWarnings)" isAnimationActive={false} />
+                <Area type="monotone" dataKey="info" name="Info" stroke="var(--color-accent)" strokeWidth={2} fill="url(#logTimelineInfo)" isAnimationActive={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
+      {/* ── AI Summary ── */}
+      <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-xl p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'color-mix(in srgb, var(--color-accent) 15%, transparent)', color: 'var(--color-accent)' }}>
+            <Brain size={20} />
+          </div>
+          <h3 className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider">AI Summary</h3>
+        </div>
+        {!logSummary || !logSummary.summaryText ? (
+          <p className="text-sm text-[var(--color-text-faint)] italic">No summary available.</p>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm text-[var(--color-text)] leading-relaxed">{logSummary.summaryText}</p>
+            <div className="flex items-center gap-6 text-xs">
+              {logSummary.topSource && (
+                <span className="text-[var(--color-text-dim)]">
+                  <span className="font-bold text-[var(--color-accent)]">Top Source:</span> {logSummary.topSource}
+                </span>
+              )}
+              {logSummary.trend && (
+                <span className="text-[var(--color-text-dim)]">
+                  <span className="font-bold text-[var(--color-warning)]">Trend:</span> {logSummary.trend}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Error Breakdown ── */}
@@ -217,243 +330,245 @@ function LiveStreamTab() {
   const [exporting, setExporting] = useState(false)
 
   const scrollRef = useRef<HTMLDivElement>(null)
-  setActiveLevels((prev) => {
-    const next = new Set(prev)
-    if (next.has(level)) next.delete(level)
-    else next.add(level)
-    return next
+
+  const toggleLevel = (level: string) => {
+    setActiveLevels((prev) => {
+      const next = new Set(prev)
+      if (next.has(level)) next.delete(level)
+      else next.add(level)
+      return next
+    })
+  }
+
+  const { refreshInterval } = useSettingsStore()
+  // ── React Query for polling ──
+  const { data: allLogs = [], refetch, dataUpdatedAt: logsUpdatedAt } = useQuery<LogEntry[]>({
+    queryKey: ['logs'],
+    queryFn: async () => {
+      const res = await call('Logs.GetLogs', '', '', 200) as LogEntry[]
+      return res || []
+    },
+    refetchInterval: refreshInterval,
   })
-}
 
-const { refreshInterval } = useSettingsStore()
-// ── React Query for polling ──
-const { data: allLogs = [], refetch, dataUpdatedAt: logsUpdatedAt } = useQuery<LogEntry[]>({
-  queryKey: ['logs'],
-  queryFn: async () => {
-    const res = await call('Logs.GetLogs', '', '', 200) as LogEntry[]
-    return res || []
-  },
-  refetchInterval: refreshInterval,
-})
-
-// ── Filtering ──
-const filteredLogs = useMemo(() => {
-  let result = allLogs
-  if (activeLevels.size < LEVELS.length) {
-    result = result.filter((l) => activeLevels.has(l.level))
-  }
-  if (search.trim()) {
-    const q = search.toLowerCase()
-    result = result.filter((l) => l.message.toLowerCase().includes(q) || l.module?.toLowerCase().includes(q))
-  }
-  return result
-}, [allLogs, activeLevels, search])
-
-// ── React Virtual for virtualized list ──
-const count = filteredLogs.length
-const virtualizer = useVirtualizer({
-  count,
-  getScrollElement: () => scrollRef.current,
-  estimateSize: useCallback((i: number) => {
-    return expandedIdx === i ? ROW_HEIGHT + EXPANDED_HEIGHT : ROW_HEIGHT
-  }, [expandedIdx]),
-  overscan: 20,
-})
-
-const handleRowClick = (idx: number) => {
-  setExpandedIdx(expandedIdx === idx ? null : idx)
-}
-
-// ── Auto-scroll to top on new data ──
-const prevLengthRef = useRef(0)
-const prevLength = prevLengthRef.current
-if (autoScroll && allLogs.length !== prevLength && allLogs.length > 0) {
-  prevLengthRef.current = allLogs.length
-  requestAnimationFrame(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = 0
+  // ── Filtering ──
+  const filteredLogs = useMemo(() => {
+    let result = allLogs
+    if (activeLevels.size < LEVELS.length) {
+      result = result.filter((l) => activeLevels.has(l.level))
     }
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      result = result.filter((l) => l.message.toLowerCase().includes(q) || l.module?.toLowerCase().includes(q))
+    }
+    return result
+  }, [allLogs, activeLevels, search])
+
+  // ── React Virtual for virtualized list ──
+  const count = filteredLogs.length
+  const virtualizer = useVirtualizer({
+    count,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: useCallback((i: number) => {
+      return expandedIdx === i ? ROW_HEIGHT + EXPANDED_HEIGHT : ROW_HEIGHT
+    }, [expandedIdx]),
+    overscan: 20,
   })
-}
 
-// ── Export handlers ──
-const handleExport = async () => {
-  setExporting(true)
-  try {
-    const result = await call('Logs.ExportLogs', 'json') as string
-    if (!result) return
-    const blob = new Blob([result], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `hawkward-logs-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(url)
-  } catch (err) {
-    console.error('[Logs] Export failed:', err)
-  } finally {
-    setExporting(false)
+  const handleRowClick = (idx: number) => {
+    setExpandedIdx(expandedIdx === idx ? null : idx)
   }
-}
 
-const handleSaveToFile = async () => {
-  const path = window.prompt('Save logs to file path:', 'hawkward-logs.json')
-  if (!path) return
-  setExporting(true)
-  try {
-    const result = await call('Logs.SaveLogsToFile', path, 'json') as string
-    if (result) {
-      const { toast } = await import('sonner')
-      toast.success(result)
+  // ── Auto-scroll to top on new data ──
+  const prevLengthRef = useRef(0)
+  const prevLength = prevLengthRef.current
+  if (autoScroll && allLogs.length !== prevLength && allLogs.length > 0) {
+    prevLengthRef.current = allLogs.length
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = 0
+      }
+    })
+  }
+
+  // ── Export handlers ──
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      const result = await call('Logs.ExportLogs', 'json') as string
+      if (!result) return
+      const blob = new Blob([result], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `hawkward-logs-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('[Logs] Export failed:', err)
+    } finally {
+      setExporting(false)
     }
-  } catch (err) {
-    console.error('[Logs] Save failed:', err)
-  } finally {
-    setExporting(false)
   }
-}
 
-// ── Render ──
-return (
-  <>
-    {/* ── Toolbar ── */}
-    <div className="border-b border-[var(--color-border)] px-6 py-3 bg-[var(--color-panel)] flex items-center gap-4 flex-wrap">
-      <div className="relative group flex-1 max-w-md">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)] group-focus-within:text-[var(--color-accent)] transition-colors" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search live stream..."
-          className="w-full bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-lg pl-10 pr-3 py-2 text-sm text-[var(--color-text)] placeholder-[var(--color-text-faint)] focus:outline-none focus:border-[var(--color-accent)]"
-        />
-      </div>
+  const handleSaveToFile = async () => {
+    const path = window.prompt('Save logs to file path:', 'hawkward-logs.json')
+    if (!path) return
+    setExporting(true)
+    try {
+      const result = await call('Logs.SaveLogsToFile', path, 'json') as string
+      if (result) {
+        const { toast } = await import('sonner')
+        toast.success(result)
+      }
+    } catch (err) {
+      console.error('[Logs] Save failed:', err)
+    } finally {
+      setExporting(false)
+    }
+  }
 
-      <DataFreshnessIndicator lastUpdated={logsUpdatedAt ? new Date(logsUpdatedAt) : null} />
-
-      <div className="flex items-center gap-1.5">
-        {LEVELS.map((level) => {
-          const levelCount = allLogs.filter(l => l.level === level).length
-          return (
-            <button
-              key={level}
-              onClick={() => toggleLevel(level)}
-              className={cn(
-                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all border',
-                activeLevels.has(level)
-                  ? `${levelStyle[level].bg} ${levelStyle[level].text} border-current/30`
-                  : 'bg-[var(--color-panel-2)] text-[var(--color-text-faint)] border-transparent opacity-40'
-              )}
-            >
-              {levelStyle[level].icon}
-              {level}
-              <span className="text-[10px] opacity-60">{levelCount}</span>
-            </button>
-          )
-        })}
-      </div>
-      <div className="flex-1" />
-
-      <button
-        onClick={() => setAutoScroll((p) => !p)}
-        className={cn(
-          'flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg border transition-all',
-          autoScroll ? 'bg-[var(--color-accent)]/10 border-[var(--color-accent)]/30 text-[var(--color-accent)]' : 'text-[var(--color-text-faint)] border-[var(--color-border)] hover:text-[var(--color-text)]'
-        )}
-      >
-        <ArrowDownToDot size={14} />
-        {autoScroll ? 'Follow Stream' : 'Freeze View'}
-      </button>
-    </div>
-
-    {/* ── Virtualized Log List ── */}
-    <div
-      ref={scrollRef}
-      className="flex-1 overflow-y-auto bg-[var(--color-bg)] shadow-inner"
-    >
-      {/* ── Column headers (sticky) ── */}
-      <div
-        className="sticky top-0 z-10 grid grid-cols-[140px_100px_1fr_140px_36px] bg-[var(--color-panel-2)] border-b border-[var(--color-border)]"
-        style={{ height: ROW_HEIGHT }}
-      >
-        <div className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Timestamp</div>
-        <div className="px-3 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Level</div>
-        <div className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Event Message</div>
-        <div className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider text-right">Module</div>
-        <div />
-      </div>
-
-      {count === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20">
-          <div className="w-20 h-20 rounded-2xl bg-[var(--color-panel-2)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-faint)] mb-4">
-            <LayoutList size={32} />
-          </div>
-          <h3 className="text-lg font-bold text-[var(--color-text)] mb-1">No Logs Found</h3>
-          <p className="text-sm text-[var(--color-text-dim)]">{search ? 'Try adjusting your search query or filters' : 'Waiting for log entries...'}</p>
+  // ── Render ──
+  return (
+    <>
+      {/* ── Toolbar ── */}
+      <div className="border-b border-[var(--color-border)] px-6 py-3 bg-[var(--color-panel)] flex items-center gap-4 flex-wrap">
+        <div className="relative group flex-1 max-w-md">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)] group-focus-within:text-[var(--color-accent)] transition-colors" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search live stream..."
+            className="w-full bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-lg pl-10 pr-3 py-2 text-sm text-[var(--color-text)] placeholder-[var(--color-text-faint)] focus:outline-none focus:border-[var(--color-accent)]"
+          />
         </div>
-      ) : (
-        <div
-          className="relative w-full"
-          style={{ height: virtualizer.getTotalSize() }}
-        >
-          {virtualizer.getVirtualItems().map((virtualItem) => {
-            const entry = filteredLogs[virtualItem.index]
-            const isExpanded = expandedIdx === virtualItem.index
 
+        <DataFreshnessIndicator lastUpdated={logsUpdatedAt ? new Date(logsUpdatedAt) : null} />
+
+        <div className="flex items-center gap-1.5">
+          {LEVELS.map((level) => {
+            const levelCount = allLogs.filter(l => l.level === level).length
             return (
-              <div
-                key={virtualItem.key}
-                className="absolute left-0 right-0"
-                style={{
-                  top: 0,
-                  transform: `translateY(${virtualItem.start}px)`,
-                  height: isExpanded ? ROW_HEIGHT + EXPANDED_HEIGHT : ROW_HEIGHT,
-                }}
-              >
-                {/* Main row */}
-                <div
-                  onClick={() => handleRowClick(virtualItem.index)}
-                  className={cn(
-                    'grid grid-cols-[140px_100px_1fr_140px_36px] border-b border-[var(--color-border)]/20 cursor-pointer transition-colors group',
-                    'hover:bg-[var(--color-sidebar-hover)]',
-                    isExpanded && 'bg-[var(--color-accent)]/5',
-                  )}
-                  style={{ height: ROW_HEIGHT }}
-                >
-                  <div className="px-6 py-5 text-sm text-[var(--color-text-faint)] font-medium font-[Geist_Mono] whitespace-nowrap truncate self-center">
-                    {entry.timestamp ? entry.timestamp.split(' ').pop() : format(new Date(), 'HH:mm:ss')}
-                  </div>
-                  <div className="px-3 py-5 self-center">
-                    <LogBadge level={entry.level} />
-                  </div>
-                  <div className="px-6 py-5 text-sm font-medium text-[var(--color-text)] truncate self-center">
-                    {entry.message}
-                  </div>
-                  <div className="px-6 py-5 text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-wider text-right self-center group-hover:text-[var(--color-accent)] transition-colors">
-                    {entry.module || 'SYSTEM'}
-                  </div>
-                  <div className="px-4 py-5 text-[var(--color-text-faint)] self-center">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                      className={cn('transition-transform', isExpanded && 'rotate-180')}>
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </div>
-                </div>
-
-                {/* Expanded detail */}
-                {isExpanded && (
-                  <div style={{ height: EXPANDED_HEIGHT }}>
-                    <DetailPanel entry={entry} idx={virtualItem.index} />
-                  </div>
+              <button
+                key={level}
+                onClick={() => toggleLevel(level)}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all border',
+                  activeLevels.has(level)
+                    ? `${levelStyle[level].bg} ${levelStyle[level].text} border-current/30`
+                    : 'bg-[var(--color-panel-2)] text-[var(--color-text-faint)] border-transparent opacity-40'
                 )}
-              </div>
+              >
+                {levelStyle[level].icon}
+                {level}
+                <span className="text-[10px] opacity-60">{levelCount}</span>
+              </button>
             )
           })}
         </div>
-      )}
-    </div>
-  </>
-)
+        <div className="flex-1" />
+
+        <button
+          onClick={() => setAutoScroll((p) => !p)}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg border transition-all',
+            autoScroll ? 'bg-[var(--color-accent)]/10 border-[var(--color-accent)]/30 text-[var(--color-accent)]' : 'text-[var(--color-text-faint)] border-[var(--color-border)] hover:text-[var(--color-text)]'
+          )}
+        >
+          <ArrowDownToDot size={14} />
+          {autoScroll ? 'Follow Stream' : 'Freeze View'}
+        </button>
+      </div>
+
+      {/* ── Virtualized Log List ── */}
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto bg-[var(--color-bg)] shadow-inner"
+      >
+        {/* ── Column headers (sticky) ── */}
+        <div
+          className="sticky top-0 z-10 grid grid-cols-[140px_100px_1fr_140px_36px] bg-[var(--color-panel-2)] border-b border-[var(--color-border)]"
+          style={{ height: ROW_HEIGHT }}
+        >
+          <div className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Timestamp</div>
+          <div className="px-3 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Level</div>
+          <div className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Event Message</div>
+          <div className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider text-right">Module</div>
+          <div />
+        </div>
+
+        {count === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-20 h-20 rounded-2xl bg-[var(--color-panel-2)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-faint)] mb-4">
+              <LayoutList size={32} />
+            </div>
+            <h3 className="text-lg font-bold text-[var(--color-text)] mb-1">No Logs Found</h3>
+            <p className="text-sm text-[var(--color-text-dim)]">{search ? 'Try adjusting your search query or filters' : 'Waiting for log entries...'}</p>
+          </div>
+        ) : (
+          <div
+            className="relative w-full"
+            style={{ height: virtualizer.getTotalSize() }}
+          >
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const entry = filteredLogs[virtualItem.index]
+              const isExpanded = expandedIdx === virtualItem.index
+
+              return (
+                <div
+                  key={virtualItem.key}
+                  className="absolute left-0 right-0"
+                  style={{
+                    top: 0,
+                    transform: `translateY(${virtualItem.start}px)`,
+                    height: isExpanded ? ROW_HEIGHT + EXPANDED_HEIGHT : ROW_HEIGHT,
+                  }}
+                >
+                  {/* Main row */}
+                  <div
+                    onClick={() => handleRowClick(virtualItem.index)}
+                    className={cn(
+                      'grid grid-cols-[140px_100px_1fr_140px_36px] border-b border-[var(--color-border)]/20 cursor-pointer transition-colors group',
+                      'hover:bg-[var(--color-sidebar-hover)]',
+                      isExpanded && 'bg-[var(--color-accent)]/5',
+                    )}
+                    style={{ height: ROW_HEIGHT }}
+                  >
+                    <div className="px-6 py-5 text-sm text-[var(--color-text-faint)] font-medium font-[Geist_Mono] whitespace-nowrap truncate self-center">
+                      {entry.timestamp ? entry.timestamp.split(' ').pop() : format(new Date(), 'HH:mm:ss')}
+                    </div>
+                    <div className="px-3 py-5 self-center">
+                      <LogBadge level={entry.level} />
+                    </div>
+                    <div className="px-6 py-5 text-sm font-medium text-[var(--color-text)] truncate self-center">
+                      {entry.message}
+                    </div>
+                    <div className="px-6 py-5 text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-wider text-right self-center group-hover:text-[var(--color-accent)] transition-colors">
+                      {entry.module || 'SYSTEM'}
+                    </div>
+                    <div className="px-4 py-5 text-[var(--color-text-faint)] self-center">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                        className={cn('transition-transform', isExpanded && 'rotate-180')}>
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Expanded detail */}
+                  {isExpanded && (
+                    <div style={{ height: EXPANDED_HEIGHT }}>
+                      <DetailPanel entry={entry} idx={virtualItem.index} />
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </>
+  )
 }
 
 // ══════════════════════════════════════════════

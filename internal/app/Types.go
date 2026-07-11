@@ -1,5 +1,7 @@
 package app
 
+import "time"
+
 // ── AppInfo ──────────────────────────────────────────────────────────────────
 
 // AppInfo holds metadata about the application.
@@ -234,12 +236,14 @@ type FirewallRule struct {
 
 // UserInfo holds a local user account entry.
 type UserInfo struct {
-	Username  string `json:"username"`
-	FullName  string `json:"full_name"`
-	SID       string `json:"sid"`
-	Group     string `json:"group"`
-	IsAdmin   bool   `json:"is_admin"`
-	IsEnabled bool   `json:"is_enabled"`
+	Username             string `json:"username"`
+	FullName             string `json:"full_name"`
+	SID                  string `json:"sid"`
+	Group                string `json:"group"`
+	IsAdmin              bool   `json:"is_admin"`
+	IsEnabled            bool   `json:"is_enabled"`
+	PasswordNeverExpires bool   `json:"password_never_expires"`
+	LastLogon            string `json:"last_logon"`
 }
 
 // ListeningPort holds a listening port entry.
@@ -433,6 +437,46 @@ type EnvironmentInfo struct {
 	PackageManagers []ToolVersion `json:"package_managers"`
 }
 
+// DockerStatus holds Docker daemon and container overview.
+type DockerStatus struct {
+	Installed  bool             `json:"installed"`
+	Running    bool             `json:"running"` // daemon running
+	Version    string           `json:"version"`
+	Containers ContainerSummary `json:"containers"`
+}
+
+// KubernetesStatus holds kubectl and cluster connectivity info.
+type KubernetesStatus struct {
+	Installed bool   `json:"installed"`
+	Connected bool   `json:"connected"`
+	Cluster   string `json:"cluster"`
+	Nodes     int    `json:"nodes"`
+	Pods      int    `json:"pods"`
+}
+
+// ServiceCategory groups services by their function type.
+type ServiceCategory struct {
+	Category string        `json:"category"` // databases, message-queues, web-servers, containers, other
+	Services []ServiceInfo `json:"services"`
+}
+
+// ServiceInfo is a simplified service entry for categorization.
+type ServiceInfo struct {
+	Name   string `json:"name"`
+	Status string `json:"status"` // running, stopped, unknown
+}
+
+// ServiceGroupSummary aggregates service counts by category.
+type ServiceGroupSummary struct {
+	Databases     int `json:"databases"`
+	MessageQueues int `json:"messageQueues"`
+	WebServers    int `json:"webServers"`
+	Containers    int `json:"containers"`
+	Other         int `json:"other"`
+	Running       int `json:"running"`
+	Stopped       int `json:"stopped"`
+}
+
 // ── AIOps Types ──────────────────────────────────────────────────────────────
 
 // ChatMessage holds a chat message.
@@ -551,6 +595,23 @@ type TrendingError struct {
 	LastSeen string `json:"lastSeen"`
 }
 
+// LogTimelinePoint represents a time-bucketed log count for charting.
+type LogTimelinePoint struct {
+	Timestamp string `json:"timestamp"`
+	Total     int    `json:"total"`
+	Errors    int    `json:"errors"`
+	Warnings  int    `json:"warnings"`
+	Info      int    `json:"info"`
+}
+
+// LogSummary holds a deterministic summary of recent log activity.
+type LogSummary struct {
+	TopSource   string `json:"topSource"`
+	TopMessage  string `json:"topMessage"`
+	ErrorTrend  string `json:"errorTrend"`  // "increasing", "stable", "decreasing"
+	SummaryText string `json:"summaryText"` // Human-readable one-liner
+}
+
 // SystemRecommendation is a heuristic recommendation for system health.
 type SystemRecommendation struct {
 	Category string `json:"category"` // cpu, memory, disk, uptime
@@ -620,4 +681,44 @@ type DevOpsSuggestion struct {
 	Severity string `json:"severity"` // "info", "warning", "critical"
 	Message  string `json:"message"`
 	Action   string `json:"action"` // suggested action
+}
+
+// AIInsight is a synthesized observation from the AIOps engine.
+type AIInsight struct {
+	Category  string `json:"category"` // "performance", "security", "network", "storage"
+	Severity  string `json:"severity"` // "info", "warning", "critical"
+	Title     string `json:"title"`
+	Message   string `json:"message"`
+	Action    string `json:"action"` // suggested action
+	Timestamp string `json:"timestamp"`
+}
+
+// AIConfidence holds the overall confidence score and per-factor breakdown.
+type AIConfidence struct {
+	Overall   float64            `json:"overall"` // 0-100
+	Factors   map[string]float64 `json:"factors"` // per-dimension scores
+	UpdatedAt string             `json:"updatedAt"`
+}
+
+// ConversationMessage represents a single chat message.
+type ConversationMessage struct {
+	ID        int64     `json:"id"`
+	SessionID string    `json:"session_id"`
+	Role      string    `json:"role"`
+	Content   string    `json:"content"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+// NetworkSummary provides a deterministic overview of network state.
+type NetworkSummary struct {
+	SummaryText  string   `json:"summaryText"`
+	TopInterface string   `json:"topInterface"`
+	Issues       []string `json:"issues"`
+}
+
+// GatewayInfo holds information about the default gateway.
+type GatewayInfo struct {
+	IP        string `json:"ip"`
+	Interface string `json:"interface"`
+	Reachable bool   `json:"reachable"`
 }

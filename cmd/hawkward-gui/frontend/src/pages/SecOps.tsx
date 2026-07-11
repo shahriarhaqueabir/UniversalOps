@@ -267,12 +267,33 @@ function UsersTab({ call }: { call: BackendCall }) {
     refetchInterval: refreshInterval,
   })
 
+  const adminCount = users.filter(u => u.is_admin).length
+  const disabledCount = users.filter(u => !u.is_enabled).length
+  const pwdNeverExpiresCount = users.filter(u => u.password_never_expires).length
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <ExpertInsight
         title="Identity & Access"
         content="Local user accounts with 'IsAdmin' status have full control over the workstation. Audit these regularly to ensure the Principle of Least Privilege (PoLP) is maintained."
       />
+
+      {/* ── Summary Stats ── */}
+      {users.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {([
+            { label: 'Admins', value: adminCount, cls: 'text-[var(--color-warning)]' },
+            { label: 'Disabled', value: disabledCount, cls: 'text-[var(--color-danger)]' },
+            { label: 'Password Never Expires', value: pwdNeverExpiresCount, cls: 'text-[var(--color-accent)]' },
+            { label: 'Total Accounts', value: users.length, cls: 'text-[var(--color-success)]' },
+          ] as const).map(s => (
+            <div key={s.label} className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-5 shadow-lg">
+              <p className="text-xs font-bold text-[var(--color-text-faint)] uppercase tracking-wider mb-1">{s.label}</p>
+              <p className={`text-3xl font-bold tabular-nums ${s.cls}`}>{s.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {users.length === 0 ? (
@@ -292,14 +313,23 @@ function UsersTab({ call }: { call: BackendCall }) {
               <div className="flex items-center gap-4 mb-1">
                 <h3 className="text-2xl font-bold text-text truncate">{user.username}</h3>
                 {user.is_admin && <span className="px-3 py-1 rounded-full bg-warning text-black text-xs font-bold uppercase tracking-tighter">Admin</span>}
+                {!user.is_enabled && <span className="px-3 py-1 rounded-full bg-danger text-white text-xs font-bold uppercase tracking-tighter">Disabled</span>}
               </div>
-              <p className="text-text-dim text-lg mb-4">{user.full_name || 'System Account'}</p>
-              <div className="flex items-center gap-4">
-                <div className="px-4 py-1.5 rounded-full bg-panel-3 border border-border text-sm font-bold text-text-faint tabular-nums truncate">{user.sid}</div>
-                <div className={cn("w-3 h-3 rounded-full shadow-lg", user.is_enabled ? "bg-success" : "bg-danger")} />
+              <p className="text-text-dim text-lg mb-3">{user.full_name || 'System Account'}</p>
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                <div className="px-3 py-1 rounded-full bg-panel-3 border border-border font-bold text-text-faint tabular-nums truncate">{user.sid}</div>
+                {user.last_logon && (
+                  <div className="px-3 py-1 rounded-full bg-panel-3 border border-border font-bold text-text-faint">
+                    Last logon: {user.last_logon}
+                  </div>
+                )}
+                {user.password_never_expires && (
+                  <div className="px-3 py-1 rounded-full bg-accent/10 border border-accent/30 font-bold text-accent">
+                    Password Never Expires
+                  </div>
+                )}
               </div>
             </div>
-
           </div>
         ))}
       </div>
@@ -394,6 +424,9 @@ function ListeningTab({ call }: { call: BackendCall }) {
   })
 
   const error = fetchError ? 'Failed to retrieve listening ports.' : null
+  const totalCount = ports.length
+  const externalCount = ports.filter(p => p.is_external).length
+  const unknownCount = ports.filter(p => p.process_name.startsWith('pid:')).length
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -401,6 +434,22 @@ function ListeningTab({ call }: { call: BackendCall }) {
         title="Network Surveillance"
         content="Every open port is a potential vector for unauthorized access. Processes listed here are actively listening for inbound connections. Scrutinize unfamiliar process names, unexpected protocols, or ports outside the well-known range (0-1023)."
       />
+
+      {/* ── Summary Stats ── */}
+      {ports.length > 0 && (
+        <div className="grid grid-cols-3 gap-4">
+          {([
+            { label: 'Total Listening', value: totalCount, cls: 'text-[var(--color-accent)]' },
+            { label: 'External Bindings', value: externalCount, cls: 'text-[var(--color-warning)]' },
+            { label: 'Unknown Processes', value: unknownCount, cls: 'text-[var(--color-danger)]' },
+          ] as const).map(s => (
+            <div key={s.label} className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-5 shadow-lg">
+              <p className="text-xs font-bold text-[var(--color-text-faint)] uppercase tracking-wider mb-1">{s.label}</p>
+              <p className={`text-3xl font-bold tabular-nums ${s.cls}`}>{s.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {loading && (
         <div className="flex flex-col items-center justify-center py-20">
@@ -504,8 +553,30 @@ function EventsTab({ call }: { call: BackendCall }) {
       return cat?.ids?.includes(e.id)
     })
 
+  const failedLoginsCount = events.filter(e => [4625].includes(e.id)).length
+  const elevationCount = events.filter(e => [4672, 4673].includes(e.id)).length
+  const policyCount = events.filter(e => [1102, 4719].includes(e.id)).length
+  const usbCount = events.filter(e => [6416, 6417, 4663].includes(e.id)).length
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
+      {/* ── Summary Stats ── */}
+      {events.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {([
+            { label: 'Failed Logins', value: failedLoginsCount, cls: 'text-[var(--color-danger)]' },
+            { label: 'Elevation', value: elevationCount, cls: 'text-[var(--color-warning)]' },
+            { label: 'Policy Changes', value: policyCount, cls: 'text-[var(--color-accent)]' },
+            { label: 'USB Devices', value: usbCount, cls: 'text-[var(--color-text-dim)]' },
+          ] as const).map(s => (
+            <div key={s.label} className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-5 shadow-lg">
+              <p className="text-xs font-bold text-[var(--color-text-faint)] uppercase tracking-wider mb-1">{s.label}</p>
+              <p className={`text-3xl font-bold tabular-nums ${s.cls}`}>{s.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="flex items-center gap-3 flex-wrap">
         {categories.map(c => (
           <button

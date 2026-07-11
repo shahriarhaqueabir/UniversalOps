@@ -23,9 +23,21 @@ const mockLogs = [
   { timestamp: '2026/07/08 12:00:10', level: 'ERROR', module: 'disk', message: 'Disk space low' },
 ]
 
-// Mock react-query
+// Mock react-query — return data based on query key
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: () => {
+  useQuery: (opts: { queryKey?: string[] }) => {
+    const key = opts?.queryKey?.[0]
+    if (key === 'logStats') {
+      return {
+        data: {
+          totalToday: 0, totalThisHour: 0, totalLastMin: 0,
+          errorCount: 0, warningCount: 0, infoCount: 0, debugCount: 0,
+          topSources: [], trendingErrors: [],
+        },
+        isLoading: false,
+        refetch: vi.fn(),
+      } as const
+    }
     return { data: [] as LogEntry[], isLoading: false, refetch: vi.fn() } as const
   },
   useQueryClient: () => ({ getQueryData: vi.fn(), setQueryData: vi.fn() }),
@@ -55,17 +67,15 @@ describe('Logs Page', () => {
   it('renders without crashing', async () => {
     render(<Logs />)
     await waitFor(() => {
-      expect(screen.getByText('Live Event Aggregator')).toBeInTheDocument()
+      expect(screen.getByText('Logs & Event Stream')).toBeInTheDocument()
     })
   })
 
-  it('shows level filter badges', async () => {
+  it('shows Overview and Live Stream tabs', async () => {
     render(<Logs />)
     await waitFor(() => {
-      expect(screen.getByText('INFO')).toBeInTheDocument()
-      expect(screen.getByText('WARN')).toBeInTheDocument()
-      expect(screen.getByText('ERROR')).toBeInTheDocument()
-      expect(screen.getByText('DEBUG')).toBeInTheDocument()
+      expect(screen.getByText('Overview')).toBeInTheDocument()
+      expect(screen.getByText('Live Stream')).toBeInTheDocument()
     })
   })
 })

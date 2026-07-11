@@ -22,22 +22,24 @@ function App() {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
   const { theme } = useThemeStore()
   const refreshInterval = useSettingsStore((s) => s.refreshInterval)
+  const pingCount = useSettingsStore((s) => s.pingCount)
+  const dnsTimeout = useSettingsStore((s) => s.dnsTimeout)
   const addAlert = useAlertStore((s) => s.addAlert)
 
-  // Sync refresh interval to backend on mount
+  // Sync all settings to backend on mount
   useEffect(() => {
-    const syncInterval = async () => {
+    const syncSettings = async () => {
       try {
         const w = window as Record<string, unknown>
         const go = w.go as Record<string, Record<string, (...args: unknown[]) => Promise<unknown>>> | undefined
         if (go?.app?.PipelineAPI?.UpdateSettings) {
-          await go.app.PipelineAPI.UpdateSettings(refreshInterval, 0)
+          await go.app.PipelineAPI.UpdateSettings(refreshInterval, 0, pingCount, dnsTimeout)
         }
       } catch {
         // Backend not ready yet — will be synced on next Settings page visit
       }
     }
-    syncInterval()
+    syncSettings()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Apply theme on mount and when it changes
