@@ -166,7 +166,7 @@ export function DevOps() {
 function OverviewTab() {
   const { call } = useBackend()
   const { refreshInterval } = useSettingsStore()
-  const [refreshKey, setRefreshKey] = useState(0)
+  const [refreshKey] = useState(0)
 
   // ── Docker status ──
   const { data: dockerData } = useQuery<DockerStatus>({
@@ -1238,8 +1238,8 @@ function AISuggestionsTab() {
   const { data: suggestions, isLoading } = useQuery<DevOpsSuggestion[]>({
     queryKey: ['devops-ai-suggestions', refreshKey],
     queryFn: async () => {
-      const res = await call<DevOpsSuggestion[]>('DevOps.GetAISuggestions')
-      return res ?? []
+      const res = await call('DevOps.GetAISuggestions')
+      return (res as DevOpsSuggestion[]) ?? []
     },
   })
 
@@ -1364,8 +1364,8 @@ function ToolboxTab() {
   const { data: tools, isLoading } = useQuery<ToolInfo[]>({
     queryKey: ['devops-tools'],
     queryFn: async () => {
-      const res = await call<ToolInfo[]>('DevOps.GetInstalledTools')
-      return res
+      const res = await call('DevOps.GetInstalledTools')
+      return (res as ToolInfo[]) || []
     },
     staleTime: 30_000,
   })
@@ -1462,17 +1462,17 @@ function ToolboxTab() {
 }
 
 // Simple refresh trigger for the tools query
-function ToolsRefreshButton()
-const queryClient = useQueryClient()
-return (
-  <button
-    onClick={() => queryClient.invalidateQueries({ queryKey: ['devops-tools'] })}
-    className="flex items-center gap-2 px-4 py-2 rounded-[var(--radius-lg)] border border-border bg-panel hover:bg-[var(--color-sidebar-hover)] text-text-dim hover:text-text transition-all text-sm font-bold"
-  >
-    <RefreshCw size={16} />
-    Refresh
-  </button>
-)
+function ToolsRefreshButton() {
+  const queryClient = useQueryClient()
+  return (
+    <button
+      onClick={() => queryClient.invalidateQueries({ queryKey: ['devops-tools'] })}
+      className="flex items-center gap-2 px-4 py-2 rounded-[var(--radius-lg)] border border-border bg-panel hover:bg-[var(--color-sidebar-hover)] text-text-dim hover:text-text transition-all text-sm font-bold"
+    >
+      <RefreshCw size={16} />
+      Refresh
+    </button>
+  )
 }
 
 // ══════════════════════════════════════════════

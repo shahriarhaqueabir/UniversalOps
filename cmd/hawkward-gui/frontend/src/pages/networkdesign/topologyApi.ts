@@ -220,6 +220,8 @@ export async function discoverLocalNetwork(): Promise<TopologyDevice[]> {
       status: n.online ? 'healthy' : 'critical',
       notes: n.vendor ? `Vendor: ${n.vendor}` : '',
       subnet: '',
+      x: 0,
+      y: 0,
     }))
   } catch {
     return []

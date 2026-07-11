@@ -34,7 +34,7 @@ describe('NetOps Page', () => {
     vi.clearAllMocks()
 
     // Default mock for useQuery
-    ;(useQuery as any).mockImplementation(({ queryKey }: any) => {
+    ;(useQuery as any).mockImplementation(() => {
       return { data: [], isLoading: false }
     })
 

@@ -10,8 +10,20 @@ export function GetConnections() {
   return window['go']['app']['NetOps']['GetConnections']();
 }
 
+export function GetDefaultGateway() {
+  return window['go']['app']['NetOps']['GetDefaultGateway']();
+}
+
 export function GetInterfaces() {
   return window['go']['app']['NetOps']['GetInterfaces']();
+}
+
+export function GetNetworkSummary() {
+  return window['go']['app']['NetOps']['GetNetworkSummary']();
+}
+
+export function GetRecentChanges() {
+  return window['go']['app']['NetOps']['GetRecentChanges']();
 }
 
 export function Ping(arg1, arg2) {

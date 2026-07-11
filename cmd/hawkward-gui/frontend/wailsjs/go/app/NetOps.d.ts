@@ -6,7 +6,13 @@ export function DNSLookup(arg1:string,arg2:string,arg3:number):Promise<app.DNSRe
 
 export function GetConnections():Promise<Array<app.ConnectionInfo>>;
 
+export function GetDefaultGateway():Promise<app.GatewayInfo>;
+
 export function GetInterfaces():Promise<Array<app.InterfaceInfo>>;
+
+export function GetNetworkSummary():Promise<app.NetworkSummary>;
+
+export function GetRecentChanges():Promise<Array<app.NetworkChange>>;
 
 export function Ping(arg1:string,arg2:number):Promise<app.PingResult>;
 

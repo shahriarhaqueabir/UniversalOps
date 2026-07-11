@@ -27,6 +27,10 @@ export default tseslint.config(
       'react-hooks/set-state-in-effect': 'off',
       // TanStack Virtual's useVirtualizer is incompatible with React Compiler — this is expected
       'react-hooks/incompatible-library': 'off',
+      // Date.now() for session IDs and freshness is acceptable in desktop GUI patterns
+      'react-hooks/purity': 'off',
+      // Wails bridge (window.go) requires dynamic types
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 )
