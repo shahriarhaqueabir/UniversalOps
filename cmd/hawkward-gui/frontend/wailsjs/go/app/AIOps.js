@@ -10,6 +10,10 @@ export function Chat(arg1) {
   return window['go']['app']['AIOps']['Chat'](arg1);
 }
 
+export function DeleteSession(arg1) {
+  return window['go']['app']['AIOps']['DeleteSession'](arg1);
+}
+
 export function DetectAnomalies() {
   return window['go']['app']['AIOps']['DetectAnomalies']();
 }
@@ -18,8 +22,36 @@ export function GenerateReport(arg1) {
   return window['go']['app']['AIOps']['GenerateReport'](arg1);
 }
 
+export function GetAIInsights() {
+  return window['go']['app']['AIOps']['GetAIInsights']();
+}
+
+export function GetConfidenceScore() {
+  return window['go']['app']['AIOps']['GetConfidenceScore']();
+}
+
+export function GetLearnedBaselines() {
+  return window['go']['app']['AIOps']['GetLearnedBaselines']();
+}
+
+export function GetMessages(arg1) {
+  return window['go']['app']['AIOps']['GetMessages'](arg1);
+}
+
 export function GetOllamaStatus() {
   return window['go']['app']['AIOps']['GetOllamaStatus']();
+}
+
+export function ListSessions() {
+  return window['go']['app']['AIOps']['ListSessions']();
+}
+
+export function QuerySystemState(arg1) {
+  return window['go']['app']['AIOps']['QuerySystemState'](arg1);
+}
+
+export function SaveMessage(arg1, arg2, arg3) {
+  return window['go']['app']['AIOps']['SaveMessage'](arg1, arg2, arg3);
 }
 
 export function WithTimeout(arg1) {

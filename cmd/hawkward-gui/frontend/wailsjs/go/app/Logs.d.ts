@@ -4,6 +4,12 @@ import {app} from '../models';
 
 export function ExportLogs(arg1:string):Promise<string>;
 
+export function GenerateLogSummary():Promise<app.LogSummary>;
+
+export function GetLogStats():Promise<app.LogStats>;
+
+export function GetLogTimeline(arg1:number):Promise<Array<app.LogTimelinePoint>>;
+
 export function GetLogs(arg1:string,arg2:string,arg3:number):Promise<Array<app.LogEntry>>;
 
 export function SaveLogsToFile(arg1:string,arg2:string):Promise<string>;

@@ -14,7 +14,6 @@ import {
   Activity,
   Play,
   Square,
-  Timer,
   RefreshCw,
   Network,
   Clock,
@@ -36,7 +35,6 @@ import type {
   NetworkSummary,
   GatewayInfo,
 } from '@/types'
-import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 
 // ── Types ──
 

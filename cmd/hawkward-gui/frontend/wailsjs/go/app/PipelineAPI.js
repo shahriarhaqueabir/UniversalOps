@@ -18,6 +18,10 @@ export function GetMetricHistory(arg1, arg2) {
   return window['go']['app']['PipelineAPI']['GetMetricHistory'](arg1, arg2);
 }
 
+export function GetMetricHistoryWithTimestamps(arg1, arg2) {
+  return window['go']['app']['PipelineAPI']['GetMetricHistoryWithTimestamps'](arg1, arg2);
+}
+
 export function GetMetricWithForecast(arg1) {
   return window['go']['app']['PipelineAPI']['GetMetricWithForecast'](arg1);
 }
@@ -30,6 +34,6 @@ export function GetWindowStats(arg1) {
   return window['go']['app']['PipelineAPI']['GetWindowStats'](arg1);
 }
 
-export function UpdateSettings(arg1, arg2) {
-  return window['go']['app']['PipelineAPI']['UpdateSettings'](arg1, arg2);
+export function UpdateSettings(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['PipelineAPI']['UpdateSettings'](arg1, arg2, arg3, arg4);
 }

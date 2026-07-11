@@ -8,10 +8,26 @@ export function AskAI(arg1:context.Context,arg2:string):Promise<string>;
 
 export function Chat(arg1:string):Promise<string>;
 
+export function DeleteSession(arg1:string):Promise<void>;
+
 export function DetectAnomalies():Promise<Array<app.AnomalyInfo>>;
 
 export function GenerateReport(arg1:Array<string>):Promise<string>;
 
+export function GetAIInsights():Promise<Array<app.AIInsight>>;
+
+export function GetConfidenceScore():Promise<app.AIConfidence>;
+
+export function GetLearnedBaselines():Promise<Array<app.LearnedBaseline>>;
+
+export function GetMessages(arg1:string):Promise<Array<app.ConversationMessage>>;
+
 export function GetOllamaStatus():Promise<app.OllamaStatus>;
+
+export function ListSessions():Promise<Array<Record<string, any>>>;
+
+export function QuerySystemState(arg1:string):Promise<string>;
+
+export function SaveMessage(arg1:string,arg2:string,arg3:string):Promise<string>;
 
 export function WithTimeout(arg1:time.Duration):Promise<context.Context|context.CancelFunc>;

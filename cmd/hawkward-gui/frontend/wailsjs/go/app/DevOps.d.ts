@@ -4,11 +4,31 @@ import {app} from '../models';
 
 export function ControlService(arg1:string,arg2:string):Promise<boolean>;
 
+export function GetAISuggestions():Promise<Array<app.DevOpsSuggestion>>;
+
+export function GetContainers():Promise<app.ContainerSummary>;
+
 export function GetDefaultPath():Promise<string>;
 
 export function GetDevProcesses():Promise<Array<app.ProcessInfo>>;
 
+export function GetDockerStatus():Promise<app.DockerStatus>;
+
+export function GetEnvironment():Promise<app.EnvironmentInfo>;
+
+export function GetGitSummary():Promise<app.GitSummary>;
+
+export function GetInstalledTools():Promise<Array<app.ToolInfo>>;
+
+export function GetKubernetesStatus():Promise<app.KubernetesStatus>;
+
+export function GetLocalServers():Promise<Array<app.LocalServer>>;
+
 export function GetPowerShellWorkflows():Promise<Array<string>>;
+
+export function GetServiceCategories():Promise<Array<app.ServiceCategory>>;
+
+export function GetServiceGroupSummary():Promise<app.ServiceGroupSummary>;
 
 export function GetServices():Promise<Array<app.ServiceEntry>>;
 

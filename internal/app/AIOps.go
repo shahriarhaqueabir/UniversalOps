@@ -190,7 +190,7 @@ func (a *AIOps) GetAIInsights() []AIInsight {
 		if len(mf.Values) < 10 {
 			continue
 		}
-		if mf.Trend.Direction == "rising" && mf.LastValue > 75 {
+		if mf.Trend.Direction == common.TrendRising && mf.LastValue > 75 {
 			insights = append(insights, AIInsight{
 				Category:  metricCategory(name),
 				Severity:  "warning",
@@ -199,7 +199,7 @@ func (a *AIOps) GetAIInsights() []AIInsight {
 				Action:    "Monitor closely and consider preemptive action.",
 				Timestamp: now,
 			})
-		} else if mf.Trend.Direction == "falling" && mf.LastValue > 90 {
+		} else if mf.Trend.Direction == common.TrendFalling && mf.LastValue > 90 {
 			insights = append(insights, AIInsight{
 				Category:  metricCategory(name),
 				Severity:  "info",

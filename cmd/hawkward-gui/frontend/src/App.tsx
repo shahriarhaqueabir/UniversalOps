@@ -30,8 +30,7 @@ function App() {
   useEffect(() => {
     const syncSettings = async () => {
       try {
-        const w = window as Record<string, unknown>
-        const go = w.go as Record<string, Record<string, (...args: unknown[]) => Promise<unknown>>> | undefined
+        const go = (window as any).go
         if (go?.app?.PipelineAPI?.UpdateSettings) {
           await go.app.PipelineAPI.UpdateSettings(refreshInterval, 0, pingCount, dnsTimeout)
         }

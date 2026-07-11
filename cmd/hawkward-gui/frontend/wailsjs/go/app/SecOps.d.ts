@@ -6,11 +6,19 @@ export function GetDefenderStatus():Promise<app.DefenderStatus>;
 
 export function GetFirewallRules():Promise<Array<app.FirewallRule>>;
 
+export function GetFirewallStatus():Promise<app.FirewallStatus>;
+
 export function GetListeningPorts():Promise<Array<app.ListeningPort>>;
+
+export function GetRisks():Promise<Array<app.RiskInfo>>;
 
 export function GetScheduledTasks():Promise<Array<app.ScheduledTask>>;
 
 export function GetSecurityEvents():Promise<Array<app.SecurityEvent>>;
+
+export function GetSecurityScore():Promise<app.SecurityScore>;
+
+export function GetSecuritySummary():Promise<app.SecuritySummary>;
 
 export function GetUsers():Promise<Array<app.UserInfo>>;
 

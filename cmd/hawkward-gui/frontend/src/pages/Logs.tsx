@@ -200,7 +200,7 @@ function OverviewTab() {
                     borderRadius: '12px',
                     color: 'var(--color-text)',
                   }}
-                  labelFormatter={(v: string) => format(new Date(v), 'MMM d, HH:mm')}
+                  labelFormatter={(v: any) => format(new Date(v), 'MMM d, HH:mm')}
                 />
                 <Legend
                   wrapperStyle={{ fontSize: 12, color: 'var(--color-text-dim)' }}
@@ -327,7 +327,6 @@ function LiveStreamTab() {
   const [activeLevels, setActiveLevels] = useState<Set<string>>(new Set(LEVELS))
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null)
   const [autoScroll, setAutoScroll] = useState(true)
-  const [exporting, setExporting] = useState(false)
 
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -342,7 +341,7 @@ function LiveStreamTab() {
 
   const { refreshInterval } = useSettingsStore()
   // ── React Query for polling ──
-  const { data: allLogs = [], refetch, dataUpdatedAt: logsUpdatedAt } = useQuery<LogEntry[]>({
+  const { data: allLogs = [], dataUpdatedAt: logsUpdatedAt } = useQuery<LogEntry[]>({
     queryKey: ['logs'],
     queryFn: async () => {
       const res = await call('Logs.GetLogs', '', '', 200) as LogEntry[]
@@ -391,43 +390,6 @@ function LiveStreamTab() {
     })
   }
 
-  // ── Export handlers ──
-  const handleExport = async () => {
-    setExporting(true)
-    try {
-      const result = await call('Logs.ExportLogs', 'json') as string
-      if (!result) return
-      const blob = new Blob([result], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `hawkward-logs-${new Date().toISOString().slice(0, 10)}.json`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (err) {
-      console.error('[Logs] Export failed:', err)
-    } finally {
-      setExporting(false)
-    }
-  }
-
-  const handleSaveToFile = async () => {
-    const path = window.prompt('Save logs to file path:', 'hawkward-logs.json')
-    if (!path) return
-    setExporting(true)
-    try {
-      const result = await call('Logs.SaveLogsToFile', path, 'json') as string
-      if (result) {
-        const { toast } = await import('sonner')
-        toast.success(result)
-      }
-    } catch (err) {
-      console.error('[Logs] Save failed:', err)
-    } finally {
-      setExporting(false)
-    }
-  }
-
   // ── Render ──
   return (
     <>
@@ -456,9 +418,10 @@ function LiveStreamTab() {
                 className={cn(
                   'flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all border',
                   activeLevels.has(level)
-                    ? `${levelStyle[level].bg} ${levelStyle[level].text} border-current/30`
+                    ? 'border-current/30'
                     : 'bg-[var(--color-panel-2)] text-[var(--color-text-faint)] border-transparent opacity-40'
                 )}
+                style={activeLevels.has(level) ? { backgroundColor: levelStyle[level].bgColor, color: levelStyle[level].textColor } : {}}
               >
                 {levelStyle[level].icon}
                 {level}

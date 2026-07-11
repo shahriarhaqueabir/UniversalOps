@@ -6,6 +6,18 @@ export function ExportLogs(arg1) {
   return window['go']['app']['Logs']['ExportLogs'](arg1);
 }
 
+export function GenerateLogSummary() {
+  return window['go']['app']['Logs']['GenerateLogSummary']();
+}
+
+export function GetLogStats() {
+  return window['go']['app']['Logs']['GetLogStats']();
+}
+
+export function GetLogTimeline(arg1) {
+  return window['go']['app']['Logs']['GetLogTimeline'](arg1);
+}
+
 export function GetLogs(arg1, arg2, arg3) {
   return window['go']['app']['Logs']['GetLogs'](arg1, arg2, arg3);
 }

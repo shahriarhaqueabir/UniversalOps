@@ -6,6 +6,14 @@ export function ControlService(arg1, arg2) {
   return window['go']['app']['DevOps']['ControlService'](arg1, arg2);
 }
 
+export function GetAISuggestions() {
+  return window['go']['app']['DevOps']['GetAISuggestions']();
+}
+
+export function GetContainers() {
+  return window['go']['app']['DevOps']['GetContainers']();
+}
+
 export function GetDefaultPath() {
   return window['go']['app']['DevOps']['GetDefaultPath']();
 }
@@ -14,8 +22,40 @@ export function GetDevProcesses() {
   return window['go']['app']['DevOps']['GetDevProcesses']();
 }
 
+export function GetDockerStatus() {
+  return window['go']['app']['DevOps']['GetDockerStatus']();
+}
+
+export function GetEnvironment() {
+  return window['go']['app']['DevOps']['GetEnvironment']();
+}
+
+export function GetGitSummary() {
+  return window['go']['app']['DevOps']['GetGitSummary']();
+}
+
+export function GetInstalledTools() {
+  return window['go']['app']['DevOps']['GetInstalledTools']();
+}
+
+export function GetKubernetesStatus() {
+  return window['go']['app']['DevOps']['GetKubernetesStatus']();
+}
+
+export function GetLocalServers() {
+  return window['go']['app']['DevOps']['GetLocalServers']();
+}
+
 export function GetPowerShellWorkflows() {
   return window['go']['app']['DevOps']['GetPowerShellWorkflows']();
+}
+
+export function GetServiceCategories() {
+  return window['go']['app']['DevOps']['GetServiceCategories']();
+}
+
+export function GetServiceGroupSummary() {
+  return window['go']['app']['DevOps']['GetServiceGroupSummary']();
 }
 
 export function GetServices() {

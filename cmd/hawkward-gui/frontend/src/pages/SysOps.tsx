@@ -496,7 +496,7 @@ export function SysOps() {
                       <YAxis hide domain={[0, 100]} />
                       <Tooltip
                         contentStyle={{ backgroundColor: 'var(--color-panel-3)', border: 'none', borderRadius: '12px' }}
-                        formatter={(value: number) => [`${value.toFixed(1)}%`, 'CPU']}
+                        formatter={(value: any) => [`${Number(value).toFixed(1)}%`, 'CPU']}
                       />
                       <Area type="monotone" dataKey="value" stroke="var(--color-accent)" strokeWidth={2} fill="url(#sysopsCpuGrad)" isAnimationActive={false} />
                     </RechartsAreaChart>
@@ -525,7 +525,7 @@ export function SysOps() {
                       <YAxis hide domain={[0, 100]} />
                       <Tooltip
                         contentStyle={{ backgroundColor: 'var(--color-panel-3)', border: 'none', borderRadius: '12px' }}
-                        formatter={(value: number) => [`${value.toFixed(1)}%`, 'Memory']}
+                        formatter={(value: any) => [`${Number(value).toFixed(1)}%`, 'Memory']}
                       />
                       <Area type="monotone" dataKey="value" stroke="var(--color-success)" strokeWidth={2} fill="url(#sysopsMemGrad)" isAnimationActive={false} />
                     </RechartsAreaChart>
@@ -554,7 +554,7 @@ export function SysOps() {
                       <YAxis hide domain={[0, 100]} />
                       <Tooltip
                         contentStyle={{ backgroundColor: 'var(--color-panel-3)', border: 'none', borderRadius: '12px' }}
-                        formatter={(value: number) => [`${value.toFixed(1)}%`, 'Disk']}
+                        formatter={(value: any) => [`${Number(value).toFixed(1)}%`, 'Disk']}
                       />
                       <Area type="monotone" dataKey="value" stroke="var(--color-warning)" strokeWidth={2} fill="url(#sysopsDiskGrad)" isAnimationActive={false} />
                     </RechartsAreaChart>

@@ -10,8 +10,16 @@ export function GetFirewallRules() {
   return window['go']['app']['SecOps']['GetFirewallRules']();
 }
 
+export function GetFirewallStatus() {
+  return window['go']['app']['SecOps']['GetFirewallStatus']();
+}
+
 export function GetListeningPorts() {
   return window['go']['app']['SecOps']['GetListeningPorts']();
+}
+
+export function GetRisks() {
+  return window['go']['app']['SecOps']['GetRisks']();
 }
 
 export function GetScheduledTasks() {
@@ -20,6 +28,14 @@ export function GetScheduledTasks() {
 
 export function GetSecurityEvents() {
   return window['go']['app']['SecOps']['GetSecurityEvents']();
+}
+
+export function GetSecurityScore() {
+  return window['go']['app']['SecOps']['GetSecurityScore']();
+}
+
+export function GetSecuritySummary() {
+  return window['go']['app']['SecOps']['GetSecuritySummary']();
 }
 
 export function GetUsers() {
