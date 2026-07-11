@@ -10,7 +10,7 @@ import (
 // CollectionConfig controls how the data pipeline collects and stores metrics.
 type CollectionConfig struct {
 	// Capacity is the number of samples retained per time series (ring buffer).
-	// Default 240 = 4 min at 1 s tick interval.
+	// Default 240 = 4 min at 1 s tick interval.
 	Capacity int
 
 	// TickInterval is the nominal collection interval.
@@ -22,15 +22,23 @@ type CollectionConfig struct {
 	// ForecastWindow is the lookback window (in samples) used by the forecast engine.
 	// If zero, ForecastWindow defaults to Capacity/4.
 	ForecastWindow int
+
+	// PingCount is the default number of ICMP echo requests per ping.
+	PingCount int
+
+	// DNSTimeout is the default timeout in milliseconds for DNS lookups.
+	DNSTimeout int
 }
 
 // DefaultCollectionConfig returns a sensible configuration.
 func DefaultCollectionConfig() CollectionConfig {
 	return CollectionConfig{
 		Capacity:       240,
-		TickInterval:   1 * time.Second,
+		TickInterval:   5 * time.Second,
 		ForecastSteps:  12,
 		ForecastWindow: 60,
+		PingCount:      4,
+		DNSTimeout:     2000,
 	}
 }
 

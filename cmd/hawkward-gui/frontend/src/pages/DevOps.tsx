@@ -50,9 +50,9 @@ function stripAnsi(text: string): string {
   // eslint-disable-next-line no-control-regex
   return text.replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, '')
 }
-import type { CommandResult, ServiceEntry, FileEntry, ToolInfo, ContainerSummary, GitSummary, LocalServer, EnvironmentInfo, DevOpsSuggestion } from '@/types'
+import type { CommandResult, ServiceEntry, FileEntry, ToolInfo, ContainerSummary, GitSummary, LocalServer, EnvironmentInfo, DevOpsSuggestion, DockerStatus, KubernetesStatus, ServiceCategory, ServiceGroupSummary } from '@/types'
 
-type TabId = 'terminal' | 'powershell-pro' | 'services' | 'file-browser' | 'toolbox' | 'containers' | 'git' | 'servers' | 'environment'
+type TabId = 'overview' | 'terminal' | 'powershell-pro' | 'services' | 'file-browser' | 'toolbox' | 'containers' | 'git' | 'servers' | 'environment'
 
 // ── Inline helpers ──
 
@@ -93,6 +93,7 @@ export function DevOps() {
       <Tabs.Root value={activeTab} onValueChange={(v) => setActiveTab(v as TabId)} className="flex-1 flex flex-col min-w-0">
         <Tabs.List className="flex border-b border-border bg-panel px-4">
           {[
+            { id: 'overview', label: 'Overview', icon: <Activity size={20} className="text-accent" /> },
             { id: 'terminal', label: 'Interactive Terminal', icon: <Terminal size={20} /> },
             { id: 'powershell-pro', label: 'PowerShell Pro', icon: <Zap size={20} className="text-warning" /> },
             { id: 'services', label: 'System Services', icon: <Server size={20} /> },
@@ -119,6 +120,9 @@ export function DevOps() {
         </Tabs.List>
 
         <div className="flex-1 overflow-hidden">
+          <Tabs.Content value="overview" className="h-full">
+            <OverviewTab />
+          </Tabs.Content>
           <Tabs.Content value="terminal" className="h-full">
             <TerminalTab />
           </Tabs.Content>
@@ -151,6 +155,451 @@ export function DevOps() {
           </Tabs.Content>
         </div>
       </Tabs.Root>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════
+//  Overview Tab
+// ══════════════════════════════════════════════
+
+function OverviewTab() {
+  const { call } = useBackend()
+  const { refreshInterval } = useSettingsStore()
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  // ── Docker status ──
+  const { data: dockerData } = useQuery<DockerStatus>({
+    queryKey: ['devops-docker-status', refreshKey],
+    queryFn: async () => {
+      try {
+        const res = await call('DevOps.GetDockerStatus')
+        return res as DockerStatus
+      } catch {
+        return { installed: false, running: false, version: '', containers: { running: 0, stopped: 0, failed: 0, total: 0, containers: [] } }
+      }
+    },
+    refetchInterval: refreshInterval,
+  })
+
+  // ── Kubernetes status ──
+  const { data: k8sData } = useQuery<KubernetesStatus>({
+    queryKey: ['devops-k8s-status', refreshKey],
+    queryFn: async () => {
+      try {
+        const res = await call('DevOps.GetKubernetesStatus')
+        return res as KubernetesStatus
+      } catch {
+        return { installed: false, connected: false, cluster: '', nodes: 0, pods: 0 }
+      }
+    },
+    refetchInterval: refreshInterval,
+  })
+
+  // ── Service categories ──
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery<ServiceCategory[]>({
+    queryKey: ['devops-service-categories', refreshKey],
+    queryFn: async () => {
+      try {
+        const res = await call('DevOps.GetServiceCategories')
+        return (res as ServiceCategory[]) || []
+      } catch {
+        return []
+      }
+    },
+    refetchInterval: refreshInterval,
+  })
+
+  // ── Service group summary ──
+  const { data: summary } = useQuery<ServiceGroupSummary>({
+    queryKey: ['devops-service-summary', refreshKey],
+    queryFn: async () => {
+      try {
+        const res = await call('DevOps.GetServiceGroupSummary')
+        return res as ServiceGroupSummary
+      } catch {
+        return { databases: 0, messageQueues: 0, webServers: 0, containers: 0, other: 0, running: 0, stopped: 0 }
+      }
+    },
+    refetchInterval: refreshInterval,
+  })
+
+  // ── AI Suggestions ──
+  const { data: suggestions } = useQuery<DevOpsSuggestion[]>({
+    queryKey: ['devops-suggestions-overview', refreshKey],
+    queryFn: async () => {
+      try {
+        const res = await call('DevOps.GetAISuggestions')
+        return (res as DevOpsSuggestion[]) || []
+      } catch {
+        return []
+      }
+    },
+    refetchInterval: 120000,
+  })
+
+  // ── Git Summary ──
+  const { data: gitSummary } = useQuery<GitSummary>({
+    queryKey: ['devops-git-summary-overview', refreshKey],
+    queryFn: async () => {
+      try {
+        const res = await call('DevOps.GetGitSummary')
+        return res as GitSummary
+      } catch {
+        return { repositories: [], total_repos: 0 }
+      }
+    },
+    refetchInterval: refreshInterval,
+  })
+
+  // ── Environment Summary ──
+  const { data: environment } = useQuery<EnvironmentInfo>({
+    queryKey: ['devops-env-overview', refreshKey],
+    queryFn: async () => {
+      try {
+        const res = await call('DevOps.GetEnvironment')
+        return (res as EnvironmentInfo) || { path_dirs: [], key_vars: [], sdks: [], package_managers: [] }
+      } catch {
+        return { path_dirs: [], key_vars: [], sdks: [], package_managers: [] }
+      }
+    },
+    refetchInterval: refreshInterval,
+  })
+
+  const categoryIcons: Record<string, string> = {
+    Databases: '\uD83D\uDDC4\uFE0F',
+    'Message Queues': '\uD83D\uDCE8',
+    'Web Servers': '\uD83C\uDF10',
+    Containers: '\uD83D\uDCE6',
+    Other: '\u2699\uFE0F',
+  }
+
+  const summaryKpis = [
+    { label: 'Databases', value: summary?.databases ?? 0, colorClass: 'text-accent' },
+    { label: 'Message Queues', value: summary?.messageQueues ?? 0, colorClass: 'text-accent-2' },
+    { label: 'Web Servers', value: summary?.webServers ?? 0, colorClass: 'text-success' },
+    { label: 'Running', value: summary?.running ?? 0, colorClass: 'text-success' },
+    { label: 'Stopped', value: summary?.stopped ?? 0, colorClass: 'text-danger' },
+  ]
+
+  return (
+    <div className="flex flex-col h-full p-8 space-y-8 overflow-y-auto">
+      {/* ── Docker & Kubernetes Row ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Docker Status Card */}
+        <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Box size={28} className="text-accent" />
+              <h3 className="text-xl font-bold text-text uppercase tracking-widest">Docker</h3>
+            </div>
+            <span
+              className={cn(
+                'text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest border',
+                dockerData?.installed
+                  ? dockerData?.running
+                    ? 'bg-success/20 text-success border-success/30'
+                    : 'bg-warning/20 text-warning border-warning/30'
+                  : 'bg-text-faint/20 text-text-faint border-text-faint/30',
+              )}
+            >
+              {dockerData?.installed ? (dockerData?.running ? 'Running' : 'Installed') : 'Not Installed'}
+            </span>
+          </div>
+
+          {!dockerData?.installed ? (
+            <p className="text-text-faint text-sm">Docker is not installed on this system.</p>
+          ) : (
+            <div className="space-y-6">
+              {dockerData.version && (
+                <div className="flex items-center gap-2 text-sm text-text-dim">
+                  <span className="text-text-faint">Version:</span>
+                  <span className="font-[Geist_Mono] text-text font-medium">{dockerData.version}</span>
+                </div>
+              )}
+              <div className="grid grid-cols-4 gap-4">
+                {[
+                  { label: 'Running', value: dockerData.containers?.running ?? 0, dotClass: 'bg-success', textClass: 'text-success' },
+                  { label: 'Stopped', value: dockerData.containers?.stopped ?? 0, dotClass: 'bg-warning', textClass: 'text-warning' },
+                  { label: 'Failed', value: dockerData.containers?.failed ?? 0, dotClass: 'bg-danger', textClass: 'text-danger' },
+                  { label: 'Total', value: dockerData.containers?.total ?? 0, dotClass: 'bg-text-faint', textClass: 'text-text-dim' },
+                ].map((item) => (
+                  <div key={item.label} className="flex flex-col items-center gap-2 bg-panel-2 border border-border rounded-xl p-4">
+                    <span className={cn('w-2.5 h-2.5 rounded-full', item.dotClass)} />
+                    <span className={cn('text-2xl font-bold tabular-nums', item.textClass)}>{item.value}</span>
+                    <span className="text-xs font-semibold text-text-faint uppercase tracking-wider">{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Kubernetes Status Card */}
+        <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Server size={28} className="text-info" />
+              <h3 className="text-xl font-bold text-text uppercase tracking-widest">Kubernetes</h3>
+            </div>
+            <span
+              className={cn(
+                'text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest border',
+                k8sData?.installed
+                  ? k8sData?.connected
+                    ? 'bg-success/20 text-success border-success/30'
+                    : 'bg-warning/20 text-warning border-warning/30'
+                  : 'bg-text-faint/20 text-text-faint border-text-faint/30',
+              )}
+            >
+              {k8sData?.installed ? (k8sData?.connected ? 'Connected' : 'Not Connected') : 'Not Installed'}
+            </span>
+          </div>
+
+          {!k8sData?.installed ? (
+            <p className="text-text-faint text-sm">Kubernetes is not installed on this system.</p>
+          ) : !k8sData?.connected ? (
+            <div className="space-y-2">
+              <p className="text-warning text-sm font-medium">Installed but not connected to a cluster.</p>
+              {k8sData.cluster && (
+                <p className="text-text-faint text-xs">Last known cluster: <span className="font-[Geist_Mono] text-text-dim">{k8sData.cluster}</span></p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 text-sm text-text-dim">
+                <span className="text-text-faint">Cluster:</span>
+                <span className="font-[Geist_Mono] text-text font-medium">{k8sData.cluster}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col items-center gap-2 bg-panel-2 border border-border rounded-xl p-4">
+                  <Server size={20} className="text-info" />
+                  <span className="text-2xl font-bold tabular-nums text-info">{k8sData.nodes}</span>
+                  <span className="text-xs font-semibold text-text-faint uppercase tracking-wider">Nodes</span>
+                </div>
+                <div className="flex flex-col items-center gap-2 bg-panel-2 border border-border rounded-xl p-4">
+                  <Container size={20} className="text-accent" />
+                  <span className="text-2xl font-bold tabular-nums text-accent">{k8sData.pods}</span>
+                  <span className="text-xs font-semibold text-text-faint uppercase tracking-wider">Pods</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Service Group Summary Row ── */}
+      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-2xl">
+        <div className="flex items-center gap-3 mb-6">
+          <Activity size={22} className="text-accent" />
+          <h3 className="text-lg font-bold text-text uppercase tracking-widest">Service Overview</h3>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          {summaryKpis.map((kpi) => (
+            <div key={kpi.label} className="flex flex-col items-center gap-2 bg-panel-2 border border-border rounded-xl p-5">
+              <span className={cn('text-3xl font-bold tabular-nums', kpi.colorClass)}>{kpi.value}</span>
+              <span className="text-xs font-semibold text-text-faint uppercase tracking-wider">{kpi.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Service Categories ── */}
+      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+        <div className="flex items-center gap-3 mb-8">
+          <Package size={22} className="text-accent" />
+          <h3 className="text-lg font-bold text-text uppercase tracking-widest">Service Categories</h3>
+        </div>
+
+        {categoriesLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <RefreshCw size={24} className="text-text-faint animate-spin" />
+          </div>
+        ) : categories.length === 0 ? (
+          <EmptyState
+            icon={<Package size={28} />}
+            title="No Categories Available"
+            description="Service categories are not yet available. The backend may still be initializing."
+          />
+        ) : (
+          <div className="space-y-8">
+            {categories.map((cat) => (
+              <div key={cat.category} className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">{categoryIcons[cat.category] ?? '\u2699\uFE0F'}</span>
+                  <h4 className="text-base font-bold text-text uppercase tracking-wider">{cat.category}</h4>
+                  <span className="px-2 py-0.5 rounded-full bg-accent-soft text-accent text-xs font-bold">{cat.services.length}</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {cat.services.map((svc) => (
+                    <div
+                      key={svc.name}
+                      className="flex items-center justify-between bg-panel-2 border border-border rounded-xl px-4 py-3 hover:bg-[var(--color-sidebar-hover)] transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={cn(
+                            'w-2.5 h-2.5 rounded-full',
+                            svc.status.toLowerCase() === 'running' ? 'bg-success shadow-[0_0_6px_var(--color-success)]' : 'bg-danger shadow-[0_0_6px_var(--color-danger)]',
+                          )}
+                        />
+                        <span className="text-sm font-medium text-text font-[Geist_Mono]">{svc.name}</span>
+                      </div>
+                      <span className="text-xs text-text-faint">{svc.port > 0 ? `:${svc.port}` : ''}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── AI Suggestions Compact ── */}
+      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-2xl">
+        <div className="flex items-center gap-3 mb-4">
+          <Lightbulb size={22} className="text-warning" />
+          <h3 className="text-lg font-bold text-text uppercase tracking-widest">AI Suggestions</h3>
+        </div>
+        {(!suggestions || suggestions.length === 0) ? (
+          <p className="text-text-faint text-sm">No suggestions available.</p>
+        ) : (
+          <div className="space-y-3">
+            {(() => {
+              const critical = suggestions.filter((s) => s.severity === 'critical').length
+              const warnings = suggestions.filter((s) => s.severity === 'warning').length
+              const infos = suggestions.filter((s) => s.severity === 'info').length
+              return (
+                <div className="flex items-center gap-6">
+                  {critical > 0 && (
+                    <div className="flex items-center gap-2">
+                      <XCircle size={16} className="text-danger" />
+                      <span className="text-sm font-bold text-danger">{critical} Critical</span>
+                    </div>
+                  )}
+                  {warnings > 0 && (
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle size={16} className="text-warning" />
+                      <span className="text-sm font-bold text-warning">{warnings} Warning{warnings !== 1 ? 's' : ''}</span>
+                    </div>
+                  )}
+                  {infos > 0 && (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 size={16} className="text-success" />
+                      <span className="text-sm font-bold text-success">{infos} Info</span>
+                    </div>
+                  )}
+                  <span className="text-xs text-text-faint">{suggestions.length} total</span>
+                </div>
+              )
+            })()}
+            {suggestions.slice(0, 3).map((s, i) => (
+              <div key={`${s.category}-${i}`} className="flex items-start gap-3 bg-panel-2 border border-border rounded-xl px-4 py-3">
+                <div className="flex-shrink-0 mt-0.5">
+                  {s.severity === 'critical' ? <XCircle size={14} className="text-danger" /> : s.severity === 'warning' ? <AlertTriangle size={14} className="text-warning" /> : <CheckCircle2 size={14} className="text-success" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-text truncate">{s.message}</p>
+                  <p className="text-xs text-text-faint mt-0.5">{s.category}</p>
+                </div>
+              </div>
+            ))}
+            {suggestions.length > 3 && (
+              <p className="text-xs text-text-faint text-center">+{suggestions.length - 3} more — see AI Insights tab</p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Git Summary Compact ── */}
+      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-2xl">
+        <div className="flex items-center gap-3 mb-4">
+          <GitBranch size={22} className="text-accent" />
+          <h3 className="text-lg font-bold text-text uppercase tracking-widest">Git Summary</h3>
+        </div>
+        {!gitSummary || gitSummary.total_repos === 0 ? (
+          <p className="text-text-faint text-sm">No git repositories found.</p>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="flex flex-col items-center gap-1 bg-panel-2 border border-border rounded-xl p-4">
+                <span className="text-2xl font-bold tabular-nums text-accent">{gitSummary.total_repos}</span>
+                <span className="text-xs font-semibold text-text-faint uppercase tracking-wider">Repos</span>
+              </div>
+              <div className="flex flex-col items-center gap-1 bg-panel-2 border border-border rounded-xl p-4">
+                <span className="text-2xl font-bold tabular-nums text-warning">
+                  {gitSummary.repositories.reduce((sum, r) => sum + r.modified_files, 0)}
+                </span>
+                <span className="text-xs font-semibold text-text-faint uppercase tracking-wider">Modified</span>
+              </div>
+              <div className="flex flex-col items-center gap-1 bg-panel-2 border border-border rounded-xl p-4">
+                <span className="text-2xl font-bold tabular-nums text-text-dim">
+                  {gitSummary.repositories.filter((r) => r.clean).length}
+                </span>
+                <span className="text-xs font-semibold text-text-faint uppercase tracking-wider">Clean</span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              {gitSummary.repositories.slice(0, 4).map((repo) => (
+                <div key={repo.path} className="flex items-center justify-between bg-panel-2 border border-border rounded-lg px-4 py-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={cn('w-2 h-2 rounded-full flex-shrink-0', repo.clean ? 'bg-success' : 'bg-warning')} />
+                    <span className="text-sm font-[Geist_Mono] text-text truncate" title={repo.path}>{repo.path.split(/[/\\]/).pop()}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-text-faint">
+                    <span className="font-[Geist_Mono]">{repo.branch}</span>
+                    {(repo.ahead > 0 || repo.behind > 0) && (
+                      <span className="text-warning font-bold">↑{repo.ahead} ↓{repo.behind}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {gitSummary.total_repos > 4 && (
+                <p className="text-xs text-text-faint text-center">+{gitSummary.total_repos - 4} more — see Git tab</p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Environment Summary Compact ── */}
+      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-2xl">
+        <div className="flex items-center gap-3 mb-4">
+          <Terminal size={22} className="text-success" />
+          <h3 className="text-lg font-bold text-text uppercase tracking-widest">Environment</h3>
+        </div>
+        {!environment ? (
+          <p className="text-text-faint text-sm">Loading environment...</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="flex flex-col items-center gap-1 bg-panel-2 border border-border rounded-xl p-4">
+              <span className="text-2xl font-bold tabular-nums text-accent">{environment.path_dirs.length}</span>
+              <span className="text-xs font-semibold text-text-faint uppercase tracking-wider">PATH Dirs</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 bg-panel-2 border border-border rounded-xl p-4">
+              <span className="text-2xl font-bold tabular-nums text-warning">{environment.key_vars.length}</span>
+              <span className="text-xs font-semibold text-text-faint uppercase tracking-wider">Key Vars</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 bg-panel-2 border border-border rounded-xl p-4">
+              <span className="text-2xl font-bold tabular-nums text-success">{environment.sdks.length}</span>
+              <span className="text-xs font-semibold text-text-faint uppercase tracking-wider">SDKs</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 bg-panel-2 border border-border rounded-xl p-4">
+              <span className="text-2xl font-bold tabular-nums text-info">{environment.package_managers.length}</span>
+              <span className="text-xs font-semibold text-text-faint uppercase tracking-wider">Pkg Mgrs</span>
+            </div>
+          </div>
+        )}
+        {environment && environment.sdks.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {environment.sdks.map((sdk) => (
+              <span key={sdk.name} className="text-xs font-[Geist_Mono] font-medium bg-success/10 text-success border border-success/20 rounded-full px-3 py-1">
+                {sdk.name} {sdk.version}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

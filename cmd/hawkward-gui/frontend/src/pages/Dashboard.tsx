@@ -24,6 +24,10 @@ import {
   Loader2,
   ScrollText,
   Clock,
+  Search,
+  FileText,
+  Camera,
+  ArrowUpDown,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import {
@@ -81,6 +85,14 @@ function healthColor(pct: number) {
   if (pct >= 90) return 'var(--color-danger)'
   if (pct >= 80) return 'var(--color-warning)'
   return 'var(--color-success)'
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(Math.max(bytes, 1)) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + units[i]
 }
 
 /* ───────────────────────────────────────────
@@ -525,6 +537,15 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
             status={data.battery.detected ? (data.battery.percent < 20 && !data.battery.charging ? 'warning' : 'healthy') : 'healthy'}
             description={data.battery.detected ? `${data.battery.status}${data.battery.time_left_sec > 0 ? ` — ~${Math.round(data.battery.time_left_sec / 60)}m remaining` : ''}` : 'No battery detected — desktop or AC-powered system.'}
           />
+          <KpiCard
+            icon={<Network size={24} />}
+            label="Network"
+            value={`${formatBytes(data.network.rx_rate)} ↓ / ${formatBytes(data.network.tx_rate)} ↑`}
+            unit="/s"
+            status="healthy"
+            description={`Real-time throughput — ${data.network.unit || 'bytes'}/s aggregate across all active interfaces.`}
+            onClick={() => onNavigate?.('netops')}
+          />
         </div>
       </div>
 
@@ -560,6 +581,92 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
           <p className="mt-6 text-sm font-bold text-text-faint italic flex items-center gap-2">
             <Info size={14} /> Statistical Trend: {data.cpu.trend.toUpperCase()}
           </p>
+        </div>
+      </div>
+
+      {/* Top Issues */}
+      {(topProcs.cpuProcs.length > 0 || topProcs.memProcs.length > 0) && (
+        <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6 shadow-lg">
+          <h3 className="text-base font-bold text-[var(--color-text)] uppercase tracking-wider mb-4 flex items-center gap-2">
+            <ArrowUpDown size={18} className="text-[var(--color-warning)]" /> Top Issues
+          </h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {topProcs.cpuProcs.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-widest mb-3">Top CPU Consumers</h4>
+                <div className="space-y-2">
+                  {topProcs.cpuProcs.slice(0, 5).map((p, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-panel-2)] border border-[var(--color-border)]/50">
+                      <div className="w-8 h-8 rounded-lg bg-[var(--color-panel-3)] border border-[var(--color-border)] flex items-center justify-center text-[10px] font-bold text-[var(--color-text-faint)]">
+                        #{i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-[var(--color-text)] truncate">{p.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="flex-1 h-1.5 rounded-full bg-[var(--color-panel-3)] overflow-hidden">
+                            <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(p.cpu, 100)}%`, backgroundColor: p.cpu > 80 ? 'var(--color-danger)' : p.cpu > 50 ? 'var(--color-warning)' : 'var(--color-accent)' }} />
+                          </div>
+                          <span className="text-xs font-bold tabular-nums text-[var(--color-text-faint)]">{p.cpu.toFixed(1)}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {topProcs.memProcs.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-widest mb-3">Top Memory Consumers</h4>
+                <div className="space-y-2">
+                  {topProcs.memProcs.slice(0, 5).map((p, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-panel-2)] border border-[var(--color-border)]/50">
+                      <div className="w-8 h-8 rounded-lg bg-[var(--color-panel-3)] border border-[var(--color-border)] flex items-center justify-center text-[10px] font-bold text-[var(--color-text-faint)]">
+                        #{i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-[var(--color-text)] truncate">{p.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="flex-1 h-1.5 rounded-full bg-[var(--color-panel-3)] overflow-hidden">
+                            <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(p.mem_pct, 100)}%`, backgroundColor: p.mem_pct > 80 ? 'var(--color-danger)' : p.mem_pct > 50 ? 'var(--color-warning)' : 'var(--color-accent)' }} />
+                          </div>
+                          <span className="text-xs font-bold tabular-nums text-[var(--color-text-faint)]">{p.mem_pct.toFixed(1)}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Quick Actions */}
+      <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6 shadow-lg">
+        <h3 className="text-base font-bold text-[var(--color-text)] uppercase tracking-wider mb-4 flex items-center gap-2">
+          <Zap size={18} className="text-[var(--color-warning)]" /> Quick Actions
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          <button onClick={() => runQuickDiag()} className="flex items-center gap-2.5 p-3 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]/50 hover:bg-[var(--color-accent-soft)] hover:border-[var(--color-accent)]/30 transition-all text-left group">
+            <Search size={18} className="text-[var(--color-accent)] group-hover:text-[var(--color-accent)] shrink-0" />
+            <span className="text-sm font-bold text-[var(--color-text)]">Scan System</span>
+          </button>
+          <button onClick={() => onNavigate?.('netops')} className="flex items-center gap-2.5 p-3 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]/50 hover:bg-[var(--color-accent-soft)] hover:border-[var(--color-accent)]/30 transition-all text-left group">
+            <Network size={18} className="text-[var(--color-accent)] group-hover:text-[var(--color-accent)] shrink-0" />
+            <span className="text-sm font-bold text-[var(--color-text)]">Network Diagnostics</span>
+          </button>
+          <button onClick={() => generateBriefing()} className="flex items-center gap-2.5 p-3 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]/50 hover:bg-[var(--color-accent-soft)] hover:border-[var(--color-accent)]/30 transition-all text-left group">
+            <FileText size={18} className="text-[var(--color-accent)] group-hover:text-[var(--color-accent)] shrink-0" />
+            <span className="text-sm font-bold text-[var(--color-text)]">Generate Report</span>
+          </button>
+          <button onClick={() => onNavigate?.('aiops')} className="flex items-center gap-2.5 p-3 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]/50 hover:bg-[var(--color-accent-soft)] hover:border-[var(--color-accent)]/30 transition-all text-left group">
+            <Brain size={18} className="text-[var(--color-accent)] group-hover:text-[var(--color-accent)] shrink-0" />
+            <span className="text-sm font-bold text-[var(--color-text)]">AI Analysis</span>
+          </button>
+          <button onClick={() => { }} className="flex items-center gap-2.5 p-3 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]/50 hover:bg-[var(--color-accent-soft)] hover:border-[var(--color-accent)]/30 transition-all text-left group">
+            <Camera size={18} className="text-[var(--color-accent)] group-hover:text-[var(--color-accent)] shrink-0" />
+            <span className="text-sm font-bold text-[var(--color-text)]">Take Snapshot</span>
+          </button>
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -146,4 +147,82 @@ func (l *Logs) GetLogStats() LogStats {
 	}
 
 	return stats
+}
+
+// GetLogTimeline returns time-bucketed log counts for charting.
+// hours >= 24 buckets by hour; hours < 24 buckets by 5 minutes.
+func (l *Logs) GetLogTimeline(hours int) []LogTimelinePoint {
+	if hours <= 0 {
+		hours = 24
+	}
+
+	storage := common.GetStorage()
+	if storage == nil {
+		return []LogTimelinePoint{}
+	}
+
+	buckets, err := storage.QueryLogTimeline(hours)
+	if err != nil {
+		common.LogWarn("QueryLogTimeline failed: %v", err)
+		return []LogTimelinePoint{}
+	}
+
+	out := make([]LogTimelinePoint, len(buckets))
+	for i, b := range buckets {
+		out[i] = LogTimelinePoint{
+			Timestamp: b.Bucket,
+			Total:     b.Total,
+			Errors:    b.Errors,
+			Warnings:  b.Warnings,
+			Info:      b.Info,
+		}
+	}
+	return out
+}
+
+// GenerateLogSummary returns a deterministic summary of recent log activity.
+func (l *Logs) GenerateLogSummary() LogSummary {
+	storage := common.GetStorage()
+	if storage == nil {
+		return LogSummary{}
+	}
+
+	summary := LogSummary{}
+
+	// Top source
+	sources, err := storage.TopLogSources(1)
+	if err == nil && len(sources) > 0 {
+		summary.TopSource = sources[0].Source
+	}
+
+	// Most common error message
+	errList, err := storage.TrendingLogErrors(1)
+	if err == nil && len(errList) > 0 {
+		summary.TopMessage = errList[0].Message
+	}
+
+	// Error trend: compare last hour vs previous hour
+	now := time.Now()
+	lastHour := now.Add(-time.Hour)
+	prevHour := now.Add(-2 * time.Hour)
+
+	errorsLastHour := storage.CountLogsByLevelInRange("ERROR", lastHour, now)
+	errorsPrevHour := storage.CountLogsByLevelInRange("ERROR", prevHour, lastHour)
+
+	switch {
+	case errorsLastHour > errorsPrevHour*12/10:
+		summary.ErrorTrend = "increasing"
+	case errorsLastHour < errorsPrevHour*8/10:
+		summary.ErrorTrend = "decreasing"
+	default:
+		summary.ErrorTrend = "stable"
+	}
+
+	if summary.TopSource != "" {
+		summary.SummaryText = fmt.Sprintf("Most errors originate from %s. Error rate is %s.", summary.TopSource, summary.ErrorTrend)
+	} else {
+		summary.SummaryText = "No significant log activity detected."
+	}
+
+	return summary
 }

@@ -162,7 +162,7 @@ export function Settings() {
             onChange={(e) => {
               const val = Number(e.target.value)
               setRefreshInterval(val)
-              call('PipelineAPI.UpdateSettings', val, 0)
+              call('PipelineAPI.UpdateSettings', val, 0, pingCount, dnsTimeout)
               toast.success(`Refresh interval set to ${val / 1000}s`)
             }}
             className="bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
@@ -185,7 +185,7 @@ export function Settings() {
           <div className="flex items-center gap-3 w-44">
             <Slider.Root
               value={[pingCount]}
-              onValueChange={([v]: number[]) => { setPingCount(v); toast.success(`Ping count set to ${v}`) }}
+              onValueChange={([v]: number[]) => { setPingCount(v); call('PipelineAPI.UpdateSettings', 0, 0, v, dnsTimeout); toast.success(`Ping count set to ${v}`) }}
               min={1}
               max={20}
               step={1}
@@ -207,7 +207,7 @@ export function Settings() {
           <div className="flex items-center gap-3 w-44">
             <Slider.Root
               value={[dnsTimeout]}
-              onValueChange={([v]: number[]) => { setDnsTimeout(v); toast.success(`DNS timeout set to ${v}ms`) }}
+              onValueChange={([v]: number[]) => { setDnsTimeout(v); call('PipelineAPI.UpdateSettings', 0, 0, pingCount, v); toast.success(`DNS timeout set to ${v}ms`) }}
               min={500}
               max={10000}
               step={100}
@@ -238,8 +238,8 @@ export function Settings() {
               localStorage.setItem('hawkward_refreshInterval', JSON.stringify(DEFAULT_SETTINGS.refreshInterval))
               localStorage.setItem('hawkward_pingCount', JSON.stringify(DEFAULT_SETTINGS.pingCount))
               localStorage.setItem('hawkward_dnsTimeout', JSON.stringify(DEFAULT_SETTINGS.dnsTimeout))
-              // Also push the new interval to backend
-              call('PipelineAPI.UpdateSettings', DEFAULT_SETTINGS.refreshInterval, 0)
+              // Push all defaults to backend
+              call('PipelineAPI.UpdateSettings', DEFAULT_SETTINGS.refreshInterval, 0, DEFAULT_SETTINGS.pingCount, DEFAULT_SETTINGS.dnsTimeout)
               toast.success('All settings reset to defaults')
             }}
             className="px-5 py-2.5 bg-[var(--color-danger)]/10 hover:bg-[var(--color-danger)]/20 text-[var(--color-danger)] text-sm font-semibold rounded-lg border border-[var(--color-danger)]/30 hover:border-[var(--color-danger)]/50 transition-all"

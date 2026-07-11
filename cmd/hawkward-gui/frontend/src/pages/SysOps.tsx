@@ -16,6 +16,9 @@ import {
   Play,
   PauseCircle,
   AlertTriangle,
+  Gpu,
+  Battery,
+  Lightbulb,
 } from 'lucide-react'
 import {
   AreaChart as RechartsAreaChart,
@@ -50,7 +53,27 @@ const tabs: TabDef[] = [
   { id: 'system-info', label: 'Inventory', icon: <Box size={20} /> },
 ]
 
+interface GPUInfo {
+  detected: boolean
+  name: string
+  vendor: string
+  memory_gb: number
+  driver: string
+}
 
+interface BatteryInfo {
+  detected: boolean
+  percent: number
+  charging: boolean
+  time_left_sec: number
+  status: string
+}
+
+interface SystemRecommendation {
+  category: string
+  severity: string
+  message: string
+}
 
 const BAR_GREEN = '#4ade80'
 const BAR_AMBER = '#fbbf24'
@@ -58,6 +81,12 @@ const BAR_RED = '#f87171'
 
 function pctColor(pct: number): string {
   return pct >= 70 ? BAR_RED : pct >= 25 ? BAR_AMBER : BAR_GREEN
+}
+
+const severityStyles: Record<string, { icon: string; color: string; bg: string; border: string }> = {
+  critical: { icon: 'text-danger', color: 'text-danger', bg: 'bg-danger/20', border: 'border-danger/30' },
+  warning: { icon: 'text-warning', color: 'text-warning', bg: 'bg-warning/20', border: 'border-warning/30' },
+  info: { icon: 'text-accent', color: 'text-accent', bg: 'bg-accent/20', border: 'border-accent/30' },
 }
 
 // ── Enhanced Components ──
@@ -196,6 +225,24 @@ export function SysOps() {
       const r = await call('PipelineAPI.GetMetricHistoryWithTimestamps', 'disk.percent', 60)
       return (r as MetricDataPoint[]) || []
     },
+    refetchInterval: refreshInterval,
+  })
+
+  const { data: gpuInfo } = useQuery<GPUInfo>({
+    queryKey: ['sysops-gpu'],
+    queryFn: async () => { const r = await call('SysOps.GetGPUInfo'); return r as GPUInfo },
+    refetchInterval: refreshInterval,
+  })
+
+  const { data: batteryInfo } = useQuery<BatteryInfo>({
+    queryKey: ['sysops-battery'],
+    queryFn: async () => { const r = await call('SysOps.GetBatteryInfo'); return r as BatteryInfo },
+    refetchInterval: refreshInterval,
+  })
+
+  const { data: recommendations = [] } = useQuery<SystemRecommendation[]>({
+    queryKey: ['sysops-recommendations'],
+    queryFn: async () => { const r = await call('SysOps.GetRecommendations'); return (r as SystemRecommendation[]) || [] },
     refetchInterval: refreshInterval,
   })
 
@@ -363,6 +410,69 @@ export function SysOps() {
                     </div>
                   </div>
                 </div>
+
+                {/* GPU Card */}
+                {gpuInfo?.detected === true && (
+                  <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+                    <div className="flex items-center justify-between mb-8">
+                      <h3 className="text-xl font-bold text-text uppercase tracking-widest flex items-center gap-3"><Gpu size={24} className="text-accent" /> GPU</h3>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-accent/20 text-accent border border-accent/30 uppercase tracking-widest">Detected</span>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-text-faint uppercase">Name</span>
+                        <span className="text-sm font-bold text-[var(--color-text)]">{gpuInfo.name}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-text-faint uppercase">Vendor</span>
+                        <span className="text-sm font-bold text-[var(--color-text)]">{gpuInfo.vendor}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-text-faint uppercase">Memory</span>
+                        <span className="text-sm font-bold text-[var(--color-accent)] tabular-nums">{gpuInfo.memory_gb.toFixed(1)} GB</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-text-faint uppercase">Driver</span>
+                        <span className="text-sm font-bold text-[var(--color-text)]">{gpuInfo.driver}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Battery Card */}
+                {batteryInfo?.detected === true && (
+                  <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+                    <div className="flex items-center justify-between mb-8">
+                      <h3 className="text-xl font-bold text-text uppercase tracking-widest flex items-center gap-3"><Battery size={24} className="text-success" /> Battery</h3>
+                      <span className={cn(
+                        'text-xs font-bold px-2 py-0.5 rounded border uppercase tracking-widest',
+                        batteryInfo.charging ? 'bg-success/20 text-success border-success/30' : 'bg-warning/20 text-warning border-warning/30'
+                      )}>
+                        {batteryInfo.charging ? 'Charging' : 'Discharging'}
+                      </span>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-text-faint uppercase">Charge Level</span>
+                        <span className="text-sm font-bold text-[var(--color-text)] tabular-nums">{batteryInfo.percent.toFixed(0)}%</span>
+                      </div>
+                      <Bar label="Charge" value={batteryInfo.percent} color={batteryInfo.percent > 50 ? '#4ade80' : batteryInfo.percent > 20 ? '#fbbf24' : '#f87171'} showLabel={false} />
+                      {batteryInfo.time_left_sec > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-bold text-text-faint uppercase">Time Remaining</span>
+                          <span className="text-sm font-bold text-[var(--color-text)] tabular-nums">
+                            {Math.floor(batteryInfo.time_left_sec / 3600)}h {Math.floor((batteryInfo.time_left_sec % 3600) / 60)}m
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-text-faint uppercase">Status</span>
+                        <span className="text-sm font-bold text-[var(--color-text)]">{batteryInfo.status}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
               </div>
             </div>
 
@@ -548,6 +658,37 @@ export function SysOps() {
                   <p className="text-sm font-bold text-text-faint uppercase tracking-widest">Coming Soon</p>
                 </div>
               </div>
+
+              {/* Recommendations */}
+              {recommendations.length > 0 && (
+                <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+                  <div className="flex items-center gap-3 mb-6">
+                    <Lightbulb size={20} className="text-warning" />
+                    <h3 className="text-lg font-bold text-text uppercase tracking-widest">System Recommendations</h3>
+                  </div>
+                  <div className="space-y-4">
+                    {recommendations.map((rec, i) => {
+                      const styles = severityStyles[rec.severity] || severityStyles.info
+                      return (
+                        <div key={i} className={cn('flex items-start gap-4 p-4 rounded-[var(--radius-lg)] border', styles.bg, styles.border)}>
+                          <div className={cn('flex-shrink-0 mt-0.5', styles.icon)}>
+                            {rec.severity === 'critical' ? <AlertTriangle size={18} /> : rec.severity === 'warning' ? <AlertTriangle size={18} /> : <Info size={18} />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={cn('text-xs font-bold px-2 py-0.5 rounded border uppercase tracking-widest', styles.bg, styles.color, styles.border)}>
+                                {rec.severity}
+                              </span>
+                              <span className="text-xs font-bold text-text-faint uppercase">{rec.category}</span>
+                            </div>
+                            <p className="text-sm font-medium text-[var(--color-text)] leading-snug">{rec.message}</p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -670,6 +811,6 @@ export function SysOps() {
           </div>
         )}
       </div>
-    </div>
+    </div >
   )
 }

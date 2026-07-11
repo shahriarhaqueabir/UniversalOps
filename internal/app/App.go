@@ -37,6 +37,7 @@ type App struct {
 	AlertAPI    *AlertAPI
 	Logs        *Logs
 	Timeline    *Timeline
+	NetDesign   *NetworkDesignAPI
 
 	// Tick loop control
 	tickQuit       chan struct{}
@@ -71,6 +72,7 @@ func NewApp() *App {
 	a.AlertAPI = NewAlertAPI(a)
 	a.Logs = NewLogs(a)
 	a.Timeline = NewTimeline(a)
+	a.NetDesign = NewNetworkDesignAPI(a)
 
 	// Subscribe the event bus to persist events and emit to frontend
 	a.eventBus.Subscribe(func(evt common.TimelineEvent) {

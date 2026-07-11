@@ -3,6 +3,18 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import { TopBar } from './TopBar'
 import { useAlertStore, useThemeStore } from '../../stores/useSettingsStore'
 
+// Mock react-query hooks
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: vi.fn(() => ({ data: [], isLoading: false })),
+  useMutation: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useQueryClient: vi.fn(() => ({ invalidateQueries: vi.fn() })),
+}))
+
+// Mock useBackend
+vi.mock('@/hooks/useBackend', () => ({
+  useBackend: () => ({ call: vi.fn() }),
+}))
+
 describe('TopBar Component', () => {
   beforeEach(() => {
     act(() => {
@@ -49,12 +61,12 @@ describe('TopBar Component', () => {
     const bellButton = screen.getByLabelText(/Notifications/i)
     fireEvent.click(bellButton)
 
-    expect(screen.getByText('Alerts')).toBeDefined()
+    expect(screen.getByText('Active Alerts')).toBeDefined()
     expect(screen.getByText('Memory')).toBeDefined()
     expect(screen.getByText('Usage > 90%')).toBeDefined()
   })
 
-  it('clears alerts when Clear All is clicked', () => {
+  it('clears alerts when Clear button is clicked', () => {
     const alert = { id: '1', metric: 'Disk', message: 'Full' } as any
     act(() => {
       useAlertStore.getState().addAlert(alert)
@@ -65,7 +77,7 @@ describe('TopBar Component', () => {
     fireEvent.click(screen.getByLabelText(/Notifications/i))
 
     // Click clear
-    const clearButton = screen.getByText(/Clear All/i)
+    const clearButton = screen.getByText(/Clear$/i)
     fireEvent.click(clearButton)
 
     expect(useAlertStore.getState().alertCount).toBe(0)

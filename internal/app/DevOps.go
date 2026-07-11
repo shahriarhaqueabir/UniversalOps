@@ -1181,3 +1181,282 @@ func (d *DevOps) GetAISuggestions() []DevOpsSuggestion {
 
 	return suggestions
 }
+
+// ══════════════════════════════════════════════
+//  Docker Status
+// ══════════════════════════════════════════════
+
+// GetDockerStatus checks Docker installation, daemon status, and container counts.
+func (d *DevOps) GetDockerStatus() DockerStatus {
+	var status DockerStatus
+
+	// 1. Check if docker CLI exists
+	dockerPath, err := exec.LookPath("docker")
+	if err != nil {
+		return status // Installed=false by default
+	}
+	status.Installed = true
+
+	// 2. Get Docker version
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	verCmd := exec.CommandContext(ctx, dockerPath, "--version")
+	var verOut strings.Builder
+	verCmd.Stdout = &verOut
+	if err := verCmd.Run(); err == nil {
+		// Output: "Docker version 27.5.1, build a1678b9"
+		verLine := firstLine(verOut.String())
+		fields := strings.Fields(verLine)
+		if len(fields) >= 3 {
+			status.Version = strings.TrimRight(fields[2], ",")
+		} else {
+			status.Version = verLine
+		}
+	}
+
+	// 3. Check if Docker daemon is running via docker info
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel2()
+
+	infoCmd := exec.CommandContext(ctx2, dockerPath, "info", "--format", `{{.ServerVersion}}`)
+	var infoOut strings.Builder
+	infoCmd.Stdout = &infoOut
+	if err := infoCmd.Run(); err == nil {
+		status.Running = true
+		ver := strings.TrimSpace(infoOut.String())
+		if ver != "" && status.Version == "" {
+			status.Version = ver
+		}
+	}
+
+	// 4. Count containers by status
+	ctx3, cancel3 := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel3()
+
+	psCmd := exec.CommandContext(ctx3, dockerPath, "ps", "-a", "--format", `{{.Status}}`)
+	var psOut strings.Builder
+	psCmd.Stdout = &psOut
+	if err := psCmd.Run(); err == nil {
+		for _, line := range strings.Split(psOut.String(), "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			status.Containers.Total++
+			lower := strings.ToLower(line)
+			if strings.HasPrefix(lower, "up") {
+				status.Containers.Running++
+			} else if strings.HasPrefix(lower, "restarting") {
+				status.Containers.Failed++
+			} else {
+				status.Containers.Stopped++
+			}
+		}
+	}
+
+	return status
+}
+
+// ══════════════════════════════════════════════
+//  Kubernetes Status
+// ══════════════════════════════════════════════
+
+// GetKubernetesStatus checks kubectl availability and cluster connectivity.
+func (d *DevOps) GetKubernetesStatus() KubernetesStatus {
+	var status KubernetesStatus
+
+	// 1. Check if kubectl exists
+	kubectlPath, err := exec.LookPath("kubectl")
+	if err != nil {
+		return status // Installed=false, Connected=false by default
+	}
+	status.Installed = true
+
+	// 2. Check cluster connectivity and parse cluster name
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	clusterCmd := exec.CommandContext(ctx, kubectlPath, "cluster-info")
+	var clusterOut strings.Builder
+	clusterCmd.Stdout = &clusterOut
+	var clusterErr strings.Builder
+	clusterCmd.Stderr = &clusterErr
+	if err := clusterCmd.Run(); err == nil {
+		status.Connected = true
+		// Output line: "Kubernetes control plane is running at https://..."
+		for _, line := range strings.Split(clusterOut.String(), "\n") {
+			line = strings.TrimSpace(line)
+			if strings.Contains(line, "control plane") || strings.Contains(line, "Kubernetes master") {
+				// Extract host from URL
+				if idx := strings.Index(line, "http"); idx >= 0 {
+					url := line[idx:]
+					// Parse //host:port
+					if start := strings.Index(url, "//"); start >= 0 {
+						host := url[start+2:]
+						if end := strings.Index(host, ":"); end >= 0 {
+							host = host[:end]
+						}
+						if end := strings.Index(host, "/"); end >= 0 {
+							host = host[:end]
+						}
+						status.Cluster = host
+					}
+				}
+				break
+			}
+		}
+	}
+
+	if !status.Connected {
+		return status
+	}
+
+	// 3. Count nodes
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel2()
+
+	nodeCmd := exec.CommandContext(ctx2, kubectlPath, "get", "nodes", "--no-headers")
+	var nodeOut strings.Builder
+	nodeCmd.Stdout = &nodeOut
+	if err := nodeCmd.Run(); err == nil {
+		for _, line := range strings.Split(nodeOut.String(), "\n") {
+			if strings.TrimSpace(line) != "" {
+				status.Nodes++
+			}
+		}
+	}
+
+	// 4. Count pods across all namespaces
+	ctx3, cancel3 := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel3()
+
+	podCmd := exec.CommandContext(ctx3, kubectlPath, "get", "pods", "--all-namespaces", "--no-headers")
+	var podOut strings.Builder
+	podCmd.Stdout = &podOut
+	if err := podCmd.Run(); err == nil {
+		for _, line := range strings.Split(podOut.String(), "\n") {
+			if strings.TrimSpace(line) != "" {
+				status.Pods++
+			}
+		}
+	}
+
+	return status
+}
+
+// ══════════════════════════════════════════════
+//  Service Categorization
+// ══════════════════════════════════════════════
+
+// categorizeService maps a service name to its category.
+func categorizeService(name string) string {
+	lower := strings.ToLower(name)
+
+	databases := []string{"mysql", "postgres", "postgresql", "sqlite", "mongodb", "mongo",
+		"redis", "mariadb", "sqlserver", "mssql", "oracle", "couchdb", "cassandra", "memcached"}
+	messageQueues := []string{"rabbitmq", "nats", "kafka", "zeromq", "activemq", "mosquitto"}
+	webServers := []string{"nginx", "apache", "httpd", "iis", "caddy", "traefik", "haproxy"}
+	containers := []string{"docker", "podman", "containerd", "containerd-shim", "docker-proxy"}
+
+	for _, db := range databases {
+		if strings.Contains(lower, db) {
+			return "databases"
+		}
+	}
+	for _, mq := range messageQueues {
+		if strings.Contains(lower, mq) {
+			return "message-queues"
+		}
+	}
+	for _, ws := range webServers {
+		if strings.Contains(lower, ws) {
+			return "web-servers"
+		}
+	}
+	for _, ct := range containers {
+		if strings.Contains(lower, ct) {
+			return "containers"
+		}
+	}
+
+	return "other"
+}
+
+// normalizeServiceStatus converts various status strings to a standard form.
+func normalizeServiceStatus(status string) string {
+	lower := strings.ToLower(status)
+	if strings.Contains(lower, "running") {
+		return "running"
+	}
+	if strings.Contains(lower, "stopped") || strings.Contains(lower, "disabled") {
+		return "stopped"
+	}
+	return "unknown"
+}
+
+// GetServiceCategories returns services grouped by function type.
+func (d *DevOps) GetServiceCategories() []ServiceCategory {
+	services := d.GetServices()
+	if len(services) == 0 {
+		return nil
+	}
+
+	// Bucket services by category
+	buckets := make(map[string][]ServiceInfo)
+	for _, s := range services {
+		cat := categorizeService(s.Name)
+		si := ServiceInfo{
+			Name:   s.Name,
+			Status: normalizeServiceStatus(s.Status),
+		}
+		buckets[cat] = append(buckets[cat], si)
+	}
+
+	// Build output in consistent order
+	order := []string{"databases", "message-queues", "web-servers", "containers", "other"}
+	var categories []ServiceCategory
+	for _, cat := range order {
+		svcs, ok := buckets[cat]
+		if !ok || len(svcs) == 0 {
+			continue
+		}
+		categories = append(categories, ServiceCategory{
+			Category: cat,
+			Services: svcs,
+		})
+	}
+
+	return categories
+}
+
+// GetServiceGroupSummary returns aggregated service counts by category.
+func (d *DevOps) GetServiceGroupSummary() ServiceGroupSummary {
+	cats := d.GetServiceCategories()
+	var summary ServiceGroupSummary
+
+	for _, cat := range cats {
+		count := len(cat.Services)
+		for _, svc := range cat.Services {
+			if svc.Status == "running" {
+				summary.Running++
+			} else {
+				summary.Stopped++
+			}
+		}
+		switch cat.Category {
+		case "databases":
+			summary.Databases = count
+		case "message-queues":
+			summary.MessageQueues = count
+		case "web-servers":
+			summary.WebServers = count
+		case "containers":
+			summary.Containers = count
+		default:
+			summary.Other = count
+		}
+	}
+
+	return summary
+}

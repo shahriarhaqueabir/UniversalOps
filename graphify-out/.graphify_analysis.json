@@ -103,9 +103,6 @@
       "profiles_powershell_profile_write_hawktable"
     ],
     "1": [
-      "app_app_shutdown",
-      "app_app_starttickloop",
-      "app_app_startup",
       "app_timeline",
       "app_timeline_explainevents",
       "app_timeline_getrelatedevents",
@@ -132,7 +129,6 @@
       "common_storage_querylogs",
       "common_storage_writerloop",
       "db",
-      "internal_app_app_go_context",
       "internal_app_logs_test",
       "internal_app_logs_test_go_t",
       "internal_app_logs_test_testgetlogs",
@@ -143,13 +139,6 @@
       "internal_app_timeline_converttimelineevents",
       "internal_app_timeline_go_timelineevent",
       "internal_app_timeline_newtimeline",
-      "internal_common_logger",
-      "internal_common_logger_closelogger",
-      "internal_common_logger_initlogger",
-      "internal_common_logger_logdebug",
-      "internal_common_logger_logerror",
-      "internal_common_logger_loginfo",
-      "internal_common_metrics_exporter_initmetricsexporter",
       "internal_common_storage",
       "internal_common_storage_getstorage",
       "internal_common_storage_go_duration",
@@ -238,15 +227,18 @@
       "cmd_hawkward_gui_frontend_wailsjs_runtime_runtime_windowunminimise"
     ],
     "3": [
+      "app_netops_dnslookup",
       "app_netops_portscan",
+      "internal_app_netops_go_dnsresult",
       "internal_app_netops_go_portresult",
-      "internal_netops_interfaces",
-      "internal_netops_interfaces_calculatebandwidthrates",
-      "internal_netops_interfaces_counterdelta",
-      "internal_netops_interfaces_getbandwidthcounters",
-      "internal_netops_interfaces_getinterfaces",
-      "internal_netops_interfaces_go_bandwidthcounter",
-      "internal_netops_interfaces_go_duration",
+      "internal_netops_dns",
+      "internal_netops_dns_go_client",
+      "internal_netops_dns_go_context",
+      "internal_netops_dns_lookupdns",
+      "internal_netops_dns_lookupdnswithcontext",
+      "internal_netops_dns_querycname",
+      "internal_netops_dns_querydns",
+      "internal_netops_dns_querymx",
       "internal_netops_netops_test",
       "internal_netops_netops_test_go_t",
       "internal_netops_netops_test_testgetconnections",
@@ -286,10 +278,7 @@
       "internal_netops_workflows_go_pingresult",
       "internal_netops_workflows_go_portresult",
       "internal_netops_workflows_runnetworkdiagnostics",
-      "netops_bandwidthcounter",
-      "netops_bandwidthrate",
-      "netops_bandwidthresult",
-      "netops_interfaceinfo",
+      "netops_dnsresult",
       "netops_netipaddr",
       "netops_netipaddr_network",
       "netops_netipaddr_string",
@@ -311,7 +300,6 @@
       "aiops_enhancedreport_string",
       "aiops_ollamastatus",
       "aiops_reportsection",
-      "app_aiops_getollamastatus",
       "common_systemstats",
       "internal_aiops_ollama",
       "internal_aiops_ollama_chat",
@@ -353,8 +341,7 @@
       "internal_aiops_workflows_checkollamaavailable",
       "internal_aiops_workflows_generateenhancedreport",
       "internal_aiops_workflows_go_time",
-      "internal_common_types",
-      "ollamastatus"
+      "internal_common_types"
     ],
     "5": [
       "devops_devreport",
@@ -463,8 +450,8 @@
       "token"
     ],
     "7": [
-      "app_sysops_getdiskinfo",
-      "diskinfo",
+      "app_sysops_getcpuinfo",
+      "cpuinfo",
       "internal_sysops_collector",
       "internal_sysops_collector_buildsystemstats",
       "internal_sysops_collector_collectallstats",
@@ -544,6 +531,7 @@
       "app_securityevent",
       "app_serviceentry",
       "app_statsinfo",
+      "app_systeminfo",
       "app_tracehop",
       "app_traceresult",
       "app_trendinfo",
@@ -586,17 +574,7 @@
       "internal_common_platform_ismacos",
       "internal_common_platform_isonboarded",
       "internal_common_platform_markonboarded",
-      "internal_secops_workflows",
-      "internal_secops_workflows_boolstr",
-      "internal_secops_workflows_go_defenderstatus",
-      "internal_secops_workflows_go_firewallrule",
-      "internal_secops_workflows_go_listeningport",
-      "internal_secops_workflows_go_scheduledtask",
-      "internal_secops_workflows_go_securityevent",
-      "internal_secops_workflows_go_userinfo",
-      "secops_securityreport",
       "secops_securityreport_markdown",
-      "secops_securityreport_string",
       "sysops_healthreport_markdown",
       "sysops_healthreport_string"
     ],
@@ -684,6 +662,7 @@
       "cmd_hawkward_gui_frontend_src_pages_networkdesign_initialconnections",
       "cmd_hawkward_gui_frontend_src_pages_networkdesign_initialdevices",
       "cmd_hawkward_gui_frontend_src_pages_networkdesign_loadsavedtopology",
+      "cmd_hawkward_gui_frontend_src_pages_networkdesign_networkdesign",
       "cmd_hawkward_gui_frontend_src_pages_networkdesign_propertiespanel",
       "cmd_hawkward_gui_frontend_src_pages_networkdesign_savetopologystate",
       "cmd_hawkward_gui_frontend_wailsjs_go_app_app",
@@ -920,25 +899,16 @@
       "cmd_hawkward_gui_frontend_package_devdependencies_vitest"
     ],
     "22": [
-      "cmd_hawkward_gui_frontend_src_hooks_usebackend_usebackend",
-      "cmd_hawkward_gui_frontend_src_lib_utils_cn",
       "cmd_hawkward_gui_frontend_src_pages_aiops",
       "cmd_hawkward_gui_frontend_src_pages_aiops_aiops",
-      "cmd_hawkward_gui_frontend_src_pages_aiops_anomaliestab",
       "cmd_hawkward_gui_frontend_src_pages_aiops_chatbubble",
       "cmd_hawkward_gui_frontend_src_pages_aiops_chattab",
       "cmd_hawkward_gui_frontend_src_pages_aiops_reportstab",
       "cmd_hawkward_gui_frontend_src_pages_aiops_statusbadge",
       "cmd_hawkward_gui_frontend_src_pages_aiops_tabid",
-      "cmd_hawkward_gui_frontend_src_pages_devops_filebrowsertab",
-      "cmd_hawkward_gui_frontend_src_pages_devops_terminaltab",
-      "cmd_hawkward_gui_frontend_src_pages_logs_logs",
-      "cmd_hawkward_gui_frontend_src_pages_netops_netops",
-      "cmd_hawkward_gui_frontend_src_pages_networkdesign_networkdesign",
-      "cmd_hawkward_gui_frontend_src_pages_secops_secops",
-      "cmd_hawkward_gui_frontend_src_pages_settings_settings",
-      "cmd_hawkward_gui_frontend_src_pages_sysops_sysops",
-      "cmd_hawkward_gui_frontend_src_stores_usesettingsstore_usesettingsstore"
+      "cmd_hawkward_gui_frontend_src_stores_useollamastore",
+      "cmd_hawkward_gui_frontend_src_stores_useollamastore_ollamastate",
+      "cmd_hawkward_gui_frontend_src_stores_useollamastore_useollamastore"
     ],
     "23": [
       "internal_common_common_test_testplatformchecks",
@@ -947,6 +917,7 @@
       "internal_common_platform_iswindows",
       "internal_devops_services_controlservice",
       "internal_devops_services_isvalidservicename",
+      "internal_secops_firewall_setfirewallrulestate",
       "internal_secops_users",
       "internal_secops_users_collectuserdetails",
       "internal_secops_users_getdisabledusers",
@@ -1017,7 +988,6 @@
       "cmd_hawkward_gui_frontend_src_pages_dashboard_diagnosticresult",
       "cmd_hawkward_gui_frontend_src_pages_dashboard_healthcolor",
       "cmd_hawkward_gui_frontend_src_pages_dashboard_herosection",
-      "cmd_hawkward_gui_frontend_src_pages_dashboard_kpicard",
       "cmd_hawkward_gui_frontend_src_pages_dashboard_opsitems",
       "cmd_hawkward_gui_frontend_src_pages_dashboard_test"
     ],
@@ -1127,16 +1097,14 @@
       "app_aiops_chat",
       "app_aiops_detectanomalies",
       "app_aiops_generatereport",
+      "app_aiops_getollamastatus",
       "app_aiops_withtimeout",
-      "app_netops_dnslookup",
-      "app_netops_traceroute",
       "cancelfunc",
       "internal_app_aiops",
       "internal_app_aiops_go_context",
       "internal_app_aiops_go_duration",
       "internal_app_aiops_newaiops",
-      "internal_app_netops_go_dnsresult",
-      "traceresult"
+      "ollamastatus"
     ],
     "33": [
       "app_secops",
@@ -1204,10 +1172,7 @@
       "internal_app_dashboard_diskdiagmsg",
       "internal_app_dashboard_memdiagmsg",
       "internal_app_dashboard_newdashboard",
-      "internal_app_dashboard_procdiagmsg",
-      "internal_app_dashboard_test",
-      "internal_app_dashboard_test_go_t",
-      "internal_app_dashboard_test_testgetdashboarddata"
+      "internal_app_dashboard_procdiagmsg"
     ],
     "37": [
       "app_dashboard_getdashboarddata",
@@ -1228,7 +1193,7 @@
     ],
     "38": [
       "app_sysops",
-      "app_sysops_getcpuinfo",
+      "app_sysops_getdiskinfo",
       "app_sysops_getmemoryinfo",
       "app_sysops_getprocesstree",
       "app_sysops_getsysteminfo",
@@ -1236,7 +1201,7 @@
       "app_sysops_listallprocesses",
       "app_sysopsfacade",
       "app_sysopsfacade_collectallstats",
-      "cpuinfo",
+      "diskinfo",
       "internal_app_sysops",
       "internal_app_sysops_go_processinfo",
       "internal_app_sysops_go_systeminfo",
@@ -1261,18 +1226,21 @@
     "40": [
       "cmd_hawkward_gui_frontend_src_pages_netops",
       "cmd_hawkward_gui_frontend_src_pages_netops_ministat",
+      "cmd_hawkward_gui_frontend_src_pages_netops_netops",
       "cmd_hawkward_gui_frontend_src_pages_netops_netopstab",
       "cmd_hawkward_gui_frontend_src_pages_netops_protocolreference",
       "cmd_hawkward_gui_frontend_src_pages_netops_sectionbriefing",
       "cmd_hawkward_gui_frontend_src_pages_netops_statusbadge",
       "cmd_hawkward_gui_frontend_src_pages_netops_tabs",
+      "cmd_hawkward_gui_frontend_src_pages_sysops_sysops",
       "cmd_hawkward_gui_frontend_src_stores_usesettingsstore",
       "cmd_hawkward_gui_frontend_src_stores_usesettingsstore_alertstate",
       "cmd_hawkward_gui_frontend_src_stores_usesettingsstore_loadsetting",
       "cmd_hawkward_gui_frontend_src_stores_usesettingsstore_savesetting",
       "cmd_hawkward_gui_frontend_src_stores_usesettingsstore_settingsstate",
       "cmd_hawkward_gui_frontend_src_stores_usesettingsstore_theme",
-      "cmd_hawkward_gui_frontend_src_stores_usesettingsstore_themestate"
+      "cmd_hawkward_gui_frontend_src_stores_usesettingsstore_themestate",
+      "cmd_hawkward_gui_frontend_src_stores_usesettingsstore_usesettingsstore"
     ],
     "41": [
       "common_forecastengine",
@@ -1329,6 +1297,7 @@
       "cmd_hawkward_gui_frontend_src_pages_settings_intervaloptions",
       "cmd_hawkward_gui_frontend_src_pages_settings_section",
       "cmd_hawkward_gui_frontend_src_pages_settings_settingrow",
+      "cmd_hawkward_gui_frontend_src_pages_settings_settings",
       "cmd_hawkward_gui_frontend_src_pages_settings_test",
       "cmd_hawkward_gui_frontend_src_pages_settings_test_mocksetdnstimeout",
       "cmd_hawkward_gui_frontend_src_pages_settings_test_mocksetpingcount",
@@ -1342,27 +1311,26 @@
       "app_netops_collectinterfaces",
       "app_netops_getconnections",
       "app_netops_getinterfaces",
+      "app_netops_traceroute",
       "app_netopsmodel",
       "internal_app_netops",
       "internal_app_netops_go_bandwidthcounter",
       "internal_app_netops_go_connectioninfo",
       "internal_app_netops_go_interfaceinfo",
       "internal_app_netops_go_time",
-      "internal_app_netops_newnetops"
+      "internal_app_netops_newnetops",
+      "traceresult"
     ],
     "46": [
-      "app_systeminfo",
       "cmd_hawkward_gui_frontend_src_pages_logs",
       "cmd_hawkward_gui_frontend_src_pages_logs_detailpanel",
       "cmd_hawkward_gui_frontend_src_pages_logs_levels",
       "cmd_hawkward_gui_frontend_src_pages_logs_levelstyle",
       "cmd_hawkward_gui_frontend_src_pages_logs_logbadge",
+      "cmd_hawkward_gui_frontend_src_pages_logs_logs",
       "cmd_hawkward_gui_frontend_src_pages_logs_test",
       "cmd_hawkward_gui_frontend_src_pages_logs_test_localstoragemock",
-      "cmd_hawkward_gui_frontend_src_pages_logs_test_mocklogs",
-      "cmd_hawkward_gui_frontend_src_stores_useollamastore",
-      "cmd_hawkward_gui_frontend_src_stores_useollamastore_ollamastate",
-      "cmd_hawkward_gui_frontend_src_stores_useollamastore_useollamastore"
+      "cmd_hawkward_gui_frontend_src_pages_logs_test_mocklogs"
     ],
     "47": [
       "cmd_hawkward_gui_frontend_src_components_layout_maincontent",
@@ -1379,6 +1347,7 @@
       "cmd_hawkward_gui_frontend_src_components_layout_maincontent_sysops"
     ],
     "48": [
+      "internal_common_sandbox_systemquerysandbox",
       "internal_secops_listening",
       "internal_secops_listening_extractport",
       "internal_secops_listening_extractportfromss",
@@ -1389,7 +1358,6 @@
       "internal_secops_listening_parsessoutput",
       "internal_secops_listening_parsetasklistcsv",
       "internal_secops_listening_resolveprocessnames",
-      "internal_secops_workflows_runsecurityaudit",
       "secops_listeningport"
     ],
     "49": [
@@ -1406,9 +1374,10 @@
       "cmd_hawkward_gui_frontend_src_test_utils_test"
     ],
     "50": [
-      "cmd_hawkward_gui_frontend_src_hooks_usebackend",
-      "cmd_hawkward_gui_frontend_src_hooks_usebackend_args",
-      "cmd_hawkward_gui_frontend_src_hooks_usebackend_getgo",
+      "cmd_hawkward_gui_frontend_src_components_dialogs_confirmdialog",
+      "cmd_hawkward_gui_frontend_src_components_dialogs_confirmdialog_confirmdialog",
+      "cmd_hawkward_gui_frontend_src_components_dialogs_confirmdialog_confirmdialogprops",
+      "cmd_hawkward_gui_frontend_src_components_dialogs_confirmdialog_test",
       "cmd_hawkward_gui_frontend_src_pages_sysops",
       "cmd_hawkward_gui_frontend_src_pages_sysops_bar",
       "cmd_hawkward_gui_frontend_src_pages_sysops_inforow",
@@ -1419,6 +1388,9 @@
       "cmd_hawkward_gui_frontend_src_pages_sysops_tabs"
     ],
     "51": [
+      "cmd_hawkward_gui_frontend_src_components_ui_emptystate",
+      "cmd_hawkward_gui_frontend_src_components_ui_emptystate_emptystate",
+      "cmd_hawkward_gui_frontend_src_components_ui_emptystate_emptystateprops",
       "cmd_hawkward_gui_frontend_src_pages_secops",
       "cmd_hawkward_gui_frontend_src_pages_secops_backendcall",
       "cmd_hawkward_gui_frontend_src_pages_secops_defendertab",
@@ -1427,7 +1399,6 @@
       "cmd_hawkward_gui_frontend_src_pages_secops_firewalltab",
       "cmd_hawkward_gui_frontend_src_pages_secops_listeningtab",
       "cmd_hawkward_gui_frontend_src_pages_secops_secopstab",
-      "cmd_hawkward_gui_frontend_src_pages_secops_securitystatusbadge",
       "cmd_hawkward_gui_frontend_src_pages_secops_tabs",
       "cmd_hawkward_gui_frontend_src_pages_secops_userstab"
     ],
@@ -1442,6 +1413,7 @@
       "cmd_hawkward_gui_frontend_wailsjs_go_app_pipelineapi_d",
       "cmd_hawkward_gui_frontend_wailsjs_go_app_secops_d",
       "cmd_hawkward_gui_frontend_wailsjs_go_app_sysops_d",
+      "cmd_hawkward_gui_frontend_wailsjs_go_app_timeline_d",
       "cmd_hawkward_gui_frontend_wailsjs_go_models"
     ],
     "53": [
@@ -1458,16 +1430,21 @@
       "main_main"
     ],
     "54": [
-      "cmd_hawkward_gui_frontend_src_components_ui_emptystate",
-      "cmd_hawkward_gui_frontend_src_components_ui_emptystate_emptystate",
-      "cmd_hawkward_gui_frontend_src_components_ui_emptystate_emptystateprops",
+      "cmd_hawkward_gui_frontend_src_hooks_usebackend",
+      "cmd_hawkward_gui_frontend_src_hooks_usebackend_args",
+      "cmd_hawkward_gui_frontend_src_hooks_usebackend_getgo",
+      "cmd_hawkward_gui_frontend_src_hooks_usebackend_usebackend",
+      "cmd_hawkward_gui_frontend_src_pages_aiops_anomaliestab",
       "cmd_hawkward_gui_frontend_src_pages_devops",
       "cmd_hawkward_gui_frontend_src_pages_devops_devops",
+      "cmd_hawkward_gui_frontend_src_pages_devops_filebrowsertab",
       "cmd_hawkward_gui_frontend_src_pages_devops_powershellprotab",
       "cmd_hawkward_gui_frontend_src_pages_devops_servicestab",
       "cmd_hawkward_gui_frontend_src_pages_devops_statusbadge",
       "cmd_hawkward_gui_frontend_src_pages_devops_stripansi",
-      "cmd_hawkward_gui_frontend_src_pages_devops_tabid"
+      "cmd_hawkward_gui_frontend_src_pages_devops_tabid",
+      "cmd_hawkward_gui_frontend_src_pages_devops_terminaltab",
+      "cmd_hawkward_gui_frontend_src_pages_secops_secops"
     ],
     "55": [
       "cmd_hawkward_gui_frontend_wailsjs_go_models_dashboarddata",
@@ -1494,7 +1471,6 @@
       "cmd_hawkward_gui_frontend_wailsjs_go_models_trendinfo_createfrom"
     ],
     "57": [
-      "internal_common_sandbox_systemquerysandbox",
       "internal_secops_firewall",
       "internal_secops_firewall_getfirewallrules",
       "internal_secops_firewall_getfirewallruleslinux",
@@ -1502,7 +1478,6 @@
       "internal_secops_firewall_parsefirewallrules",
       "internal_secops_firewall_parseiptablessave",
       "internal_secops_firewall_parsenftlist",
-      "internal_secops_firewall_setfirewallrulestate",
       "secops_firewallrule"
     ],
     "58": [
@@ -1530,6 +1505,7 @@
     ],
     "60": [
       "app_app_collectandemit",
+      "app_app_starttickloop",
       "internal_common_metrics_exporter",
       "internal_common_metrics_exporter_incpipelinetick",
       "internal_common_metrics_exporter_metricsexporterport",
@@ -1551,15 +1527,17 @@
       "cmd_hawkward_gui_frontend_src_components_layout_sidebar_toolsitems"
     ],
     "62": [
-      "cmd_hawkward_gui_frontend_src_components_dialogs_confirmdialog",
-      "cmd_hawkward_gui_frontend_src_components_dialogs_confirmdialog_confirmdialog",
-      "cmd_hawkward_gui_frontend_src_components_dialogs_confirmdialog_confirmdialogprops",
-      "cmd_hawkward_gui_frontend_src_components_dialogs_confirmdialog_test",
-      "cmd_hawkward_gui_frontend_src_components_network_connectionline",
-      "cmd_hawkward_gui_frontend_src_components_network_connectionline_connectioncolors",
-      "cmd_hawkward_gui_frontend_src_components_network_connectionline_connectionline",
-      "cmd_hawkward_gui_frontend_src_components_network_connectionline_connectionlineprops",
-      "cmd_hawkward_gui_frontend_src_lib_utils"
+      "internal_secops_workflows",
+      "internal_secops_workflows_boolstr",
+      "internal_secops_workflows_go_defenderstatus",
+      "internal_secops_workflows_go_firewallrule",
+      "internal_secops_workflows_go_listeningport",
+      "internal_secops_workflows_go_scheduledtask",
+      "internal_secops_workflows_go_securityevent",
+      "internal_secops_workflows_go_userinfo",
+      "internal_secops_workflows_runsecurityaudit",
+      "secops_securityreport",
+      "secops_securityreport_string"
     ],
     "63": [
       "cmd_hawkward_gui_frontend_wailsjs_go_app_pipelineapi",
@@ -1584,15 +1562,16 @@
       "internal_common_sandbox_windows_test_testwindowssandboxsystemquery"
     ],
     "65": [
-      "internal_netops_dns",
-      "internal_netops_dns_go_client",
-      "internal_netops_dns_go_context",
-      "internal_netops_dns_lookupdns",
-      "internal_netops_dns_lookupdnswithcontext",
-      "internal_netops_dns_querycname",
-      "internal_netops_dns_querydns",
-      "internal_netops_dns_querymx",
-      "netops_dnsresult"
+      "app_app_shutdown",
+      "app_app_startup",
+      "internal_app_app_go_context",
+      "internal_common_logger",
+      "internal_common_logger_closelogger",
+      "internal_common_logger_initlogger",
+      "internal_common_logger_logdebug",
+      "internal_common_logger_logerror",
+      "internal_common_logger_loginfo",
+      "internal_common_metrics_exporter_initmetricsexporter"
     ],
     "66": [
       "cmd_hawkward_gui_frontend_wailsjs_go_app_alertapi",
@@ -1679,12 +1658,20 @@
       "cmd_hawkward_gui_frontend_package_scripts_test"
     ],
     "75": [
+      "cmd_hawkward_gui_frontend_src_components_network_connectionline",
+      "cmd_hawkward_gui_frontend_src_components_network_connectionline_connectioncolors",
+      "cmd_hawkward_gui_frontend_src_components_network_connectionline_connectionline",
+      "cmd_hawkward_gui_frontend_src_components_network_connectionline_connectionlineprops",
       "cmd_hawkward_gui_frontend_src_components_network_devicenode",
       "cmd_hawkward_gui_frontend_src_components_network_devicenode_devicecolors",
       "cmd_hawkward_gui_frontend_src_components_network_devicenode_deviceicons",
       "cmd_hawkward_gui_frontend_src_components_network_devicenode_devicenode",
       "cmd_hawkward_gui_frontend_src_components_network_devicenode_devicenodeprops",
-      "cmd_hawkward_gui_frontend_src_components_network_devicenode_statusdotcolors"
+      "cmd_hawkward_gui_frontend_src_components_network_devicenode_statusdotcolors",
+      "cmd_hawkward_gui_frontend_src_lib_utils",
+      "cmd_hawkward_gui_frontend_src_lib_utils_cn",
+      "cmd_hawkward_gui_frontend_src_pages_dashboard_kpicard",
+      "cmd_hawkward_gui_frontend_src_pages_secops_securitystatusbadge"
     ],
     "76": [
       "internal_secops_events",
@@ -1703,10 +1690,12 @@
     ],
     "78": [
       "cmd_hawkward_gui_frontend_wailsjs_go_app_aiops",
+      "cmd_hawkward_gui_frontend_wailsjs_go_app_aiops_askai",
       "cmd_hawkward_gui_frontend_wailsjs_go_app_aiops_chat",
       "cmd_hawkward_gui_frontend_wailsjs_go_app_aiops_detectanomalies",
       "cmd_hawkward_gui_frontend_wailsjs_go_app_aiops_generatereport",
-      "cmd_hawkward_gui_frontend_wailsjs_go_app_aiops_getollamastatus"
+      "cmd_hawkward_gui_frontend_wailsjs_go_app_aiops_getollamastatus",
+      "cmd_hawkward_gui_frontend_wailsjs_go_app_aiops_withtimeout"
     ],
     "79": [
       "cmd_hawkward_gui_frontend_wailsjs_go_app_dashboard",
@@ -1905,22 +1894,54 @@
     ],
     "121": [
       "scripts_release_ps1_scripts_release"
+    ],
+    "122": [
+      "internal_netops_interfaces",
+      "internal_netops_interfaces_calculatebandwidthrates",
+      "internal_netops_interfaces_counterdelta",
+      "internal_netops_interfaces_getbandwidthcounters",
+      "internal_netops_interfaces_getinterfaces",
+      "internal_netops_interfaces_go_bandwidthcounter",
+      "internal_netops_interfaces_go_duration",
+      "netops_bandwidthcounter",
+      "netops_bandwidthrate",
+      "netops_bandwidthresult",
+      "netops_interfaceinfo"
+    ],
+    "123": [
+      "cmd_hawkward_gui_frontend_wailsjs_go_app_timeline",
+      "cmd_hawkward_gui_frontend_wailsjs_go_app_timeline_explainevents",
+      "cmd_hawkward_gui_frontend_wailsjs_go_app_timeline_getrelatedevents",
+      "cmd_hawkward_gui_frontend_wailsjs_go_app_timeline_gettimelinecategories",
+      "cmd_hawkward_gui_frontend_wailsjs_go_app_timeline_gettimelineeventbyid",
+      "cmd_hawkward_gui_frontend_wailsjs_go_app_timeline_gettimelineevents",
+      "cmd_hawkward_gui_frontend_wailsjs_go_app_timeline_gettimelinesummary"
+    ],
+    "124": [
+      "cmd_hawkward_gui_frontend_wailsjs_go_models_timelineevent",
+      "cmd_hawkward_gui_frontend_wailsjs_go_models_timelineevent_constructor",
+      "cmd_hawkward_gui_frontend_wailsjs_go_models_timelineevent_createfrom"
+    ],
+    "125": [
+      "internal_app_dashboard_test",
+      "internal_app_dashboard_test_go_t",
+      "internal_app_dashboard_test_testgetdashboarddata"
     ]
   },
   "cohesion": {
     "0": 0.07919191919191919,
-    "1": 0.06340326340326341,
+    "1": 0.07609427609427609,
     "2": 0.03076923076923077,
-    "3": 0.059227921734531994,
-    "4": 0.07256894049346879,
+    "3": 0.060285563194077206,
+    "4": 0.07686274509803921,
     "5": 0.06966618287373004,
     "6": 0.07568027210884354,
     "7": 0.07149758454106281,
-    "8": 0.047619047619047616,
-    "9": 0.07641196013289037,
+    "8": 0.046511627906976744,
+    "9": 0.10795454545454546,
     "10": 0.05128205128205128,
     "11": 0.06451612903225806,
-    "12": 0.08045977011494253,
+    "12": 0.07741935483870968,
     "13": 0.14,
     "14": 0.20666666666666667,
     "15": 0.08695652173913043,
@@ -1930,50 +1951,50 @@
     "19": 0.20526315789473684,
     "20": 0.1631578947368421,
     "21": 0.10526315789473684,
-    "22": 0.19298245614035087,
-    "23": 0.2222222222222222,
+    "22": 0.2222222222222222,
+    "23": 0.20526315789473684,
     "24": 0.12418300653594772,
     "25": 0.1437908496732026,
-    "26": 0.1437908496732026,
+    "26": 0.15441176470588236,
     "27": 0.1111111111111111,
     "28": 0.2875816993464052,
     "29": 0.3006535947712418,
     "30": 0.29411764705882354,
     "31": 0.11764705882352941,
-    "32": 0.15833333333333333,
+    "32": 0.18681318681318682,
     "33": 0.13333333333333333,
     "34": 0.125,
     "35": 0.2833333333333333,
-    "36": 0.21904761904761905,
+    "36": 0.30303030303030304,
     "37": 0.20952380952380953,
     "38": 0.1978021978021978,
     "39": 0.23076923076923078,
-    "40": 0.14285714285714285,
+    "40": 0.125,
     "41": 0.18681318681318682,
     "42": 0.3516483516483517,
     "43": 0.21794871794871795,
     "44": 0.15384615384615385,
-    "45": 0.24242424242424243,
-    "46": 0.18181818181818182,
+    "45": 0.1978021978021978,
+    "46": 0.25,
     "47": 0.16666666666666666,
-    "48": 0.36363636363636365,
+    "48": 0.4090909090909091,
     "49": 0.2,
-    "50": 0.2,
-    "51": 0.18181818181818182,
-    "52": 0.18181818181818182,
+    "50": 0.19696969696969696,
+    "51": 0.15384615384615385,
+    "52": 0.16666666666666666,
     "53": 0.41818181818181815,
-    "54": 0.2222222222222222,
+    "54": 0.18095238095238095,
     "55": 0.2,
     "56": 0.2,
-    "57": 0.5111111111111111,
+    "57": 0.6428571428571429,
     "58": 0.35555555555555557,
     "59": 0.2222222222222222,
-    "60": 0.3611111111111111,
+    "60": 0.3111111111111111,
     "61": 0.3055555555555556,
-    "62": 0.25,
+    "62": 0.21818181818181817,
     "63": 0.2222222222222222,
     "64": 0.4722222222222222,
-    "65": 0.5277777777777778,
+    "65": 0.3333333333333333,
     "66": 0.25,
     "67": 0.25,
     "68": 0.25,
@@ -1983,10 +2004,10 @@
     "72": 0.2857142857142857,
     "73": 0.3333333333333333,
     "74": 0.3333333333333333,
-    "75": 0.3333333333333333,
+    "75": 0.16483516483516483,
     "76": 0.7333333333333333,
     "77": 0.4,
-    "78": 0.4,
+    "78": 0.2857142857142857,
     "79": 0.5,
     "80": 0.5,
     "81": 0.6666666666666666,
@@ -2029,7 +2050,11 @@
     "118": 1.0,
     "119": 1.0,
     "120": 1.0,
-    "121": 1.0
+    "121": 1.0,
+    "122": 0.36363636363636365,
+    "123": 0.2857142857142857,
+    "124": 0.6666666666666666,
+    "125": 0.6666666666666666
   },
   "gods": [
     {
@@ -2096,52 +2121,85 @@
       "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; peripheral node `main()` unexpectedly reaches hub `NewApp()`"
     },
     {
-      "source": "ConnectionLine()",
-      "target": "cn()",
-      "source_files": [
-        "cmd/hawkward-gui/frontend/src/components/network/ConnectionLine.tsx",
-        "cmd/hawkward-gui/frontend/src/lib/utils.ts"
-      ],
-      "confidence": "INFERRED",
-      "relation": "calls",
-      "why": "inferred connection - not explicitly stated in source; bridges separate communities; peripheral node `ConnectionLine()` unexpectedly reaches hub `cn()`"
-    },
-    {
-      "source": "DeviceNode()",
-      "target": "cn()",
-      "source_files": [
-        "cmd/hawkward-gui/frontend/src/components/network/DeviceNode.tsx",
-        "cmd/hawkward-gui/frontend/src/lib/utils.ts"
-      ],
-      "confidence": "INFERRED",
-      "relation": "calls",
-      "why": "inferred connection - not explicitly stated in source; bridges separate communities; peripheral node `DeviceNode()` unexpectedly reaches hub `cn()`"
-    },
-    {
-      "source": "ServicesTab()",
+      "source": "ChatTab()",
       "target": "useBackend()",
       "source_files": [
-        "cmd/hawkward-gui/frontend/src/pages/DevOps.tsx",
+        "cmd/hawkward-gui/frontend/src/pages/AIOps.tsx",
         "cmd/hawkward-gui/frontend/src/hooks/useBackend.ts"
       ],
       "confidence": "INFERRED",
       "relation": "calls",
-      "why": "inferred connection - not explicitly stated in source; bridges separate communities; peripheral node `ServicesTab()` unexpectedly reaches hub `useBackend()`"
+      "why": "inferred connection - not explicitly stated in source; bridges separate communities; peripheral node `ChatTab()` unexpectedly reaches hub `useBackend()`"
     },
     {
-      "source": "KpiCard()",
+      "source": "ReportsTab()",
+      "target": "useBackend()",
+      "source_files": [
+        "cmd/hawkward-gui/frontend/src/pages/AIOps.tsx",
+        "cmd/hawkward-gui/frontend/src/hooks/useBackend.ts"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; bridges separate communities; peripheral node `ReportsTab()` unexpectedly reaches hub `useBackend()`"
+    },
+    {
+      "source": "ChatBubble()",
       "target": "cn()",
       "source_files": [
-        "cmd/hawkward-gui/frontend/src/pages/Dashboard.tsx",
+        "cmd/hawkward-gui/frontend/src/pages/AIOps.tsx",
         "cmd/hawkward-gui/frontend/src/lib/utils.ts"
       ],
       "confidence": "INFERRED",
       "relation": "calls",
-      "why": "inferred connection - not explicitly stated in source; bridges separate communities; peripheral node `KpiCard()` unexpectedly reaches hub `cn()`"
+      "why": "inferred connection - not explicitly stated in source; bridges separate communities; peripheral node `ChatBubble()` unexpectedly reaches hub `cn()`"
+    },
+    {
+      "source": "StatusBadge()",
+      "target": "cn()",
+      "source_files": [
+        "cmd/hawkward-gui/frontend/src/pages/AIOps.tsx",
+        "cmd/hawkward-gui/frontend/src/lib/utils.ts"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; bridges separate communities; peripheral node `StatusBadge()` unexpectedly reaches hub `cn()`"
     }
   ],
-  "tokens": {
-    "input": 0,
-    "output": 0
-  }
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `LogWarn()` connect `Log Management & DevOps` to `AIOps`, `LogInfo`, `SecOps Firewall Rules & Status`, `Network Lookup & Scan`, `Storage & Timeline`, `SysOps`, `CPU Info Collector`, `Active Job Sandbox`, `Bandwidth Counter & Network Metrics`, `Log Management & Event Bus`, `AIOps Dashboard & Tabs`, `Metrics Exporter Initialization`?",
+      "why": "High betweenness centrality (0.067) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `App` connect `AIOps Dashboard & Tabs` to `AIOps`, `LogInfo`, `Storage & Timeline`, `SecOps Firewall Rules & Status`, `Dashboard Briefing Generation`, `Dashboard Data Retrieval`, `SysOps`, `App Information`, `Alert API & Alerts Management`, `Log Management & DevOps`, `Bandwidth Counter & Network Metrics`, `Data Pipeline Configurations`, `Log Management & Event Bus`, `Alerts & Conditions`, `NewApp`, `Metrics Definition & Pipeline API`, `Metrics Exporter Initialization`?",
+      "why": "High betweenness centrality (0.061) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `LogInfo()` connect `LogInfo` to `SecOps Firewall Rules & Status`, `Storage & Timeline`, `Connections Management & Process Mapping`, `Dev Report`, `events.go`, `Log Management & DevOps`?",
+      "why": "High betweenness centrality (0.041) - this node is a cross-community bridge."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 40 inferred relationships involving `LogWarn()` (e.g. with `.Chat()` and `.collectAndEmit()`) actually correct?",
+      "why": "`LogWarn()` has 40 INFERRED edges - model-reasoned connections that need verification."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 35 inferred relationships involving `SandboxedCommandWithConfig()` (e.g. with `TestSandboxedCommandWithConfig()` and `TestSandboxedCommandWithConfigDefaults()`) actually correct?",
+      "why": "`SandboxedCommandWithConfig()` has 35 INFERRED edges - model-reasoned connections that need verification."
+    },
+    {
+      "type": "isolated_nodes",
+      "question": "What connects `name`, `private`, `version` to the rest of the system?",
+      "why": "274 weakly-connected nodes found - possible documentation gaps or missing edges."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `Hawk Management` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.07919191919191919 - nodes in this community are weakly interconnected."
+    }
+  ]
 }

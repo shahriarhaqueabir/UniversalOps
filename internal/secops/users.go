@@ -12,12 +12,14 @@ import (
 
 // UserInfo represents a local user account.
 type UserInfo struct {
-	Username  string
-	FullName  string
-	SID       string
-	Group     string
-	IsAdmin   bool
-	IsEnabled bool
+	Username             string
+	FullName             string
+	SID                  string
+	Group                string
+	IsAdmin              bool
+	IsEnabled            bool
+	PasswordNeverExpires bool
+	LastLogon            string
 }
 
 // GetUsers retrieves local user accounts.
@@ -288,28 +290,31 @@ func parseNetUserDetail(output, username string) UserInfo {
 	scanner := bufio.NewScanner(strings.NewReader(output))
 	for scanner.Scan() {
 		line := scanner.Text()
-		colonIdx := strings.Index(line, ":")
-		if colonIdx < 0 {
-			continue
-		}
+		trimmed := strings.TrimSpace(line)
 
-		key := strings.TrimSpace(line[:colonIdx])
-		value := strings.TrimSpace(line[colonIdx+1:])
-
-		switch key {
-		case "Full Name":
-			user.FullName = value
-		case "Account active":
-			user.IsEnabled = strings.EqualFold(value, "Yes")
-		case "Local Group Memberships":
-			user.IsAdmin = strings.Contains(value, "*Administrators")
-			if strings.Contains(value, "*Administrators") {
+		// Windows "net user <name>" uses label-based lines without colons.
+		// Match known label prefixes and extract the value portion.
+		switch {
+		case strings.HasPrefix(trimmed, "Full Name"):
+			user.FullName = strings.TrimSpace(strings.TrimPrefix(trimmed, "Full Name"))
+		case strings.HasPrefix(trimmed, "Account active"):
+			val := strings.TrimSpace(strings.TrimPrefix(trimmed, "Account active"))
+			user.IsEnabled = strings.EqualFold(val, "Yes")
+		case strings.HasPrefix(trimmed, "Password expires"):
+			val := strings.TrimSpace(strings.TrimPrefix(trimmed, "Password expires"))
+			user.PasswordNeverExpires = strings.EqualFold(val, "Never")
+		case strings.HasPrefix(trimmed, "Last logon"):
+			user.LastLogon = strings.TrimSpace(strings.TrimPrefix(trimmed, "Last logon"))
+		case strings.HasPrefix(trimmed, "Local Group Memberships"):
+			val := strings.TrimSpace(strings.TrimPrefix(trimmed, "Local Group Memberships"))
+			user.IsAdmin = strings.Contains(val, "*Administrators")
+			if strings.Contains(val, "*Administrators") {
 				user.Group = "Administrators"
-			} else if strings.Contains(value, "*Users") {
+			} else if strings.Contains(val, "*Users") {
 				user.Group = "Users"
-			} else if strings.Contains(value, "*Guests") {
+			} else if strings.Contains(val, "*Guests") {
 				user.Group = "Guests"
-			} else if strings.Contains(value, "*Remote Desktop") {
+			} else if strings.Contains(val, "*Remote Desktop") {
 				user.Group = "Remote Desktop Users"
 			} else {
 				user.Group = "Users"

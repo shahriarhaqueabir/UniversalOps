@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { OverviewTab } from './netops/OverviewTab'
 import {
   Activity,
   Globe,
@@ -27,6 +28,7 @@ import {
   MinusCircle,
   CircleDot,
   CircleOff,
+  LayoutDashboard,
 } from 'lucide-react'
 import {
   AreaChart,
@@ -48,9 +50,10 @@ import type {
 } from '@/types'
 import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 
-type NetOpsTab = 'ping' | 'dns' | 'connections' | 'interfaces' | 'traceroute' | 'portscan' | 'bandwidth'
+type NetOpsTab = 'overview' | 'ping' | 'dns' | 'connections' | 'interfaces' | 'traceroute' | 'portscan' | 'bandwidth'
 
 const tabs: { id: NetOpsTab; label: string; icon: React.ReactNode }[] = [
+  { id: 'overview', label: 'Overview', icon: <LayoutDashboard size={20} /> },
   { id: 'ping', label: 'Probes', icon: <Activity size={20} /> },
   { id: 'dns', label: 'Resolution', icon: <Globe size={20} /> },
   { id: 'connections', label: 'Endpoints', icon: <Cable size={20} /> },
@@ -267,7 +270,7 @@ function ConnectivityPanel() {
 export function NetOps() {
   const { call } = useBackend()
   const { pingCount, refreshInterval, dnsTimeout } = useSettingsStore()
-  const [activeTab, setActiveTab] = useState<NetOpsTab>('ping')
+  const [activeTab, setActiveTab] = useState<NetOpsTab>('overview')
   const [pingTarget, setPingTarget] = useState('8.8.8.8')
   const [pingRunning, setPingRunning] = useState(false)
   const [pingEntries, setPingEntries] = useState<PingEntry[]>([])
@@ -418,7 +421,7 @@ export function NetOps() {
           <p className="text-text-dim text-lg mt-2">Fabric probes, resolver triage, and cumulative traffic heuristics.</p>
           <DataFreshnessIndicator lastUpdated={ifacesUpdatedAt ? new Date(ifacesUpdatedAt) : null} className="mt-1" />
         </div>
-        <div className="flex gap-1 bg-panel border border-border rounded-2xl p-1.5 shadow-inner overflow-x-auto max-w-[800px]">
+        <div className="flex gap-1 bg-panel border border-border rounded-2xl p-1.5 shadow-inner overflow-x-auto max-w-[1100px]">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -440,6 +443,10 @@ export function NetOps() {
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         <ConnectivityPanel />
+
+        {activeTab === 'overview' && (
+          <OverviewTab />
+        )}
 
         {activeTab === 'ping' && (
           <div className="space-y-8 animate-in fade-in duration-500">

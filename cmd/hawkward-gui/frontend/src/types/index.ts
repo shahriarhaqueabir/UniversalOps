@@ -240,6 +240,8 @@ export interface UserInfo {
   group: string
   is_admin: boolean
   is_enabled: boolean
+  password_never_expires: boolean
+  last_logon: string
 }
 
 export interface ListeningPort {
@@ -318,6 +320,42 @@ export interface SecuritySummary {
 }
 
 // ── DevOps Types ─────────────────────────────────────────────────────────────
+export interface DockerStatus {
+  installed: boolean
+  running: boolean
+  version: string
+  containers: ContainerSummary
+}
+
+export interface KubernetesStatus {
+  installed: boolean
+  connected: boolean
+  cluster: string
+  nodes: number
+  pods: number
+}
+
+export interface ServiceInfo {
+  name: string
+  status: string
+  port: number
+}
+
+export interface ServiceCategory {
+  category: string
+  services: ServiceInfo[]
+}
+
+export interface ServiceGroupSummary {
+  databases: number
+  messageQueues: number
+  webServers: number
+  containers: number
+  other: number
+  running: number
+  stopped: number
+}
+
 export interface ContainerInfo {
   id: string
   name: string
@@ -450,6 +488,33 @@ export interface LogStats {
   trendingErrors: TrendingError[]
 }
 
+export interface LogTimelinePoint {
+  timestamp: string
+  errors: number
+  warnings: number
+  info: number
+}
+
+export interface LogSummary {
+  summaryText: string
+  topSource: string
+  trend: string
+}
+
+// ── NetOps Overview Types ──
+
+export interface GatewayInfo {
+  ip: string
+  interface: string
+  reachable: boolean
+}
+
+export interface NetworkSummary {
+  summaryText: string
+  topInterface: string
+  issues: string[]
+}
+
 // ── AIOps Types ──
 
 export interface ChatMessage {
@@ -499,4 +564,83 @@ export interface TopologyConnection {
   targetId: string
   label?: string
   type: ConnectionType
+}
+
+export interface AIInsight {
+  category: string
+  severity: 'info' | 'warning' | 'critical'
+  title: string
+  message: string
+  action: string
+  timestamp: string
+}
+
+export interface AIConfidence {
+  overall: number
+  factors: Record<string, number>
+  updatedAt: string
+}
+
+export interface ConversationMessage {
+  id: number
+  session_id: string
+  role: string
+  content: string
+  timestamp: string
+}
+
+export interface LearnedBaseline {
+  metric: string
+  mean: number
+  min: number
+  max: number
+  stdDev: number
+  count: number
+}
+
+// ── NetworkDesign Analysis Types ──
+
+export interface TopologyNode {
+  id: string
+  type: string
+  label: string
+  ip: string
+  mac: string
+  vendor: string
+  notes: string
+  vlan: string
+  online: boolean
+  props: Record<string, string>
+}
+
+export interface TopologyEdge {
+  id: string
+  source: string
+  target: string
+  label: string
+  type: string
+  bandwidth: string
+  status: string
+}
+
+export interface DuplicateIPEntry {
+  ip: string
+  nodes: string[]
+}
+
+export interface TopologyHealth {
+  totalNodes: number
+  totalEdges: number
+  brokenLinks: number
+  missingLabels: number
+  orphanNodes: string[]
+  duplicateIPs: DuplicateIPEntry[]
+  subnetErrors: string[]
+  suggestions: string[]
+}
+
+export interface DeviceInventoryGroup {
+  type: string
+  count: number
+  devices: TopologyDevice[]
 }

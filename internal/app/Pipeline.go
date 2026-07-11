@@ -109,22 +109,35 @@ func (p *PipelineAPI) ClearPipeline() {
 	p.app.pipeline.Clear()
 }
 
-// UpdateSettings updates the pipeline configuration and tick interval.
-func (p *PipelineAPI) UpdateSettings(intervalMs int, capacity int) {
-	newInterval := time.Duration(intervalMs) * time.Millisecond
+// UpdateSettings updates the pipeline configuration and network defaults.
+func (p *PipelineAPI) UpdateSettings(intervalMs int, capacity int, pingCount int, dnsTimeout int) {
 	cfg := p.app.pipeline.Config()
-	cfg.TickInterval = newInterval
+
+	if intervalMs > 0 {
+		newInterval := time.Duration(intervalMs) * time.Millisecond
+		cfg.TickInterval = newInterval
+
+		// Signal the tick loop to use the new interval
+		select {
+		case p.app.tickIntervalCh <- newInterval:
+		default:
+			// Channel full, loop will pick up next time or ignore if same
+		}
+	}
+
 	if capacity > 0 {
 		cfg.Capacity = capacity
 	}
-	p.app.pipeline.UpdateConfig(cfg)
 
-	// Signal the tick loop to use the new interval
-	select {
-	case p.app.tickIntervalCh <- newInterval:
-	default:
-		// Channel full, loop will pick up next time or ignore if same
+	if pingCount > 0 {
+		cfg.PingCount = pingCount
 	}
+
+	if dnsTimeout > 0 {
+		cfg.DNSTimeout = dnsTimeout
+	}
+
+	p.app.pipeline.UpdateConfig(cfg)
 }
 
 // ── Converters ───────────────────────────────────────────────────────────────
