@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import {
   Activity,
@@ -18,10 +18,12 @@ import {
   Shield,
   Wifi,
   X,
+  History,
 } from 'lucide-react'
-import type { TopologyDevice, TopologyConnection } from '@/types'
+import type { TopologyDevice, TopologyConnection, TopologyHealth } from '@/types'
+import { useBackend } from '@/hooks/useBackend'
+import { useQuery } from '@tanstack/react-query'
 import {
-  analyzeTopology,
   groupByType,
   findDocumentationGaps,
   computeHealthScore,
@@ -133,9 +135,37 @@ export function AnalysisSidebar({
   onToggle,
   onDevicesDiscovered,
 }: AnalysisSidebarProps) {
+  const { call } = useBackend()
   const [discovering, setDiscovering] = useState(false)
 
-  const health = useMemo(() => analyzeTopology(devices, connections), [devices, connections])
+  // ── Sync topology to backend ──
+  useEffect(() => {
+    const sync = async () => {
+      try {
+        await call('NetDesign.SetTopology', JSON.stringify(devices), JSON.stringify(connections))
+      } catch (err) {
+        console.error('[NetworkDesign] Sync failed:', err)
+      }
+    }
+    sync()
+  }, [devices, connections, call])
+
+  // ── Backend Analysis ──
+  const { data: health = { totalNodes: 0, totalEdges: 0, brokenLinks: 0, missingLabels: 0, orphanNodes: [], duplicateIPs: [], subnetErrors: [], suggestions: [] } } = useQuery<TopologyHealth>({
+    queryKey: ['topology-health', devices.length, connections.length],
+    queryFn: async () => {
+      const res = await call('NetDesign.AnalyzeTopology')
+      return res as TopologyHealth
+    },
+  })
+
+  const { data: inventorySummary } = useQuery<any>({
+    queryKey: ['topology-inventory', devices.length],
+    queryFn: async () => {
+      return await call('NetDesign.GetInventory')
+    }
+  })
+
   const healthScore = useMemo(() => computeHealthScore(health), [health])
   const inventory = useMemo(() => groupByType(devices), [devices])
   const docGaps = useMemo(() => findDocumentationGaps(devices, connections), [devices, connections])
@@ -212,6 +242,12 @@ export function AnalysisSidebar({
             <div className="space-y-2">
               <StatRow label="Total Devices" value={health.totalNodes} />
               <StatRow label="Total Connections" value={health.totalEdges} />
+              {inventorySummary && (
+                <>
+                  <StatRow label="Missing IPs" value={inventorySummary.missingIPs} color={inventorySummary.missingIPs > 0 ? 'text-warning' : ''} />
+                  <StatRow label="Missing MACs" value={inventorySummary.missingMACs} color={inventorySummary.missingMACs > 0 ? 'text-warning' : ''} />
+                </>
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-xs text-[var(--color-text-dim)]">Health Score</span>
                 <div className="flex items-center gap-2">
@@ -229,7 +265,39 @@ export function AnalysisSidebar({
             </div>
           </Section>
 
-          {/* ── Section 2: Topology Health ── */}
+          {/* ── Section 2: Inventory Statistics (NEW) ── */}
+          {inventorySummary && (
+            <Section
+              title="Inventory Stats"
+              icon={<ListChecks size={14} />}
+              defaultOpen={false}
+            >
+              <div className="space-y-3">
+                {inventorySummary.vendors && Object.entries(inventorySummary.vendors).length > 0 && (
+                  <div>
+                    <span className="text-[10px] font-bold text-text-faint uppercase tracking-widest block mb-1.5">Top Vendors</span>
+                    <div className="space-y-1">
+                      {Object.entries(inventorySummary.vendors).map(([v, count]: [string, any]) => (
+                        <StatRow key={v} label={v} value={count} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {inventorySummary.types && (
+                  <div>
+                    <span className="text-[10px] font-bold text-text-faint uppercase tracking-widest block mb-1.5">Device Types</span>
+                    <div className="space-y-1">
+                      {Object.entries(inventorySummary.types).map(([t, count]: [string, any]) => (
+                        <StatRow key={t} label={t.charAt(0).toUpperCase() + t.slice(1)} value={count} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Section>
+          )}
+
+          {/* ── Section 3: Topology Health ── */}
           <Section
             title="Health"
             icon={<Activity size={14} />}
@@ -427,7 +495,47 @@ export function AnalysisSidebar({
             )}
           </Section>
 
-          {/* ── Section 5: AI Suggestions ── */}
+          {/* ── Section 5: Documentation Details (NEW) ── */}
+          <Section
+            title="Documentation"
+            icon={<FileText size={14} />}
+            count={devices.filter(d => !d.ip || !d.mac || !d.notes).length}
+            defaultOpen={false}
+          >
+            <div className="space-y-4">
+              {devices.map(d => {
+                const missing = []
+                if (!d.ip) missing.push('IP')
+                if (!d.mac) missing.push('MAC')
+                if (!d.notes) missing.push('Notes')
+                if (!d.subnet) missing.push('Subnet')
+
+                if (missing.length === 0) return null
+
+                return (
+                  <div key={d.id} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-text truncate">{d.label}</span>
+                      <span className="text-[9px] font-black uppercase text-warning bg-warning/10 px-1.5 py-0.5 rounded">Incomplete</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {missing.map(m => (
+                        <span key={m} className="text-[9px] font-mono text-text-faint bg-panel-3 px-1 rounded border border-border">Missing {m}</span>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+              {devices.every(d => d.ip && d.mac && d.notes && d.subnet) && (
+                <div className="flex items-center gap-2 text-success py-2">
+                  <CheckCircle2 size={14} />
+                  <span className="text-xs font-bold uppercase tracking-widest">Full Coverage</span>
+                </div>
+              )}
+            </div>
+          </Section>
+
+          {/* ── Section 6: AI Suggestions ── */}
           <Section
             title="Suggestions"
             icon={<Lightbulb size={14} />}

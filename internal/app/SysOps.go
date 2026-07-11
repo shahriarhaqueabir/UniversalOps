@@ -98,6 +98,7 @@ func (s *SysOps) GetTopProcesses(n int) []ProcessInfo {
 	for _, p := range procs {
 		result = append(result, ProcessInfo{
 			PID:    p.PID,
+			PPID:   p.PPID,
 			Name:   p.Name,
 			CPU:    p.CPU,
 			Memory: p.Memory,

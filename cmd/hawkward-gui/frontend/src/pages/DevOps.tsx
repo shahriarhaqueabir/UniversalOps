@@ -52,7 +52,7 @@ function stripAnsi(text: string): string {
 }
 import type { CommandResult, ServiceEntry, FileEntry, ToolInfo, ContainerSummary, GitSummary, LocalServer, EnvironmentInfo, DevOpsSuggestion, DockerStatus, KubernetesStatus, ServiceCategory, ServiceGroupSummary } from '@/types'
 
-type TabId = 'overview' | 'terminal' | 'powershell-pro' | 'services' | 'file-browser' | 'toolbox' | 'containers' | 'git' | 'servers' | 'environment'
+type TabId = 'overview' | 'terminal' | 'powershell-pro' | 'services' | 'file-browser' | 'toolbox' | 'containers' | 'git' | 'servers' | 'environment' | 'log-explorer'
 
 // ── Inline helpers ──
 
@@ -104,6 +104,7 @@ export function DevOps() {
             { id: 'environment', label: 'Environment', icon: <Variable size={20} /> },
             { id: 'file-browser', label: 'File Explorer', icon: <Folder size={20} /> },
             { id: 'toolbox', label: 'Toolbox', icon: <Wrench size={20} /> },
+            { id: 'log-explorer', label: 'Log Explorer', icon: <FileText size={20} /> },
           ].map((tab) => (
             <Tabs.Trigger
               key={tab.id}
@@ -152,6 +153,9 @@ export function DevOps() {
           </Tabs.Content>
           <Tabs.Content value="environment" className="h-full">
             <EnvironmentTab />
+          </Tabs.Content>
+          <Tabs.Content value="log-explorer" className="h-full">
+            <LogExplorerTab />
           </Tabs.Content>
         </div>
       </Tabs.Root>
@@ -1228,6 +1232,92 @@ function FileBrowserTab() {
 }
 
 // ══════════════════════════════════════════════
+//  Log Explorer Tab
+// ══════════════════════════════════════════════
+
+function LogExplorerTab() {
+  const { call } = useBackend()
+  const [logPath, setLogPath] = useState('hawkward-gui.log')
+  const [lines, setLines] = useState<string[]>([])
+  const [searchPattern, setSearchPattern] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleTail = async () => {
+    setLoading(true)
+    try {
+      const res = await call('DevOps.TailLog', logPath, 100)
+      setLines((res as string[]) || [])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSearch = async () => {
+    if (!searchPattern) return
+    setLoading(true)
+    try {
+      const res = await call('DevOps.SearchLog', logPath, searchPattern)
+      setLines((res as string[]) || [])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col h-full p-8 space-y-6">
+      <div className="flex items-end gap-4 bg-panel border border-border p-6 rounded-2xl shadow-lg">
+        <div className="flex-1 space-y-2">
+          <label className="text-xs font-bold text-text-faint uppercase tracking-widest">Log File Path</label>
+          <input
+            type="text"
+            value={logPath}
+            onChange={(e) => setLogPath(e.target.value)}
+            className="w-full bg-panel-2 border border-border rounded-lg px-4 py-2 text-sm text-text focus:outline-none focus:border-accent"
+          />
+        </div>
+        <div className="flex-1 space-y-2">
+          <label className="text-xs font-bold text-text-faint uppercase tracking-widest">Search Pattern</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={searchPattern}
+              onChange={(e) => setSearchPattern(e.target.value)}
+              placeholder="Regex or text..."
+              className="w-full bg-panel-2 border border-border rounded-lg px-4 py-2 text-sm text-text focus:outline-none focus:border-accent"
+            />
+            <button onClick={handleSearch} className="px-4 py-2 bg-accent text-white rounded-lg font-bold hover:opacity-90 transition-all shadow-md">
+              Search
+            </button>
+          </div>
+        </div>
+        <button onClick={handleTail} className="px-6 py-2 bg-panel-3 border border-border rounded-lg font-bold text-text hover:bg-panel transition-all mb-0.5">
+          Tail (Last 100)
+        </button>
+      </div>
+
+      <div className="flex-1 bg-black/40 border border-border rounded-2xl p-6 font-[Geist_Mono] text-sm overflow-auto shadow-inner">
+        {loading ? (
+          <div className="flex items-center justify-center h-full gap-3 text-text-faint">
+            <RefreshCw size={20} className="animate-spin" />
+            <span className="font-bold uppercase tracking-widest">Accessing File...</span>
+          </div>
+        ) : lines.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-text-faint italic">
+            No entries to display. Enter a path and tail or search.
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {lines.map((line, i) => (
+              <div key={i} className="whitespace-pre-wrap break-all text-text-dim border-b border-white/5 pb-1 last:border-0">{line}</div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════
 //  AI Suggestions Tab
 // ══════════════════════════════════════════════
 
@@ -1895,6 +1985,92 @@ function EnvironmentTab() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════
+//  Log Explorer Tab
+// ══════════════════════════════════════════════
+
+function LogExplorerTab() {
+  const { call } = useBackend()
+  const [logPath, setLogPath] = useState('hawkward-gui.log')
+  const [lines, setLines] = useState<string[]>([])
+  const [searchPattern, setSearchPattern] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleTail = async () => {
+    setLoading(true)
+    try {
+      const res = await call('DevOps.TailLog', logPath, 100)
+      setLines((res as string[]) || [])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSearch = async () => {
+    if (!searchPattern) return
+    setLoading(true)
+    try {
+      const res = await call('DevOps.SearchLog', logPath, searchPattern)
+      setLines((res as string[]) || [])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col h-full p-8 space-y-6">
+      <div className="flex items-end gap-4 bg-panel border border-border p-6 rounded-2xl shadow-lg">
+        <div className="flex-1 space-y-2">
+          <label className="text-xs font-bold text-text-faint uppercase tracking-widest">Log File Path</label>
+          <input
+            type="text"
+            value={logPath}
+            onChange={(e) => setLogPath(e.target.value)}
+            className="w-full bg-panel-2 border border-border rounded-lg px-4 py-2 text-sm text-text focus:outline-none focus:border-accent"
+          />
+        </div>
+        <div className="flex-1 space-y-2">
+          <label className="text-xs font-bold text-text-faint uppercase tracking-widest">Search Pattern</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={searchPattern}
+              onChange={(e) => setSearchPattern(e.target.value)}
+              placeholder="Regex or text..."
+              className="w-full bg-panel-2 border border-border rounded-lg px-4 py-2 text-sm text-text focus:outline-none focus:border-accent"
+            />
+            <button onClick={handleSearch} className="px-4 py-2 bg-accent text-white rounded-lg font-bold hover:opacity-90 transition-all shadow-md">
+              Search
+            </button>
+          </div>
+        </div>
+        <button onClick={handleTail} className="px-6 py-2 bg-panel-3 border border-border rounded-lg font-bold text-text hover:bg-panel transition-all mb-0.5">
+          Tail (Last 100)
+        </button>
+      </div>
+
+      <div className="flex-1 bg-black/40 border border-border rounded-2xl p-6 font-[Geist_Mono] text-sm overflow-auto shadow-inner">
+        {loading ? (
+          <div className="flex items-center justify-center h-full gap-3 text-text-faint">
+            <RefreshCw size={20} className="animate-spin" />
+            <span className="font-bold uppercase tracking-widest">Accessing File...</span>
+          </div>
+        ) : lines.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-text-faint italic">
+            No entries to display. Enter a path and tail or search.
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {lines.map((line, i) => (
+              <div key={i} className="whitespace-pre-wrap break-all text-text-dim border-b border-white/5 pb-1 last:border-0">{line}</div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

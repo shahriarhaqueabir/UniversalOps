@@ -30,7 +30,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { EmptyState } from '@/components/ui/EmptyState'
 import * as Tabs from '@radix-ui/react-tabs'
 import { useOllamaStore } from '@/stores/useOllamaStore'
-import type { ChatMessage, AnomalyInfo, OllamaStatus, AIInsight, AIConfidence, LearnedBaseline } from '@/types'
+import type { ChatMessage, AnomalyInfo, OllamaStatus, AIInsight, AIConfidence, LearnedBaseline, ChatSession } from '@/types'
 
 type TabId = 'ai-chat' | 'reports' | 'anomalies' | 'insights' | 'confidence'
 
@@ -213,15 +213,24 @@ function ChatTab() {
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const [activeSession, setActiveSession] = useState<string>(`sess-${Date.now()}`)
   const chatRef = useRef<HTMLDivElement>(null)
-  const sessionRef = useRef<string>(`sess-${Date.now()}`)
 
-  // Load persisted messages on mount
+  const { data: sessions = [], refetch: refetchSessions } = useQuery<ChatSession[]>({
+    queryKey: ['chat-sessions'],
+    queryFn: async () => {
+      const res = await call('AIOps.ListSessions')
+      return (res as ChatSession[]) || []
+    }
+  })
+
+  // Load persisted messages when activeSession changes
   useEffect(() => {
     let cancelled = false
     const loadMessages = async () => {
+      setLoaded(false)
       try {
-        const msgs = await call('AIOps.GetMessages', sessionRef.current) as ChatMessage[]
+        const msgs = await call('AIOps.GetMessages', activeSession) as ChatMessage[]
         if (!cancelled && msgs && msgs.length > 0) {
           setMessages(msgs)
         } else if (!cancelled) {
@@ -236,8 +245,8 @@ function ChatTab() {
       }
     }
     loadMessages()
-    return () => { cancelled = true }
-  }, [call])
+    return () => { cancelled = false }
+  }, [call, activeSession])
 
   const handleSend = async () => {
     if (!input.trim() || isTyping) return
@@ -249,7 +258,8 @@ function ChatTab() {
 
     // Persist user message
     try {
-      await call('AIOps.SaveMessage', sessionRef.current, 'user', userMsg.content)
+      await call('AIOps.SaveMessage', activeSession, 'user', userMsg.content)
+      refetchSessions()
     } catch { /* non-critical */ }
 
     try {
@@ -258,22 +268,32 @@ function ChatTab() {
       setMessages(prev => [...prev, assistantMsg])
       // Persist assistant message
       try {
-        await call('AIOps.SaveMessage', sessionRef.current, 'assistant', response)
+        await call('AIOps.SaveMessage', activeSession, 'assistant', response)
+        refetchSessions()
       } catch { /* non-critical */ }
     } catch (err) {
       const errMsg = `Analyst Error: ${String(err)}`
       setMessages(prev => [...prev, { role: 'assistant', content: errMsg }])
       try {
-        await call('AIOps.SaveMessage', sessionRef.current, 'assistant', errMsg)
+        await call('AIOps.SaveMessage', activeSession, 'assistant', errMsg)
       } catch { /* non-critical */ }
     } finally {
       setIsTyping(false)
     }
   }
 
-  const handleClear = () => {
-    sessionRef.current = `sess-${Date.now()}`
-    setMessages([{ role: 'assistant', content: 'New session started. How can I assist you?' }])
+  const handleNewSession = () => {
+    setActiveSession(`sess-${Date.now()}`)
+  }
+
+  const handleDeleteSession = async (sid: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!window.confirm('Delete this session and all its messages?')) return
+    await call('AIOps.DeleteSession', sid)
+    refetchSessions()
+    if (activeSession === sid) {
+      handleNewSession()
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -289,98 +309,148 @@ function ChatTab() {
     }
   }, [messages, isTyping])
 
-  if (!loaded) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="flex items-center gap-3 text-text-dim">
-          <RefreshCw size={20} className="animate-spin" />
-          <span className="text-sm font-bold uppercase tracking-widest">Loading conversation...</span>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="flex flex-col h-full bg-[var(--color-bg)] relative">
-      {/* Background Decor */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-accent rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-accent rounded-full blur-[150px] opacity-30" />
-      </div>
-
-      {/* Messages */}
-      <div ref={chatRef} className="flex-1 overflow-y-auto p-10 space-y-8 relative z-10 scroll-smooth">
-        {messages.map((msg, i) => (
-          <ChatBubble key={i} role={msg.role} content={msg.content} />
-        ))}
-        {isTyping && (
-          <div className="flex gap-6 max-w-[80%] animate-pulse">
-            <div className="w-12 h-12 rounded-xl bg-panel-3 border border-accent/20 flex items-center justify-center shrink-0">
-              <Bot size={24} className="text-accent" />
-            </div>
-            <div className="bg-panel-2 border border-border rounded-2xl rounded-tl-none px-6 py-4">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                <span className="ml-2 text-sm font-bold text-text-faint uppercase tracking-widest">Analyzing System Context...</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Input Area */}
-      <div className="p-8 bg-panel-2 border-t border-border relative z-20">
-        <div className="max-w-5xl mx-auto space-y-6">
-          {/* Suggested Prompts */}
-          {messages.length < 3 && (
-            <div className="flex flex-wrap gap-3">
-              {["Analyze recent system health", "Check for security anomalies", "Review network connection density", "Summarize resource usage trends"].map(prompt => (
-                <button
-                  key={prompt}
-                  onClick={() => { setInput(prompt) }}
-                  className="px-4 py-2 bg-panel border border-border rounded-full text-sm font-bold text-text-dim hover:text-accent hover:border-accent/40 transition-all"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="flex items-end gap-4">
-            <div className="relative flex-1 group">
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask about system health, anomalies, or network state..."
-                rows={1}
-                className="w-full bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-2xl px-6 py-5 text-xl text-text placeholder-text-faint focus:outline-none focus:border-accent transition-all shadow-inner resize-none min-h-[64px] max-h-40"
-                style={{ height: 'auto' }}
-              />
-              <div className="absolute right-4 bottom-4 flex items-center gap-3 text-text-faint">
-                <span className="text-xs font-bold uppercase tracking-tighter group-focus-within:text-accent transition-colors">Shift+Enter for newline</span>
-                <div className="w-px h-3 bg-border" />
-                <Zap size={14} className="group-focus-within:text-warning transition-colors" />
-              </div>
-            </div>
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || isTyping}
-              className="h-16 w-16 flex items-center justify-center bg-accent text-white rounded-2xl hover:bg-accent/90 disabled:opacity-30 disabled:scale-95 transition-all shadow-lg active:scale-90"
-            >
-              <Send size={28} />
-            </button>
-            <button
-              onClick={handleClear}
-              className="h-16 w-16 flex items-center justify-center text-text-faint border border-border rounded-2xl hover:bg-danger/10 hover:text-danger transition-all"
-              title="New Session"
-            >
-              <Trash2 size={24} />
-            </button>
-          </div>
+    <div className="flex h-full bg-[var(--color-bg)] overflow-hidden">
+      {/* Sessions Sidebar */}
+      <div className="w-80 border-r border-border bg-panel flex flex-col shrink-0">
+        <div className="p-6 border-b border-border">
+          <button
+            onClick={handleNewSession}
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-accent text-white rounded-xl font-bold hover:bg-accent/90 transition-all shadow-lg active:scale-95"
+          >
+            <Sparkles size={18} />
+            New Intelligence Session
+          </button>
         </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {sessions.length === 0 ? (
+            <div className="py-10 px-4 text-center">
+              <p className="text-sm font-bold text-text-faint uppercase tracking-widest mb-2">No History</p>
+              <p className="text-xs text-text-dim">Persistent sessions will appear here.</p>
+            </div>
+          ) : (
+            sessions.map((s) => (
+              <div
+                key={s.session_id}
+                onClick={() => setActiveSession(s.session_id)}
+                className={cn(
+                  "group relative p-4 rounded-xl border transition-all cursor-pointer",
+                  activeSession === s.session_id
+                    ? "bg-accent-soft border-accent/40 shadow-md"
+                    : "border-transparent hover:bg-[var(--color-sidebar-hover)]"
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className={cn("text-sm font-bold truncate", activeSession === s.session_id ? "text-text" : "text-text-dim group-hover:text-text")}>
+                      {s.session_id}
+                    </p>
+                    <div className="flex items-center gap-3 mt-1.5 text-[10px] font-bold text-text-faint uppercase tracking-tighter">
+                      <span className="flex items-center gap-1"><MessageSquare size={10} /> {s.msg_count}</span>
+                      <span>\u2022</span>
+                      <span>{format(new Date(s.last_active), 'MMM d, HH:mm')}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => handleDeleteSession(s.session_id, e)}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-danger/10 hover:text-danger text-text-faint transition-all"
+                    title="Delete Session"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Chat Area */}
+      <div className="flex-1 flex flex-col relative min-w-0">
+        {!loaded ? (
+          <div className="flex items-center justify-center h-full bg-[var(--color-bg)]">
+            <div className="flex items-center gap-3 text-text-dim">
+              <RefreshCw size={20} className="animate-spin" />
+              <span className="text-sm font-bold uppercase tracking-widest">Retrieving logs...</span>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Background Decor */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+              <div className="absolute -top-24 -left-24 w-96 h-96 bg-accent rounded-full blur-[120px]" />
+              <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-accent rounded-full blur-[150px] opacity-30" />
+            </div>
+
+            {/* Messages */}
+            <div ref={chatRef} className="flex-1 overflow-y-auto p-10 space-y-8 relative z-10 scroll-smooth">
+              {messages.map((msg, i) => (
+                <ChatBubble key={i} role={msg.role} content={msg.content} />
+              ))}
+              {isTyping && (
+                <div className="flex gap-6 max-w-[80%] animate-pulse">
+                  <div className="w-12 h-12 rounded-xl bg-panel-3 border border-accent/20 flex items-center justify-center shrink-0">
+                    <Bot size={24} className="text-accent" />
+                  </div>
+                  <div className="bg-panel-2 border border-border rounded-2xl rounded-tl-none px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <span className="ml-2 text-sm font-bold text-text-faint uppercase tracking-widest">Analyzing System Context...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Input Area */}
+            <div className="p-8 bg-panel-2 border-t border-border relative z-20">
+              <div className="max-w-5xl mx-auto space-y-6">
+                {/* Suggested Prompts */}
+                {messages.length < 3 && (
+                  <div className="flex flex-wrap gap-3">
+                    {["Analyze recent system health", "Check for security anomalies", "Review network connection density", "Summarize resource usage trends"].map(prompt => (
+                      <button
+                        key={prompt}
+                        onClick={() => { setInput(prompt) }}
+                        className="px-4 py-2 bg-panel border border-border rounded-full text-sm font-bold text-text-dim hover:text-accent hover:border-accent/40 transition-all"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-end gap-4">
+                  <div className="relative flex-1 group">
+                    <textarea
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Ask about system health, anomalies, or network state..."
+                      rows={1}
+                      className="w-full bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-2xl px-6 py-5 text-xl text-text placeholder-text-faint focus:outline-none focus:border-accent transition-all shadow-inner resize-none min-h-[64px] max-h-40"
+                      style={{ height: 'auto' }}
+                    />
+                    <div className="absolute right-4 bottom-4 flex items-center gap-3 text-text-faint">
+                      <span className="text-xs font-bold uppercase tracking-tighter group-focus-within:text-accent transition-colors">Shift+Enter for newline</span>
+                      <div className="w-px h-3 bg-border" />
+                      <Zap size={14} className="group-focus-within:text-warning transition-colors" />
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleSend}
+                    disabled={!input.trim() || isTyping}
+                    className="h-16 w-16 flex items-center justify-center bg-accent text-white rounded-2xl hover:bg-accent/90 disabled:opacity-30 disabled:scale-95 transition-all shadow-lg active:scale-90"
+                  >
+                    <Send size={28} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

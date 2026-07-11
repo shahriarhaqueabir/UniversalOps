@@ -108,6 +108,7 @@ type DiskPartition struct {
 // ProcessInfo holds a single process snapshot.
 type ProcessInfo struct {
 	PID    int32   `json:"pid"`
+	PPID   int32   `json:"ppid"`
 	Name   string  `json:"name"`
 	CPU    float64 `json:"cpu"`
 	Memory float32 `json:"memory"`

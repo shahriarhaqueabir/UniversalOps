@@ -19,6 +19,7 @@ import {
   Gpu,
   Battery,
   Lightbulb,
+  ChevronRight,
 } from 'lucide-react'
 import {
   AreaChart as RechartsAreaChart,
@@ -134,6 +135,45 @@ function Bar({ label, value, max = 100, color, unit = '%', showLabel = true }: {
   )
 }
 
+function ProcessTreeItem({ proc, allProcs, depth = 0, onKill }: { proc: ProcessInfo, allProcs: ProcessInfo[], depth?: number, onKill: (p: ProcessInfo) => void }) {
+  const children = allProcs.filter(p => p.ppid === proc.pid && p.pid !== proc.pid)
+  const [expanded, setExpanded] = useState(depth < 2)
+
+  return (
+    <div className="flex flex-col">
+      <div className={cn(
+        "flex items-center gap-4 py-3 px-4 border-b border-border/10 hover:bg-sidebar-hover transition-colors group",
+        depth > 0 && "ml-6 border-l border-border/30"
+      )}>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {children.length > 0 && (
+            <button onClick={() => setExpanded(!expanded)} className="text-text-faint hover:text-accent">
+              <ChevronRight size={14} className={cn("transition-transform", expanded && "rotate-90")} />
+            </button>
+          )}
+          {children.length === 0 && <div className="w-[14px]" />}
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-bold text-text truncate">{proc.name}</span>
+            <span className="text-[10px] font-black uppercase text-text-faint tracking-tighter">PID: {proc.pid}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-6 shrink-0">
+          <span className="text-xs font-mono font-bold text-accent tabular-nums w-12 text-right">{proc.cpu.toFixed(1)}%</span>
+          <span className="text-xs font-mono text-text-dim tabular-nums w-12 text-right">{proc.memory.toFixed(0)}MB</span>
+          <button onClick={() => onKill(proc)} className="opacity-0 group-hover:opacity-100 p-1.5 text-text-faint hover:text-danger hover:bg-danger/10 rounded-lg transition-all">
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </div>
+      {expanded && children.length > 0 && (
+        <div className="flex flex-col">
+          {children.map(c => <ProcessTreeItem key={c.pid} proc={c} allProcs={allProcs} depth={depth + 1} onKill={onKill} />)}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function InfoRow({ label, value, copyable = false }: { label: string, value: string | number, copyable?: boolean }) {
   return (
     <div className="flex items-center justify-between py-4 border-b border-border last:border-0 group">
@@ -148,8 +188,6 @@ function InfoRow({ label, value, copyable = false }: { label: string, value: str
     </div>
   )
 }
-
-// ── Main Component ──
 
 export function SysOps() {
   const { call } = useBackend()
@@ -188,6 +226,14 @@ export function SysOps() {
     queryFn: async () => { const r = await call('SysOps.ListAllProcesses', 100); return (r as ProcessInfo[]) || [] },
     refetchInterval: refreshInterval,
   })
+
+  const { data: processTree = [] } = useQuery<ProcessInfo[]>({
+    queryKey: ['sysops-process-tree'],
+    queryFn: async () => { const r = await call('SysOps.GetProcessTree'); return (r as ProcessInfo[]) || [] },
+    refetchInterval: refreshInterval,
+  })
+
+  const [processView, setProcessView] = useState<'list' | 'tree'>('list')
 
   const { data: topProcesses = [] } = useQuery<ProcessInfo[]>({
     queryKey: ['sysops-top-processes'],
@@ -719,6 +765,20 @@ export function SysOps() {
                       className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-3 text-sm font-medium text-[var(--color-text)] placeholder-[var(--color-text-faint)] focus:outline-none focus:border-accent shadow-xl"
                     />
                   </div>
+                  <div className="flex gap-1 bg-panel border border-border rounded-xl p-1 shadow-lg">
+                    <button
+                      onClick={() => setProcessView('list')}
+                      className={cn("px-4 py-2 rounded-lg text-xs font-bold transition-all", processView === 'list' ? "bg-accent text-white" : "text-text-faint hover:text-text")}
+                    >
+                      Flat List
+                    </button>
+                    <button
+                      onClick={() => setProcessView('tree')}
+                      className={cn("px-4 py-2 rounded-lg text-xs font-bold transition-all", processView === 'tree' ? "bg-accent text-white" : "text-text-faint hover:text-text")}
+                    >
+                      Process Tree
+                    </button>
+                  </div>
                   <div className="px-8 py-4 bg-panel border border-border rounded-2xl shadow-lg">
                     <span className="text-sm font-semibold text-text tabular-nums">{processes.length} active</span>
                   </div>
@@ -726,48 +786,72 @@ export function SysOps() {
 
                 <div className="bg-panel border border-border rounded-[var(--radius-lg)] overflow-hidden shadow-2xl">
                   <div className="max-h-[600px] overflow-y-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border">
-                        <tr>
-                          <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Process Name</th>
-                          <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider text-right">CPU %</th>
-                          <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider text-right">RAM (MB)</th>
-                          <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider text-right">Impact</th>
-                          <th className="px-6 py-4 w-20" />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {processes.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
+                    {processView === 'list' ? (
+                      <table className="w-full text-left border-collapse">
+                        <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border">
                           <tr>
-                            <td colSpan={5} className="px-6 py-10 text-center">
-                              <p className="text-text-faint text-lg font-bold">No processes match your filter.</p>
-                              <p className="text-text-faint text-sm mt-2">Try a different search term or clear the filter.</p>
-                            </td>
+                            <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Process Name</th>
+                            <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider text-right">CPU %</th>
+                            <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider text-right">RAM (MB)</th>
+                            <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider text-right">Impact</th>
+                            <th className="px-6 py-4 w-20" />
                           </tr>
-                        ) : processes.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).map(p => (
-                          <tr key={p.pid} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all group">
-                            <td className="px-6 py-4">
-                              <div className="flex flex-col">
-                                <span className="text-sm font-medium text-text">{p.name}</span>
-                                <span className="text-sm font-bold text-text-faint uppercase tracking-tighter">PID: {p.pid} • {p.status}</span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 text-right font-semibold text-sm text-[var(--color-accent)] tabular-nums">{p.cpu.toFixed(1)}%</td>
-                            <td className="px-6 py-4 text-right font-medium text-sm text-[var(--color-text-dim)] tabular-nums">{p.memory.toFixed(0)}</td>
-                            <td className="px-6 py-4 text-right">
-                              <span className={cn("px-4 py-1.5 rounded-full text-xs font-bold uppercase border", p.cpu > 5 ? "bg-danger/10 text-danger border-danger/30" : "bg-success/10 text-success border-success/30")}>
-                                {p.cpu > 5 ? 'High Impact' : 'Nominal'}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <button onClick={() => setKillTarget({ pid: p.pid, name: p.name })} aria-label={`Kill process ${p.name} (PID ${p.pid})`} className="p-3 text-text-faint hover:text-danger hover:bg-danger/10 rounded-xl transition-all">
-                                <Trash2 size={24} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {processes.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="px-6 py-10 text-center">
+                                <p className="text-text-faint text-lg font-bold">No processes match your filter.</p>
+                                <p className="text-text-faint text-sm mt-2">Try a different search term or clear the filter.</p>
+                              </td>
+                            </tr>
+                          ) : processes.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).map(p => (
+                            <tr key={p.pid} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all group">
+                              <td className="px-6 py-4">
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-text">{p.name}</span>
+                                  <span className="text-sm font-bold text-text-faint uppercase tracking-tighter">PID: {p.pid} • {p.status}</span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-right font-semibold text-sm text-[var(--color-accent)] tabular-nums">{p.cpu.toFixed(1)}%</td>
+                              <td className="px-6 py-4 text-right font-medium text-sm text-[var(--color-text-dim)] tabular-nums">{p.memory.toFixed(0)}</td>
+                              <td className="px-6 py-4 text-right">
+                                <span className={cn("px-4 py-1.5 rounded-full text-xs font-bold uppercase border", p.cpu > 5 ? "bg-danger/10 text-danger border-danger/30" : "bg-success/10 text-success border-success/30")}>
+                                  {p.cpu > 5 ? 'High Impact' : 'Nominal'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <button onClick={() => setKillTarget({ pid: p.pid, name: p.name })} aria-label={`Kill process ${p.name} (PID ${p.pid})`} className="p-3 text-text-faint hover:text-danger hover:bg-danger/10 rounded-xl transition-all">
+                                  <Trash2 size={24} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div className="flex flex-col">
+                        <div className="sticky top-0 z-10 grid grid-cols-[1fr_120px_120px_60px] bg-panel-2 border-b border-border px-8 py-4">
+                          <div className="text-xs font-semibold text-text-dim uppercase">Process Tree</div>
+                          <div className="text-xs font-semibold text-text-dim uppercase text-right">CPU %</div>
+                          <div className="text-xs font-semibold text-text-dim uppercase text-right">RAM (MB)</div>
+                          <div />
+                        </div>
+                        <div className="p-4">
+                          {processTree
+                            .filter(p => !processTree.some(parent => parent.pid === p.ppid && parent.pid !== p.pid))
+                            .filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || processTree.some(c => c.ppid === p.pid && c.name.toLowerCase().includes(search.toLowerCase())))
+                            .map(p => (
+                              <ProcessTreeItem
+                                key={p.pid}
+                                proc={p}
+                                allProcs={processTree}
+                                onKill={(target) => setKillTarget({ pid: target.pid, name: target.name })}
+                              />
+                            ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
