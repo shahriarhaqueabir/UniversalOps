@@ -1,33 +1,27 @@
 # Hawkward — Workspace Memory
 
 ## Active Session
-- **Sprint 24: Quality Polish & Documentation Sync** 🔄 IN PROGRESS
-- **Sprint 23: Comprehensive Codebase Audit, Settings Verification, CI Pipeline Hardening** ✅ DONE
+- **Sprint 25: Operational Excellence & Feature Wiring** ✅ DONE
+- **Sprint 24: Quality Polish & Documentation Sync** ✅ DONE
 
 ## Completed Work
 
 | ID | Description | Status |
 |----|-------------|--------|
-| T-01 → T-18 | Sprints 1–20 | ✅ |
-| T-19 | Dashboard Quick Diag + Generate Briefing backend actions | ✅ |
-| T-20 | Dashboard UI: dynamic red flags, diag/briefing overlays | ✅ |
-| T-21 | Prometheus metrics exporter (port 9210) | ✅ |
-| T-22 | TestPing Linux CI skip logic improved | ✅ |
-| T-23 | README badges fixed for private repo | ✅ |
-| T-24 | npm lockfile synced (typescript reinstalled) | ✅ |
-| T-25 | Compute Logic Analysis now dynamic with real data | ✅ |
-| T-26 | Default AI model set to `agentic-coder` (was `llama3.2`) | ✅ |
-| T-27 | `healthColor()` inverted logic fixed in Dashboard | ✅ |
-| T-28 | Settings page version corrected (1.1.1 → 1.3.0) | ✅ |
-| T-29 | eslint-plugin-react-hooks lockfile synced (5.2.0 → 7.1.1) | ✅ |
-| T-30 | CLAUDE.md updated with agentic-coder model reference | ✅ |
-| T-31 | Library audit: all recommended libs already present | ✅ |
-| T-32 | node_modules untracked from git (removed 9,147 tracked files) | ✅ |
-| T-33 | CI test.yml: setcap CAP_NET_RAW added for TestPing | ✅ |
-| T-34 | release.yml: GITHUB_TOKEN → GH_TOKEN fallback for private repo | ✅ |
-| T-35 | index.html font load: Inter/JetBrains Mono → Geist (consistent with globals.css) | ✅ |
-| T-36 | Settings audit: all 7 pages verified for settings wiring | ✅ |
-| T-37 | All Go tests (7/7) and Frontend tests (27/27) passing | ✅ |
+| T-01 → T-37 | Sprints 1–23 | ✅ |
+| T-38 | Fix AIOps type mismatch & build errors | ✅ |
+| T-39 | Clean temp diagnostic files | ✅ |
+| T-40 | Wire SecOps Scheduled Tasks | ✅ |
+| T-41 | Wire DevOps Tool Detection | ✅ |
+| T-42 | Wire AIOps Session Management | ✅ |
+| T-43 | Wire Dashboard Timeline Summary | ✅ |
+| T-44 | Dashboard Forecast Chart integration | ✅ |
+| T-45 | AI Event Explanation on Dashboard | ✅ |
+| T-46 | Backend Topology Analysis & Inventory | ✅ |
+| T-47 | Alert Rules Management UI | ✅ |
+| T-48 | Process Tree View with PPID support | ✅ |
+| T-49 | Arbitrary Log Explorer with Tail/Search | ✅ |
+| T-50 | New UI tests for AIOps, SecOps, DevOps | ✅ |
 
 ## Git State (Current)
 - **Branch**: `main` ✅ pushed to origin
