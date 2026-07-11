@@ -328,6 +328,15 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
   // Timeline events state
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([])
 
+  const { data: eventSummary } = useQuery<Record<string, number>>({
+    queryKey: ['timelineSummary'],
+    queryFn: async () => {
+      const res = await call('Timeline.GetTimelineSummary', 60)
+      return (res as Record<string, number>) || {}
+    },
+    staleTime: refreshInterval,
+  })
+
   // Top processes state
   const [topProcs, setTopProcs] = useState<{ cpuProcs: Array<{ name: string, cpu: number }>, memProcs: Array<{ name: string, mem_pct: number }> }>({ cpuProcs: [], memProcs: [] })
 
@@ -342,6 +351,25 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
   const [briefingOpen, setBriefingOpen] = useState(false)
   const [briefingSections, setBriefingSections] = useState<BriefingSection[]>([])
   const [briefingLoading, setBriefingLoading] = useState(false)
+
+  // Explain state
+  const [explanationOpen, setExplanationOpen] = useState(false)
+  const [explanationText, setExplanationText] = useState('')
+  const [explainingId, setExplainingId] = useState<string | null>(null)
+
+  const handleExplain = async (eventId: string) => {
+    setExplainingId(eventId)
+    setExplanationOpen(true)
+    setExplanationText('')
+    try {
+      const res = await call('Timeline.ExplainEvents', [eventId]) as string
+      setExplanationText(res)
+    } catch (err) {
+      setExplanationText(`Analysis Error: ${String(err)}`)
+    } finally {
+      setExplainingId(null)
+    }
+  }
 
   // Initial data load via react-query (cached, deduped)
   useQuery<DashboardData>({
@@ -563,18 +591,43 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
           </h3>
           <div className="flex-1 min-h-[240px]">
             <ResponsiveContainer width="100%" height="100%">
-              <RechartsAreaChart data={cpuHistory}>
+              <RechartsAreaChart data={[
+                ...cpuHistory.map(p => ({ ...p, isForecast: false })),
+                ...(data.cpu.forecast || []).map((v, i) => ({
+                  time: `+${i + 1}m`,
+                  value: v,
+                  isForecast: true
+                }))
+              ]}>
                 <defs>
                   <linearGradient id="cpuGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="var(--color-accent)" stopOpacity={0.3} />
                     <stop offset="100%" stopColor="var(--color-accent)" stopOpacity={0} />
                   </linearGradient>
+                  <linearGradient id="cpuForecastGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--color-warning)" stopOpacity={0.2} />
+                    <stop offset="100%" stopColor="var(--color-warning)" stopOpacity={0} />
+                  </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="4 4" stroke="var(--color-border)" vertical={false} strokeOpacity={0.5} />
                 <XAxis dataKey="time" hide />
                 <YAxis hide domain={[0, 100]} />
-                <Tooltip contentStyle={{ backgroundColor: 'var(--color-panel-3)', border: 'none', borderRadius: '12px' }} />
-                <Area type="monotone" dataKey="value" stroke="var(--color-accent)" strokeWidth={4} fill="url(#cpuGrad)" isAnimationActive={false} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: 'var(--color-panel-3)', border: 'none', borderRadius: '12px' }}
+                  formatter={(value: any, name: any, props: any) => {
+                    const isForecast = props.payload.isForecast
+                    return [`${Number(value).toFixed(1)}%`, isForecast ? 'Forecast' : 'Observed']
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="var(--color-accent)"
+                  strokeWidth={4}
+                  fill="url(#cpuGrad)"
+                  isAnimationActive={false}
+                  connectNulls
+                />
               </RechartsAreaChart>
             </ResponsiveContainer>
           </div>
@@ -672,9 +725,18 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
 
       {/* Recent Events Timeline */}
       <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6 shadow-lg">
-        <h3 className="text-base font-bold text-[var(--color-text)] uppercase tracking-wider mb-4 flex items-center gap-2">
-          <Clock size={18} className="text-[var(--color-accent)]" /> Recent Events
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-bold text-[var(--color-text)] uppercase tracking-wider flex items-center gap-2">
+            <Clock size={18} className="text-[var(--color-accent)]" /> Recent Events
+          </h3>
+          <div className="flex items-center gap-2">
+            {eventSummary && Object.entries(eventSummary).map(([cat, count]) => (
+              <span key={cat} className="px-2 py-0.5 rounded-md bg-[var(--color-panel-3)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-widest text-[var(--color-text-dim)]">
+                {cat}: <span className="text-[var(--color-accent)]">{count}</span>
+              </span>
+            ))}
+          </div>
+        </div>
         {timelineEvents.length === 0 ? (
           <p className="text-sm text-[var(--color-text-faint)] italic py-6 text-center">No recent events recorded.</p>
         ) : (
@@ -706,13 +768,55 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
                     </span>
                   </div>
                   <p className="text-xs font-semibold text-[var(--color-text)] leading-snug">{evt.title}</p>
-                  {evt.detail && <p className="text-[11px] text-[var(--color-text-dim)] leading-relaxed mt-0.5 truncate">{evt.detail}</p>}
+                  <div className="flex items-center justify-between gap-4 mt-1">
+                    {evt.detail && <p className="text-[11px] text-[var(--color-text-dim)] leading-relaxed truncate flex-1">{evt.detail}</p>}
+                    <button
+                      onClick={() => handleExplain(evt.id)}
+                      disabled={explainingId === evt.id}
+                      className="text-[10px] font-black uppercase tracking-tighter text-accent hover:text-accent/80 transition-all flex items-center gap-1 shrink-0 bg-accent/5 px-2 py-0.5 rounded border border-accent/10"
+                    >
+                      {explainingId === evt.id ? <Loader2 size={10} className="animate-spin" /> : <Brain size={10} />}
+                      Explain
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* ── Event Explanation Modal ── */}
+      <Dialog.Root open={explanationOpen} onOpenChange={setExplanationOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in data-[state=closed]:animate-out data-[state=closed]:fade-out" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[20px] p-8 w-full max-w-xl shadow-2xl data-[state=open]:animate-in data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:zoom-out-95">
+            <div className="flex items-center justify-between mb-6">
+              <Dialog.Title className="text-xl font-bold text-[var(--color-text)] flex items-center gap-3">
+                <Brain size={20} className="text-accent" /> AI Event Analysis
+              </Dialog.Title>
+              <Dialog.Close className="text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-colors rounded-lg p-1 hover:bg-[var(--color-sidebar-hover)]">
+                <XCircle size={18} />
+              </Dialog.Close>
+            </div>
+            <div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl p-6 shadow-inner min-h-[120px]">
+              {!explanationText ? (
+                <div className="flex flex-col items-center justify-center py-8 gap-3">
+                  <Loader2 size={24} className="text-accent animate-spin" />
+                  <p className="text-xs font-bold text-text-faint uppercase tracking-widest">Heuristic Synthesis in Progress...</p>
+                </div>
+              ) : (
+                <p className="text-sm text-[var(--color-text-dim)] leading-relaxed whitespace-pre-wrap">{explanationText}</p>
+              )}
+            </div>
+            <div className="mt-6 flex justify-end">
+              <Dialog.Close className="px-5 py-2 rounded-lg bg-[var(--color-panel-3)] text-xs font-bold uppercase tracking-wider text-text hover:bg-panel transition-all">
+                Acknowledge
+              </Dialog.Close>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
 
       {/* Layer Launchpad */}
       <div className="space-y-6">

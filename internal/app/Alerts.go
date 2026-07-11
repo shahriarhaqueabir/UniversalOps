@@ -34,6 +34,23 @@ func (a *AlertAPI) GetAlertHistory() []AlertInfo {
 	return out
 }
 
+// GetRules returns all currently active alert rules.
+func (a *AlertAPI) GetRules() []AlertRuleInfo {
+	rules := a.app.alerts.GetRules()
+	out := make([]AlertRuleInfo, 0, len(rules))
+	for _, r := range rules {
+		out = append(out, AlertRuleInfo{
+			Metric:    r.Metric,
+			Condition: r.Condition.String(),
+			Threshold: r.Threshold,
+			FlapCount: r.FlapCount,
+			Severity:  r.Severity.String(),
+			Message:   r.Message,
+		})
+	}
+	return out
+}
+
 // ResolveAlert marks a specific alert as resolved by its ID.
 func (a *AlertAPI) ResolveAlert(id string) {
 	a.app.alerts.ResolveAlert(id)

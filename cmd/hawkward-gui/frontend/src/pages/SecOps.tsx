@@ -537,6 +537,15 @@ function EventsTab({ call }: { call: BackendCall }) {
     refetchInterval: refreshInterval,
   })
 
+  const { data: tasks = [] } = useQuery<ScheduledTask[]>({
+    queryKey: ['secops-tasks'],
+    queryFn: async () => {
+      const res = await call('SecOps.GetScheduledTasks')
+      return (res as ScheduledTask[]) || []
+    },
+    refetchInterval: refreshInterval * 2, // Tasks change less frequently
+  })
+
   const categories = [
     { id: 'all', label: 'All', ids: null },
     { id: 'failed-logins', label: 'Failed Logins', ids: [4625] },
@@ -559,80 +568,133 @@ function EventsTab({ call }: { call: BackendCall }) {
   const usbCount = events.filter(e => [6416, 6417, 4663].includes(e.id)).length
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      {/* ── Summary Stats ── */}
-      {events.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {([
-            { label: 'Failed Logins', value: failedLoginsCount, cls: 'text-[var(--color-danger)]' },
-            { label: 'Elevation', value: elevationCount, cls: 'text-[var(--color-warning)]' },
-            { label: 'Policy Changes', value: policyCount, cls: 'text-[var(--color-accent)]' },
-            { label: 'USB Devices', value: usbCount, cls: 'text-[var(--color-text-dim)]' },
-          ] as const).map(s => (
-            <div key={s.label} className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-5 shadow-lg">
-              <p className="text-xs font-bold text-[var(--color-text-faint)] uppercase tracking-wider mb-1">{s.label}</p>
-              <p className={`text-3xl font-bold tabular-nums ${s.cls}`}>{s.value}</p>
-            </div>
+    <div className="space-y-12 animate-in fade-in duration-500">
+      <div className="space-y-8">
+        <h3 className="text-xl font-bold text-text uppercase tracking-widest flex items-center gap-4">
+          <History size={24} className="text-accent" /> Security Event Log
+        </h3>
+
+        {/* ── Summary Stats ── */}
+        {events.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {([
+              { label: 'Failed Logins', value: failedLoginsCount, cls: 'text-[var(--color-danger)]' },
+              { label: 'Elevation', value: elevationCount, cls: 'text-[var(--color-warning)]' },
+              { label: 'Policy Changes', value: policyCount, cls: 'text-[var(--color-accent)]' },
+              { label: 'USB Devices', value: usbCount, cls: 'text-[var(--color-text-dim)]' },
+            ] as const).map(s => (
+              <div key={s.label} className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-5 shadow-lg">
+                <p className="text-xs font-bold text-[var(--color-text-faint)] uppercase tracking-wider mb-1">{s.label}</p>
+                <p className={`text-3xl font-bold tabular-nums ${s.cls}`}>{s.value}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center gap-3 flex-wrap">
+          {categories.map(c => (
+            <button
+              key={c.id}
+              onClick={() => setActiveFilter(c.id)}
+              className={cn(
+                'px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider border transition-all',
+                activeFilter === c.id
+                  ? 'bg-accent text-white border-accent shadow-lg'
+                  : 'bg-panel border-border text-text-dim hover:text-text hover:bg-[var(--color-sidebar-hover)]'
+              )}
+            >
+              {c.label}
+              {c.ids && (
+                <span className="ml-2 text-xs tabular-nums">
+                  {events.filter(e => c.ids.includes(e.id)).length}
+                </span>
+              )}
+            </button>
           ))}
         </div>
-      )}
 
-      <div className="flex items-center gap-3 flex-wrap">
-        {categories.map(c => (
-          <button
-            key={c.id}
-            onClick={() => setActiveFilter(c.id)}
-            className={cn(
-              'px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider border transition-all',
-              activeFilter === c.id
-                ? 'bg-accent text-white border-accent shadow-lg'
-                : 'bg-panel border-border text-text-dim hover:text-text hover:bg-[var(--color-sidebar-hover)]'
+        <div className="bg-panel border border-border rounded-[var(--radius-lg)] overflow-hidden shadow-2xl">
+          <div className="max-h-[500px] overflow-y-auto">
+            {filtered.length === 0 ? (
+              <EmptyState
+                icon={<FileText size={28} />}
+                title="No Security Events"
+                description={activeFilter === 'all' ? "No security events have been recorded yet." : "No events match the selected filter."}
+              />
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border shadow-sm">
+                  <tr>
+                    <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">ID</th>
+                    <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Level</th>
+                    <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Origin</th>
+                    <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Message</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((e, i) => (
+                    <tr key={i} className={cn("border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all group", e.level === 'Error' ? "bg-danger/5" : "")}>
+                      <td className="px-8 py-5 font-bold text-lg text-text-faint tabular-nums">{e.id}</td>
+                      <td className="px-8 py-5">
+                        <span className={cn("px-4 py-1 rounded-full text-xs font-bold uppercase tracking-tighter border", e.level === 'Error' ? "bg-danger text-white border-danger/30 shadow-[0_0_12px_rgba(251,93,107,0.4)]" : "bg-panel-3 text-text-dim border-border")}>
+                          {e.level}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-[var(--color-text)] truncate max-w-[200px]">{e.provider}</td>
+                      <td className="px-6 py-4 text-sm text-[var(--color-text-dim)] leading-relaxed">{e.message}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
-          >
-            {c.label}
-            {c.ids && (
-              <span className="ml-2 text-xs tabular-nums">
-                {events.filter(e => c.ids.includes(e.id)).length}
-              </span>
-            )}
-          </button>
-        ))}
+          </div>
+        </div>
       </div>
 
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] overflow-hidden shadow-2xl">
-        <div className="max-h-[700px] overflow-y-auto">
-          {filtered.length === 0 ? (
-            <EmptyState
-              icon={<FileText size={28} />}
-              title="No Security Events"
-              description={activeFilter === 'all' ? "No security events have been recorded yet. Events will appear here as they occur." : "No events match the selected filter."}
-            />
-          ) : (
-            <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border shadow-sm">
-                <tr>
-                  <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">ID</th>
-                  <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Level</th>
-                  <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Origin</th>
-                  <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Message</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((e, i) => (
-                  <tr key={i} className={cn("border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all group", e.level === 'Error' ? "bg-danger/5" : "")}>
-                    <td className="px-8 py-5 font-bold text-lg text-text-faint tabular-nums">{e.id}</td>
-                    <td className="px-8 py-5">
-                      <span className={cn("px-4 py-1 rounded-full text-xs font-bold uppercase tracking-tighter border", e.level === 'Error' ? "bg-danger text-white border-danger/30 shadow-[0_0_12px_rgba(251,93,107,0.4)]" : "bg-panel-3 text-text-dim border-border")}>
-                        {e.level}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium text-[var(--color-text)] truncate max-w-[200px]">{e.provider}</td>
-                    <td className="px-6 py-4 text-sm text-[var(--color-text-dim)] leading-relaxed">{e.message}</td>
+      {/* ── Scheduled Tasks Section ── */}
+      <div className="space-y-8">
+        <h3 className="text-xl font-bold text-text uppercase tracking-widest flex items-center gap-4">
+          <Clock size={24} className="text-warning" /> Scheduled Tasks
+        </h3>
+
+        <div className="bg-panel border border-border rounded-[var(--radius-lg)] overflow-hidden shadow-2xl">
+          <div className="max-h-[500px] overflow-y-auto">
+            {tasks.length === 0 ? (
+              <div className="py-20">
+                <EmptyState
+                  icon={<Clock size={28} />}
+                  title="No Scheduled Tasks"
+                  description="No system-level scheduled tasks were detected."
+                />
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border shadow-sm">
+                  <tr>
+                    <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Task Name</th>
+                    <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Status</th>
+                    <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Last Run</th>
+                    <th className="px-8 py-6 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Next Run</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody>
+                  {tasks.map((t, i) => (
+                    <tr key={i} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all">
+                      <td className="px-8 py-5">
+                        <p className="text-sm font-bold text-[var(--color-text)]">{t.name}</p>
+                        <p className="text-[10px] text-text-faint font-medium uppercase tracking-tight mt-0.5">{t.author || 'System'}</p>
+                      </td>
+                      <td className="px-8 py-5">
+                        <SecurityStatusBadge status={t.status} />
+                      </td>
+                      <td className="px-8 py-5 text-sm text-text-dim font-medium tabular-nums">{t.last_run || 'Never'}</td>
+                      <td className="px-8 py-5 text-sm text-accent font-bold tabular-nums">{t.next_run || 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Monitor,
   Activity,
@@ -8,12 +8,20 @@ import {
   Sun,
   ExternalLink,
   RotateCcw,
+  Bell,
+  Trash2,
+  Plus,
+  AlertTriangle,
+  XCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import * as Slider from '@radix-ui/react-slider'
+import * as Dialog from '@radix-ui/react-dialog'
 import { useBackend } from '@/hooks/useBackend'
 import { useThemeStore, useSettingsStore } from '@/stores/useSettingsStore'
 import { toast } from 'sonner'
+import { useState } from 'react'
+import type { AlertRuleInfo } from '@/types'
 
 // ── Section Card (aligned with Squib design system) ──
 
@@ -79,12 +87,38 @@ const DEFAULT_APP_INFO: AppInfo = {
 
 export function Settings() {
   const { call } = useBackend()
+  const queryClient = useQueryClient()
 
   // Theme — from zustand store
   const { theme, toggle } = useThemeStore()
 
   // Settings — from zustand store (auto-persisted to localStorage)
   const { refreshInterval, pingCount, dnsTimeout, setRefreshInterval, setPingCount, setDnsTimeout } = useSettingsStore()
+
+  // Rules — via react-query
+  const { data: rules = [] } = useQuery<AlertRuleInfo[]>({
+    queryKey: ['alert-rules'],
+    queryFn: async () => {
+      const res = await call('AlertAPI.GetRules')
+      return (res as AlertRuleInfo[]) || []
+    },
+  })
+
+  const [addOpen, setAddOpen] = useState(false)
+  const [newRule, setNewRule] = useState({ metric: 'cpu.percent', threshold: 90, severity: 'critical', condition: 'gt' })
+
+  const handleAddRule = async () => {
+    await call('AlertAPI.AddRule', newRule.metric, newRule.threshold, newRule.severity, newRule.condition)
+    queryClient.invalidateQueries({ queryKey: ['alert-rules'] })
+    setAddOpen(false)
+    toast.success('Alert rule added')
+  }
+
+  const handleRemoveRule = async (metric: string, threshold: number) => {
+    await call('AlertAPI.RemoveRule', metric, threshold)
+    queryClient.invalidateQueries({ queryKey: ['alert-rules'] })
+    toast.info('Alert rule removed')
+  }
 
   // About — via react-query
   const { data: appInfo = DEFAULT_APP_INFO } = useQuery<AppInfo>({
@@ -174,6 +208,133 @@ export function Settings() {
             ))}
           </select>
         </SettingRow>
+      </Section>
+
+      </Section>
+
+      {/* ── Alert Rules ── */}
+      <Section title="Alert Rules" icon={<Bell size={20} />}>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-text-faint">Configured system-wide alert thresholds.</p>
+            <Dialog.Root open={addOpen} onOpenChange={setAddOpen}>
+              <Dialog.Trigger asChild>
+                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent text-white text-xs font-bold hover:opacity-90 transition-all shadow-md active:scale-95">
+                  <Plus size={14} /> Add Rule
+                </button>
+              </Dialog.Trigger>
+              <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
+                <Dialog.Content className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[20px] p-8 w-full max-w-md shadow-2xl">
+                  <div className="flex items-center justify-between mb-6">
+                    <Dialog.Title className="text-xl font-bold text-text">New Alert Rule</Dialog.Title>
+                    <Dialog.Close className="text-text-faint hover:text-text transition-colors"><XCircle size={20} /></Dialog.Close>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs font-bold text-text-dim uppercase tracking-widest block mb-1.5">Metric</label>
+                      <select
+                        value={newRule.metric}
+                        onChange={(e) => setNewRule({ ...newRule, metric: e.target.value })}
+                        className="w-full bg-[var(--color-panel-2)] border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-accent"
+                      >
+                        <option value="cpu.percent">CPU Usage (%)</option>
+                        <option value="memory.percent">Memory Usage (%)</option>
+                        <option value="disk.percent">Disk Usage (%)</option>
+                        <option value="cpu.temperature">CPU Temp (°C)</option>
+                        <option value="network.rx.rate">Network RX (bps)</option>
+                        <option value="process.count">Process Count</option>
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-bold text-text-dim uppercase tracking-widest block mb-1.5">Condition</label>
+                        <select
+                          value={newRule.condition}
+                          onChange={(e) => setNewRule({ ...newRule, condition: e.target.value })}
+                          className="w-full bg-[var(--color-panel-2)] border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-accent"
+                        >
+                          <option value="gt">Greater than</option>
+                          <option value="lt">Less than</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-text-dim uppercase tracking-widest block mb-1.5">Threshold</label>
+                        <input
+                          type="number"
+                          value={newRule.threshold}
+                          onChange={(e) => setNewRule({ ...newRule, threshold: Number(e.target.value) })}
+                          className="w-full bg-[var(--color-panel-2)] border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-accent"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-text-dim uppercase tracking-widest block mb-1.5">Severity</label>
+                      <select
+                        value={newRule.severity}
+                        onChange={(e) => setNewRule({ ...newRule, severity: e.target.value })}
+                        className="w-full bg-[var(--color-panel-2)] border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-accent"
+                      >
+                        <option value="info">Info</option>
+                        <option value="warning">Warning</option>
+                        <option value="critical">Critical</option>
+                      </select>
+                    </div>
+                    <button
+                      onClick={handleAddRule}
+                      className="w-full py-3 bg-accent text-white rounded-xl font-bold hover:opacity-90 transition-all shadow-lg active:scale-95 mt-4"
+                    >
+                      Create Rule
+                    </button>
+                  </div>
+                </Dialog.Content>
+              </Dialog.Portal>
+            </Dialog.Root>
+          </div>
+
+          <div className="bg-panel-2 border border-border rounded-xl overflow-hidden shadow-inner">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-panel-3 border-b border-border">
+                <tr>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase text-text-faint">Metric</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase text-text-faint">Condition</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase text-text-faint">Severity</th>
+                  <th className="px-4 py-3 text-right"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rules.map((rule, i) => (
+                  <tr key={i} className="border-b border-border/20 hover:bg-panel transition-colors group">
+                    <td className="px-4 py-3">
+                      <p className="text-xs font-bold text-text">{rule.metric.replace('.percent', '').replace('_', ' ').toUpperCase()}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-xs font-mono font-bold text-text-dim">{rule.condition} {rule.threshold}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={cn(
+                        'px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter border',
+                        rule.severity === 'CRITICAL' ? 'bg-danger/10 text-danger border-danger/30' :
+                          rule.severity === 'WARNING' ? 'bg-warning/10 text-warning border-warning/30' :
+                            'bg-accent/10 text-accent border-accent/30'
+                      )}>
+                        {rule.severity}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => handleRemoveRule(rule.metric, rule.threshold)}
+                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-danger/10 hover:text-danger text-text-faint transition-all"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </Section>
 
       {/* ── Network ── */}

@@ -307,6 +307,16 @@ func (ae *AlertEngine) GetAlerts() []Alert {
 	return active
 }
 
+// GetRules returns all currently active alert rules.
+func (ae *AlertEngine) GetRules() []AlertRule {
+	ae.mu.RLock()
+	defer ae.mu.RUnlock()
+
+	out := make([]AlertRule, len(ae.rules))
+	copy(out, ae.rules)
+	return out
+}
+
 // AlertCount returns the number of unresolved alerts.
 func (ae *AlertEngine) AlertCount() int {
 	ae.mu.RLock()

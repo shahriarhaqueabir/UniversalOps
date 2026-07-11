@@ -84,6 +84,7 @@ export interface DiskInfo {
 
 export interface ProcessInfo {
   pid: number
+  ppid: number
   name: string
   cpu: number
   memory: number
@@ -113,6 +114,15 @@ export interface AlertInfo {
   threshold: number
   timestamp: string
   resolved: boolean
+}
+
+export interface AlertRuleInfo {
+  metric: string
+  condition: string
+  threshold: number
+  flap_count: number
+  severity: string
+  message: string
 }
 
 export type HealthStatus = 'healthy' | 'warning' | 'critical'
@@ -643,4 +653,10 @@ export interface DeviceInventoryGroup {
   type: string
   count: number
   devices: TopologyDevice[]
+}
+
+export interface ChatSession {
+  session_id: string
+  last_active: string
+  msg_count: number
 }

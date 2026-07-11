@@ -9,6 +9,7 @@ import (
 // ProcessInfo holds information about a single process.
 type ProcessInfo struct {
 	PID    int32
+	PPID   int32
 	Name   string
 	CPU    float64
 	Memory float32 // RSS in MB
@@ -61,8 +62,15 @@ func GetTopProcesses(n int) ([]ProcessInfo, error) {
 			fdCount = fds
 		}
 
+		// Get parent PID
+		ppid, err := p.Ppid()
+		if err != nil {
+			ppid = 0
+		}
+
 		result = append(result, ProcessInfo{
 			PID:    p.Pid,
+			PPID:   ppid,
 			Name:   name,
 			CPU:    cpu,
 			Memory: rss,
