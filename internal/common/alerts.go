@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -65,7 +66,10 @@ type AlertRule struct {
 
 func (r AlertRule) evalMessage(value float64) string {
 	if r.Message != "" {
-		return r.Message
+		msg := strings.ReplaceAll(r.Message, "{value}", fmt.Sprintf("%.1f", value))
+		msg = strings.ReplaceAll(msg, "{threshold}", fmt.Sprintf("%.1f", r.Threshold))
+		msg = strings.ReplaceAll(msg, "{metric}", r.Metric)
+		return msg
 	}
 	return fmt.Sprintf("%s %s %.1f (current %.1f)", r.Metric, r.Condition, r.Threshold, value)
 }

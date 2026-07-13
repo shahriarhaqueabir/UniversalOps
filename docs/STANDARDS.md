@@ -1,4 +1,4 @@
-# Hawkward — Development Standards
+# OpsForAll — Development Standards
 
 ## Go Conventions (Backend)
 
@@ -117,4 +117,4 @@ Before submitting a PR:
 
 ---
 
-*Last updated: 2025-05-22 (Sprint 24)*
+*Last updated: 2026-07-12*

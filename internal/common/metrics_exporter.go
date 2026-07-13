@@ -1,10 +1,12 @@
 package common
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -13,12 +15,12 @@ import (
 var (
 	metricsOnce     sync.Once
 	metricsPort     = 9210
-	cpuGauge        = prometheus.NewGauge(prometheus.GaugeOpts{Name: "hawkward_cpu_percent", Help: "Current CPU usage percentage"})
-	memGauge        = prometheus.NewGauge(prometheus.GaugeOpts{Name: "hawkward_memory_percent", Help: "Current memory usage percentage"})
-	diskGauge       = prometheus.NewGauge(prometheus.GaugeOpts{Name: "hawkward_disk_percent", Help: "Current disk usage percentage"})
-	procGauge       = prometheus.NewGauge(prometheus.GaugeOpts{Name: "hawkward_process_count", Help: "Number of running processes"})
-	alertsGauge     = prometheus.NewGauge(prometheus.GaugeOpts{Name: "hawkward_alerts_total", Help: "Total number of active alerts"})
-	pipelineTickCnt = prometheus.NewCounter(prometheus.CounterOpts{Name: "hawkward_pipeline_ticks_total", Help: "Number of pipeline collection ticks"})
+	cpuGauge        = prometheus.NewGauge(prometheus.GaugeOpts{Name: "opsforall_cpu_percent", Help: "Current CPU usage percentage"})
+	memGauge        = prometheus.NewGauge(prometheus.GaugeOpts{Name: "opsforall_memory_percent", Help: "Current memory usage percentage"})
+	diskGauge       = prometheus.NewGauge(prometheus.GaugeOpts{Name: "opsforall_disk_percent", Help: "Current disk usage percentage"})
+	procGauge       = prometheus.NewGauge(prometheus.GaugeOpts{Name: "opsforall_process_count", Help: "Number of running processes"})
+	alertsGauge     = prometheus.NewGauge(prometheus.GaugeOpts{Name: "opsforall_alerts_total", Help: "Total number of active alerts"})
+	pipelineTickCnt = prometheus.NewCounter(prometheus.CounterOpts{Name: "opsforall_pipeline_ticks_total", Help: "Number of pipeline collection ticks"})
 )
 
 // InitMetricsExporter registers Prometheus metrics and starts an HTTP server
@@ -33,9 +35,20 @@ func InitMetricsExporter(port int) {
 
 		mux := http.NewServeMux()
 		mux.Handle("/metrics", promhttp.Handler())
+		mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":    "ok",
+				"app":       "OpsForAll",
+				"version":   "1.3.0",
+				"timestamp": time.Now().UTC().Format(time.RFC3339),
+				"port":      metricsPort,
+			})
+		})
 
 		addr := fmt.Sprintf(":%d", metricsPort)
 		go func() {
+			defer RecoverPanic()
 			LogInfo("Metrics exporter listening on %s", addr)
 			if err := http.ListenAndServe(addr, mux); err != nil {
 				LogWarn("Metrics exporter stopped: %v", err)

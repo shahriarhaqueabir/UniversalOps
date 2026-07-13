@@ -136,7 +136,7 @@ func (n *NetOps) PortScan(host string, ports []int) []PortResult {
 	results, err := netops.ScanPorts(host, ports)
 	if err != nil {
 		common.LogWarn("PortScan failed: %v", err)
-		return nil
+		return []PortResult{}
 	}
 	out := make([]PortResult, 0, len(results))
 	for _, r := range results {
@@ -184,7 +184,7 @@ func (n *NetOps) GetConnections() []ConnectionInfo {
 	conns, err := netops.GetConnections()
 	if err != nil {
 		common.LogWarn("GetConnections failed: %v", err)
-		return nil
+		return []ConnectionInfo{}
 	}
 	out := make([]ConnectionInfo, 0, len(conns))
 	for _, c := range conns {
@@ -207,7 +207,7 @@ func (n *NetOps) GetInterfaces() []InterfaceInfo {
 	ifaces, err := n.collectInterfaces()
 	if err != nil {
 		common.LogWarn("GetInterfaces failed: %v", err)
-		return nil
+		return []InterfaceInfo{}
 	}
 	return ifaces
 }

@@ -6,6 +6,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
 // PortResult holds the result of a single port scan.
@@ -64,6 +66,7 @@ func ScanPorts(host string, ports []int) ([]PortResult, error) {
 	for i, port := range ports {
 		wg.Add(1)
 		go func(idx int, p int) {
+			defer common.RecoverPanic()
 			defer wg.Done()
 			result := PortResult{
 				Port:    p,

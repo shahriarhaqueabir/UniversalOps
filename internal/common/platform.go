@@ -48,7 +48,7 @@ func ConfigDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "hawkward"), nil
+	return filepath.Join(dir, "opsforall"), nil
 }
 
 // IsOnboarded checks if the onboarding marker file exists.

@@ -56,7 +56,7 @@ func (t *Timeline) GetTimelineEvents(category, level string, limit, offset int) 
 
 	// Apply offset + limit
 	if offset >= len(filtered) {
-		return nil
+		return []TimelineEvent{}
 	}
 	filtered = filtered[offset:]
 	if len(filtered) > limit {
@@ -83,12 +83,12 @@ func (t *Timeline) GetTimelineEventByID(id string) *TimelineEvent {
 func (t *Timeline) GetRelatedEvents(eventID string) []TimelineEvent {
 	evt := t.GetTimelineEventByID(eventID)
 	if evt == nil || len(evt.Related) == 0 {
-		return nil
+		return []TimelineEvent{}
 	}
 
 	storage := common.GetStorage()
 	if storage == nil {
-		return nil
+		return []TimelineEvent{}
 	}
 
 	var results []TimelineEvent
@@ -115,7 +115,7 @@ func (t *Timeline) GetTimelineSummary(sinceMinutes int) map[string]int {
 
 	storage := common.GetStorage()
 	if storage == nil {
-		return nil
+		return map[string]int{}
 	}
 
 	summary := make(map[string]int)

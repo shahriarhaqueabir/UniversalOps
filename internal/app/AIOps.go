@@ -36,7 +36,7 @@ func (a *AIOps) Chat(message string) string {
 	}
 
 	messages := []aiops.ChatMessage{
-		{Role: "system", Content: "You are the Hawkward AI Assistant. Use current stats and historical context provided to answer accurately." + historyContext},
+		{Role: "system", Content: "You are the OpsForAll AI Assistant. Use current stats and historical context provided to answer accurately." + historyContext},
 		{Role: "user", Content: message},
 	}
 	response, err := aiops.Chat(messages)
@@ -47,10 +47,22 @@ func (a *AIOps) Chat(message string) string {
 	return response
 }
 
+// sanitizePromptInput strips content that could facilitate prompt injection.
+func sanitizePromptInput(s string) string {
+	s = strings.TrimSpace(s)
+	if len(s) > 200 {
+		s = s[:200]
+	}
+	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.ReplaceAll(s, "\r", " ")
+	return s
+}
+
 // GenerateReport creates a formatted text report from the given sections.
 func (a *AIOps) GenerateReport(sections []string) string {
 	var reportSections []aiops.ReportSection
 	for _, title := range sections {
+		title = sanitizePromptInput(title)
 		prompt := "Generate a brief operations report section for: " + title +
 			". Include key metrics and observations based on recent system data."
 		resp, err := aiops.Chat([]aiops.ChatMessage{
@@ -144,7 +156,7 @@ func (a *AIOps) DetectAnomalies() []AnomalyInfo {
 // AskAI sends a prompt to the AI with the given context and returns the response.
 func (a *AIOps) AskAI(ctx context.Context, prompt string) (string, error) {
 	messages := []aiops.ChatMessage{
-		{Role: "system", Content: "You are the Hawkward AI assistant, an expert operations analyst. Be concise and specific."},
+		{Role: "system", Content: "You are the OpsForAll AI assistant, an expert operations analyst. Be concise and specific."},
 		{Role: "user", Content: prompt},
 	}
 	return aiops.Chat(messages)

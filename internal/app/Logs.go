@@ -21,7 +21,7 @@ func NewLogs(app *App) *Logs {
 	return &Logs{app: app}
 }
 
-// GetLogs returns filtered log entries from the hawkward database.
+// GetLogs returns filtered log entries from the opsforall database.
 func (l *Logs) GetLogs(level string, since string, n int) []LogEntry {
 	if n <= 0 {
 		n = 200
@@ -29,13 +29,13 @@ func (l *Logs) GetLogs(level string, since string, n int) []LogEntry {
 
 	storage := common.GetStorage()
 	if storage == nil {
-		return nil
+		return []LogEntry{}
 	}
 
 	data, err := storage.QueryLogs(level, "", n)
 	if err != nil {
 		common.LogWarn("QueryLogs failed: %v", err)
-		return nil
+		return []LogEntry{}
 	}
 
 	out := make([]LogEntry, 0, len(data))
@@ -45,7 +45,7 @@ func (l *Logs) GetLogs(level string, since string, n int) []LogEntry {
 			Level:     d.Level,
 			Module:    d.Module,
 			Message:   d.Message,
-			Line:      d.Message,
+			Line:      "",
 		})
 	}
 	return out
@@ -54,9 +54,9 @@ func (l *Logs) GetLogs(level string, since string, n int) []LogEntry {
 // ExportLogs returns the log contents as a single formatted string.
 // format can be "text", "json", or "csv".
 func (l *Logs) ExportLogs(format string) string {
-	lines, err := devops.TailLog("hawkward-gui.log", 2000)
+	lines, err := devops.TailLog("opsforall.log", 2000)
 	if err != nil {
-		lines, err = devops.TailLog("hawkward.log", 2000)
+		lines, err = devops.TailLog("opsforall-legacy.log", 2000)
 		if err != nil {
 			return ""
 		}

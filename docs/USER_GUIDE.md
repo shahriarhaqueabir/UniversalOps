@@ -1,6 +1,6 @@
-# Hawkward User Guide
+# OpsForAll User Guide
 
-Welcome to Hawkward, the terminal-based operations platform. This guide covers setup, usage, and customization.
+Welcome to OpsForAll, the premium native GUI operations platform. This guide covers setup, usage, and customization.
 
 ## Table of Contents
 1. [Installation & Setup](#1-installation--setup)
@@ -15,35 +15,37 @@ Welcome to Hawkward, the terminal-based operations platform. This guide covers s
 
 ### Prerequisites
 - **Go 1.26+**: Required for building from source.
-- **Windows / Linux / macOS**: Hawkward is cross-platform.
+- **Wails v2 CLI**: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
+- **Node.js**: Required for frontend builds.
+- **Windows / Linux / macOS**: OpsForAll is cross-platform.
 
 ### Building from Source
 ```bash
-git clone https://github.com/youruser/hawkward.git
-cd hawkward
-go build -o hawkward.exe ./cmd/hawkward
-./hawkward.exe
+git clone https://github.com/youruser/opsforall.git
+cd opsforall
+wails build
 ```
+The compiled binary will be located in the `build/bin/` directory.
 
 ### First Run
-On the first launch, Hawkward will walk you through an onboarding wizard. This will explain the basic navigation and the five "Ops Layers."
+Each page is accessible from the sidebar. The five ops layers (SysOps, NetOps, SecOps, DevOps, AIOps) each provide a dedicated view.
 
 ---
 
 ## 2. AI Operations Setup
 
-Hawkward uses **Ollama** by default for local, private AI operations.
+OpsForAll uses **Ollama** by default for local, private AI operations.
 
 ### Installing Ollama
 1. Download Ollama from [ollama.com](https://ollama.com/).
 2. Install and run the Ollama application.
 3. Open a terminal and pull the default model:
    ```bash
-   ollama pull llama3.2
+   ollama pull agentic-coder
    ```
 
 ### Customizing the AI Model
-By default, Hawkward looks for `llama3.2` at `http://localhost:11434`. You can change this using environment variables:
+By default, OpsForAll looks for `agentic-coder` (Qwopus3.5-9B-Coder based) at `http://localhost:11434`. Falls back to the first available model if the default is not found. You can override this using environment variables or the **Settings** page within the application.
 
 - `OLLAMA_HOST`: The URL of your Ollama server (e.g., `http://192.168.1.50:11434`).
 - `OLLAMA_MODEL`: The name of the model you want to use (e.g., `mistral`, `gemma`).
@@ -51,11 +53,12 @@ By default, Hawkward looks for `llama3.2` at `http://localhost:11434`. You can c
 **Example (Windows PowerShell):**
 ```powershell
 $env:OLLAMA_MODEL = "mistral"
-./hawkward.exe
+./build/bin/OpsForAll.exe
 ```
 
 ### Using External AI (OpenAI/Anthropic)
-Currently, Hawkward focuses on local AI for privacy and offline capability. Integration with external APIs is planned for a future release. For now, you can use **LiteLLM** or a similar proxy to expose OpenAI-compatible endpoints as an Ollama-like service if needed.
+Currently, OpsForAll
+ focuses on local AI for privacy and offline capability. Integration with external APIs is planned for a future release. For now, you can use **LiteLLM** or a similar proxy to expose OpenAI-compatible endpoints as an Ollama-like service if needed.
 
 ---
 
@@ -98,16 +101,16 @@ Currently, Hawkward focuses on local AI for privacy and offline capability. Inte
 ## 4. Customization
 
 ### Theming
-- Press `t` to cycle through available themes: **Default**, **Dark**, **Light**, and **High Contrast**.
-- **Custom Themes**: You can define a custom palette by setting the `HAWKWARD_THEME` environment variable to a JSON path (planned).
+- Use the **Theme Toggle** button in the TopBar to switch between **Dark** and **Light** modes.
+- OpsForAll uses a "Squib" design system with fluid CSS variables, adapting its palette for optimal readability and focus.
 
 ### Refresh Interval
-The dashboard refreshes every 3 seconds by default. This can be configured in the source or via future CLI flags.
+The dashboard refreshes every 3 seconds by default. This can be configured in the **Settings** page, allowing you to balance data granularity with system overhead.
 
 ---
 
 ## 5. Troubleshooting
 
-- **AI Ops not responding**: Ensure Ollama is running and you have pulled the model (`ollama pull llama3.2`).
+- **AI Ops not responding**: Ensure Ollama is running and you have pulled the model (`ollama pull agentic-coder`).
 - **Permission Denied (SecOps)**: Some security checks (like firewall rules) require Administrator/Sudo privileges.
-- **High CPU usage by Hawkward**: This can happen if the refresh interval is set too low (e.g., < 500ms).
+- **High CPU usage by OpsForAll**: This can happen if the refresh interval is set too low (e.g., < 500ms).

@@ -46,3 +46,23 @@ func TestAllThemePalettesAreValid(t *testing.T) {
 		}
 	}
 }
+
+func TestCleanJSON(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"No change", `{"a": 1}`, `{"a": 1}`},
+		{"BOM removal", "\ufeff" + `{"a": 1}`, `{"a": 1}`},
+		{"Control chars removal", "{\"a\": 1\x00\x1F}", `{"a": 1}`},
+		{"Keep valid whitespace", "{\n\t\"a\": 1\r\n}", "{\n\t\"a\": 1\r\n}"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := CleanJSON(tt.input); got != tt.want {
+				t.Errorf("CleanJSON() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

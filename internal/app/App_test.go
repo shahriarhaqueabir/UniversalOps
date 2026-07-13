@@ -31,8 +31,8 @@ func TestGetAppInfo(t *testing.T) {
 	a.startedAt = time.Now().Add(-1 * time.Hour)
 	info := a.GetAppInfo()
 
-	if info.Name != "Hawkward Operations Platform" {
-		t.Errorf("Name = %q, want %q", info.Name, "Hawkward Operations Platform")
+	if info.Name != "OpsForAll Universal Platform" {
+		t.Errorf("Name = %q, want %q", info.Name, "OpsForAll Universal Platform")
 	}
 	if info.Uptime == "" {
 		t.Error("Uptime is empty")
@@ -104,6 +104,21 @@ func TestTrendDirectionString(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidateOllamaEnv(t *testing.T) {
+	validateOllamaEnv()
+}
+
+func TestValidateOllamaEnv_Custom(t *testing.T) {
+	t.Setenv("OLLAMA_HOST", "http://example.com:11434")
+	t.Setenv("OLLAMA_MODEL", "test-model")
+	validateOllamaEnv()
+}
+
+func TestValidateOllamaEnv_InvalidURL(t *testing.T) {
+	t.Setenv("OLLAMA_HOST", "://invalid")
+	validateOllamaEnv()
 }
 
 func TestConvertAlert(t *testing.T) {

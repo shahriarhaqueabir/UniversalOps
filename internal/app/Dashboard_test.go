@@ -2,9 +2,14 @@ package app
 
 import (
 	"testing"
+
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
 func TestGetDashboardData(t *testing.T) {
+	common.InitStorage(":memory:")
+	defer common.GetStorage().Close()
+
 	app := NewApp()
 
 	// Pre-populate pipeline with a metric to ensure units are set

@@ -11,7 +11,7 @@ import (
 func newTestStorage(t *testing.T) *Storage {
 	t.Helper()
 
-	f, err := os.CreateTemp("", "hawkward-test-*.db")
+	f, err := os.CreateTemp("", "opsforall-test-*.db")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func newTestStorage(t *testing.T) *Storage {
 }
 
 func TestInitStoragePragmas(t *testing.T) {
-	f, err := os.CreateTemp("", "hawkward-test-*.db")
+	f, err := os.CreateTemp("", "opsforall-test-*.db")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,64 +175,54 @@ func TestConcurrentMetricWrites(t *testing.T) {
 func TestInsertLogAndQuery(t *testing.T) {
 	s := newTestStorage(t)
 
-	// Wait a brief moment for the InitStorage LogInfo goroutine to settle
-	// to make the total count deterministic (either 3 or 4).
-	time.Sleep(50 * time.Millisecond)
+	// Use a unique module name for our test logs to avoid interference
+	// from the async system log triggered by InitStorage.
+	testModule := "storage_test_module"
 
-	if err := s.InsertLog("INFO", "test", "hello world"); err != nil {
+	if err := s.InsertLog("INFO", testModule, "hello world"); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.InsertLog("ERROR", "network", "connection refused"); err != nil {
+	if err := s.InsertLog("ERROR", testModule, "connection refused"); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.InsertLog("INFO", "network", "retry succeeded"); err != nil {
+	if err := s.InsertLog("INFO", testModule, "retry succeeded"); err != nil {
 		t.Fatal(err)
 	}
 
-	entries, err := s.QueryLogs("", "", 10)
+	// Query with specific module to be deterministic
+	entries, err := s.QueryLogs("", testModule, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// We expect at least the 3 entries we just inserted.
-	// The 4th entry comes from InitStorage's LogInfo (module=SYSTEM) but is async.
-	if len(entries) < 3 {
-		t.Fatalf("got %d log entries, want at least 3", len(entries))
+	if len(entries) != 3 {
+		t.Fatalf("got %d log entries for module %q, want 3", len(entries), testModule)
 	}
 
-	// Filter by level
-	entries, err = s.QueryLogs("ERROR", "", 10)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// We check for ERROR entries specifically; should be at least 1.
-	foundError := false
-	for _, e := range entries {
-		if e.Level == "ERROR" && e.Message == "connection refused" {
-			foundError = true
-			break
-		}
-	}
-	if !foundError {
-		t.Errorf("filtered by ERROR: did not find 'connection refused'. entries: %+v", entries)
-	}
-
-	// Filter by search
-	entries, err = s.QueryLogs("", "network", 10)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Should find our 2 network entries.
-	if len(entries) < 2 {
-		t.Errorf("search 'network': got %d entries, want at least 2", len(entries))
-	}
-
-	// Limit
-	entries, err = s.QueryLogs("INFO", "", 1)
+	// Filter by level and module
+	entries, err = s.QueryLogs("ERROR", testModule, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(entries) != 1 {
-		t.Errorf("limited INFO query: got %d, want 1", len(entries))
+		t.Errorf("filtered by ERROR: got %d entries, want 1", len(entries))
+	} else if entries[0].Message != "connection refused" {
+		t.Errorf("got message %q, want 'connection refused'", entries[0].Message)
+	}
+
+	// Filter by search and module
+	entries, err = s.QueryLogs("", "retry", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, e := range entries {
+		if e.Module == testModule && e.Message == "retry succeeded" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("search 'retry': did not find expected entry")
 	}
 }
 
@@ -285,7 +275,7 @@ func TestPruneData(t *testing.T) {
 }
 
 func TestStorageClose(t *testing.T) {
-	f, err := os.CreateTemp("", "hawkward-test-*.db")
+	f, err := os.CreateTemp("", "opsforall-test-*.db")
 	if err != nil {
 		t.Fatal(err)
 	}

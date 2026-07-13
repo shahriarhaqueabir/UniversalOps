@@ -24,7 +24,7 @@ func (s *SecOps) GetFirewallRules() []FirewallRule {
 	rules, err := secops.GetFirewallRules()
 	if err != nil {
 		common.LogWarn("GetFirewallRules failed: %v", err)
-		return nil
+		return []FirewallRule{}
 	}
 	out := make([]FirewallRule, 0, len(rules))
 	for _, r := range rules {
@@ -49,7 +49,7 @@ func (s *SecOps) GetUsers() []UserInfo {
 	users, err := secops.GetUsers()
 	if err != nil {
 		common.LogWarn("GetUsers failed: %v", err)
-		return nil
+		return []UserInfo{}
 	}
 	out := make([]UserInfo, 0, len(users))
 	for _, u := range users {
@@ -70,7 +70,7 @@ func (s *SecOps) GetListeningPorts() []ListeningPort {
 	ports, err := secops.GetListeningPorts()
 	if err != nil {
 		common.LogWarn("GetListeningPorts failed: %v", err)
-		return nil
+		return []ListeningPort{}
 	}
 	out := make([]ListeningPort, 0, len(ports))
 	for _, p := range ports {
@@ -114,7 +114,7 @@ func (s *SecOps) GetScheduledTasks() []ScheduledTask {
 	tasks, err := secops.GetScheduledTasks()
 	if err != nil {
 		common.LogWarn("GetScheduledTasks failed: %v", err)
-		return nil
+		return []ScheduledTask{}
 	}
 	out := make([]ScheduledTask, 0, len(tasks))
 	for _, t := range tasks {
@@ -135,7 +135,7 @@ func (s *SecOps) GetSecurityEvents() []SecurityEvent {
 	events, err := secops.GetSecurityEvents()
 	if err != nil {
 		common.LogWarn("GetSecurityEvents failed: %v", err)
-		return nil
+		return []SecurityEvent{}
 	}
 	out := make([]SecurityEvent, 0, len(events))
 	for _, e := range events {

@@ -1,8 +1,15 @@
-# Hawkward — Workspace Memory
+# OpsForAll — Workspace Memory
+
+## Project Identity
+- **Name**: OpsForAll
+- **Persona**: Nostalgic Professional (Reliable, high-performance universal utility).
+- **Core Value**: Universal deep system visibility and automation for everyone.
 
 ## Active Session
+- **Sprint 26: Rebranding & Legacy Cleanup** ✅ DONE
 - **Sprint 25: Operational Excellence & Feature Wiring** ✅ DONE
-- **Sprint 24: Quality Polish & Documentation Sync** ✅ DONE
+- **Sprint 24: Quality Polish & Documentation Sync** ❌ ARCHIVED (superseded)
+- **Sprint 27: Documentation & Stale Code Audit** ✅ DONE
 
 ## Completed Work
 
@@ -94,6 +101,16 @@
 
 ## Known Remaining Issues
 1. **Release pipeline**: `softrops/action-gh-release` with `GITHUB_TOKEN` can't create releases on private repos. Needs PAT in `GH_TOKEN` secret.
+12. **Semantic diff for Docs & Plans**: Archived `plans/2025-05-22-sprint-24-quality-polish.md` — 6 stale TODOs closed. Archived `docs/ToolsCommands.md` raw research notes — formatted into proper reference doc.
+13. **Doc fixes applied 2026-07-12**: Updated ARCHITECTURE.md/STANDARDS.md dates, fixed USER_GUIDE.md (agentic-coder model, removed onboarding wizard), archived stale plan, cleaned ToolsCommands.md, updated state.md, fixed main.go (Hawkward→OpsForAll, path), removed 25 unused TS imports, added missing diagColor/diagIcon functions in Dashboard.tsx, fixed unicode corruption in Dashboard.tsx, fixed 3 missing type imports.
+14. **Full-layer test sprint 2026-07-12 — 6 parallel agents**:
+   - Backend: 140/140 Go tests pass, vet clean ✅
+   - TypeScript: tsc clean, build clean (3217 modules) ✅
+   - Vitest: 60/60 pass (was 59/60, fixed Dashboard test) ✅
+   - Lint: 0 errors, 0 warnings, 45 files ✅
+   - Dead code audit: 4 TS items + entire `theme.go` (415 lines) + 6 orphan Go funcs flagged
+   - E2E audit: Fixed wails.json (stale frontend:dir path → blocked all Wails builds), fixed test.yml/release.yml CI paths. Wails build now passes. 8k+ hawkward refs remain as known debt.
+15. **Renaming debt (Hawkward→OpsForAll)**: After this sprint, paths are fixed but internal branding is ~50% migrated. Known remaining: binary names in release.yml, App.go app name, DB/log filenames, Prometheus metric names, AI prompt context, config dir, CLAUDE.md, README.md.
 2. **TestPing**: May fail on Linux CI (no root for raw sockets + ping binary needs CAP_NET_RAW) — improved skip logic.
 3. **TestInsertLogAndQuery**: Flaky in full suite — SQLite DB leaks between tests.
 4. **Recharts ResponsiveContainer**: Stderr warnings in jsdom tests — cosmetic (jsdom has no layout).

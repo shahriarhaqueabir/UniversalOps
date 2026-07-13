@@ -1,7 +1,9 @@
-# Onboarding Guide: Hawkward Operations Platform
+# Onboarding Guide: OpsForAll
+ Operations Platform
 
 ## Overview
-Hawkward is a high-performance, local-first operations platform designed for system administrators, security analysts, and DevOps engineers. It provides real-time telemetry across five specialized layers (Sys, Net, Sec, Dev, AI) using a Go-based backend and a React-based GUI via Wails.
+OpsForAll
+ is a high-performance, local-first operations platform designed for system administrators, security analysts, and DevOps engineers. It provides real-time telemetry across five specialized layers (Sys, Net, Sec, Dev, AI) using a Go-based backend and a React-based GUI via Wails.
 
 ## Tech Stack
 | Layer | Technology | Version |
@@ -13,15 +15,16 @@ Hawkward is a high-performance, local-first operations platform designed for sys
 | Monitoring | gopsutil/v4 | v4.x |
 
 ## Architecture
-Hawkward follows a **Modular Monolith** architecture with a **Facade-Bridge** pattern:
+OpsForAll
+ follows a **Modular Monolith** architecture with a **Facade-Bridge** pattern:
 1. **Core Modules** (`internal/*ops/`): Pure domain logic, platform-specific implementations, and high-performance collection.
 2. **Common Layer** (`internal/common/`): Shared infrastructure including the Time-Series Data Pipeline, Alert Engine, and Persistent Storage.
 3. **Facade Layer** (`internal/app/`): Wails-bound structs that map internal domain models to frontend-safe API types.
-4. **GUI Layer** (`cmd/hawkward-gui/frontend/`): React application using Tailwind v4 for a premium, high-density dashboard.
+4. **GUI Layer** (`cmd/opsforall-gui/frontend/`): React application using Tailwind v4 for a premium, high-density dashboard.
 
 ## Key Entry Points
 - **Backend Entry**: `main.go` — Wails bootstrap and module binding.
-- **Frontend Entry**: `cmd/hawkward-gui/frontend/src/main.tsx` — React root.
+- **Frontend Entry**: `cmd/opsforall-gui/frontend/src/main.tsx` — React root.
 - **Telemetry Loop**: `internal/app/App.go` (`collectAndEmit`) — Centralized polling logic.
 - **API Definition**: `internal/app/Types.go` — Source of truth for frontend/backend data contracts.
 

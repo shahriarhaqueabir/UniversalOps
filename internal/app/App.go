@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"os"
 	"strings"
 
 	"sync"
@@ -10,7 +12,6 @@ import (
 
 	goruntime "runtime"
 
-	"github.com/shirou/gopsutil/v4/sensors"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -39,10 +40,16 @@ type App struct {
 	Timeline    *Timeline
 	NetDesign   *NetworkDesignAPI
 
-	// Tick loop control
-	tickQuit       chan struct{}
-	tickIntervalCh chan time.Duration
-	tickWg         sync.WaitGroup
+	// Collector architecture
+	collectorRegistry *common.CollectorRegistry
+	scheduler         *common.CollectorScheduler
+
+	// Alert and dashboard evaluation loop
+	alertQuit chan struct{}
+	alertWg   sync.WaitGroup
+
+	// Previous metric values for significant-change detection
+	lastCPU, lastMem, lastDisk float64
 }
 
 // NewApp creates a new App with initialized subsystems.
@@ -53,12 +60,11 @@ func NewApp() *App {
 	alertEngine.AddDefaultRules()
 
 	a := &App{
-		pipeline:       pipeline,
-		alerts:         alertEngine,
-		eventBus:       common.NewEventBus(1000),
-		startedAt:      time.Now(),
-		tickQuit:       make(chan struct{}),
-		tickIntervalCh: make(chan time.Duration, 1),
+		pipeline:  pipeline,
+		alerts:    alertEngine,
+		eventBus:  common.NewEventBus(1000),
+		startedAt: time.Now(),
+		alertQuit: make(chan struct{}),
 	}
 
 	// Initialize subsystem facades
@@ -96,31 +102,54 @@ func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 
 	// Initialize persistent storage
-	if err := common.InitStorage("hawkward.db"); err != nil {
+	if err := common.InitStorage("opsforall.db"); err != nil {
 		common.LogWarn("Failed to init storage: %v", err)
 	}
 
 	// Initialize the common logger
-	if err := common.InitLogger("hawkward-gui.log"); err != nil {
+	if err := common.InitLogger("opsforall.log"); err != nil {
 		common.LogWarn("Failed to init logger: %v", err)
 	}
 
-	common.LogInfo("Hawkward GUI starting up")
+	common.LogInfo("OpsForAll starting up")
+
+	// Validate Ollama environment variables
+	validateOllamaEnv()
 
 	// Initialize Prometheus metrics exporter
 	common.InitMetricsExporter(0)
 
-	// Start the metrics collection tick loop
-	a.startTickLoop()
+	// Start the modular collector system
+	a.collectorRegistry = common.NewCollectorRegistry()
+	RegisterCollectors(a.collectorRegistry, a)
+	a.scheduler = common.NewCollectorScheduler(a.collectorRegistry, a.pipeline)
+	a.scheduler.Start()
+
+	// Start the alert and dashboard evaluation loop
+	a.startAlertLoop()
 }
 
 // Shutdown is called by Wails when the application shuts down.
 func (a *App) Shutdown(ctx context.Context) {
-	common.LogInfo("Hawkward GUI shutting down")
+	common.LogInfo("OpsForAll shutting down")
 
-	// Stop the tick loop
-	close(a.tickQuit)
-	a.tickWg.Wait()
+	// Stop the collector scheduler
+	if a.scheduler != nil {
+		a.scheduler.Stop(5 * time.Second)
+	}
+
+	// Stop the alert evaluation loop
+	close(a.alertQuit)
+	alertDone := make(chan struct{})
+	go func() {
+		a.alertWg.Wait()
+		close(alertDone)
+	}()
+	select {
+	case <-alertDone:
+	case <-time.After(5 * time.Second):
+		common.LogWarn("Alert loop did not shut down within 5s")
+	}
 
 	// Close persistent storage
 	if s := common.GetStorage(); s != nil {
@@ -133,7 +162,7 @@ func (a *App) Shutdown(ctx context.Context) {
 // GetAppInfo returns metadata about the application.
 func (a *App) GetAppInfo() AppInfo {
 	return AppInfo{
-		Name:      "Hawkward Operations Platform",
+		Name:      "OpsForAll Universal Platform",
 		Version:   "1.3.0",
 		GoVersion: goruntime.Version(),
 		Uptime:    common.FormatUptime(uint64(time.Since(a.startedAt).Seconds())),
@@ -184,76 +213,34 @@ func (a *App) SaveFileDialog(title string, filename string, filters []string) (s
 
 // ── Internal helpers ─────────────────────────────────────────────────────────
 
-// startTickLoop begins the periodic metrics collection goroutine.
-func (a *App) startTickLoop() {
-	a.tickWg.Add(1)
+// startAlertLoop begins the periodic alert evaluation and dashboard event
+// emission goroutine. It does NOT collect data — collectors run independently
+// via the CollectorScheduler.
+func (a *App) startAlertLoop() {
+	a.alertWg.Add(1)
 	go func() {
-		defer a.tickWg.Done()
-		interval := 3 * time.Second
-		if a.pipeline != nil {
-			interval = a.pipeline.Config().TickInterval
-		}
-		ticker := time.NewTicker(interval)
+		defer common.RecoverPanic()
+		defer a.alertWg.Done()
+		ticker := time.NewTicker(5 * time.Second)
 		defer ticker.Stop()
 
 		for {
 			select {
-			case <-a.tickQuit:
+			case <-a.alertQuit:
 				return
-			case newInterval := <-a.tickIntervalCh:
-				ticker.Stop()
-				ticker = time.NewTicker(newInterval)
 			case <-ticker.C:
-				a.collectAndEmit()
+				a.evaluateAndEmit()
 			}
 		}
 	}()
 }
 
-// collectAndEmit collects all stats, pushes to pipeline, evaluates alerts,
-// and emits events to the frontend.
-func (a *App) collectAndEmit() {
-	if a.ctx == nil {
+// evaluateAndEmit reads metrics from the pipeline, evaluates alert rules,
+// and emits dashboard + alert events to the frontend.
+// Data collection is handled separately by the CollectorScheduler.
+func (a *App) evaluateAndEmit() {
+	if a.ctx == nil || a.ctx.Err() != nil {
 		return
-	}
-	if a.ctx.Err() != nil {
-		return
-	}
-
-	// 1. Collect ALL raw values FIRST — same timestamp window
-	stats, err := a.SysOps.collector.CollectAllStats()
-	if err != nil {
-		common.LogWarn("CollectAllStats failed: %v", err)
-		return
-	}
-
-	// Collect previous values for threshold change detection
-	prevCPU := a.pipeline.GetMetricWithForecast(common.MetricCPU).LastValue
-	prevMem := a.pipeline.GetMetricWithForecast(common.MetricMem).LastValue
-	prevDisk := a.pipeline.GetMetricWithForecast(common.MetricDisk).LastValue
-
-	// Collect network rates at the same time
-	var rxTotal, txTotal float64
-	ifaces, err := a.NetOps.collectInterfaces()
-	if err == nil && len(ifaces) > 0 {
-		for _, iface := range ifaces {
-			rxTotal += iface.RXRateBps
-			txTotal += iface.TXRateBps
-		}
-	}
-
-	// 2. Push ALL metrics to pipeline (fast, no blocking I/O)
-	if stats != nil {
-		a.pipeline.PushMetric(common.MetricCPU, "%", stats.CPUPercent)
-		a.pipeline.PushMetric(common.MetricMem, "%", stats.MemoryUsed)
-		a.pipeline.PushMetric(common.MetricDisk, "%", stats.DiskUsed)
-		a.pipeline.PushMetric(common.MetricProcCnt, "count", float64(stats.ProcessCount))
-		a.pipeline.PushMetric(common.MetricNetRX, "bps", rxTotal)
-		a.pipeline.PushMetric(common.MetricNetTX, "bps", txTotal)
-
-		if temps, err := sensors.SensorsTemperatures(); err == nil && len(temps) > 0 {
-			a.pipeline.PushMetric(common.MetricCPUTemp, "°C", temps[0].Temperature)
-		}
 	}
 
 	// Snapshot active alert IDs before evaluation (for resolve detection)
@@ -279,7 +266,6 @@ func (a *App) collectAndEmit() {
 			})
 		}
 
-		// Detect and persist resolved alerts
 		for id := range prevActive {
 			found := false
 			for _, al := range a.alerts.ActiveAlerts() {
@@ -333,6 +319,39 @@ func (a *App) collectAndEmit() {
 		Connections: 0, // fetched on-demand
 	}
 
+	// Detect significant changes and emit timeline events
+	currCPU := cpuMF.LastValue
+	currMem := memMF.LastValue
+	currDisk := diskMF.LastValue
+
+	if currCPU > a.lastCPU+15 && a.lastCPU > 0 {
+		a.eventBus.Emit(common.NewEventWithMeta(
+			common.CatSystem, common.EventWarning, "sysops",
+			"CPU spiked",
+			fmt.Sprintf("CPU usage jumped from %.0f%% to %.0f%%", a.lastCPU, currCPU),
+			map[string]string{"from": fmt.Sprintf("%.1f", a.lastCPU), "to": fmt.Sprintf("%.1f", currCPU)},
+		))
+	}
+	if currMem > a.lastMem+10 && a.lastMem > 0 {
+		a.eventBus.Emit(common.NewEventWithMeta(
+			common.CatSystem, common.EventWarning, "sysops",
+			"Memory pressure increasing",
+			fmt.Sprintf("Memory usage increased from %.0f%% to %.0f%%", a.lastMem, currMem),
+			map[string]string{"from": fmt.Sprintf("%.1f", a.lastMem), "to": fmt.Sprintf("%.1f", currMem)},
+		))
+	}
+	if currDisk > a.lastDisk+10 && a.lastDisk > 0 {
+		a.eventBus.Emit(common.NewEventWithMeta(
+			common.CatSystem, common.EventWarning, "sysops",
+			"Disk usage increasing",
+			fmt.Sprintf("Disk usage increased from %.0f%% to %.0f%%", a.lastDisk, currDisk),
+			map[string]string{"from": fmt.Sprintf("%.1f", a.lastDisk), "to": fmt.Sprintf("%.1f", currDisk)},
+		))
+	}
+	a.lastCPU = currCPU
+	a.lastMem = currMem
+	a.lastDisk = currDisk
+
 	// Update Prometheus metrics
 	common.SetCPUMetric(cpuMF.LastValue)
 	common.SetMemoryMetric(memMF.LastValue)
@@ -352,7 +371,6 @@ func (a *App) collectAndEmit() {
 			AlertCount: a.alerts.AlertCount(),
 		})
 
-		// Emit timeline event for alert
 		a.eventBus.Emit(common.NewEventWithMeta(
 			common.CatAlert,
 			common.EventCritical,
@@ -362,42 +380,66 @@ func (a *App) collectAndEmit() {
 			map[string]string{"threshold": fmt.Sprintf("%.1f", alert.Threshold), "value": fmt.Sprintf("%.1f", alert.Value)},
 		))
 	}
+}
 
-	// Emit timeline event for significant CPU change (>15% jump)
-	if stats != nil && stats.CPUPercent > prevCPU+15 && prevCPU > 0 {
-		a.eventBus.Emit(common.NewEventWithMeta(
-			common.CatSystem,
-			common.EventWarning,
-			"sysops",
-			"CPU spiked",
-			fmt.Sprintf("CPU usage jumped from %.0f%% to %.0f%%", prevCPU, stats.CPUPercent),
-			map[string]string{"from": fmt.Sprintf("%.1f", prevCPU), "to": fmt.Sprintf("%.1f", stats.CPUPercent)},
-		))
+// ── Collector Bindings ────────────────────────────────────────────────────────
+
+// ListCollectors returns the status of all registered collectors.
+func (a *App) ListCollectors() []common.CollectorStatus {
+	if a.collectorRegistry == nil {
+		return nil
+	}
+	return a.collectorRegistry.Snapshot()
+}
+
+// SetCollectorEnabled enables or disables a collector by ID.
+func (a *App) SetCollectorEnabled(id string, enabled bool) error {
+	reg := a.collectorRegistry
+	if reg == nil {
+		return fmt.Errorf("collector system not initialized")
+	}
+	cid := common.CollectorID(id)
+	if enabled {
+		return reg.Enable(cid)
+	}
+	return reg.Disable(cid)
+}
+
+// SetCollectorInterval sets the interval for a collector in milliseconds.
+func (a *App) SetCollectorInterval(id string, intervalMs int) error {
+	reg := a.collectorRegistry
+	if reg == nil {
+		return fmt.Errorf("collector system not initialized")
+	}
+	if intervalMs <= 0 {
+		return fmt.Errorf("interval must be positive")
+	}
+	return reg.SetInterval(common.CollectorID(id), time.Duration(intervalMs)*time.Millisecond)
+}
+
+// TriggerCollector forces an immediate one-shot collection for the given collector.
+func (a *App) TriggerCollector(id string) error {
+	reg := a.collectorRegistry
+	if reg == nil {
+		return fmt.Errorf("collector system not initialized")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	samples, err := reg.CollectNow(ctx, common.CollectorID(id))
+	if err != nil {
+		return err
 	}
 
-	// Emit timeline event for significant memory change (>10% jump)
-	if stats != nil && stats.MemoryUsed > prevMem+10 && prevMem > 0 {
-		a.eventBus.Emit(common.NewEventWithMeta(
-			common.CatSystem,
-			common.EventWarning,
-			"sysops",
-			"Memory pressure increasing",
-			fmt.Sprintf("Memory usage increased from %.0f%% to %.0f%%", prevMem, stats.MemoryUsed),
-			map[string]string{"from": fmt.Sprintf("%.1f", prevMem), "to": fmt.Sprintf("%.1f", stats.MemoryUsed)},
-		))
+	// Push samples to the pipeline
+	for _, s := range samples {
+		a.pipeline.PushMetric(s.Name, s.Unit, s.Value)
 	}
 
-	// Emit timeline event for significant disk change (>10% jump)
-	if stats != nil && stats.DiskUsed > prevDisk+10 && prevDisk > 0 {
-		a.eventBus.Emit(common.NewEventWithMeta(
-			common.CatSystem,
-			common.EventWarning,
-			"sysops",
-			"Disk usage increasing",
-			fmt.Sprintf("Disk usage increased from %.0f%% to %.0f%%", prevDisk, stats.DiskUsed),
-			map[string]string{"from": fmt.Sprintf("%.1f", prevDisk), "to": fmt.Sprintf("%.1f", stats.DiskUsed)},
-		))
-	}
+	// Trigger immediate alert evaluation
+	a.evaluateAndEmit()
+
+	return nil
 }
 
 // ── Utility functions ────────────────────────────────────────────────────────
@@ -414,6 +456,27 @@ func lastValue(values []float64) float64 {
 		return 0
 	}
 	return values[len(values)-1]
+}
+
+// validateOllamaEnv checks OLLAMA_HOST and OLLAMA_MODEL at startup.
+func validateOllamaEnv() {
+	host := os.Getenv("OLLAMA_HOST")
+	if host == "" {
+		common.LogInfo("OLLAMA_HOST not set, defaulting to http://localhost:11434")
+	} else {
+		u, err := url.Parse(host)
+		if err != nil || u.Scheme == "" || u.Host == "" {
+			common.LogWarn("OLLAMA_HOST=%q is not a valid URL, will fall back to default", host)
+		} else {
+			common.LogInfo("OLLAMA_HOST=%s", host)
+		}
+	}
+	model := os.Getenv("OLLAMA_MODEL")
+	if model == "" {
+		common.LogInfo("OLLAMA_MODEL not set, defaulting to agentic-coder")
+	} else {
+		common.LogInfo("OLLAMA_MODEL=%s", model)
+	}
 }
 
 func trendDirectionString(dir common.TrendDirection) string {
