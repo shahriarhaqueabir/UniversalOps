@@ -10,7 +10,6 @@ const NetOps = lazy(() => import('../../pages/NetOps').then(m => ({ default: m.N
 const SecOps = lazy(() => import('../../pages/SecOps').then(m => ({ default: m.SecOps })))
 const DevOps = lazy(() => import('../../pages/DevOps').then(m => ({ default: m.DevOps })))
 const AIOps = lazy(() => import('../../pages/AIOps').then(m => ({ default: m.AIOps })))
-const NetworkDesign = lazy(() => import('../../pages/NetworkDesign').then(m => ({ default: m.NetworkDesign })))
 const Logs = lazy(() => import('../../pages/Logs').then(m => ({ default: m.Logs })))
 const Settings = lazy(() => import('../../pages/Settings').then(m => ({ default: m.Settings })))
 
@@ -66,7 +65,6 @@ export function MainContent({ currentPage, onNavigate }: MainContentProps) {
       case 'secops': return <SecOps />
       case 'devops': return <DevOps />
       case 'aiops': return <AIOps />
-      case 'network-design': return <NetworkDesign />
       case 'logs': return <Logs />
       case 'settings': return <Settings />
       default: return <Dashboard />

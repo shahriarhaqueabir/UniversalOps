@@ -20,7 +20,6 @@ import {
   Search,
   Info,
   ChevronRight,
-  BookOpen,
   Map,
   ArrowUpCircle,
   ArrowDownCircle,
@@ -67,36 +66,7 @@ const tabs: { id: NetOpsTab; label: string; icon: React.ReactNode }[] = [
 
 // ── Enhanced Components ──
 
-function ProtocolReference() {
-  const commonPorts = [
-    { p: 22, n: 'SSH', d: 'Remote Shell (Encrypted)' },
-    { p: 80, n: 'HTTP', d: 'Web Traffic (Clear)' },
-    { p: 443, n: 'HTTPS', d: 'Web Traffic (SSL)' },
-    { p: 3389, n: 'RDP', d: 'Windows Remote Desktop' },
-    { p: 53, n: 'DNS', d: 'Domain Resolution' },
-  ]
-  return (
-    <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl">
-      <div className="flex items-center gap-4 mb-6">
-        <BookOpen size={24} className="text-accent" />
-        <h3 className="text-xl font-bold text-text uppercase tracking-widest">Protocol Intel</h3>
-      </div>
-      <div className="space-y-4">
-        {commonPorts.map(port => (
-          <div key={port.p} className="flex items-center justify-between p-3 bg-panel-3 rounded-xl border border-border group hover:border-accent/30 transition-all">
-            <div className="flex items-center gap-4">
-              <span className="w-12 text-lg font-bold text-accent">{port.p}</span>
-              <div className="flex flex-col">
-                <span className="text-sm font-bold text-text uppercase tracking-tighter">{port.n}</span>
-                <span className="text-xs text-text-faint font-medium">{port.d}</span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+// ProtocolReference removed
 
 function SectionBriefing({ title, objective, checklist }: { title: string, objective: string, checklist: string[] }) {
   return (
@@ -678,7 +648,6 @@ export function NetOps() {
                   "CLOSE_WAIT: Pending remote termination."
                 ]}
               />
-              <ProtocolReference />
             </div>
             <div className="lg:col-span-3 space-y-4">
               <div className="grid grid-cols-3 gap-4">

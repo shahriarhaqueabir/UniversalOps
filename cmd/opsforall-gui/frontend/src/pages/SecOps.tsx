@@ -1012,6 +1012,7 @@ function RiskAssessmentPanel({ call }: { call: BackendCall }) {
 export function SecOps() {
   const { call } = useBackend()
   const [activeTab, setActiveTab] = useState<SecOpsTab>('firewall')
+  const [showOverview, setShowOverview] = useState(false)
 
   const { dataUpdatedAt: secUpdatedAt } = useQuery({
     queryKey: ['secops-health'],
@@ -1031,7 +1032,15 @@ export function SecOps() {
             <Shield size={32} className="text-danger" /> Security Operations
           </h1>
           <p className="text-text-dim text-lg mt-2">Threat surface analysis, access control, and endpoint protection status.</p>
-          <DataFreshnessIndicator lastUpdated={secUpdatedAt ? new Date(secUpdatedAt) : null} className="mt-1" />
+          <div className="flex items-center gap-4 mt-2">
+            <DataFreshnessIndicator lastUpdated={secUpdatedAt ? new Date(secUpdatedAt) : null} />
+            <button
+              onClick={() => setShowOverview(!showOverview)}
+              className="text-xs font-bold uppercase tracking-wider text-accent hover:text-accent/80 transition-all border border-accent/20 px-2 py-0.5 rounded bg-accent/5 hover:bg-accent/10"
+            >
+              {showOverview ? 'Hide Threat Summary' : 'Show Threat Summary'}
+            </button>
+          </div>
         </div>
         <div className="flex gap-1 bg-panel border border-border rounded-2xl p-1.5 shadow-inner">
           {tabs.map((tab) => (
@@ -1054,9 +1063,13 @@ export function SecOps() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        <SecurityScoreCard call={call} />
-        <SecuritySummaryPanel call={call} />
-        <RiskAssessmentPanel call={call} />
+        {showOverview && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+            <SecurityScoreCard call={call} />
+            <SecuritySummaryPanel call={call} />
+            <RiskAssessmentPanel call={call} />
+          </div>
+        )}
         {activeTab === 'firewall' && <FirewallTab call={call} />}
         {activeTab === 'users' && <UsersTab call={call} />}
         {activeTab === 'defender' && <DefenderTab call={call} />}
