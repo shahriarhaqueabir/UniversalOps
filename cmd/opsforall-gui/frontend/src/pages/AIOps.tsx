@@ -5,7 +5,6 @@ import {
   Trash2,
   Bot,
   User,
-  FileText,
   RefreshCw,
   AlertTriangle,
   Activity,
@@ -15,13 +14,9 @@ import {
   MessageSquare,
   ShieldCheck,
   Zap,
-  Globe,
   Copy,
   Check,
   Lightbulb,
-  TrendingUp,
-  Clock,
-  BarChart3,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -30,9 +25,9 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { EmptyState } from '@/components/ui/EmptyState'
 import * as Tabs from '@radix-ui/react-tabs'
 import { useOllamaStore } from '@/stores/useOllamaStore'
-import type { ChatMessage, AnomalyInfo, OllamaStatus, AIInsight, AIConfidence, LearnedBaseline, ChatSession } from '@/types'
+import type { ChatMessage, AnomalyInfo, OllamaStatus, AIInsight, ChatSession } from '@/types'
 
-type TabId = 'ai-chat' | 'reports' | 'anomalies' | 'insights' | 'confidence'
+type TabId = 'ai-chat' | 'anomalies' | 'insights'
 
 // ── Inline helpers ──
 
@@ -162,10 +157,8 @@ export function AIOps() {
         <Tabs.List className="flex border-b border-border bg-panel px-4">
           {[
             { id: 'ai-chat', label: 'Analyst Chat', icon: <MessageSquare size={20} /> },
-            { id: 'reports', label: 'Intelligence Reports', icon: <FileText size={20} /> },
             { id: 'anomalies', label: 'Anomaly Detection', icon: <Activity size={20} /> },
             { id: 'insights', label: 'AI Insights', icon: <Lightbulb size={20} /> },
-            { id: 'confidence', label: 'Confidence', icon: <BarChart3 size={20} /> },
           ].map((tab) => (
             <Tabs.Trigger
               key={tab.id}
@@ -185,17 +178,11 @@ export function AIOps() {
           <Tabs.Content value="ai-chat" className="h-full">
             <ChatTab />
           </Tabs.Content>
-          <Tabs.Content value="reports" className="h-full">
-            <ReportsTab />
-          </Tabs.Content>
           <Tabs.Content value="anomalies" className="h-full">
             <AnomaliesTab />
           </Tabs.Content>
           <Tabs.Content value="insights" className="h-full">
             <InsightsTab />
-          </Tabs.Content>
-          <Tabs.Content value="confidence" className="h-full">
-            <ConfidenceTab />
           </Tabs.Content>
         </div>
       </Tabs.Root>
@@ -456,85 +443,7 @@ function ChatTab() {
   )
 }
 
-// ══════════════════════════════════════════════
-//  Reports Tab
-// ══════════════════════════════════════════════
-
-function ReportsTab() {
-  const { call } = useBackend()
-  const [reportType, setReportType] = useState('System Health')
-  const [reportContent, setReportContent] = useState('')
-  const [isGenerating, setIsGenerating] = useState(false)
-
-  const templates = [
-    { id: 'health', label: 'System Health', desc: 'Aggregate performance, uptime, and resource usage.', icon: <Activity size={20} /> },
-    { id: 'security', label: 'Security Audit', desc: 'Failed logins, firewall status, and user changes.', icon: <ShieldCheck size={20} /> },
-    { id: 'network', label: 'Network Triage', desc: 'Latency trends, DNS health, and connection density.', icon: <Globe size={20} /> },
-  ]
-
-  const generate = async (name: string) => {
-    setReportType(name)
-    setIsGenerating(true)
-    setReportContent('')
-    try {
-      const res = await call('AIOps.GenerateReport', [name]) as string
-      setReportContent(res)
-    } catch {
-      setReportContent('Generation Error: request failed')
-    } finally {
-      setIsGenerating(false)
-    }
-  }
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 h-full p-8 gap-8 overflow-hidden">
-      <div className="lg:col-span-1 space-y-4 overflow-y-auto pr-2">
-        <h3 className="text-lg font-bold text-text-dim uppercase tracking-widest mb-4">Intelligence Templates</h3>
-        {templates.map(t => (
-          <button
-            key={t.id}
-            onClick={() => generate(t.label)}
-            disabled={isGenerating}
-            className={cn(
-              "w-full text-left border rounded-2xl p-6 transition-all group disabled:opacity-50",
-              reportType === t.label ? "bg-accent-soft border-accent/50" : "bg-panel border-border hover:bg-[var(--color-sidebar-hover)]"
-            )}
-          >
-            <div className="flex items-center gap-4 mb-3">
-              <div className="w-10 h-10 rounded-lg bg-panel-3 flex items-center justify-center text-accent border border-border">
-                {t.icon}
-              </div>
-              <span className="text-xl font-bold text-text">{t.label}</span>
-            </div>
-            <p className="text-text-dim text-base leading-relaxed mb-4">{t.desc}</p>
-            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest text-accent opacity-0 group-hover:opacity-100 transition-opacity">
-              <span>Draft Intel Report</span>
-              <ChevronRight size={14} />
-            </div>
-          </button>
-        ))}
-      </div>
-
-      <div className="lg:col-span-3 flex flex-col space-y-4 min-w-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <FileText size={20} className="text-text-faint" />
-            <h3 className="text-lg font-bold text-text-dim uppercase tracking-widest">{reportType} Document</h3>
-          </div>
-          {isGenerating && (
-            <div className="flex items-center gap-2 text-accent animate-pulse">
-              <Sparkles size={16} />
-              <span className="text-sm font-bold uppercase tracking-tighter">AI Synthesizing Report...</span>
-            </div>
-          )}
-        </div>
-        <div className="flex-1 bg-[var(--color-bg)] border border-border rounded-2xl p-10 overflow-y-auto font-[Geist_Mono] text-lg leading-relaxed whitespace-pre shadow-inner">
-          {reportContent || (isGenerating ? 'Collecting system metrics and performing heuristic analysis...' : 'Select a template to generate a professional intelligence report.')}
-        </div>
-      </div>
-    </div>
-  )
-}
+// Reports tab removed
 
 // ══════════════════════════════════════════════
 //  Anomalies Tab
@@ -730,225 +639,6 @@ function InsightsTab() {
           })
         )}
       </div>
-    </div>
-  )
-}
-
-// ══════════════════════════════════════════════
-//  Confidence Tab
-// ══════════════════════════════════════════════
-
-function ConfidenceTab() {
-  const { call } = useBackend()
-  const { refreshInterval } = useSettingsStore()
-
-  const { data: confidence, isLoading, refetch } = useQuery<AIConfidence>({
-    queryKey: ['ai-confidence'],
-    queryFn: async () => {
-      const res = await call('AIOps.GetConfidenceScore') as AIConfidence
-      return res
-    },
-    refetchInterval: refreshInterval,
-  })
-
-  const { data: baselines = [] } = useQuery<LearnedBaseline[]>({
-    queryKey: ['learned-baselines'],
-    queryFn: async () => {
-      const res = await call('AIOps.GetLearnedBaselines') as LearnedBaseline[]
-      return res || []
-    },
-    refetchInterval: refreshInterval,
-  })
-
-  const scoreColor = (score: number) => {
-    if (score >= 70) return 'text-success'
-    if (score >= 40) return 'text-warning'
-    return 'text-danger'
-  }
-
-  const scoreRingColor = (score: number) => {
-    if (score >= 70) return 'stroke-success'
-    if (score >= 40) return 'stroke-warning'
-    return 'stroke-danger'
-  }
-
-  const barColor = (score: number) => {
-    if (score >= 70) return 'bg-success'
-    if (score >= 40) return 'bg-warning'
-    return 'bg-danger'
-  }
-
-  const factorLabels: Record<string, string> = {
-    data_freshness: 'Data Freshness',
-    metric_stability: 'Metric Stability',
-    anomaly_count: 'Anomaly Score',
-    alert_health: 'Alert Health',
-  }
-
-  const factorWeights: Record<string, string> = {
-    data_freshness: '30%',
-    metric_stability: '25%',
-    anomaly_count: '25%',
-    alert_health: '20%',
-  }
-
-  const overall = confidence?.overall ?? 0
-  const circumference = 2 * Math.PI * 54
-  const dashOffset = circumference * (1 - overall / 100)
-
-  return (
-    <div className="flex flex-col h-full p-8 space-y-8">
-      <div className="flex items-center justify-between bg-panel border border-border px-6 py-4 rounded-xl shadow-lg">
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center border bg-accent/10 border-accent/30 text-accent">
-              <BarChart3 size={32} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-[var(--color-text)]">System Confidence</p>
-              <p className="text-sm font-bold text-text-dim uppercase tracking-widest">Composite Health Score</p>
-            </div>
-          </div>
-          <div className="w-px h-12 bg-border" />
-          <div className="text-text-dim text-sm leading-relaxed max-w-md italic">
-            Weighted score across data freshness, metric stability, anomaly count, and alert health.
-          </div>
-        </div>
-        <button
-          onClick={() => refetch()}
-          className="flex items-center gap-3 px-5 py-2.5 bg-[var(--color-panel-3)] border border-[var(--color-border)] rounded-lg hover:bg-panel hover:border-accent/40 text-text font-bold transition-all shadow-lg active:scale-95"
-        >
-          <RefreshCw size={20} className={cn(isLoading && "animate-spin")} />
-          Refresh
-        </button>
-      </div>
-
-      <div className="flex-1 flex flex-col lg:flex-row gap-8">
-        {/* Overall Score Ring */}
-        <div className="flex flex-col items-center justify-center bg-panel border border-border rounded-2xl p-10 shadow-lg min-w-[280px]">
-          {isLoading ? (
-            <div className="w-[140px] h-[140px] rounded-full border-4 border-border animate-pulse" />
-          ) : (
-            <div className="relative w-[140px] h-[140px]">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-                <circle cx="60" cy="60" r="54" fill="none" stroke="var(--color-border)" strokeWidth="8" />
-                <circle
-                  cx="60" cy="60" r="54"
-                  fill="none"
-                  className={cn('transition-all duration-700', scoreRingColor(overall))}
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={dashOffset}
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className={cn('text-4xl font-bold tabular-nums', scoreColor(overall))}>{overall.toFixed(0)}</span>
-                <span className="text-xs font-bold text-text-dim uppercase tracking-widest">/ 100</span>
-              </div>
-            </div>
-          )}
-          <div className="mt-6 text-center">
-            <p className={cn('text-lg font-bold', scoreColor(overall))}>
-              {overall >= 70 ? 'Healthy' : overall >= 40 ? 'Degraded' : 'Critical'}
-            </p>
-            <div className="flex items-center gap-2 mt-2 text-xs text-text-dim">
-              <Clock size={12} />
-              {confidence?.updatedAt ? format(new Date(confidence.updatedAt), 'HH:mm:ss') : '—'}
-            </div>
-          </div>
-        </div>
-
-        {/* Factor Breakdown */}
-        <div className="flex-1 bg-panel border border-border rounded-2xl p-8 shadow-lg">
-          <h3 className="text-lg font-bold text-[var(--color-text)] mb-6 flex items-center gap-3">
-            <TrendingUp size={20} className="text-accent" />
-            Factor Breakdown
-          </h3>
-          <div className="space-y-6">
-            {confidence?.factors && Object.entries(confidence.factors).map(([key, value]) => (
-              <div key={key} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-bold text-[var(--color-text)]">
-                      {factorLabels[key] || key}
-                    </span>
-                    <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider bg-text-faint/10 px-2 py-0.5 rounded-full">
-                      weight {factorWeights[key] || '—'}
-                    </span>
-                  </div>
-                  <span className={cn('text-sm font-bold tabular-nums', scoreColor(value))}>
-                    {value.toFixed(0)}%
-                  </span>
-                </div>
-                <div className="h-2.5 bg-[var(--color-bg)] rounded-full overflow-hidden">
-                  <div
-                    className={cn('h-full rounded-full transition-all duration-700', barColor(value))}
-                    style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {!confidence?.factors && !isLoading && (
-            <div className="flex items-center justify-center h-40">
-              <EmptyState
-                icon={<BarChart3 size={28} />}
-                title="No Confidence Data"
-                description="Confidence score requires active metric collection. Start the pipeline to begin scoring."
-              />
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Learned Baselines */}
-      {baselines.length > 0 && (
-        <div className="bg-panel border border-border rounded-2xl p-8 shadow-lg">
-          <h3 className="text-lg font-bold text-[var(--color-text)] mb-6 flex items-center gap-3">
-            <Activity size={20} className="text-accent" />
-            Learned Baselines
-            <span className="text-xs font-bold text-text-dim uppercase tracking-wider bg-text-faint/10 px-2.5 py-0.5 rounded-full">
-              rolling window
-            </span>
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="px-4 py-3 text-xs font-semibold text-text-dim uppercase tracking-wider">Metric</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-text-dim uppercase tracking-wider text-right">Normal Range</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-text-dim uppercase tracking-wider text-right">Mean</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-text-dim uppercase tracking-wider text-right">Std Dev</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-text-dim uppercase tracking-wider text-right">Samples</th>
-                </tr>
-              </thead>
-              <tbody>
-                {baselines.map((b) => (
-                  <tr key={b.metric} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-colors">
-                    <td className="px-4 py-3 text-sm font-semibold text-[var(--color-text)]">
-                      {b.metric.replace('.percent', '').replace('_', ' ').toUpperCase()}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-[var(--color-text-dim)] text-right tabular-nums">
-                      {b.min.toFixed(1)}% — {b.max.toFixed(1)}%
-                    </td>
-                    <td className="px-4 py-3 text-sm font-semibold text-[var(--color-text)] text-right tabular-nums">
-                      {b.mean.toFixed(1)}%
-                    </td>
-                    <td className="px-4 py-3 text-sm text-[var(--color-text-faint)] text-right tabular-nums">
-                      ±{b.stdDev.toFixed(1)}%
-                    </td>
-                    <td className="px-4 py-3 text-sm text-text-dim text-right tabular-nums">
-                      {b.count}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

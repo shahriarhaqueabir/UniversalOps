@@ -7,7 +7,6 @@ import {
   Shield,
   Terminal,
   Bot,
-  GitBranch,
   ScrollText,
   Settings,
   ChevronLeft,
@@ -33,9 +32,8 @@ const opsItems: NavItem[] = [
 ]
 
 const toolsItems: NavItem[] = [
-  { id: 'network-design', label: 'Network Design', icon: <GitBranch size={20} />, shortcut: 7 },
-  { id: 'logs', label: 'Logs', icon: <ScrollText size={20} />, shortcut: 8 },
-  { id: 'settings', label: 'Settings', icon: <Settings size={20} />, shortcut: 9 },
+  { id: 'logs', label: 'Logs', icon: <ScrollText size={20} />, shortcut: 7 },
+  { id: 'settings', label: 'Settings', icon: <Settings size={20} />, shortcut: 8 },
 ]
 
 interface SidebarProps {

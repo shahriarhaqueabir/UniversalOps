@@ -18,7 +18,6 @@ const pageLabels: Record<Page, string> = {
   secops: 'Security Operations',
   devops: 'Development Operations',
   aiops: 'AI Operations',
-  'network-design': 'Network Design',
   logs: 'Log Viewer',
   settings: 'Settings',
 }

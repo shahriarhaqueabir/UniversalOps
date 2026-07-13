@@ -6,7 +6,7 @@ import { MainContent } from './components/layout/MainContent'
 import { useThemeStore, useAlertStore, useSettingsStore } from './stores'
 import type { AlertInfo } from './types'
 
-export type Page = 'dashboard' | 'sysops' | 'netops' | 'secops' | 'devops' | 'aiops' | 'network-design' | 'logs' | 'settings'
+export type Page = 'dashboard' | 'sysops' | 'netops' | 'secops' | 'devops' | 'aiops' | 'logs' | 'settings'
 
 interface WailsRuntime {
   EventsOn: (event: string, handler: (...args: unknown[]) => void) => void
@@ -46,7 +46,7 @@ function App() {
 
   // Global keyboard shortcuts
   useEffect(() => {
-    const pages: Page[] = ['dashboard', 'sysops', 'netops', 'secops', 'devops', 'aiops', 'network-design', 'logs', 'settings']
+    const pages: Page[] = ['dashboard', 'sysops', 'netops', 'secops', 'devops', 'aiops', 'logs', 'settings']
     const handler = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey) {
         const num = parseInt(e.key)

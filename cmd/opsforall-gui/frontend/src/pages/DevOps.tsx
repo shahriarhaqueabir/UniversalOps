@@ -8,7 +8,6 @@ import {
   Trash2,
   Search,
   ChevronRight,
-  RefreshCw,
   FileText,
   X,
   PlayCircle,
@@ -22,7 +21,6 @@ import {
   Wrench,
   Container,
   Variable,
-  Lightbulb,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import * as Tabs from '@radix-ui/react-tabs'
@@ -31,7 +29,7 @@ import { useEvents } from '@/hooks/useEvents'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
 import { nanoid } from 'nanoid'
-import type { CommandResult, ServiceEntry, FileEntry, ToolInfo, ContainerSummary, GitSummary, LocalServer, EnvironmentInfo, DevOpsSuggestion, DockerStatus, KubernetesStatus, ServiceGroupSummary } from '@/types'
+import type { CommandResult, ServiceEntry, FileEntry, ToolInfo, ContainerSummary, GitSummary, LocalServer, EnvironmentInfo, DockerStatus, KubernetesStatus, ServiceGroupSummary } from '@/types'
 
 // Strip ANSI escape sequences from terminal output
 function stripAnsi(text: string): string {
@@ -81,17 +79,15 @@ export function DevOps() {
         <Tabs.List className="flex border-b border-border bg-panel px-4 overflow-x-auto no-scrollbar">
           {[
             { id: 'overview', label: 'Overview', icon: <Activity size={20} className="text-accent" /> },
-            { id: 'terminal', label: 'Interactive Terminal', icon: <Terminal size={20} /> },
-            { id: 'powershell-pro', label: 'PowerShell Pro', icon: <Zap size={20} className="text-warning" /> },
-            { id: 'services', label: 'System Services', icon: <Server size={20} /> },
+            { id: 'terminal', label: 'Terminal', icon: <Terminal size={20} /> },
+            { id: 'powershell-pro', label: 'PowerShell', icon: <Zap size={20} className="text-warning" /> },
+            { id: 'services', label: 'Services', icon: <Server size={20} /> },
             { id: 'containers', label: 'Containers', icon: <Container size={20} /> },
             { id: 'git', label: 'Git', icon: <GitBranch size={20} /> },
             { id: 'servers', label: 'Servers', icon: <Globe size={20} /> },
-            { id: 'ai-suggestions', label: 'AI Insights', icon: <Lightbulb size={20} className="text-warning" /> },
             { id: 'environment', label: 'Environment', icon: <Variable size={20} /> },
-            { id: 'file-browser', label: 'File Explorer', icon: <Folder size={20} /> },
+            { id: 'file-browser', label: 'Files', icon: <Folder size={20} /> },
             { id: 'toolbox', label: 'Toolbox', icon: <Wrench size={20} /> },
-            { id: 'log-explorer', label: 'Log Explorer', icon: <FileText size={20} /> },
           ].map((tab) => (
             <Tabs.Trigger
               key={tab.id}
@@ -117,9 +113,7 @@ export function DevOps() {
           <Tabs.Content value="containers" className="h-full"><ContainersTab /></Tabs.Content>
           <Tabs.Content value="git" className="h-full"><GitTab /></Tabs.Content>
           <Tabs.Content value="servers" className="h-full"><ServersTab /></Tabs.Content>
-          <Tabs.Content value="ai-suggestions" className="h-full"><AISuggestionsTab /></Tabs.Content>
           <Tabs.Content value="environment" className="h-full"><EnvironmentTab /></Tabs.Content>
-          <Tabs.Content value="log-explorer" className="h-full"><LogExplorerTab /></Tabs.Content>
         </div>
       </Tabs.Root>
     </div>
@@ -542,46 +536,7 @@ function FileBrowserTab() {
   )
 }
 
-function LogExplorerTab() {
-  const { call } = useBackend()
-  const [logPath, setLogPath] = useState('opsforall-gui.log')
-  const [lines, setLines] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
-
-  const handleTail = async () => {
-    setLoading(true); try { setLines(await call('DevOps.TailLog', logPath, 100) as string[]) } finally { setLoading(false) }
-  }
-
-  return (
-    <div className="flex flex-col h-full p-8 space-y-6">
-      <div className="flex gap-4 bg-panel border border-border p-6 rounded-2xl">
-        <input type="text" value={logPath} onChange={e => setLogPath(e.target.value)} className="flex-1 bg-panel-2 border border-border rounded-lg px-4 py-2 text-sm" />
-        <button onClick={handleTail} className="px-6 py-2 bg-accent text-white rounded-lg font-bold">Tail</button>
-      </div>
-      <div className="flex-1 bg-black border border-border rounded-2xl p-6 font-mono text-sm overflow-auto">
-        {loading ? <RefreshCw className="animate-spin" /> : lines.map((l, i) => <div key={i} className="mb-1 text-text-dim">{l}</div>)}
-      </div>
-    </div>
-  )
-}
-
-function AISuggestionsTab() {
-  const { call } = useBackend()
-  const { data: suggestions = [] } = useQuery<DevOpsSuggestion[]>({
-    queryKey: ['devops-ai-suggestions'],
-    queryFn: async () => (await call('DevOps.GetAISuggestions') as DevOpsSuggestion[]) ?? []
-  })
-  return (
-    <div className="p-8 space-y-4 overflow-y-auto h-full">
-      {suggestions.map((s, i) => (
-        <div key={i} className={cn('p-6 rounded-xl border bg-panel', s.severity === 'critical' ? 'border-danger/30 bg-danger/5' : 'border-border')}>
-          <h4 className="font-bold text-text mb-1 uppercase tracking-tight">{s.category}: {s.message}</h4>
-          <p className="text-sm text-text-dim">{s.action}</p>
-        </div>
-      ))}
-    </div>
-  )
-}
+// LogExplorerTab and AISuggestionsTab removed
 
 function ToolboxTab() {
   const { call } = useBackend()
