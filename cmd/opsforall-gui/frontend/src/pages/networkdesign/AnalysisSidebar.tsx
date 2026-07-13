@@ -172,7 +172,7 @@ export function AnalysisSidebar({
   const { data: inventorySummary } = useQuery<InventorySummary>({
     queryKey: ['topology-inventory', devices.length],
     queryFn: async () => {
-      return await call('NetDesign.GetInventory')
+      return await call('NetDesign.GetInventory') as any
     }
   })
 

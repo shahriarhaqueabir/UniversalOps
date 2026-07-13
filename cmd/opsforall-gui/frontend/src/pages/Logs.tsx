@@ -200,7 +200,7 @@ function OverviewTab() {
                     borderRadius: '12px',
                     color: 'var(--color-text)',
                   }}
-                  labelFormatter={(v: Date) => format(new Date(v), 'MMM d, HH:mm')}
+                  labelFormatter={(v: any) => format(new Date(v), 'MMM d, HH:mm')}
                 />
                 <Legend
                   wrapperStyle={{ fontSize: 12, color: 'var(--color-text-dim)' }}

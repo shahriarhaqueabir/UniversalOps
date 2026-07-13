@@ -6,10 +6,26 @@ export function GetAppInfo() {
   return window['go']['app']['App']['GetAppInfo']();
 }
 
+export function ListCollectors() {
+  return window['go']['app']['App']['ListCollectors']();
+}
+
 export function OpenFileDialog(arg1, arg2) {
   return window['go']['app']['App']['OpenFileDialog'](arg1, arg2);
 }
 
 export function SaveFileDialog(arg1, arg2, arg3) {
   return window['go']['app']['App']['SaveFileDialog'](arg1, arg2, arg3);
+}
+
+export function SetCollectorEnabled(arg1, arg2) {
+  return window['go']['app']['App']['SetCollectorEnabled'](arg1, arg2);
+}
+
+export function SetCollectorInterval(arg1, arg2) {
+  return window['go']['app']['App']['SetCollectorInterval'](arg1, arg2);
+}
+
+export function TriggerCollector(arg1) {
+  return window['go']['app']['App']['TriggerCollector'](arg1);
 }

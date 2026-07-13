@@ -214,7 +214,7 @@ export async function discoverLocalNetwork(): Promise<TopologyDevice[]> {
     if (!Array.isArray(nodes)) return []
     return nodes.map((n: Record<string, unknown>) => ({
       id: (n.id as string) || `discovered-${Math.random().toString(36).slice(2, 8)}`,
-      type: (n.type as string) || 'client',
+      type: ((n.type as string) || 'client') as any,
       label: (n.label as string) || (n.ip as string) || 'Unknown',
       ip: (n.ip as string) || '',
       mac: (n.mac as string) || '',

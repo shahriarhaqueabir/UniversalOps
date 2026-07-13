@@ -3,6 +3,7 @@ package netops
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
@@ -21,54 +22,100 @@ type NetworkReport struct {
 func RunNetworkDiagnostics() (*NetworkReport, error) {
 	report := &NetworkReport{}
 	var errs []string
+	var errsMu sync.Mutex
+	var wg sync.WaitGroup
 
 	// Ping default targets
-	ping, err := Ping("8.8.8.8", 3)
-	if err != nil {
-		errs = append(errs, fmt.Sprintf("Ping: %v", err))
-	} else {
-		report.Ping = ping
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer common.RecoverPanic()
+		ping, err := Ping("8.8.8.8", 3)
+		if err != nil {
+			errsMu.Lock()
+			errs = append(errs, fmt.Sprintf("Ping: %v", err))
+			errsMu.Unlock()
+		} else {
+			report.Ping = ping
+		}
+	}()
 
 	// DNS lookup
-	dns, err := LookupDNS("google.com")
-	if err != nil {
-		errs = append(errs, fmt.Sprintf("DNS: %v", err))
-	} else {
-		report.DNS = dns
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer common.RecoverPanic()
+		dns, err := LookupDNS("google.com")
+		if err != nil {
+			errsMu.Lock()
+			errs = append(errs, fmt.Sprintf("DNS: %v", err))
+			errsMu.Unlock()
+		} else {
+			report.DNS = dns
+		}
+	}()
 
 	// Port scan (common ports on localhost)
-	ports, err := ScanPorts("localhost", DefaultScanPorts())
-	if err != nil {
-		errs = append(errs, fmt.Sprintf("PortScan: %v", err))
-	} else {
-		report.PortScan = ports
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer common.RecoverPanic()
+		ports, err := ScanPorts("localhost", DefaultScanPorts())
+		if err != nil {
+			errsMu.Lock()
+			errs = append(errs, fmt.Sprintf("PortScan: %v", err))
+			errsMu.Unlock()
+		} else {
+			report.PortScan = ports
+		}
+	}()
 
 	// Traceroute
-	trace, err := TraceRoute("8.8.8.8")
-	if err != nil {
-		errs = append(errs, fmt.Sprintf("Traceroute: %v", err))
-	} else {
-		report.Trace = trace
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer common.RecoverPanic()
+		trace, err := TraceRoute("8.8.8.8")
+		if err != nil {
+			errsMu.Lock()
+			errs = append(errs, fmt.Sprintf("Traceroute: %v", err))
+			errsMu.Unlock()
+		} else {
+			report.Trace = trace
+		}
+	}()
 
 	// Network connections
-	conns, err := GetConnections()
-	if err != nil {
-		errs = append(errs, fmt.Sprintf("Connections: %v", err))
-	} else {
-		report.Connections = conns
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer common.RecoverPanic()
+		conns, err := GetConnections()
+		if err != nil {
+			errsMu.Lock()
+			errs = append(errs, fmt.Sprintf("Connections: %v", err))
+			errsMu.Unlock()
+		} else {
+			report.Connections = conns
+		}
+	}()
 
 	// Interfaces
-	ifacesRes, err := GetInterfaces(nil, 0)
-	if err != nil {
-		errs = append(errs, fmt.Sprintf("Interfaces: %v", err))
-	} else {
-		report.Interfaces = ifacesRes.Interfaces
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer common.RecoverPanic()
+		ifacesRes, err := GetInterfaces(nil, 0)
+		if err != nil {
+			errsMu.Lock()
+			errs = append(errs, fmt.Sprintf("Interfaces: %v", err))
+			errsMu.Unlock()
+		} else {
+			report.Interfaces = ifacesRes.Interfaces
+		}
+	}()
+
+	wg.Wait()
 
 	if len(errs) > 0 && report.Ping == nil && report.DNS == nil && len(report.PortScan) == 0 {
 		return nil, fmt.Errorf("all network checks failed: %s", strings.Join(errs, "; "))

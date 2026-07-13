@@ -12,6 +12,8 @@ export function GetAlertCount():Promise<number>;
 
 export function GetAlertHistory():Promise<Array<app.AlertInfo>>;
 
+export function GetRules():Promise<Array<app.AlertRuleInfo>>;
+
 export function RemoveRule(arg1:string,arg2:number):Promise<void>;
 
 export function ResolveAlert(arg1:string):Promise<void>;

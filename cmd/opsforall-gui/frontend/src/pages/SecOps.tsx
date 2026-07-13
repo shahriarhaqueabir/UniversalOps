@@ -150,9 +150,9 @@ function FirewallTab({ call }: { call: BackendCall }) {
               <span className="text-2xl font-bold text-text">Global: {fwStatus.enabled ? 'ON' : 'OFF'}</span>
             </div>
           </div>
-          {fwStatus.profiles.length > 0 && (
+          {(fwStatus.profiles ?? []).length > 0 && (
             <div className="flex items-center gap-4">
-              {fwStatus.profiles.map(p => (
+              {(fwStatus.profiles ?? []).map(p => (
                 <div key={p.name} className="flex items-center gap-2">
                   <span className={cn("px-3 py-1 text-xs font-bold uppercase tracking-widest rounded-full border shadow-sm",
                     p.enabled
@@ -810,9 +810,9 @@ function SecurityScoreCard({ call }: { call: BackendCall }) {
         </div>
 
         {/* Recommendations */}
-        {data.recommendations.length > 0 && (
+        {(data.recommendations ?? []).length > 0 && (
           <div className="flex flex-col gap-2">
-            {data.recommendations.map((rec, i) => (
+            {(data.recommendations ?? []).map((rec, i) => (
               <div key={i} className="flex items-start gap-3 text-sm">
                 <Lightbulb size={14} className="text-warning mt-0.5 shrink-0" />
                 <span className="text-[var(--color-text-dim)]">{rec}</span>
@@ -881,11 +881,11 @@ function SecuritySummaryPanel({ call }: { call: BackendCall }) {
           </div>
 
           {/* ── Risks ── */}
-          {data.risks.length > 0 && (
+          {(data.risks ?? []).length > 0 && (
             <div>
               <h4 className="text-xs font-bold uppercase tracking-widest text-text-dim mb-3">Risks Detected</h4>
               <div className="space-y-2">
-                {data.risks.map((risk, i) => (
+                {(data.risks ?? []).map((risk, i) => (
                   <div key={i} className="flex items-start gap-3 bg-panel-2 border border-border rounded-xl px-4 py-3">
                     <AlertTriangle size={14} className="text-danger mt-0.5 shrink-0" />
                     <span className="text-sm text-text-dim leading-snug">{risk}</span>
@@ -896,11 +896,11 @@ function SecuritySummaryPanel({ call }: { call: BackendCall }) {
           )}
 
           {/* ── Recommendations ── */}
-          {data.recommendations.length > 0 && (
+          {(data.recommendations ?? []).length > 0 && (
             <div>
               <h4 className="text-xs font-bold uppercase tracking-widest text-text-dim mb-3">Recommendations</h4>
               <div className="space-y-2">
-                {data.recommendations.map((rec, i) => (
+                {(data.recommendations ?? []).map((rec, i) => (
                   <div key={i} className="flex items-start gap-3 bg-panel-2 border border-border rounded-xl px-4 py-3">
                     <Lightbulb size={14} className="text-warning mt-0.5 shrink-0" />
                     <span className="text-sm text-text-dim leading-snug">{rec}</span>
@@ -911,7 +911,7 @@ function SecuritySummaryPanel({ call }: { call: BackendCall }) {
           )}
 
           {/* ── Empty state ── */}
-          {data.risks.length === 0 && data.recommendations.length === 0 && (
+          {(data.risks ?? []).length === 0 && (data.recommendations ?? []).length === 0 && (
             <div className="flex items-center gap-4 py-4">
               <div className="w-12 h-12 rounded-2xl bg-success/10 border border-success/30 flex items-center justify-center">
                 <CheckCircle2 size={24} className="text-success" />

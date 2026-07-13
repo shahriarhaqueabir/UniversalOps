@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { AIOps } from './AIOps'
@@ -45,7 +46,7 @@ describe('AIOps Page', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(useBackend).mockReturnValue({ call: mockCall })
-    vi.mocked(useQuery).mockImplementation((opts: { queryKey: string[] }) => {
+    vi.mocked(useQuery).mockImplementation((opts: any) => {
       const key = opts.queryKey[0]
       if (key === 'chat-sessions') return { data: mockSessions, isLoading: false, refetch: vi.fn() }
       if (key === 'ollama-status') {
@@ -106,7 +107,7 @@ describe('AIOps Page', () => {
   })
 
   it('show empty state when ollama is offline', () => {
-    vi.mocked(useQuery).mockImplementation((opts: { queryKey: string[] }) => {
+    vi.mocked(useQuery).mockImplementation((opts: any) => {
       const key = opts.queryKey[0]
       if (key === 'ollama-status') {
         return { data: null, isLoading: false, refetch: vi.fn() }

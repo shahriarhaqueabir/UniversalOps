@@ -64,6 +64,28 @@ export namespace app {
 	        this.resolved = source["resolved"];
 	    }
 	}
+	export class AlertRuleInfo {
+	    metric: string;
+	    condition: string;
+	    threshold: number;
+	    flap_count: number;
+	    severity: string;
+	    message: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AlertRuleInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.metric = source["metric"];
+	        this.condition = source["condition"];
+	        this.threshold = source["threshold"];
+	        this.flap_count = source["flap_count"];
+	        this.severity = source["severity"];
+	        this.message = source["message"];
+	    }
+	}
 	export class AnomalyInfo {
 	    metric: string;
 	    value: number;
@@ -1379,6 +1401,7 @@ export namespace app {
 	}
 	export class ProcessInfo {
 	    pid: number;
+	    ppid: number;
 	    name: string;
 	    cpu: number;
 	    memory: number;
@@ -1393,6 +1416,7 @@ export namespace app {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.pid = source["pid"];
+	        this.ppid = source["ppid"];
 	        this.name = source["name"];
 	        this.cpu = source["cpu"];
 	        this.memory = source["memory"];
@@ -1771,6 +1795,30 @@ export namespace app {
 
 export namespace common {
 	
+	export class CollectorStatus {
+	    id: string;
+	    name: string;
+	    description: string;
+	    enabled: boolean;
+	    interval_ms: number;
+	    default_interval_ms: number;
+	    last_run: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CollectorStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.description = source["description"];
+	        this.enabled = source["enabled"];
+	        this.interval_ms = source["interval_ms"];
+	        this.default_interval_ms = source["default_interval_ms"];
+	        this.last_run = source["last_run"];
+	    }
+	}
 	export class DataPoint {
 	    // Go type: time
 	    Time: any;

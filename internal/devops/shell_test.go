@@ -266,3 +266,58 @@ func TestRunPowerShell_ProceedsToSandbox(t *testing.T) {
 		t.Logf("RunPowerShell proceeded past allowlist+profile checks (sandbox applied): %v", err)
 	}
 }
+
+func TestRunCommandWithLiveOutput_WaitGroup(t *testing.T) {
+	// Use a safe command that produces output
+	ch := make(chan string, 100)
+
+	// Start a goroutine to consume the channel so we don't deadlock
+	// if the output is larger than the buffer.
+	count := 0
+	done := make(chan bool)
+	go func() {
+		for range ch {
+			count++
+		}
+		done <- true
+	}()
+
+	res, err := RunCommandWithLiveOutput("ipconfig", ch)
+	if err != nil {
+		// If ipconfig is not available (Linux CI), skip
+		t.Skipf("Skipping test: ipconfig failed: %v", err)
+		return
+	}
+
+	<-done
+
+	if count == 0 {
+		t.Log("No lines received from ipconfig (unexpected but possible if output is empty)")
+	} else {
+		t.Logf("Received %d lines from ipconfig", count)
+	}
+
+	if res.Output == "" && count > 0 {
+		t.Error("Result output is empty but lines were received on channel")
+	}
+}
+
+func TestIsDangerousCommand_EdgeCases(t *testing.T) {
+	tests := []struct {
+		cmd  string
+		want bool
+	}{
+		{"echo > file", true},
+		{"echo >> file", true},
+		{"cat file | grep", true},
+		{"rm", false}, // needs space
+		{"rm ", true},
+		{"powershell -c", true},
+		{"./myapp --rm", false},
+	}
+	for _, tt := range tests {
+		if got := IsDangerousCommand(tt.cmd); got != tt.want {
+			t.Errorf("IsDangerousCommand(%q) = %v, want %v", tt.cmd, got, tt.want)
+		}
+	}
+}

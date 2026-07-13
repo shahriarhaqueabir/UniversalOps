@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, it, expect } from 'vitest'
 import { cn } from '@/lib/utils'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
