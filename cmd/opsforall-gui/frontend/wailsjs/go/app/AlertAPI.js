@@ -22,6 +22,10 @@ export function GetAlertHistory() {
   return window['go']['app']['AlertAPI']['GetAlertHistory']();
 }
 
+export function GetRules() {
+  return window['go']['app']['AlertAPI']['GetRules']();
+}
+
 export function RemoveRule(arg1, arg2) {
   return window['go']['app']['AlertAPI']['RemoveRule'](arg1, arg2);
 }

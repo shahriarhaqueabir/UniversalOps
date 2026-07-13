@@ -3,6 +3,7 @@ package common
 import (
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -11,6 +12,7 @@ import (
 var (
 	logFile *os.File
 	zlog    zerolog.Logger
+	logWg   sync.WaitGroup
 )
 
 // InitLogger initializes the session logger with zerolog.
@@ -46,6 +48,8 @@ func InitLogger(filename string) error {
 func CloseLogger() {
 	if logFile != nil {
 		LogInfo("Session ended")
+		// Wait for any pending log writes to the DB to finish
+		logWg.Wait()
 		logFile.Close()
 	}
 }
@@ -55,7 +59,9 @@ func LogInfo(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
 	zlog.Info().Msg(msg)
 	if s := GetStorage(); s != nil {
+		logWg.Add(1)
 		go func() {
+			defer logWg.Done()
 			defer RecoverPanic()
 			s.InsertLog("INFO", "SYSTEM", msg)
 		}()
@@ -67,7 +73,9 @@ func LogWarn(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
 	zlog.Warn().Msg(msg)
 	if s := GetStorage(); s != nil {
+		logWg.Add(1)
 		go func() {
+			defer logWg.Done()
 			defer RecoverPanic()
 			s.InsertLog("WARN", "SYSTEM", msg)
 		}()
@@ -79,7 +87,9 @@ func LogError(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
 	zlog.Error().Msg(msg)
 	if s := GetStorage(); s != nil {
+		logWg.Add(1)
 		go func() {
+			defer logWg.Done()
 			defer RecoverPanic()
 			s.InsertLog("ERROR", "SYSTEM", msg)
 		}()

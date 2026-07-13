@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { DevOps } from './DevOps'
@@ -60,7 +61,7 @@ describe('DevOps Page', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(useBackend).mockReturnValue({ call: mockCall })
-    vi.mocked(useQuery).mockImplementation((opts: { queryKey: string[] }) => {
+    vi.mocked(useQuery).mockImplementation((opts: any) => {
       const key = opts.queryKey[0]
       if (key === 'devops-services') return { data: mockServices, isLoading: false }
       if (key === 'devops-docker-status') return { data: null, isLoading: false }

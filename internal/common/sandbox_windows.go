@@ -272,15 +272,12 @@ func setLowIntegrityLevel(token windows.Token) error {
 	)
 }
 
-// createRestrictedToken creates a token with dangerous privileges disabled.
-// It keeps benign privileges (like SeChangeNotifyPrivilege) enabled so the
-// child process can function normally, while preventing privileged operations.
-func createRestrictedToken() (syscall.Token, error) {
-	// Open the current process token for duplication and adjustment.
+// duplicateProcessToken creates a primary token by duplicating the current process token.
+func duplicateProcessToken() (syscall.Token, error) {
 	var token windows.Token
 	err := windows.OpenProcessToken(
 		windows.CurrentProcess(),
-		windows.TOKEN_DUPLICATE|windows.TOKEN_QUERY|windows.TOKEN_ADJUST_PRIVILEGES|windows.TOKEN_ASSIGN_PRIMARY,
+		windows.TOKEN_DUPLICATE|windows.TOKEN_QUERY,
 		&token,
 	)
 	if err != nil {
@@ -288,7 +285,6 @@ func createRestrictedToken() (syscall.Token, error) {
 	}
 	defer token.Close()
 
-	// Duplicate the token so we can modify it independently.
 	var dup windows.Token
 	err = windows.DuplicateTokenEx(
 		token,
@@ -298,6 +294,18 @@ func createRestrictedToken() (syscall.Token, error) {
 		windows.TokenPrimary,
 		&dup,
 	)
+	if err != nil {
+		return 0, err
+	}
+	return syscall.Token(dup), nil
+}
+
+// createRestrictedToken creates a token with dangerous privileges disabled.
+// It keeps benign privileges (like SeChangeNotifyPrivilege) enabled so the
+// child process can function normally, while preventing privileged operations.
+func createRestrictedToken() (syscall.Token, error) {
+	// First duplicate the token.
+	dup, err := duplicateProcessToken()
 	if err != nil {
 		return 0, err
 	}
@@ -329,7 +337,7 @@ func createRestrictedToken() (syscall.Token, error) {
 		// The memory layout is identical: uint32 count + variable-length array.
 		tp := (*windows.Tokenprivileges)(unsafe.Pointer(buf))
 		err = windows.AdjustTokenPrivileges(
-			dup,
+			windows.Token(dup),
 			false,
 			tp,
 			uint32(unsafe.Sizeof(*buf)),
@@ -337,12 +345,12 @@ func createRestrictedToken() (syscall.Token, error) {
 			nil,
 		)
 		if err != nil {
-			dup.Close()
+			windows.CloseHandle(windows.Handle(dup))
 			return 0, err
 		}
 	}
 
-	return syscall.Token(dup), nil
+	return dup, nil
 }
 
 // applyPlatformSandbox applies Windows sandbox restrictions using Job Objects,
@@ -375,36 +383,30 @@ func applyPlatformSandbox(cmd *exec.Cmd, cfg SandboxConfig) *SandboxedCmd {
 		sa.HideWindow = true
 	}
 
-	// Apply restricted token for privilege drop.
-	if cfg.DropPrivileges {
-		token, err := createRestrictedToken()
-		if err != nil {
-			LogWarn("sandbox: failed to create restricted token: %v (running without privilege drop)", err)
+	// Handle token-based restrictions (privilege drop and integrity levels).
+	if cfg.DropPrivileges || cfg.ReadOnlyFS {
+		var token syscall.Token
+		var err error
+		if cfg.DropPrivileges {
+			token, err = createRestrictedToken()
+			if err != nil {
+				LogWarn("sandbox: failed to create restricted token: %v (running without privilege drop)", err)
+			}
 		} else {
-			sa.Token = token
-		}
-	}
-
-	// Apply Low integrity level for read-only filesystem access.
-	// This prevents the sandboxed process from writing to Medium-integrity
-	// locations (the vast majority of user and system paths).
-	if cfg.ReadOnlyFS {
-		token := windows.Token(sa.Token)
-		if token == 0 {
-			// No restricted token was created; open the process token directly.
-			var err error
-			err = windows.OpenProcessToken(
-				windows.CurrentProcess(),
-				windows.TOKEN_DUPLICATE|windows.TOKEN_QUERY|windows.TOKEN_ADJUST_DEFAULT,
-				&token,
-			)
-			if err == nil {
-				defer token.Close()
+			// Read-only FS requested but no privilege drop.
+			// Duplicate current token so we can modify its integrity without affecting the parent process.
+			token, err = duplicateProcessToken()
+			if err != nil {
+				LogWarn("sandbox: failed to duplicate token for integrity level: %v (running without read-only FS)", err)
 			}
 		}
+
 		if token != 0 {
-			if err := setLowIntegrityLevel(token); err != nil {
-				LogWarn("sandbox: failed to set low integrity level: %v (running without read-only FS)", err)
+			sa.Token = token
+			if cfg.ReadOnlyFS {
+				if err := setLowIntegrityLevel(windows.Token(token)); err != nil {
+					LogWarn("sandbox: failed to set low integrity level: %v (running without read-only FS)", err)
+				}
 			}
 		}
 	}

@@ -6,9 +6,7 @@
 - **Core Value**: Universal deep system visibility and automation for everyone.
 
 ## Active Session
-- **Sprint 26: Rebranding & Legacy Cleanup** ✅ DONE
-- **Sprint 25: Operational Excellence & Feature Wiring** ✅ DONE
-- **Sprint 24: Quality Polish & Documentation Sync** ❌ ARCHIVED (superseded)
+- **Sprint 28: Layer-Driven Code Review** 🔄 IN PROGRESS
 - **Sprint 27: Documentation & Stale Code Audit** ✅ DONE
 
 ## Completed Work

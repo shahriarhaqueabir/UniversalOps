@@ -319,7 +319,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
   const data = liveData || queryData
 
   useEvents('metrics', useCallback((payload: unknown) => {
-    const p = payload as { data?: DashboardData } | DashboardData | null | undefined
+    const p = payload as any
     const d = p?.data ?? p
     if (!d || !d.cpu || !d.memory || !d.disk || !Array.isArray(d.cpu.history)) return
     setLiveData(d)
@@ -429,8 +429,8 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
           <KpiCard icon={<Cpu size={24} />} label="Processor" value={Math.round(data.cpu.value).toString()} unit="%" status={data.cpu.value > 80 ? 'warning' : 'healthy'} description="Measures aggregate clock-cycle pressure." onClick={() => onNavigate?.('sysops')} />
           <KpiCard icon={<MemoryStick size={24} />} label="Memory" value={Math.round(data.memory.value).toString()} unit="%" status={data.memory.value > 85 ? 'warning' : 'healthy'} description="Percentage of volatile allocation." onClick={() => onNavigate?.('sysops')} />
           <KpiCard icon={<HardDrive size={24} />} label="Storage" value={Math.round(data.disk.value).toString()} unit="%" status={data.disk.value > 90 ? 'warning' : 'healthy'} description="Local disk occupancy." onClick={() => onNavigate?.('sysops')} />
-          <KpiCard icon={<Gpu size={24} />} label="GPU" value={data.gpu.detected ? data.gpu.vendor : '—'} status="healthy" description={data.gpu.detected ? `${data.gpu.name}` : 'No GPU detected.'} />
-          <KpiCard icon={<Battery size={24} />} label="Battery" value={data.battery.detected ? Math.round(data.battery.percent).toString() : '—'} unit="%" status="healthy" description={data.battery.detected ? `${data.battery.status}` : 'AC-powered.'} />
+          <KpiCard icon={<Gpu size={24} />} label="GPU" value={data.gpu?.detected ? data.gpu.vendor : '—'} status="healthy" description={data.gpu?.detected ? `${data.gpu.name}` : 'No GPU detected.'} />
+          <KpiCard icon={<Battery size={24} />} label="Battery" value={data.battery?.detected ? Math.round(data.battery.percent).toString() : '—'} unit="%" status="healthy" description={data.battery?.detected ? `${data.battery.status}` : 'AC-powered.'} />
           <KpiCard icon={<Network size={24} />} label="Network" value={`${formatBytes(data.network.rx_rate)} \u2193 / ${formatBytes(data.network.tx_rate)} \u2191`} unit="/s" status="healthy" description="Real-time throughput." onClick={() => onNavigate?.('netops')} />
         </div>
       </div>

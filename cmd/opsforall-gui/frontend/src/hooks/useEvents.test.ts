@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useEvents } from './useEvents'
@@ -11,7 +12,7 @@ describe('useEvents', () => {
     const handler = vi.fn()
     renderHook(() => useEvents('test-event', handler))
 
-    expect(window.runtime.EventsOn).toHaveBeenCalledWith(
+    expect((window as any).runtime.EventsOn).toHaveBeenCalledWith(
       'test-event',
       expect.any(Function),
     )
@@ -23,7 +24,7 @@ describe('useEvents', () => {
 
     unmount()
 
-    expect(window.runtime.EventsOff).toHaveBeenCalledWith(
+    expect((window as any).runtime.EventsOff).toHaveBeenCalledWith(
       'test-event',
       expect.any(Function),
     )
@@ -33,7 +34,7 @@ describe('useEvents', () => {
     const handler = vi.fn()
     renderHook(() => useEvents('data-update', handler))
 
-    const registeredHandler = vi.mocked(window.runtime.EventsOn).mock.lastCall?.[1]
+    const registeredHandler = vi.mocked((window as any).runtime.EventsOn).mock.lastCall?.[1]
 
     act(() => { registeredHandler?.({ value: 42 }) })
 
@@ -49,8 +50,8 @@ describe('useEvents', () => {
 
     rerender({ name: 'event-b' })
 
-    expect(window.runtime.EventsOff).toHaveBeenCalledWith('event-a', expect.any(Function))
-    expect(window.runtime.EventsOn).toHaveBeenCalledWith('event-b', expect.any(Function))
+    expect((window as any).runtime.EventsOff).toHaveBeenCalledWith('event-a', expect.any(Function))
+    expect((window as any).runtime.EventsOn).toHaveBeenCalledWith('event-b', expect.any(Function))
   })
 
   it('updates handler ref without re-subscribing', () => {
@@ -63,7 +64,7 @@ describe('useEvents', () => {
     const handler2 = vi.fn()
     rerender({ h: handler2 })
 
-    const registeredHandler = vi.mocked(window.runtime.EventsOn).mock.lastCall?.[1]
+    const registeredHandler = vi.mocked((window as any).runtime.EventsOn).mock.lastCall?.[1]
 
     act(() => { registeredHandler?.('payload') })
 

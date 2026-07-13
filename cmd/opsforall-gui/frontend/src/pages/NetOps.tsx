@@ -201,7 +201,7 @@ function ConnectivityPanel() {
         const res = await call('NetOps.Ping', '8.8.8.8', 1) as PingStats & { error?: string; ip: string; ttl: number | null }
         if (res?.error) return { status: 'error' as ConnectivityStatus, detail: String(res.error) }
         if (res?.lost > 0) return { status: 'error' as ConnectivityStatus, detail: 'Packet loss detected' }
-        return { status: 'ok' as ConnectivityStatus, detail: `${res.avg_ms}ms latency` }
+        return { status: 'ok' as ConnectivityStatus, detail: `${(res.avg_ms || 0)}ms latency` }
       } catch /* ignore */ { return { status: 'error' as ConnectivityStatus, detail: 'Ping failed' } }
     },
     refetchInterval: 15000,
@@ -348,13 +348,13 @@ export function NetOps() {
         setPingEntries(prev => {
           const lastEntry = prev[prev.length - 1]
           let currentJitter = 0
-          if (lastEntry && lastEntry.rtt_ms !== null && res.avg_ms !== undefined) {
-            currentJitter = Math.abs(res.avg_ms - lastEntry.rtt_ms)
+          if (lastEntry && lastEntry.rtt_ms !== null && (res.avg_ms || 0) !== undefined) {
+            currentJitter = Math.abs((res.avg_ms || 0) - lastEntry.rtt_ms)
           }
           return [...prev.slice(-49), {
             seq: prev.length + 1,
             ip: res.ip,
-            rtt_ms: res.avg_ms || res.min_ms,
+            rtt_ms: (res.avg_ms || 0) || res.min_ms,
             jitter_ms: currentJitter,
             ttl: res.ttl,
             status: res.lost > 0 ? 'timeout' : 'success'
@@ -1122,7 +1122,7 @@ export function NetOps() {
                                   backdropFilter: 'blur(8px)',
                                 }}
                                 labelStyle={{ display: 'none' }}
-                                formatter={(value: number) => [`${Number(value ?? 0).toFixed(2)} Mbps`]}
+                                formatter={(value: any) => [`${Number(value ?? 0).toFixed(2)} Mbps`]}
                               />
                               <Area type="monotone" dataKey="rx" stackId="1" stroke="var(--color-success)" fill={`url(#${gradId}-rx)`} strokeWidth={2} dot={false} />
                               <Area type="monotone" dataKey="tx" stackId="1" stroke="var(--color-accent)" fill={`url(#${gradId}-tx)`} strokeWidth={2} dot={false} />

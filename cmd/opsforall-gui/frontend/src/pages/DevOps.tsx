@@ -259,7 +259,7 @@ function TerminalTab() {
   const [currentCmdId, setCurrentCmdId] = useState<string | null>(null)
   const outputRef = useRef<HTMLDivElement>(null)
 
-  useEvents('DevOps.EventCmdLine', (data) => {
+  useEvents('DevOps.EventCmdLine', (data: any) => {
     if (data.id === currentCmdId) {
       setOutput(prev => [...prev, data.line])
     }

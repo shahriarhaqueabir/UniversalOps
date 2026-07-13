@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -147,9 +148,13 @@ func RunCommandWithLiveOutput(cmd string, output chan string) (result *ShellResu
 		return nil, startErr
 	}
 
+	var wg sync.WaitGroup
+	wg.Add(2)
+
 	// Read stdout
 	go func() {
 		defer common.RecoverPanic()
+		defer wg.Done()
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -161,6 +166,7 @@ func RunCommandWithLiveOutput(cmd string, output chan string) (result *ShellResu
 	// Read stderr
 	go func() {
 		defer common.RecoverPanic()
+		defer wg.Done()
 		scanner := bufio.NewScanner(stderr)
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -170,6 +176,7 @@ func RunCommandWithLiveOutput(cmd string, output chan string) (result *ShellResu
 	}()
 
 	waitErr := c.Wait()
+	wg.Wait()
 	close(output)
 
 	exitCode := 0

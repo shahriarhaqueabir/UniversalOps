@@ -111,3 +111,32 @@ func TestAnswerSystemStateQuery(t *testing.T) {
 		t.Errorf("Expected answer to contain log info, got: %s", answer)
 	}
 }
+
+func TestDetectAnomalies_EmptyHistory(t *testing.T) {
+	anomalies := DetectAnomalies(nil)
+	if len(anomalies) != 0 {
+		t.Errorf("Expected 0 anomalies for nil history, got %d", len(anomalies))
+	}
+
+	anomalies = DetectAnomalies([]common.SystemStats{})
+	if len(anomalies) != 0 {
+		t.Errorf("Expected 0 anomalies for empty history, got %d", len(anomalies))
+	}
+}
+
+func TestDetectAnomalies_DiskPressure(t *testing.T) {
+	history := []common.SystemStats{
+		{DiskUsed: 96.0},
+	}
+	anomalies := DetectAnomalies(history)
+	found := false
+	for _, a := range anomalies {
+		if a.Metric == "disk" && a.Severity == "critical" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("Expected critical disk anomaly for 96%% usage")
+	}
+}
