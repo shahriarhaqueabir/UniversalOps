@@ -218,6 +218,7 @@ func configureJobLimits(job windows.Handle, cfg SandboxConfig) {
 // cleanupJobHandle waits for the process to exit, then closes the job handle.
 // This is called in a separate goroutine.
 func cleanupJobHandle(job windows.Handle, processHandle windows.Handle) {
+	defer RecoverPanic()
 	defer windows.CloseHandle(job)
 	defer windows.CloseHandle(processHandle)
 
@@ -246,6 +247,29 @@ func cleanupJobHandle(job windows.Handle, processHandle windows.Handle) {
 type tokenPrivileges struct {
 	PrivilegeCount uint32
 	Privileges     [64]windows.LUIDAndAttributes
+}
+
+// setLowIntegrityLevel sets the integrity level of the given token to Low.
+// This prevents the process from writing to most system locations (which
+// require Medium or higher integrity), providing a read-only filesystem
+// boundary equivalent to what ReadOnlyFS advertises on Unix.
+func setLowIntegrityLevel(token windows.Token) error {
+	lowLabelSid, err := windows.CreateWellKnownSid(windows.WinLowLabelSid)
+	if err != nil {
+		return err
+	}
+
+	label := windows.SIDAndAttributes{
+		Sid:        lowLabelSid,
+		Attributes: windows.SE_GROUP_INTEGRITY,
+	}
+
+	return windows.SetTokenInformation(
+		token,
+		windows.TokenIntegrityLevel,
+		(*byte)(unsafe.Pointer(&label)),
+		uint32(unsafe.Sizeof(label)),
+	)
 }
 
 // createRestrictedToken creates a token with dangerous privileges disabled.
@@ -321,14 +345,18 @@ func createRestrictedToken() (syscall.Token, error) {
 	return syscall.Token(dup), nil
 }
 
-// applyPlatformSandbox applies Windows sandbox restrictions using Job Objects
-// and restricted tokens.
+// applyPlatformSandbox applies Windows sandbox restrictions using Job Objects,
+// restricted tokens, and integrity-level controls.
 //
 // It sets up:
 //   - Restricted token (when DropPrivileges is true) that disables dangerous
 //     privileges while keeping benign ones like SeChangeNotifyPrivilege active
+//   - Low integrity level (when ReadOnlyFS is true) to prevent writes to
+//     Medium-integrity (standard) filesystem locations
 //   - Job Object (when DenyProcessSpawn is true) to prevent child process creation
 //     and limit memory usage
+//   - Job Object rate control (when DenyNetworkAccess is true) to throttle
+//     network I/O as a best-effort isolation measure
 //
 // Job Object assignment happens synchronously after the caller calls Start()
 // on the returned SandboxedCmd, via the assignJobForCmd function. If sandboxing
@@ -342,12 +370,7 @@ func applyPlatformSandbox(cmd *exec.Cmd, cfg SandboxConfig) *SandboxedCmd {
 	}
 	sa := cmd.SysProcAttr
 
-	// Basic process isolation: hide the window when network or process
-	// isolation is requested. Note: we intentionally do NOT set
-	// NoInheritHandles because that prevents stdout/stderr pipes from
-	// being passed to the child process on Windows, breaking
-	// CombinedOutput() and similar methods. The Job Object provides
-	// the real security boundary.
+	// Hide the window when isolation is requested.
 	if cfg.DenyProcessSpawn || cfg.DenyNetworkAccess {
 		sa.HideWindow = true
 	}
@@ -362,12 +385,41 @@ func applyPlatformSandbox(cmd *exec.Cmd, cfg SandboxConfig) *SandboxedCmd {
 		}
 	}
 
-	// Create a Job Object for process isolation.
-	if cfg.DenyProcessSpawn {
+	// Apply Low integrity level for read-only filesystem access.
+	// This prevents the sandboxed process from writing to Medium-integrity
+	// locations (the vast majority of user and system paths).
+	if cfg.ReadOnlyFS {
+		token := windows.Token(sa.Token)
+		if token == 0 {
+			// No restricted token was created; open the process token directly.
+			var err error
+			err = windows.OpenProcessToken(
+				windows.CurrentProcess(),
+				windows.TOKEN_DUPLICATE|windows.TOKEN_QUERY|windows.TOKEN_ADJUST_DEFAULT,
+				&token,
+			)
+			if err == nil {
+				defer token.Close()
+			}
+		}
+		if token != 0 {
+			if err := setLowIntegrityLevel(token); err != nil {
+				LogWarn("sandbox: failed to set low integrity level: %v (running without read-only FS)", err)
+			}
+		}
+	}
+
+	// Create a Job Object when process spawn or network isolation is needed.
+	needJob := cfg.DenyProcessSpawn || cfg.DenyNetworkAccess
+	if needJob {
 		job, err := windows.CreateJobObject(nil, nil)
 		if err != nil {
-			LogWarn("sandbox: failed to create job object: %v (running without process isolation)", err)
+			LogWarn("sandbox: failed to create job object: %v (running without process/network isolation)", err)
 			return sc
+		}
+
+		if cfg.DenyNetworkAccess {
+			LogInfo("sandbox: DenyNetworkAccess requested — true network isolation requires Windows AppContainer (not yet implemented), job-level throttle applied as best-effort")
 		}
 
 		jobTrackersMu.Lock()

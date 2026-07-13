@@ -16,7 +16,7 @@ var (
 // InitLogger initializes the session logger with zerolog.
 func InitLogger(filename string) error {
 	if filename == "" {
-		filename = "hawkward.log"
+		filename = "opsforall.log"
 	}
 
 	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -35,7 +35,7 @@ func InitLogger(filename string) error {
 	zlog = zerolog.New(output).
 		With().
 		Timestamp().
-		Str("app", "hawkward").
+		Str("app", "opsforall").
 		Logger()
 
 	LogInfo("Session started")
@@ -55,7 +55,10 @@ func LogInfo(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
 	zlog.Info().Msg(msg)
 	if s := GetStorage(); s != nil {
-		go s.InsertLog("INFO", "SYSTEM", msg)
+		go func() {
+			defer RecoverPanic()
+			s.InsertLog("INFO", "SYSTEM", msg)
+		}()
 	}
 }
 
@@ -64,7 +67,10 @@ func LogWarn(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
 	zlog.Warn().Msg(msg)
 	if s := GetStorage(); s != nil {
-		go s.InsertLog("WARN", "SYSTEM", msg)
+		go func() {
+			defer RecoverPanic()
+			s.InsertLog("WARN", "SYSTEM", msg)
+		}()
 	}
 }
 
@@ -73,7 +79,10 @@ func LogError(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
 	zlog.Error().Msg(msg)
 	if s := GetStorage(); s != nil {
-		go s.InsertLog("ERROR", "SYSTEM", msg)
+		go func() {
+			defer RecoverPanic()
+			s.InsertLog("ERROR", "SYSTEM", msg)
+		}()
 	}
 }
 

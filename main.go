@@ -11,14 +11,14 @@ import (
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/app"
 )
 
-//go:embed all:cmd/hawkward-gui/frontend/dist
+//go:embed all:cmd/opsforall-gui/frontend/dist
 var assets embed.FS
 
 func main() {
 	application := app.NewApp()
 
 	err := wails.Run(&options.App{
-		Title:     "Hawkward Operations Platform",
+		Title:     "OpsForAll Universal Platform",
 		Width:     1400,
 		Height:    900,
 		MinWidth:  1024,

@@ -64,6 +64,7 @@ func (d *DevOps) RunCommandLive(cmd string, id string) CommandResult {
 	lineCh := make(chan string, 100)
 
 	go func() {
+		defer common.RecoverPanic()
 		for line := range lineCh {
 			wailsruntime.EventsEmit(d.app.ctx, EventCmdLine, map[string]string{
 				"id":   id,
@@ -102,7 +103,7 @@ func (d *DevOps) ListDirectory(path string) []FileEntry {
 	entries, err := devops.ListDir(path)
 	if err != nil {
 		common.LogWarn("ListDirectory failed: %v", err)
-		return nil
+		return []FileEntry{}
 	}
 	out := make([]FileEntry, 0, len(entries))
 	for _, e := range entries {
@@ -145,7 +146,7 @@ func (d *DevOps) GetDevProcesses() []ProcessInfo {
 	procs, err := sysopsPkg.GetTopProcesses(100)
 	if err != nil {
 		common.LogWarn("GetDevProcesses failed: %v", err)
-		return nil
+		return []ProcessInfo{}
 	}
 	out := make([]ProcessInfo, 0, len(procs))
 	for _, p := range procs {
@@ -176,7 +177,7 @@ func (d *DevOps) TailLog(path string, n int) []string {
 	lines, err := devops.TailLog(path, n)
 	if err != nil {
 		common.LogWarn("TailLog failed: %v", err)
-		return nil
+		return []string{}
 	}
 	return lines
 }
@@ -186,7 +187,7 @@ func (d *DevOps) SearchLog(path string, pattern string) []string {
 	lines, err := devops.SearchLog(path, pattern)
 	if err != nil {
 		common.LogWarn("SearchLog failed: %v", err)
-		return nil
+		return []string{}
 	}
 	return lines
 }
@@ -196,7 +197,7 @@ func (d *DevOps) GetServices() []ServiceEntry {
 	services, err := devops.ListServices(0)
 	if err != nil {
 		common.LogWarn("GetServices failed: %v", err)
-		return nil
+		return []ServiceEntry{}
 	}
 	out := make([]ServiceEntry, 0, len(services))
 	for _, s := range services {
@@ -229,7 +230,7 @@ func (d *DevOps) ControlService(name, action string) bool {
 	return true
 }
 
-// RunPowerShell executes a PowerShell command using the HawkwardHybrid profile.
+// RunPowerShell executes a PowerShell command using the OpsForAll hybrid profile.
 func (d *DevOps) RunPowerShell(cmd string) CommandResult {
 	start := time.Now()
 	result, err := devops.RunPowerShell(cmd)
@@ -280,8 +281,14 @@ func (d *DevOps) GetPowerShellWorkflows() []string {
 
 // sanitizeError strips internal details from errors sent to the frontend.
 func sanitizeError(err error) string {
+	if err == nil {
+		return ""
+	}
 	if errors.Is(err, devops.ErrDangerousCommand) {
 		return "command rejected by security policy"
+	}
+	if errors.Is(err, devops.ErrShellMetachar) {
+		return "command rejected: shell metacharacters not allowed"
 	}
 	// For all other errors, return the message but log full details server-side.
 	return err.Error()
@@ -453,7 +460,7 @@ func firstLine(text string) string {
 // GetContainers returns Docker container status and summary.
 func (d *DevOps) GetContainers() ContainerSummary {
 	if _, err := exec.LookPath("docker"); err != nil {
-		return ContainerSummary{}
+		return ContainerSummary{Containers: []ContainerInfo{}}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -463,7 +470,7 @@ func (d *DevOps) GetContainers() ContainerSummary {
 	var stdout strings.Builder
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
-		return ContainerSummary{}
+		return ContainerSummary{Containers: []ContainerInfo{}}
 	}
 
 	var containers []ContainerInfo
@@ -539,7 +546,7 @@ func findGitRepos(maxRepos int) []string {
 		}
 	}
 
-	var found []string
+	found := []string{}
 	seen := make(map[string]bool)
 
 	for _, dir := range candidates {
@@ -603,11 +610,11 @@ func parseIntOr(s string, fallback int) int {
 // GetGitSummary returns aggregated git repository status.
 func (d *DevOps) GetGitSummary() GitSummary {
 	if _, err := exec.LookPath("git"); err != nil {
-		return GitSummary{}
+		return GitSummary{Repositories: []GitRepoInfo{}}
 	}
 
 	paths := findGitRepos(10)
-	var repos []GitRepoInfo
+	repos := []GitRepoInfo{}
 
 	for _, dir := range paths {
 		branch := gitRun(dir, "rev-parse", "--abbrev-ref", "HEAD")
@@ -731,7 +738,7 @@ func (d *DevOps) getLocalServersWindows() []LocalServer {
 	var stdout strings.Builder
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
-		return nil
+		return []LocalServer{}
 	}
 
 	servers := parseNetstatOutput(stdout.String())
@@ -751,7 +758,7 @@ func (d *DevOps) getLocalServersUnix() []LocalServer {
 	var stdout strings.Builder
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
-		return nil
+		return []LocalServer{}
 	}
 
 	servers := parseSSOutput(stdout.String())
@@ -763,7 +770,7 @@ func (d *DevOps) getLocalServersUnix() []LocalServer {
 
 // parseNetstatOutput parses Windows netstat -ano output for listening ports on localhost.
 func parseNetstatOutput(output string) []LocalServer {
-	var servers []LocalServer
+	servers := []LocalServer{}
 	pidProcess := make(map[string]string)
 
 	for _, line := range strings.Split(output, "\n") {
@@ -844,7 +851,7 @@ func parseNetstatOutput(output string) []LocalServer {
 
 // parseSSOutput parses Linux ss -tlnp output for listening ports.
 func parseSSOutput(output string) []LocalServer {
-	var servers []LocalServer
+	servers := []LocalServer{}
 
 	for _, line := range strings.Split(output, "\n") {
 		line = strings.TrimSpace(line)
@@ -1399,7 +1406,7 @@ func normalizeServiceStatus(status string) string {
 func (d *DevOps) GetServiceCategories() []ServiceCategory {
 	services := d.GetServices()
 	if len(services) == 0 {
-		return nil
+		return []ServiceCategory{}
 	}
 
 	// Bucket services by category

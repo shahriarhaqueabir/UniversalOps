@@ -92,7 +92,7 @@ func (s *SysOps) GetTopProcesses(n int) []ProcessInfo {
 	procs, err := sysops.GetTopProcesses(n)
 	if err != nil {
 		common.LogWarn("GetTopProcesses failed: %v", err)
-		return nil
+		return []ProcessInfo{}
 	}
 	result := make([]ProcessInfo, 0, len(procs))
 	for _, p := range procs {

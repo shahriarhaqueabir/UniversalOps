@@ -1,20 +1,20 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "hawkward-gui",
-  "outputfilename": "hawkward-gui",
-  "frontend:dir": "cmd/hawkward-gui/frontend",
+  "name": "opsforall-gui",
+  "outputfilename": "opsforall-gui",
+  "frontend:dir": "cmd/opsforall-gui/frontend",
   "frontend:install": "npm install",
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "http://localhost:5173",
   "info": {
-    "productName": "Hawkward GUI",
+    "productName": "OpsForAll Universal Platform",
     "productVersion": "1.3.0",
-    "copyright": "Copyright 2026 Hawkward",
+    "copyright": "Copyright 2026 OpsForAll",
     "comments": "Operations Intelligence & Release Hardening"
   },
   "author": {
-    "name": "Hawkward",
-    "email": "dev@hawkward.io"
+    "name": "OpsForAll",
+    "email": "dev@opsforall.io"
   }
 }

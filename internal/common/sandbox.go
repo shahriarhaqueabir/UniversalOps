@@ -44,12 +44,18 @@ func DefaultSandbox() SandboxConfig {
 // OS tools (netsh, netstat, powershell) but don't need network access.
 // DenyProcessSpawn is false because these tools are themselves sub-processes.
 func SystemQuerySandbox() SandboxConfig {
-	return SandboxConfig{
+	cfg := SandboxConfig{
 		DenyNetworkAccess: true,
 		ReadOnlyFS:        true,
 		DenyProcessSpawn:  false,
 		DropPrivileges:    true,
 	}
+	// On Windows, ReadOnlyFS (implemented via Low Integrity Level)
+	// breaks common system tools like ping and netsh.
+	if IsWindows() {
+		cfg.ReadOnlyFS = false
+	}
+	return cfg
 }
 
 // SandboxedCommand creates a sandboxed command with default restrictions.

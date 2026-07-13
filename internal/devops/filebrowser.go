@@ -123,7 +123,7 @@ func ReadFile(path string) (string, error) {
 		return "", err
 	}
 	if isBinaryFile(path, info) {
-		return "// [Hawkward] Binary file content hidden for safety.", nil
+		return "// [OpsForAll] Binary file content hidden for safety.", nil
 	}
 
 	// Limit read to 1MB
@@ -147,7 +147,7 @@ func ReadFile(path string) (string, error) {
 
 	content := string(data)
 	if info.Size() > maxSize {
-		content += "\n\n// [Hawkward] File truncated - viewing first 1MB."
+		content += "\n\n// [OpsForAll] File truncated - viewing first 1MB."
 	}
 	return content, nil
 }

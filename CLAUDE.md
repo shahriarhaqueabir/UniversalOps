@@ -9,12 +9,11 @@
 ## Build & Run
 - **Build**: `wails build` (NOT `go build` — Wails embed + assets require `wails build`)
 - **Dev**: `wails dev`
-- **Frontend Dev**: `cd cmd/hawkward-gui/frontend && npm run dev`
-- **Test (Go)**: `go test ./internal/... -count=1`
-- **Test (Frontend)**: `cd cmd/hawkward-gui/frontend && npm test`
-- **Lint (Frontend)**: `cd cmd/hawkward-gui/frontend && npm run lint`
-- **TypeScript Check**: `cd cmd/hawkward-gui/frontend && npx tsc --noEmit`
-- **Frontend Build**: `cd cmd/hawkward-gui/frontend && npm run build`
+- **Frontend Dev**: `cd cmd/opsforall-gui/frontend && npm run dev`
+- **Test (Frontend)**: `cd cmd/opsforall-gui/frontend && npm test`
+- **Lint (Frontend)**: `cd cmd/opsforall-gui/frontend && npm run lint`
+- **TypeScript Check**: `cd cmd/opsforall-gui/frontend && npx tsc --noEmit`
+- **Frontend Build**: `cd cmd/opsforall-gui/frontend && npm run build`
 - **Go Vet**: `go vet ./...`
 
 ## Code Style
@@ -34,7 +33,7 @@
 
 ## Project Structure
 - `main.go`: Entry point (Wails v2 embed + runtime).
-- `cmd/hawkward-gui/frontend/`: React + Vite frontend.
+- `cmd/opsforall-gui/frontend/`: React + Vite frontend.
 - `internal/common/`: Shared utilities, types, logging, DataPipeline, Storage (SQLite), AlertEngine.
 - `internal/{sysops,netops,secops,devops,aiops}/`: Modular domain logic.
 - `internal/app/`: Wails bindings (AIOps.go, App.go, Dashboard.go, DevOps.go, NetOps.go, SecOps.go, SysOps.go, Types.go, Logs.go, Pipeline.go, Alerts.go, Events.go).

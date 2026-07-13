@@ -7,7 +7,7 @@ import (
 )
 
 func TestListDir(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "hawkward-test-*")
+	tempDir, err := os.MkdirTemp("", "opsforall-test-*")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
@@ -38,7 +38,7 @@ func TestListDir(t *testing.T) {
 }
 
 func TestReadFile_Safety(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "hawkward-read-test-*")
+	tempDir, err := os.MkdirTemp("", "opsforall-read-test-*")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
@@ -55,7 +55,7 @@ func TestReadFile_Safety(t *testing.T) {
 		t.Fatalf("ReadFile failed: %v", err)
 	}
 
-	if content != "// [Hawkward] Binary file content hidden for safety." {
+	if content != "// [OpsForAll] Binary file content hidden for safety." {
 		t.Errorf("Binary file read incorrectly: %q", content)
 	}
 }

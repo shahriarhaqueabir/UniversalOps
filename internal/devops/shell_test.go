@@ -116,6 +116,93 @@ func TestIsDangerousCommand_AllowsSafeCommands(t *testing.T) {
 	}
 }
 
+func TestContainsShellMetachar_DetectsMetacharacters(t *testing.T) {
+	malicious := []struct {
+		name    string
+		cmd     string
+		reason  string
+	}{
+		{"backticks", "echo `whoami`", "backtick substitution"},
+		{"dollar_paren", "echo $(whoami)", "$() command substitution"},
+		{"dollar_curly", "echo ${PATH}", "shell variable expansion"},
+		{"pipe", "ipconfig | findstr foo", "output piping"},
+		{"pipe_no_space", "ipconfig|findstr foo", "pipe without space"},
+		{"redirect_out", "echo foo > file.txt", "output redirect"},
+		{"redirect_append", "echo foo >> file.txt", "append redirect"},
+		{"redirect_in", "cat < file.txt", "input redirect"},
+		{"chain_and", "echo hello & del *.*", "command chaining with &"},
+		{"chain_and_no_space", "echo hello&del *.*", "& chaining without space"},
+		{"chain_semi", "echo hello; rm -rf /", "semicolon chaining"},
+		{"chain_semi_no_space", "echo hello;rm -rf /", "semicolon chaining no space"},
+		{"newline", "echo hello\nrm -rf /", "newline injection"},
+		{"carriage_return", "echo hello\rdel /f *.*", "CR injection"},
+		{"curly_block", "{ rm -rf /; }", "curly brace block"},
+		{"paren_subshell", "(rm -rf /)", "subshell grouping"},
+	}
+	for _, tc := range malicious {
+		t.Run(tc.name, func(t *testing.T) {
+			if !ContainsShellMetachar(tc.cmd) {
+				t.Errorf("ContainsShellMetachar(%q) = false, want true (%s)", tc.cmd, tc.reason)
+			}
+		})
+	}
+}
+
+func TestContainsShellMetachar_AllowsSafeCommands(t *testing.T) {
+	safe := []string{
+		"ipconfig",
+		"ipconfig /all",
+		"ping 8.8.8.8",
+		"ping -n 4 google.com",
+		"netstat -an",
+		"netstat -b",
+		"tasklist",
+		"systeminfo",
+		"dir",
+		"ls",
+		"whoami",
+		"echo hello",
+		"type nul",
+		"go version",
+		"git --version",
+		"docker ps",
+	}
+	for _, cmd := range safe {
+		if ContainsShellMetachar(cmd) {
+			t.Errorf("ContainsShellMetachar(%q) = true, want false", cmd)
+		}
+	}
+}
+
+func TestRunCommand_BlocksShellMetachar(t *testing.T) {
+	bypasses := []string{
+		"echo `whoami`",
+		"echo $(whoami)",
+		"ipconfig | findstr foo",
+	}
+	for _, cmd := range bypasses {
+		_, err := RunCommand(cmd)
+		if err == nil {
+			t.Errorf("RunCommand(%q) should return error for shell metacharacters", cmd)
+		}
+		if !errors.Is(err, ErrShellMetachar) {
+			t.Errorf("RunCommand(%q) error should wrap ErrShellMetachar, got: %v", cmd, err)
+		}
+	}
+}
+
+func TestRunCommandWithLiveOutput_BlocksShellMetachar(t *testing.T) {
+	ch := make(chan string, 10)
+	_, err := RunCommandWithLiveOutput("echo `whoami`", ch)
+	// RunCommandWithLiveOutput closes ch on error — do not close again
+	if err == nil {
+		t.Fatal("RunCommandWithLiveOutput should return error for shell metacharacters")
+	}
+	if !errors.Is(err, ErrShellMetachar) {
+		t.Errorf("RunCommandWithLiveOutput error should wrap ErrShellMetachar, got: %v", err)
+	}
+}
+
 func TestIsDangerousCommand_CaseInsensitive(t *testing.T) {
 	cases := []struct {
 		cmd  string
@@ -148,7 +235,7 @@ func TestRunCommand_BlocksDangerousCommand(t *testing.T) {
 func TestRunCommandWithLiveOutput_BlocksDangerousCommand(t *testing.T) {
 	ch := make(chan string, 10)
 	_, err := RunCommandWithLiveOutput("rm -rf /", ch)
-	close(ch)
+	// RunCommandWithLiveOutput closes ch on error — do not close again
 	if err == nil {
 		t.Fatal("RunCommandWithLiveOutput should return error for dangerous command")
 	}

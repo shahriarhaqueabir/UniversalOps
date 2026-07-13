@@ -175,9 +175,9 @@ func TestConfigDir(t *testing.T) {
 	if dir == "" {
 		t.Error("ConfigDir() returned an empty path")
 	}
-	// Should end with "hawkward"
-	if filepath.Base(dir) != "hawkward" {
-		t.Errorf("ConfigDir() = %q, want path ending with 'hawkward'", dir)
+	// Should end with "opsforall"
+	if filepath.Base(dir) != "opsforall" {
+		t.Errorf("ConfigDir() = %q, want path ending with 'opsforall'", dir)
 	}
 }
 

@@ -8,7 +8,7 @@ updates:
       - "dependencies"
       - "go"
   - package-ecosystem: "npm"
-    directory: "/cmd/hawkward-gui/frontend"
+    directory: "/cmd/opsforall-gui/frontend"
     schedule:
       interval: "weekly"
     labels:

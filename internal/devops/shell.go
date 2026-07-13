@@ -38,6 +38,29 @@ var DangerousCommands = []string{
 // ErrDangerousCommand is returned when a dangerous command is rejected.
 var ErrDangerousCommand = errors.New("command contains dangerous patterns and was blocked server-side")
 
+// ErrShellMetachar is returned when a command contains shell metacharacters
+// that enable command injection (backticks, $(), pipes, redirects, etc.).
+var ErrShellMetachar = errors.New("command contains shell metacharacters and was rejected")
+
+// ShellMetacharacters are characters that enable arbitrary command execution
+// or injection in shell environments (cmd /c, sh -c). Any command containing
+// these characters is rejected regardless of the command blocklist.
+var ShellMetacharacters = []string{
+	"`", "$", "(", ")", "{", "}", "|", "&", ";", "<", ">", "\n", "\r",
+}
+
+// ContainsShellMetachar checks if a command contains any shell metacharacters
+// that could enable command injection. This provides a character-level defense
+// that covers bypass techniques the substring blocklist cannot catch.
+func ContainsShellMetachar(cmd string) bool {
+	for _, mc := range ShellMetacharacters {
+		if strings.Contains(cmd, mc) {
+			return true
+		}
+	}
+	return false
+}
+
 // IsDangerousCommand checks if a command contains dangerous patterns (case-insensitive).
 func IsDangerousCommand(cmd string) bool {
 	lower := strings.ToLower(cmd)
@@ -52,6 +75,9 @@ func IsDangerousCommand(cmd string) bool {
 // RunCommand executes a shell command and returns the combined output.
 // It uses cmd /c on Windows and sh -c on Unix.
 func RunCommand(cmd string) (*ShellResult, error) {
+	if ContainsShellMetachar(cmd) {
+		return nil, fmt.Errorf("%w: %s", ErrShellMetachar, cmd)
+	}
 	if IsDangerousCommand(cmd) {
 		return nil, fmt.Errorf("%w: %s", ErrDangerousCommand, cmd)
 	}
@@ -83,7 +109,17 @@ func RunCommand(cmd string) (*ShellResult, error) {
 
 // RunCommandWithLiveOutput executes a command and streams each line of output
 // through the provided channel. The channel is closed when the command finishes.
-func RunCommandWithLiveOutput(cmd string, output chan string) (*ShellResult, error) {
+// Named return values ensure output is always closed on error paths.
+func RunCommandWithLiveOutput(cmd string, output chan string) (result *ShellResult, err error) {
+	defer func() {
+		if err != nil {
+			close(output)
+		}
+	}()
+
+	if ContainsShellMetachar(cmd) {
+		return nil, fmt.Errorf("%w: %s", ErrShellMetachar, cmd)
+	}
 	if IsDangerousCommand(cmd) {
 		return nil, fmt.Errorf("%w: %s", ErrDangerousCommand, cmd)
 	}
@@ -98,21 +134,22 @@ func RunCommandWithLiveOutput(cmd string, output chan string) (*ShellResult, err
 		c = common.SandboxedCommand("sh", "-c", cmd)
 	}
 
-	stdout, err := c.StdoutPipe()
-	if err != nil {
-		return nil, err
+	stdout, pipeErr := c.StdoutPipe()
+	if pipeErr != nil {
+		return nil, pipeErr
 	}
-	stderr, err := c.StderrPipe()
-	if err != nil {
-		return nil, err
+	stderr, pipeErr := c.StderrPipe()
+	if pipeErr != nil {
+		return nil, pipeErr
 	}
 
-	if err := c.Start(); err != nil {
-		return nil, err
+	if startErr := c.Start(); startErr != nil {
+		return nil, startErr
 	}
 
 	// Read stdout
 	go func() {
+		defer common.RecoverPanic()
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -123,6 +160,7 @@ func RunCommandWithLiveOutput(cmd string, output chan string) (*ShellResult, err
 
 	// Read stderr
 	go func() {
+		defer common.RecoverPanic()
 		scanner := bufio.NewScanner(stderr)
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -131,22 +169,23 @@ func RunCommandWithLiveOutput(cmd string, output chan string) (*ShellResult, err
 		}
 	}()
 
-	err = c.Wait()
+	waitErr := c.Wait()
 	close(output)
 
 	exitCode := 0
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+	if waitErr != nil {
+		if exitErr, ok := waitErr.(*exec.ExitError); ok {
 			exitCode = exitErr.ExitCode()
 		}
 	}
 
-	return &ShellResult{
+	result = &ShellResult{
 		Command:  cmd,
 		Output:   stdoutBuf.String() + stderrBuf.String(),
 		ExitCode: exitCode,
 		Duration: time.Since(start),
-	}, nil
+	}
+	return
 }
 
 // AllowedPowerShellWorkflows is the list of approved PowerShell workflow commands
@@ -165,7 +204,7 @@ var AllowedPowerShellWorkflows = []string{
 // It tries multiple locations in order of preference:
 //  1. Relative to the executable's directory (production build)
 //  2. Relative to the current working directory (dev mode, run from project root)
-//  3. Parent of CWD (dev mode, run from cmd/hawkward-gui)
+//  3. Parent of CWD (dev mode, run from cmd/opsforall-gui)
 //  4. Plain "profiles" relative path
 //
 // Override for testing.

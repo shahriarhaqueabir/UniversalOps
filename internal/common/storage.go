@@ -33,7 +33,7 @@ type Storage struct {
 
 var (
 	// DefaultDBName is the name of the SQLite database file.
-	DefaultDBName = "hawkward.db"
+	DefaultDBName = "opsforall.db"
 	globalStorage *Storage
 )
 
@@ -198,6 +198,7 @@ func (s *Storage) migrate() error {
 
 // writerLoop drains the metrics channel and inserts batches on a ticker.
 func (s *Storage) writerLoop() {
+	defer RecoverPanic()
 	defer s.writerWg.Done()
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
@@ -288,6 +289,7 @@ func (s *Storage) flushMetrics() {
 
 // dailyPruneLoop runs Prune once per day until the storage is closed.
 func (s *Storage) dailyPruneLoop() {
+	defer RecoverPanic()
 	defer s.pruneWg.Done()
 	ticker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()

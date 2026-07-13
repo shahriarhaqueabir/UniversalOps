@@ -154,8 +154,14 @@ func TestSystemQuerySandbox(t *testing.T) {
 	if !cfg.DenyNetworkAccess {
 		t.Error("SystemQuerySandbox().DenyNetworkAccess should be true")
 	}
-	if !cfg.ReadOnlyFS {
-		t.Error("SystemQuerySandbox().ReadOnlyFS should be true")
+	if IsWindows() {
+		if cfg.ReadOnlyFS {
+			t.Error("SystemQuerySandbox().ReadOnlyFS should be false on Windows (integrity breakage)")
+		}
+	} else {
+		if !cfg.ReadOnlyFS {
+			t.Error("SystemQuerySandbox().ReadOnlyFS should be true")
+		}
 	}
 	if cfg.DenyProcessSpawn {
 		t.Error("SystemQuerySandbox().DenyProcessSpawn should be false (system tools need to run)")

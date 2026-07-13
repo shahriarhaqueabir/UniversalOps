@@ -20,7 +20,7 @@ func NewPipelineAPI(app *App) *PipelineAPI {
 func (p *PipelineAPI) GetMetricHistory(name string, n int) []float64 {
 	ts := p.app.pipeline.GetTimeSeries(name)
 	if ts == nil {
-		return nil
+		return []float64{}
 	}
 	values := ts.Values()
 	if n > 0 && len(values) > n {
@@ -33,7 +33,7 @@ func (p *PipelineAPI) GetMetricHistory(name string, n int) []float64 {
 func (p *PipelineAPI) GetMetricHistoryWithTimestamps(name string, n int) []common.DataPoint {
 	ts := p.app.pipeline.GetTimeSeries(name)
 	if ts == nil {
-		return nil
+		return []common.DataPoint{}
 	}
 	points := ts.DataPoints()
 	if n > 0 && len(points) > n {
@@ -114,15 +114,7 @@ func (p *PipelineAPI) UpdateSettings(intervalMs int, capacity int, pingCount int
 	cfg := p.app.pipeline.Config()
 
 	if intervalMs > 0 {
-		newInterval := time.Duration(intervalMs) * time.Millisecond
-		cfg.TickInterval = newInterval
-
-		// Signal the tick loop to use the new interval
-		select {
-		case p.app.tickIntervalCh <- newInterval:
-		default:
-			// Channel full, loop will pick up next time or ignore if same
-		}
+		cfg.TickInterval = time.Duration(intervalMs) * time.Millisecond
 	}
 
 	if capacity > 0 {

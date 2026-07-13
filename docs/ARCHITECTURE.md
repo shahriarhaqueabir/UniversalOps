@@ -1,6 +1,6 @@
-# Hawkward — Architecture Document
+# OpsForAll — Architecture Document
 
-> A native desktop operations platform built with Go and Wails v2, featuring a React + Tailwind GUI.
+> A native desktop operations platform built with Go and Wails v2, featuring a React + Tailwind GUI. Inspired by heroic "One For All" principles.
 
 ---
 
@@ -19,7 +19,8 @@
 
 ## Overview
 
-Hawkward is a premium native desktop application that provides system administrators, developers, and security professionals with a unified operations dashboard. It leverages the Wails framework to combine Go's performance and system access with the flexibility of a modern React frontend.
+OpsForAll
+ is a premium native desktop application that provides system administrators, developers, and security professionals with a unified operations dashboard. It leverages the Wails framework to combine Go's performance and system access with the flexibility of a modern React frontend.
 
 ### Goals
 
@@ -183,7 +184,7 @@ AllOpsFull/
 │   ├── secops/                # Firewall, Defender, Users, Events
 │   ├── devops/                # Shell, FileBrowser, Services
 │   └── aiops/                 # Ollama client, Report generation
-├── cmd/hawkward-gui/frontend/ # React + TypeScript + Vite frontend
+├── cmd/opsforall-gui/frontend/ # React + TypeScript + Vite frontend
 │   ├── src/
 │   │   ├── components/        # Layout, UI components, Overlays
 │   │   ├── pages/             # Domain-specific views
@@ -218,7 +219,7 @@ Settings (refresh intervals, themes, etc.) are managed in a Zustand store and sy
 ## Key Decisions
 
 ### Why Wails v2 + React?
-Compared to TUI frameworks (like Bubble Tea) or heavy Electron apps:
+Compared to heavy Electron apps:
 - **Low Footprint**: Uses the native OS WebView (WebView2 on Windows) instead of bundling Chromium.
 - **Go Power**: Direct access to system APIs, networking, and high-performance concurrency.
 - **Modern UI**: Full CSS/JS ecosystem for complex charts (Recharts) and accessible interactions (Radix).
@@ -227,8 +228,9 @@ Compared to TUI frameworks (like Bubble Tea) or heavy Electron apps:
 To handle frequent metric writes from the `DataPipeline` without blocking read queries from the UI, we use **Write-Ahead Logging (WAL)**.
 
 ### Why Local-First AI?
-Hawkward integrates with **Ollama** locally. This ensures that sensitive system architecture and logs never leave the user's machine, satisfying enterprise privacy requirements.
+OpsForAll
+ integrates with **Ollama** locally. This ensures that sensitive system architecture and logs never leave the user's machine, satisfying enterprise privacy requirements.
 
 ---
 
-*Last updated: 2025-05-22 (Sprint 24)*
+*Last updated: 2026-07-12*
