@@ -1,0 +1,1110 @@
+<think>
+The user wants me to generate a comprehensive knowledge graph for the OpsForAll Universal Platform project based on the provided description. I need to extract entities (nodes) and relationships (edges) from the given information and output them in a structured JSON format.
+
+Let me analyze the input:
+
+**Entities to extract:**
+1. App - Wails orchestrator
+2. DataPipeline - Central metric ingestion with forecast engine
+3. AlertEngine - Threshold alerts with flap detection and dedup
+4. EventBus - Pub-sub for timeline events
+5. TimeSeriesStore - Ring buffer per metric
+6. ForecastEngine - Linear regression, SMA, EMA, trend detection
+7. CollectorRegistry - 6 collectors
+8. CollectorScheduler - Goroutine per collector
+9. Storage - SQLite WAL
+10. PrometheusExporter - :9210/metrics endpoint
+
+Domain modules:
+- SysOps
+- NetOps
+- SecOps
+- DevOps
+- AIOps
+- NetworkDesign
+
+Frontend components:
+- Pages (Dashboard, SysOps, NetOps, SecOps, DevOps, AIOps, Logs, Settings, NetworkDesign)
+- Stores (useSettingsStore, useOllamaStore, useThemeStore, useAlertStore)
+- Hooks (useBackend, useEvents)
+- Layout components (Sidebar, TopBar, MainContent)
+
+**Relations to extract:**
+- App -> owns -> DataPipeline, AlertEngine, EventBus
+- App -> binds -> SysOps, NetOps, SecOps, DevOps, AIOps, Dashboard, PipelineAPI, AlertAPI, Logs, Timeline, NetworkDesign
+- DataPipeline -> contains -> TimeSeriesStore, ForecastEngine
+- DataPipeline -> pushes to -> Storage
+- CollectorScheduler -> runs -> Collectors -> pushes to -> DataPipeline
+- AlertEngine -> reads from -> DataPipeline -> fires alerts
+- EventBus -> persists to -> Storage, emits to -> Frontend
+- Frontend -> useEvents -> receives Wails events -> updates React state
+- All domain modules -> depend on -> common package
+
+Let me structure this into a proper JSON format with nodes and edges.
+
+I'll create:
+1. Nodes (entities) with their types and properties
+2. Edges (relations) with active verbs
+
+Let me think about the node types:
+- App, DataPipeline, AlertEngine, EventBus, TimeSeriesStore, ForecastEngine, CollectorRegistry, CollectorScheduler, Storage, PrometheusExporter -> System/Module
+- SysOps, NetOps, SecOps, DevOps, AIOps, NetworkDesign -> Domain Module
+- Pages (Dashboard, SysOps, etc.) -> Page
+- Stores -> Store
+- Hooks -> Hook
+- Layout components -> Component
+
+For edges, I need active verbs:
+- owns, contains, pushes_to, reads_from, fires_alerts, persists_to, emits_to, receives_events, updates_state, depends_on, runs, binds
+
+Let me create a comprehensive JSON output.
+</think>
+
+```json
+{
+  "nodes": [
+    {
+      "id": "app-orchestrator",
+      "name": "App",
+      "type": "System",
+      "properties": {
+        "description": "Wails orchestrator, owns all subsystems",
+        "role": "Orchestrator"
+      },
+      "evidence": "App - Wails orchestrator, owns all subsystems",
+      "confidence": 1.0
+    },
+    {
+      "id": "data-pipeline",
+      "name": "DataPipeline",
+      "type": "System",
+      "properties": {
+        "description": "Central metric ingestion with forecast engine per metric",
+        "role": "Ingestion Engine"
+      },
+      "evidence": "DataPipeline - Central metric ingestion with forecast engine per metric",
+      "confidence": 1.0
+    },
+    {
+      "id": "alert-engine",
+      "name": "AlertEngine",
+      "type": "System",
+      "properties": {
+        "description": "Threshold alerts with flap detection and dedup",
+        "role": "Alerting Engine"
+      },
+      "evidence": "AlertEngine - Threshold alerts with flap detection and dedup",
+      "confidence": 1.0
+    },
+    {
+      "id": "event-bus",
+      "name": "EventBus",
+      "type": "System",
+      "properties": {
+        "description": "Pub-sub for timeline events, persists to SQLite",
+        "role": "Event Bus"
+      },
+      "evidence": "EventBus - Pub-sub for timeline events, persists to SQLite",
+      "confidence": 1.0
+    },
+    {
+      "id": "time-series-store",
+      "name": "TimeSeriesStore",
+      "type": "System",
+      "properties": {
+        "description": "Ring buffer per metric (240 samples, ~4min)",
+        "role": "Storage"
+      },
+      "evidence": "TimeSeriesStore - Ring buffer per metric (240 samples, ~4min)",
+      "confidence": 1.0
+    },
+    {
+      "id": "forecast-engine",
+      "name": "ForecastEngine",
+      "type": "System",
+      "properties": {
+        "description": "Linear regression, SMA, EMA, trend detection",
+        "role": "Analytics"
+      },
+      "evidence": "ForecastEngine - Linear regression, SMA, EMA, trend detection",
+      "confidence": 1.0
+    },
+    {
+      "id": "collector-registry",
+      "name": "CollectorRegistry",
+      "type": "System",
+      "properties": {
+        "description": "6 collectors: CPU(3s), Memory(5s), Disk(10s), Network(5s), Temperature(15s,disabled), Processes(15s)",
+        "role": "Registry"
+      },
+      "evidence": "CollectorRegistry - 6 collectors: CPU(3s), Memory(5s), Disk(10s), Network(5s), Temperature(15s,disabled), Processes(15s)",
+      "confidence": 1.0
+    },
+    {
+      "id": "collector-scheduler",
+      "name": "CollectorScheduler",
+      "type": "System",
+      "properties": {
+        "description": "Goroutine per collector with exponential backoff",
+        "role": "Scheduler"
+      },
+      "evidence": "CollectorScheduler - Goroutine per collector with exponential backoff",
+      "confidence": 1.0
+    },
+    {
+      "id": "storage-wal",
+      "name": "Storage",
+      "type": "System",
+      "properties": {
+        "description": "SQLite WAL, batched writes, daily prune",
+        "role": "Persistent Storage"
+      },
+      "evidence": "Storage - SQLite WAL, batched writes, daily prune",
+      "confidence": 1.0
+    },
+    {
+      "id": "prometheus-exporter",
+      "name": "PrometheusExporter",
+      "type": "System",
+      "properties": {
+        "description": ":9210/metrics endpoint",
+        "role": "Exporter"
+      },
+      "evidence": "PrometheusExporter - :9210/metrics endpoint",
+      "confidence": 1.0
+    },
+    {
+      "id": "sysops-domain",
+      "name": "SysOps",
+      "type": "DomainModule",
+      "properties": {
+        "description": "CPU, Memory, Disk, GPU, Battery, Processes, Scheduler, Diagnostics, Packages, Logs",
+        "role": "System Operations"
+      },
+      "evidence": "SysOps: CPU, Memory, Disk, GPU, Battery, Processes, Scheduler, Diagnostics, Packages, Logs",
+      "confidence": 1.0
+    },
+    {
+      "id": "netops-domain",
+      "name": "NetOps",
+      "type": "DomainModule",
+      "properties": {
+        "description": "Ping, DNS, PortScan, Traceroute, Connections, Interfaces, Firewall, VPN, WiFi, ARP, Routing, Health, Monitoring, Discovery",
+        "role": "Network Operations"
+      },
+      "evidence": "NetOps: Ping, DNS, PortScan, Traceroute, Connections, Interfaces, Firewall, VPN, WiFi, ARP, Routing, Health, Monitoring, Discovery",
+      "confidence": 1.0
+    },
+    {
+      "id": "secops-domain",
+      "name": "SecOps",
+      "type": "DomainModule",
+      "properties": {
+        "description": "Audit, Defender, Endpoint, Events, Firewall, Hardening, Listening, Network, Response, Security, Tasks, Users",
+        "role": "Security Operations"
+      },
+      "evidence": "SecOps: Audit, Defender, Endpoint, Events, Firewall, Hardening, Listening, Network, Response, Security, Tasks, Users",
+      "confidence": 1.0
+    },
+    {
+      "id": "devops-domain",
+      "name": "DevOps",
+      "type": "DomainModule",
+      "properties": {
+        "description": "Shell, FileBrowser, Services, Git, Docker, Kubernetes, Builds, CICD, Releases, LogTail, Diagnostics",
+        "role": "Development Operations"
+      },
+      "evidence": "DevOps: Shell, FileBrowser, Services, Git, Docker, Kubernetes, Builds, CICD, Releases, LogTail, Diagnostics",
+      "confidence": 1.0
+    },
+    {
+      "id": "aiops-domain",
+      "name": "AIOps",
+      "type": "DomainModule",
+      "properties": {
+        "description": "Ollama (chat, status, model discovery), Reporting, StateQuery",
+        "role": "AI Operations"
+      },
+      "evidence": "AIOps: Ollama (chat, status, model discovery), Reporting, StateQuery",
+      "confidence": 1.0
+    },
+    {
+      "id": "network-design-domain",
+      "name": "NetworkDesign",
+      "type": "DomainModule",
+      "properties": {
+        "description": "Analysis, Discovery, Topology",
+        "role": "Network Design"
+      },
+      "evidence": "NetworkDesign: Analysis, Discovery, Topology",
+      "confidence": 1.0
+    },
+    {
+      "id": "dashboard-page",
+      "name": "Dashboard",
+      "type": "Page",
+      "properties": {
+        "description": "Main dashboard view",
+        "role": "UI Page"
+      },
+      "evidence": "Pages: Dashboard, SysOps, NetOps, SecOps, DevOps, AIOps, Logs, Settings, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "id": "sysops-page",
+      "name": "SysOps Page",
+      "type": "Page",
+      "properties": {
+        "description": "System operations view",
+        "role": "UI Page"
+      },
+      "evidence": "Pages: Dashboard, SysOps, NetOps, SecOps, DevOps, AIOps, Logs, Settings, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "id": "netops-page",
+      "name": "NetOps Page",
+      "type": "Page",
+      "properties": {
+        "description": "Network operations view",
+        "role": "UI Page"
+      },
+      "evidence": "Pages: Dashboard, SysOps, NetOps, SecOps, DevOps, AIOps, Logs, Settings, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "id": "secops-page",
+      "name": "SecOps Page",
+      "type": "Page",
+      "properties": {
+        "description": "Security operations view",
+        "role": "UI Page"
+      },
+      "evidence": "Pages: Dashboard, SysOps, NetOps, SecOps, DevOps, AIOps, Logs, Settings, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "id": "devops-page",
+      "name": "DevOps Page",
+      "type": "Page",
+      "properties": {
+        "description": "Development operations view",
+        "role": "UI Page"
+      },
+      "evidence": "Pages: Dashboard, SysOps, NetOps, SecOps, DevOps, AIOps, Logs, Settings, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "id": "aiops-page",
+      "name": "AIOps Page",
+      "type": "Page",
+      "properties": {
+        "description": "AI operations view",
+        "role": "UI Page"
+      },
+      "evidence": "Pages: Dashboard, SysOps, NetOps, SecOps, DevOps, AIOps, Logs, Settings, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "id": "logs-page",
+      "name": "Logs Page",
+      "type": "Page",
+      "properties": {
+        "description": "Log viewing page",
+        "role": "UI Page"
+      },
+      "evidence": "Pages: Dashboard, SysOps, NetOps, SecOps, DevOps, AIOps, Logs, Settings, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "id": "settings-page",
+      "name": "Settings Page",
+      "type": "Page",
+      "properties": {
+        "description": "Application settings page",
+        "role": "UI Page"
+      },
+      "evidence": "Pages: Dashboard, SysOps, NetOps, SecOps, DevOps, AIOps, Logs, Settings, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "id": "network-design-page",
+      "name": "NetworkDesign Page",
+      "type": "Page",
+      "properties": {
+        "description": "Network design view",
+        "role": "UI Page"
+      },
+      "evidence": "Pages: Dashboard, SysOps, NetOps, SecOps, DevOps, AIOps, Logs, Settings, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "id": "use-settings-store",
+      "name": "useSettingsStore",
+      "type": "Store",
+      "properties": {
+        "description": "Zustand store for application settings",
+        "role": "State Management"
+      },
+      "evidence": "Stores: useSettingsStore, useOllamaStore, useThemeStore, useAlertStore (Zustand)",
+      "confidence": 1.0
+    },
+    {
+      "id": "use-ollama-store",
+      "name": "useOllamaStore",
+      "type": "Store",
+      "properties": {
+        "description": "Zustand store for Ollama AI state",
+        "role": "State Management"
+      },
+      "evidence": "Stores: useSettingsStore, useOllamaStore, useThemeStore, useAlertStore (Zustand)",
+      "confidence": 1.0
+    },
+    {
+      "id": "use-theme-store",
+      "name": "useThemeStore",
+      "type": "Store",
+      "properties": {
+        "description": "Zustand store for theme preferences",
+        "role": "State Management"
+      },
+      "evidence": "Stores: useSettingsStore, useOllamaStore, useThemeStore, useAlertStore (Zustand)",
+      "confidence": 1.0
+    },
+    {
+      "id": "use-alert-store",
+      "name": "useAlertStore",
+      "type": "Store",
+      "properties": {
+        "description": "Zustand store for alert state",
+        "role": "State Management"
+      },
+      "evidence": "Stores: useSettingsStore, useOllamaStore, useThemeStore, useAlertStore (Zustand)",
+      "confidence": 1.0
+    },
+    {
+      "id": "use-backend-hook",
+      "name": "useBackend",
+      "type": "Hook",
+      "properties": {
+        "description": "Wails bindings hook for backend communication",
+        "role": "IPC Hook"
+      },
+      "evidence": "Hooks: useBackend (Wails bindings), useEvents (IPC events)",
+      "confidence": 1.0
+    },
+    {
+      "id": "use-events-hook",
+      "name": "useEvents",
+      "type": "Hook",
+      "properties": {
+        "description": "IPC events hook for frontend-backend communication",
+        "role": "IPC Hook"
+      },
+      "evidence": "Hooks: useBackend (Wails bindings), useEvents (IPC events)",
+      "confidence": 1.0
+    },
+    {
+      "id": "sidebar-layout",
+      "name": "Sidebar",
+      "type": "Component",
+      "properties": {
+        "description": "Navigation sidebar component",
+        "role": "Layout"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 1.0
+    },
+    {
+      "id": "topbar-layout",
+      "name": "TopBar",
+      "type": "Component",
+      "properties": {
+        "description": "Top navigation bar component",
+        "role": "Layout"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 1.0
+    },
+    {
+      "id": "main-content-layout",
+      "name": "MainContent",
+      "type": "Component",
+      "properties": {
+        "description": "Main content area component",
+        "role": "Layout"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 1.0
+    },
+    {
+      "id": "pipeline-api",
+      "name": "PipelineAPI",
+      "type": "API",
+      "properties": {
+        "description": "API for pipeline operations",
+        "role": "Interface"
+      },
+      "evidence": "App -> binds -> SysOps, NetOps, SecOps, DevOps, AIOps, Dashboard, PipelineAPI, AlertAPI, Logs, Timeline, NetworkDesign",
+      "confidence": 0.9
+    },
+    {
+      "id": "alert-api",
+      "name": "AlertAPI",
+      "type": "API",
+      "properties": {
+        "description": "API for alert operations",
+        "role": "Interface"
+      },
+      "evidence": "App -> binds -> SysOps, NetOps, SecOps, DevOps, AIOps, Dashboard, PipelineAPI, AlertAPI, Logs, Timeline, NetworkDesign",
+      "confidence": 0.9
+    },
+    {
+      "id": "timeline-view",
+      "name": "Timeline",
+      "type": "View",
+      "properties": {
+        "description": "Timeline view component",
+        "role": "UI View"
+      },
+      "evidence": "App -> binds -> SysOps, NetOps, SecOps, DevOps, AIOps, Dashboard, PipelineAPI, AlertAPI, Logs, Timeline, NetworkDesign",
+      "confidence": 0.9
+    },
+    {
+      "id": "common-package",
+      "name": "Common Package",
+      "type": "Package",
+      "properties": {
+        "description": "Shared utilities and types used by all domain modules",
+        "role": "Dependency"
+      },
+      "evidence": "All domain modules -> depend on -> common package",
+      "confidence": 1.0
+    }
+  ],
+  "edges": [
+    {
+      "source": "app-orchestrator",
+      "target": "data-pipeline",
+      "type": "OWNS",
+      "properties": {
+        "description": "App orchestrator owns the data pipeline subsystem"
+      },
+      "evidence": "App - Wails orchestrator, owns all subsystems",
+      "confidence": 1.0
+    },
+    {
+      "source": "app-orchestrator",
+      "target": "alert-engine",
+      "type": "OWNS",
+      "properties": {
+        "description": "App orchestrator owns the alert engine subsystem"
+      },
+      "evidence": "App - Wails orchestrator, owns all subsystems",
+      "confidence": 1.0
+    },
+    {
+      "source": "app-orchestrator",
+      "target": "event-bus",
+      "type": "OWNS",
+      "properties": {
+        "description": "App orchestrator owns the event bus subsystem"
+      },
+      "evidence": "App - Wails orchestrator, owns all subsystems",
+      "confidence": 1.0
+    },
+    {
+      "source": "app-orchestrator",
+      "target": "sysops-domain",
+      "type": "BINDS",
+      "properties": {
+        "description": "App binds to SysOps domain module"
+      },
+      "evidence": "App -> binds -> SysOps, NetOps, SecOps, DevOps, AIOps, Dashboard, PipelineAPI, AlertAPI, Logs, Timeline, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "source": "app-orchestrator",
+      "target": "netops-domain",
+      "type": "BINDS",
+      "properties": {
+        "description": "App binds to NetOps domain module"
+      },
+      "evidence": "App -> binds -> SysOps, NetOps, SecOps, DevOps, AIOps, Dashboard, PipelineAPI, AlertAPI, Logs, Timeline, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "source": "app-orchestrator",
+      "target": "secops-domain",
+      "type": "BINDS",
+      "properties": {
+        "description": "App binds to SecOps domain module"
+      },
+      "evidence": "App -> binds -> SysOps, NetOps, SecOps, DevOps, AIOps, Dashboard, PipelineAPI, AlertAPI, Logs, Timeline, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "source": "app-orchestrator",
+      "target": "devops-domain",
+      "type": "BINDS",
+      "properties": {
+        "description": "App binds to DevOps domain module"
+      },
+      "evidence": "App -> binds -> SysOps, NetOps, SecOps, DevOps, AIOps, Dashboard, PipelineAPI, AlertAPI, Logs, Timeline, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "source": "app-orchestrator",
+      "target": "aiops-domain",
+      "type": "BINDS",
+      "properties": {
+        "description": "App binds to AIOps domain module"
+      },
+      "evidence": "App -> binds -> SysOps, NetOps, SecOps, DevOps, AIOps, Dashboard, PipelineAPI, AlertAPI, Logs, Timeline, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "source": "app-orchestrator",
+      "target": "network-design-domain",
+      "type": "BINDS",
+      "properties": {
+        "description": "App binds to NetworkDesign domain module"
+      },
+      "evidence": "App -> binds -> SysOps, NetOps, SecOps, DevOps, AIOps, Dashboard, PipelineAPI, AlertAPI, Logs, Timeline, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "source": "app-orchestrator",
+      "target": "dashboard-page",
+      "type": "BINDS",
+      "properties": {
+        "description": "App binds to Dashboard page"
+      },
+      "evidence": "App -> binds -> SysOps, NetOps, SecOps, DevOps, AIOps, Dashboard, PipelineAPI, AlertAPI, Logs, Timeline, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "source": "app-orchestrator",
+      "target": "pipeline-api",
+      "type": "BINDS",
+      "properties": {
+        "description": "App binds to PipelineAPI"
+      },
+      "evidence": "App -> binds -> SysOps, NetOps, SecOps, DevOps, AIOps, Dashboard, PipelineAPI, AlertAPI, Logs, Timeline, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "source": "app-orchestrator",
+      "target": "alert-api",
+      "type": "BINDS",
+      "properties": {
+        "description": "App binds to AlertAPI"
+      },
+      "evidence": "App -> binds -> SysOps, NetOps, SecOps, DevOps, AIOps, Dashboard, PipelineAPI, AlertAPI, Logs, Timeline, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "source": "app-orchestrator",
+      "target": "logs-page",
+      "type": "BINDS",
+      "properties": {
+        "description": "App binds to Logs page"
+      },
+      "evidence": "App -> binds -> SysOps, NetOps, SecOps, DevOps, AIOps, Dashboard, PipelineAPI, AlertAPI, Logs, Timeline, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "source": "app-orchestrator",
+      "target": "timeline-view",
+      "type": "BINDS",
+      "properties": {
+        "description": "App binds to Timeline view"
+      },
+      "evidence": "App -> binds -> SysOps, NetOps, SecOps, DevOps, AIOps, Dashboard, PipelineAPI, AlertAPI, Logs, Timeline, NetworkDesign",
+      "confidence": 1.0
+    },
+    {
+      "source": "data-pipeline",
+      "target": "time-series-store",
+      "type": "CONTAINS",
+      "properties": {
+        "description": "DataPipeline contains TimeSeriesStore for metric storage"
+      },
+      "evidence": "DataPipeline -> contains -> TimeSeriesStore, ForecastEngine",
+      "confidence": 1.0
+    },
+    {
+      "source": "data-pipeline",
+      "target": "forecast-engine",
+      "type": "CONTAINS",
+      "properties": {
+        "description": "DataPipeline contains ForecastEngine for metric forecasting"
+      },
+      "evidence": "DataPipeline -> contains -> TimeSeriesStore, ForecastEngine",
+      "confidence": 1.0
+    },
+    {
+      "source": "data-pipeline",
+      "target": "storage-wal",
+      "type": "PUSHES_TO",
+      "properties": {
+        "description": "DataPipeline pushes ingested metrics to Storage"
+      },
+      "evidence": "DataPipeline -> pushes to -> Storage",
+      "confidence": 1.0
+    },
+    {
+      "source": "collector-scheduler",
+      "target": "collector-registry",
+      "type": "RUNS",
+      "properties": {
+        "description": "CollectorScheduler runs collectors registered in CollectorRegistry"
+      },
+      "evidence": "CollectorScheduler -> runs -> Collectors -> pushes to -> DataPipeline",
+      "confidence": 1.0
+    },
+    {
+      "source": "collector-registry",
+      "target": "data-pipeline",
+      "type": "PUSHES_TO",
+      "properties": {
+        "description": "Collectors push collected metrics to DataPipeline"
+      },
+      "evidence": "CollectorScheduler -> runs -> Collectors -> pushes to -> DataPipeline",
+      "confidence": 1.0
+    },
+    {
+      "source": "alert-engine",
+      "target": "data-pipeline",
+      "type": "READS_FROM",
+      "properties": {
+        "description": "AlertEngine reads metric data from DataPipeline"
+      },
+      "evidence": "AlertEngine -> reads from -> DataPipeline -> fires alerts",
+      "confidence": 1.0
+    },
+    {
+      "source": "alert-engine",
+      "target": "event-bus",
+      "type": "FIRES_ALERTS_TO",
+      "properties": {
+        "description": "AlertEngine fires alerts to EventBus for timeline recording"
+      },
+      "evidence": "AlertEngine -> reads from -> DataPipeline -> fires alerts",
+      "confidence": 1.0
+    },
+    {
+      "source": "event-bus",
+      "target": "storage-wal",
+      "type": "PERSISTS_TO",
+      "properties": {
+        "description": "EventBus persists timeline events to Storage"
+      },
+      "evidence": "EventBus -> persists to -> Storage, emits to -> Frontend",
+      "confidence": 1.0
+    },
+    {
+      "source": "event-bus",
+      "target": "use-events-hook",
+      "type": "EMITS_TO",
+      "properties": {
+        "description": "EventBus emits events to useEvents hook for frontend state updates"
+      },
+      "evidence": "EventBus -> persists to -> Storage, emits to -> Frontend",
+      "confidence": 1.0
+    },
+    {
+      "source": "use-events-hook",
+      "target": "use-settings-store",
+      "type": "UPDATES_STATE_OF",
+      "properties": {
+        "description": "useEvents hook updates React state via Zustand stores"
+      },
+      "evidence": "Frontend -> useEvents -> receives Wails events -> updates React state",
+      "confidence": 1.0
+    },
+    {
+      "source": "use-events-hook",
+      "target": "use-ollama-store",
+      "type": "UPDATES_STATE_OF",
+      "properties": {
+        "description": "useEvents hook updates React state via Zustand stores"
+      },
+      "evidence": "Frontend -> useEvents -> receives Wails events -> updates React state",
+      "confidence": 1.0
+    },
+    {
+      "source": "use-events-hook",
+      "target": "use-theme-store",
+      "type": "UPDATES_STATE_OF",
+      "properties": {
+        "description": "useEvents hook updates React state via Zustand stores"
+      },
+      "evidence": "Frontend -> useEvents -> receives Wails events -> updates React state",
+      "confidence": 1.0
+    },
+    {
+      "source": "use-events-hook",
+      "target": "use-alert-store",
+      "type": "UPDATES_STATE_OF",
+      "properties": {
+        "description": "useEvents hook updates React state via Zustand stores"
+      },
+      "evidence": "Frontend -> useEvents -> receives Wails events -> updates React state",
+      "confidence": 1.0
+    },
+    {
+      "source": "sysops-domain",
+      "target": "common-package",
+      "type": "DEPENDS_ON",
+      "properties": {
+        "description": "SysOps domain module depends on common package"
+      },
+      "evidence": "All domain modules -> depend on -> common package",
+      "confidence": 1.0
+    },
+    {
+      "source": "netops-domain",
+      "target": "common-package",
+      "type": "DEPENDS_ON",
+      "properties": {
+        "description": "NetOps domain module depends on common package"
+      },
+      "evidence": "All domain modules -> depend on -> common package",
+      "confidence": 1.0
+    },
+    {
+      "source": "secops-domain",
+      "target": "common-package",
+      "type": "DEPENDS_ON",
+      "properties": {
+        "description": "SecOps domain module depends on common package"
+      },
+      "evidence": "All domain modules -> depend on -> common package",
+      "confidence": 1.0
+    },
+    {
+      "source": "devops-domain",
+      "target": "common-package",
+      "type": "DEPENDS_ON",
+      "properties": {
+        "description": "DevOps domain module depends on common package"
+      },
+      "evidence": "All domain modules -> depend on -> common package",
+      "confidence": 1.0
+    },
+    {
+      "source": "aiops-domain",
+      "target": "common-package",
+      "type": "DEPENDS_ON",
+      "properties": {
+        "description": "AIOps domain module depends on common package"
+      },
+      "evidence": "All domain modules -> depend on -> common package",
+      "confidence": 1.0
+    },
+    {
+      "source": "network-design-domain",
+      "target": "common-package",
+      "type": "DEPENDS_ON",
+      "properties": {
+        "description": "NetworkDesign domain module depends on common package"
+      },
+      "evidence": "All domain modules -> depend on -> common package",
+      "confidence": 1.0
+    },
+    {
+      "source": "dashboard-page",
+      "target": "sidebar-layout",
+      "type": "USES",
+      "properties": {
+        "description": "Dashboard page uses Sidebar layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "dashboard-page",
+      "target": "topbar-layout",
+      "type": "USES",
+      "properties": {
+        "description": "Dashboard page uses TopBar layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "dashboard-page",
+      "target": "main-content-layout",
+      "type": "USES",
+      "properties": {
+        "description": "Dashboard page uses MainContent layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "sysops-page",
+      "target": "sidebar-layout",
+      "type": "USES",
+      "properties": {
+        "description": "SysOps page uses Sidebar layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "sysops-page",
+      "target": "topbar-layout",
+      "type": "USES",
+      "properties": {
+        "description": "SysOps page uses TopBar layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "sysops-page",
+      "target": "main-content-layout",
+      "type": "USES",
+      "properties": {
+        "description": "SysOps page uses MainContent layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "netops-page",
+      "target": "sidebar-layout",
+      "type": "USES",
+      "properties": {
+        "description": "NetOps page uses Sidebar layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "netops-page",
+      "target": "topbar-layout",
+      "type": "USES",
+      "properties": {
+        "description": "NetOps page uses TopBar layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "netops-page",
+      "target": "main-content-layout",
+      "type": "USES",
+      "properties": {
+        "description": "NetOps page uses MainContent layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "secops-page",
+      "target": "sidebar-layout",
+      "type": "USES",
+      "properties": {
+        "description": "SecOps page uses Sidebar layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "secops-page",
+      "target": "topbar-layout",
+      "type": "USES",
+      "properties": {
+        "description": "SecOps page uses TopBar layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "secops-page",
+      "target": "main-content-layout",
+      "type": "USES",
+      "properties": {
+        "description": "SecOps page uses MainContent layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "devops-page",
+      "target": "sidebar-layout",
+      "type": "USES",
+      "properties": {
+        "description": "DevOps page uses Sidebar layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "devops-page",
+      "target": "topbar-layout",
+      "type": "USES",
+      "properties": {
+        "description": "DevOps page uses TopBar layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "devops-page",
+      "target": "main-content-layout",
+      "type": "USES",
+      "properties": {
+        "description": "DevOps page uses MainContent layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "aiops-page",
+      "target": "sidebar-layout",
+      "type": "USES",
+      "properties": {
+        "description": "AIOps page uses Sidebar layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "aiops-page",
+      "target": "topbar-layout",
+      "type": "USES",
+      "properties": {
+        "description": "AIOps page uses TopBar layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "aiops-page",
+      "target": "main-content-layout",
+      "type": "USES",
+      "properties": {
+        "description": "AIOps page uses MainContent layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "logs-page",
+      "target": "sidebar-layout",
+      "type": "USES",
+      "properties": {
+        "description": "Logs page uses Sidebar layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "logs-page",
+      "target": "topbar-layout",
+      "type": "USES",
+      "properties": {
+        "description": "Logs page uses TopBar layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "logs-page",
+      "target": "main-content-layout",
+      "type": "USES",
+      "properties": {
+        "description": "Logs page uses MainContent layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "settings-page",
+      "target": "sidebar-layout",
+      "type": "USES",
+      "properties": {
+        "description": "Settings page uses Sidebar layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "settings-page",
+      "target": "topbar-layout",
+      "type": "USES",
+      "properties": {
+        "description": "Settings page uses TopBar layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "settings-page",
+      "target": "main-content-layout",
+      "type": "USES",
+      "properties": {
+        "description": "Settings page uses MainContent layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "network-design-page",
+      "target": "sidebar-layout",
+      "type": "USES",
+      "properties": {
+        "description": "NetworkDesign page uses Sidebar layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "network-design-page",
+      "target": "topbar-layout",
+      "type": "USES",
+      "properties": {
+        "description": "NetworkDesign page uses TopBar layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    },
+    {
+      "source": "network-design-page",
+      "target": "main-content-layout",
+      "type": "USES",
+      "properties": {
+        "description": "NetworkDesign page uses MainContent layout component"
+      },
+      "evidence": "Layout: Sidebar, TopBar, MainContent",
+      "confidence": 0.9
+    }
+  ],
+  "uncertainties": [
+    {
+      "description": "The exact internal data flow between DataPipeline and ForecastEngine (whether ForecastEngine is invoked synchronously or asynchronously) is not explicitly documented.",
+      "evidence": "DataPipeline -> contains -> TimeSeriesStore, ForecastEngine",
+      "confidence": 0.6
+    },
+    {
+      "description": "The precise mechanism by which EventBus emits events to the frontend (direct IPC calls vs queued messages) is inferred from the useEvents hook description.",
+      "evidence": "EventBus -> persists to -> Storage, emits to -> Frontend",
+      "confidence": 0.7
+    },
+    {
+      "description": "The exact relationship between CollectorRegistry and CollectorScheduler (whether Scheduler queries Registry at runtime or maintains a cached list) is not explicitly stated.",
+      "evidence": "CollectorScheduler -> runs -> Collectors -> pushes to -> DataPipeline",
+      "confidence": 0.6
+    },
+    {
+      "description": "The specific Wails event types emitted by the backend and consumed by useEvents hook are not documented in the provided information.",
+      "evidence": "Frontend -> useEvents -> receives Wails events -> updates React state",
+      "confidence": 0.5
+    }
+  ]
+}
+```

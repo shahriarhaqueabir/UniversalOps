@@ -121,7 +121,7 @@ func GetDockerStatus() (DockerStatus, error) {
 	}
 
 	infoCmd := exec.CommandContext(ctx, dockerPath, "info", "--format", `{{.ServerVersion}}`)
-	if _, err := infoCmd.Run(); err == nil {
+	if err := infoCmd.Run(); err == nil {
 		status.Running = true
 	}
 

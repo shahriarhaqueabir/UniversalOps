@@ -1,0 +1,44 @@
+Generate a comprehensive knowledge graph for the OpsForAll Universal Platform project. Output a structured JSON with nodes (entities) and edges (relations).
+
+PROJECT: OpsForAll v1.3.0 - Native desktop operations platform
+STACK: Go 1.26.5 + Wails v2.13.0 + React 19 + TypeScript + Tailwind v4 + SQLite WAL + Ollama AI
+GOAL: Single binary, native GUI, local-first AI, cross-platform ops dashboard
+
+KEY ENTITIES:
+1. App - Wails orchestrator, owns all subsystems
+2. DataPipeline - Central metric ingestion with forecast engine per metric
+3. AlertEngine - Threshold alerts with flap detection and dedup
+4. EventBus - Pub-sub for timeline events, persists to SQLite
+5. TimeSeriesStore - Ring buffer per metric (240 samples, ~4min)
+6. ForecastEngine - Linear regression, SMA, EMA, trend detection
+7. CollectorRegistry - 6 collectors: CPU(3s), Memory(5s), Disk(10s), Network(5s), Temperature(15s,disabled), Processes(15s)
+8. CollectorScheduler - Goroutine per collector with exponential backoff
+9. Storage - SQLite WAL, batched writes, daily prune
+10. PrometheusExporter - :9210/metrics endpoint
+
+DOMAIN MODULES:
+- SysOps: CPU, Memory, Disk, GPU, Battery, Processes, Scheduler, Diagnostics, Packages, Logs
+- NetOps: Ping, DNS, PortScan, Traceroute, Connections, Interfaces, Firewall, VPN, WiFi, ARP, Routing, Health, Monitoring, Discovery
+- SecOps: Audit, Defender, Endpoint, Events, Firewall, Hardening, Listening, Network, Response, Security, Tasks, Users
+- DevOps: Shell, FileBrowser, Services, Git, Docker, Kubernetes, Builds, CICD, Releases, LogTail, Diagnostics
+- AIOps: Ollama (chat, status, model discovery), Reporting, StateQuery
+- NetworkDesign: Analysis, Discovery, Topology
+
+FRONTEND:
+- Pages: Dashboard, SysOps, NetOps, SecOps, DevOps, AIOps, Logs, Settings, NetworkDesign
+- Stores: useSettingsStore, useOllamaStore, useThemeStore, useAlertStore (Zustand)
+- Hooks: useBackend (Wails bindings), useEvents (IPC events)
+- Layout: Sidebar, TopBar, MainContent
+
+KEY RELATIONS:
+- App -> owns -> DataPipeline, AlertEngine, EventBus
+- App -> binds -> SysOps, NetOps, SecOps, DevOps, AIOps, Dashboard, PipelineAPI, AlertAPI, Logs, Timeline, NetworkDesign
+- DataPipeline -> contains -> TimeSeriesStore, ForecastEngine
+- DataPipeline -> pushes to -> Storage
+- CollectorScheduler -> runs -> Collectors -> pushes to -> DataPipeline
+- AlertEngine -> reads from -> DataPipeline -> fires alerts
+- EventBus -> persists to -> Storage, emits to -> Frontend
+- Frontend -> useEvents -> receives Wails events -> updates React state
+- All domain modules -> depend on -> common package
+
+Return the output as a JSON object with "nodes" and "edges" arrays.

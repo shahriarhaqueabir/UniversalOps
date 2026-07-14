@@ -48,6 +48,9 @@ type App struct {
 	alertQuit chan struct{}
 	alertWg   sync.WaitGroup
 
+	// Mutex for protecting lastCPU/lastMem/lastDisk accessed from multiple goroutines
+	mu sync.Mutex
+
 	// Previous metric values for significant-change detection
 	lastCPU, lastMem, lastDisk float64
 }
@@ -320,37 +323,42 @@ func (a *App) evaluateAndEmit() {
 	}
 
 	// Detect significant changes and emit timeline events
+	a.mu.Lock()
 	currCPU := cpuMF.LastValue
 	currMem := memMF.LastValue
 	currDisk := diskMF.LastValue
-
-	if currCPU > a.lastCPU+15 && a.lastCPU > 0 {
-		a.eventBus.Emit(common.NewEventWithMeta(
-			common.CatSystem, common.EventWarning, "sysops",
-			"CPU spiked",
-			fmt.Sprintf("CPU usage jumped from %.0f%% to %.0f%%", a.lastCPU, currCPU),
-			map[string]string{"from": fmt.Sprintf("%.1f", a.lastCPU), "to": fmt.Sprintf("%.1f", currCPU)},
-		))
-	}
-	if currMem > a.lastMem+10 && a.lastMem > 0 {
-		a.eventBus.Emit(common.NewEventWithMeta(
-			common.CatSystem, common.EventWarning, "sysops",
-			"Memory pressure increasing",
-			fmt.Sprintf("Memory usage increased from %.0f%% to %.0f%%", a.lastMem, currMem),
-			map[string]string{"from": fmt.Sprintf("%.1f", a.lastMem), "to": fmt.Sprintf("%.1f", currMem)},
-		))
-	}
-	if currDisk > a.lastDisk+10 && a.lastDisk > 0 {
-		a.eventBus.Emit(common.NewEventWithMeta(
-			common.CatSystem, common.EventWarning, "sysops",
-			"Disk usage increasing",
-			fmt.Sprintf("Disk usage increased from %.0f%% to %.0f%%", a.lastDisk, currDisk),
-			map[string]string{"from": fmt.Sprintf("%.1f", a.lastDisk), "to": fmt.Sprintf("%.1f", currDisk)},
-		))
-	}
+	lastCPU := a.lastCPU
+	lastMem := a.lastMem
+	lastDisk := a.lastDisk
 	a.lastCPU = currCPU
 	a.lastMem = currMem
 	a.lastDisk = currDisk
+	a.mu.Unlock()
+
+	if currCPU > lastCPU+15 && lastCPU > 0 {
+		a.eventBus.Emit(common.NewEventWithMeta(
+			common.CatSystem, common.EventWarning, "sysops",
+			"CPU spiked",
+			fmt.Sprintf("CPU usage jumped from %.0f%% to %.0f%%", lastCPU, currCPU),
+			map[string]string{"from": fmt.Sprintf("%.1f", lastCPU), "to": fmt.Sprintf("%.1f", currCPU)},
+		))
+	}
+	if currMem > lastMem+10 && lastMem > 0 {
+		a.eventBus.Emit(common.NewEventWithMeta(
+			common.CatSystem, common.EventWarning, "sysops",
+			"Memory pressure increasing",
+			fmt.Sprintf("Memory usage increased from %.0f%% to %.0f%%", lastMem, currMem),
+			map[string]string{"from": fmt.Sprintf("%.1f", lastMem), "to": fmt.Sprintf("%.1f", currMem)},
+		))
+	}
+	if currDisk > lastDisk+10 && lastDisk > 0 {
+		a.eventBus.Emit(common.NewEventWithMeta(
+			common.CatSystem, common.EventWarning, "sysops",
+			"Disk usage increasing",
+			fmt.Sprintf("Disk usage increased from %.0f%% to %.0f%%", lastDisk, currDisk),
+			map[string]string{"from": fmt.Sprintf("%.1f", lastDisk), "to": fmt.Sprintf("%.1f", currDisk)},
+		))
+	}
 
 	// Update Prometheus metrics
 	common.SetCPUMetric(cpuMF.LastValue)

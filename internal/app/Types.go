@@ -77,10 +77,10 @@ type CPUInfo struct {
 
 // CPUExtendedInfo holds extended CPU details for SysOps.
 type CPUExtendedInfo struct {
-	ModelName    string          `json:"model_name"`
-	FrequencyMHz float64         `json:"frequency_mhz"`
-	CacheSizeKB  int32           `json:"cache_size_kb"`
-	Temperature  float64         `json:"temperature"`
+	ModelName    string           `json:"model_name"`
+	FrequencyMHz float64          `json:"frequency_mhz"`
+	CacheSizeKB  int32            `json:"cache_size_kb"`
+	Temperature  float64          `json:"temperature"`
 	PerCPUInfo   []PerCPUInfoData `json:"per_cpu_info"`
 }
 
@@ -447,6 +447,131 @@ type SecuritySummary struct {
 	AnalyzedAt      string   `json:"analyzedAt"`
 }
 
+// ── SecOps Phase 2 Types ─────────────────────────────────────────────────────
+
+// PasswordPolicy holds password policy configuration.
+type PasswordPolicy struct {
+	MaxAge           int  `json:"max_age"`
+	MinLength        int  `json:"min_length"`
+	Complexity       bool `json:"complexity"`
+	LockoutThreshold int  `json:"lockout_threshold"`
+	LockoutDuration  int  `json:"lockout_duration"`
+}
+
+// FailedLogin holds a failed login attempt record.
+type FailedLogin struct {
+	Time     string `json:"time"`
+	Username string `json:"username"`
+	SourceIP string `json:"source_ip"`
+	Count    int    `json:"count"`
+}
+
+// LockedAccount holds a locked account record.
+type LockedAccount struct {
+	Username    string `json:"username"`
+	LockedSince string `json:"locked_since"`
+}
+
+// DiskEncryption holds disk encryption status.
+type DiskEncryption struct {
+	Volume    string `json:"volume"`
+	Encrypted bool   `json:"encrypted"`
+	Method    string `json:"method"`
+	Status    string `json:"status"`
+}
+
+// SecureBoot holds secure boot status.
+type SecureBoot struct {
+	Enabled bool   `json:"enabled"`
+	State   string `json:"state"`
+}
+
+// SystemService holds a system service entry.
+type SystemService struct {
+	Name        string `json:"name"`
+	DisplayName string `json:"display_name"`
+	Status      string `json:"status"`
+	StartupType string `json:"startup_type"`
+}
+
+// TLSCertificate holds TLS certificate info.
+type TLSCertificate struct {
+	Subject    string `json:"subject"`
+	Issuer     string `json:"issuer"`
+	NotAfter   string `json:"not_after"`
+	KeySize    int    `json:"key_size"`
+	IsExpiring bool   `json:"is_expiring"`
+	DaysLeft   int    `json:"days_left"`
+}
+
+// SSHConfig holds SSH configuration.
+type SSHConfig struct {
+	PermitRootLogin        string `json:"permit_root_login"`
+	PasswordAuthentication string `json:"password_authentication"`
+	PubkeyAuthentication   string `json:"pubkey_authentication"`
+	X11Forwarding          string `json:"x11_forwarding"`
+	MaxAuthTries           string `json:"max_auth_tries"`
+}
+
+// HardeningCheck holds a single hardening check result.
+type HardeningCheck struct {
+	Category    string `json:"category"`
+	Check       string `json:"check"`
+	Passed      bool   `json:"passed"`
+	Severity    string `json:"severity"`
+	Remediation string `json:"remediation"`
+}
+
+// AuditCheckItem holds a single audit check result.
+type AuditCheckItem struct {
+	Category    string `json:"category"`
+	Check       string `json:"check"`
+	Passed      bool   `json:"passed"`
+	Description string `json:"description"`
+	Remediation string `json:"remediation"`
+}
+
+// SecurityAuditResult holds the full audit result.
+type SecurityAuditResult struct {
+	Score     int              `json:"score"`
+	Total     int              `json:"total"`
+	Passed    int              `json:"passed"`
+	Failed    int              `json:"failed"`
+	Items     []AuditCheckItem `json:"items"`
+	Timestamp string           `json:"timestamp"`
+}
+
+// PrivilegeEvent holds a privilege escalation event.
+type PrivilegeEvent struct {
+	Time      string `json:"time"`
+	Username  string `json:"username"`
+	Privilege string `json:"privilege"`
+	Process   string `json:"process"`
+}
+
+// SecTimelineEvent holds a chronological security event.
+type SecTimelineEvent struct {
+	Time     string `json:"time"`
+	Type     string `json:"type"`
+	Detail   string `json:"detail"`
+	Severity string `json:"severity"`
+}
+
+// PublicExposure holds public-facing port info.
+type PublicExposure struct {
+	Port        int    `json:"port"`
+	Protocol    string `json:"protocol"`
+	ProcessName string `json:"process_name"`
+	Severity    string `json:"severity"`
+}
+
+// SecActionResult holds the result of a security incident response action.
+type SecActionResult struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Error   string `json:"error,omitempty"`
+}
+
 // ── DevOps Types ─────────────────────────────────────────────────────────────
 
 // CommandResult holds the result of a shell command.
@@ -733,7 +858,7 @@ type LogTimelinePoint struct {
 type LogSummary struct {
 	TopSource   string `json:"topSource"`
 	TopMessage  string `json:"topMessage"`
-	ErrorTrend  string `json:"errorTrend"`  // "increasing", "stable", "decreasing"
+	ErrorTrend  string `json:"trend"`       // "increasing", "stable", "decreasing"
 	SummaryText string `json:"summaryText"` // Human-readable one-liner
 }
 
@@ -806,6 +931,293 @@ type DevOpsSuggestion struct {
 	Severity string `json:"severity"` // "info", "warning", "critical"
 	Message  string `json:"message"`
 	Action   string `json:"action"` // suggested action
+}
+
+// ── DevOps Extended Types ─────────────────────────────────────────────────────
+
+// GitBranchInfo holds branch details for the frontend.
+type GitBranchInfo struct {
+	Name       string `json:"name"`
+	Current    bool   `json:"current"`
+	Upstream   string `json:"upstream"`
+	Ahead      int    `json:"ahead"`
+	Behind     int    `json:"behind"`
+	LastCommit string `json:"last_commit"`
+}
+
+// GitTagInfo holds tag details for the frontend.
+type GitTagInfo struct {
+	Name   string `json:"name"`
+	Commit string `json:"commit"`
+	Date   string `json:"date"`
+	Msg    string `json:"msg"`
+}
+
+// GitStashEntry holds stash entry details for the frontend.
+type GitStashEntry struct {
+	Index   int    `json:"index"`
+	Branch  string `json:"branch"`
+	Message string `json:"message"`
+}
+
+// GitRemoteInfo holds remote details for the frontend.
+type GitRemoteInfo struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+	Type string `json:"type"`
+}
+
+// GitBlameEntry holds blame line entry for the frontend.
+type GitBlameEntry struct {
+	Commit  string `json:"commit"`
+	Author  string `json:"author"`
+	Date    string `json:"date"`
+	LineNum int    `json:"line_num"`
+	Content string `json:"content"`
+}
+
+// GitExtendedData holds all extended git information.
+type GitExtendedData struct {
+	Branches []GitBranchInfo `json:"branches"`
+	Tags     []GitTagInfo    `json:"tags"`
+	Stash    []GitStashEntry `json:"stash"`
+	Remotes  []GitRemoteInfo `json:"remotes"`
+}
+
+// DockerStatsEntry holds container stats for the frontend.
+type DockerStatsEntry struct {
+	ContainerID   string `json:"container_id"`
+	Name          string `json:"name"`
+	CPUPercent    string `json:"cpu_percent"`
+	MemoryUsage   string `json:"memory_usage"`
+	MemoryLimit   string `json:"memory_limit"`
+	MemoryPercent string `json:"memory_percent"`
+	NetIO         string `json:"net_io"`
+	BlockIO       string `json:"block_io"`
+	PIDCount      string `json:"pid_count"`
+}
+
+// DockerComposeService holds compose service details for the frontend.
+type DockerComposeService struct {
+	Name  string `json:"name"`
+	State string `json:"state"`
+	Ports string `json:"ports"`
+}
+
+// DockerComposeProject holds compose project details for the frontend.
+type DockerComposeProject struct {
+	Project  string                 `json:"project"`
+	Status   string                 `json:"status"`
+	WorkDir  string                 `json:"work_dir"`
+	Services []DockerComposeService `json:"services"`
+}
+
+// DockerNetworkInfo holds network details for the frontend.
+type DockerNetworkInfo struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Driver     string `json:"driver"`
+	Scope      string `json:"scope"`
+	Subnet     string `json:"subnet"`
+	Gateway    string `json:"gateway"`
+	Containers int    `json:"containers"`
+}
+
+// DockerVolumeInfo holds volume details for the frontend.
+type DockerVolumeInfo struct {
+	Driver     string `json:"driver"`
+	Name       string `json:"name"`
+	Mountpoint string `json:"mountpoint"`
+	Size       string `json:"size"`
+}
+
+// DockerExtendedData holds all extended Docker information.
+type DockerExtendedData struct {
+	Stats    []DockerStatsEntry     `json:"stats"`
+	Compose  []DockerComposeProject `json:"compose"`
+	Networks []DockerNetworkInfo    `json:"networks"`
+	Volumes  []DockerVolumeInfo     `json:"volumes"`
+}
+
+// K8sResourceItem holds a single K8s resource entry for the frontend.
+type K8sResourceItem struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Status    string `json:"status"`
+	Age       string `json:"age"`
+	Details   string `json:"details"`
+}
+
+// K8sRolloutStatus holds rollout status for the frontend.
+type K8sRolloutStatus struct {
+	Name      string `json:"name"`
+	Kind      string `json:"kind"`
+	Ready     bool   `json:"ready"`
+	Replicas  string `json:"replicas"`
+	Updated   string `json:"updated"`
+	Available string `json:"available"`
+}
+
+// K8sEvent holds cluster events for the frontend.
+type K8sEvent struct {
+	LastSeen string `json:"last_seen"`
+	Type     string `json:"type"`
+	Reason   string `json:"reason"`
+	Object   string `json:"object"`
+	Message  string `json:"message"`
+}
+
+// K8sNamespaceInfo holds namespace details for the frontend.
+type K8sNamespaceInfo struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
+	Age    string `json:"age"`
+}
+
+// K8sScalingResult holds scaling operation result for the frontend.
+type K8sScalingResult struct {
+	Current int    `json:"current"`
+	Desired int    `json:"desired"`
+	Success bool   `json:"success"`
+	Output  string `json:"output"`
+}
+
+// K8sExtendedData holds all extended Kubernetes information.
+type K8sExtendedData struct {
+	Namespaces  []K8sNamespaceInfo `json:"namespaces"`
+	Deployments []K8sResourceItem  `json:"deployments"`
+	Services    []K8sResourceItem  `json:"services"`
+	Pods        []K8sResourceItem  `json:"pods"`
+	Rollouts    []K8sRolloutStatus `json:"rollouts"`
+	Events      []K8sEvent         `json:"events"`
+	ConfigMaps  []K8sResourceItem  `json:"config_maps"`
+	Secrets     []K8sResourceItem  `json:"secrets"`
+	Ingresses   []K8sResourceItem  `json:"ingresses"`
+	Jobs        []K8sResourceItem  `json:"jobs"`
+	Nodes       []K8sResourceItem  `json:"nodes"`
+}
+
+// BuildSystemInfo holds build system detection info for the frontend.
+type BuildSystemInfo struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	Found   bool   `json:"found"`
+	Path    string `json:"path"`
+}
+
+// BuildTargetInfo holds a detected build target for the frontend.
+type BuildTargetInfo struct {
+	Name       string `json:"name"`
+	Type       string `json:"type"`
+	Path       string `json:"path"`
+	HasBuild   bool   `json:"has_build"`
+	HasTest    bool   `json:"has_test"`
+	HasLint    bool   `json:"has_lint"`
+	HasPackage bool   `json:"has_package"`
+	DepCount   int    `json:"dep_count"`
+}
+
+// CICDConfig holds a detected CI/CD config for the frontend.
+type CICDConfig struct {
+	Platform    string   `json:"platform"`
+	ConfigFiles []string `json:"config_files"`
+	Detected    bool     `json:"detected"`
+}
+
+// CICDPipelineInfo holds pipeline info for the frontend.
+type CICDPipelineInfo struct {
+	Name      string `json:"name"`
+	Status    string `json:"status"`
+	Branch    string `json:"branch"`
+	Commit    string `json:"commit"`
+	Duration  string `json:"duration"`
+	UpdatedAt string `json:"updated_at"`
+	URL       string `json:"url"`
+}
+
+// CICDStatus holds CI/CD status for the frontend.
+type CICDStatus struct {
+	Platform    string             `json:"platform"`
+	Enabled     bool               `json:"enabled"`
+	ConfigFound bool               `json:"config_found"`
+	Pipelines   []CICDPipelineInfo `json:"pipelines"`
+	Configs     []CICDConfig       `json:"configs"`
+}
+
+// ReleaseInfo holds release details for the frontend.
+type ReleaseInfo struct {
+	Version string `json:"version"`
+	Date    string `json:"date"`
+	Branch  string `json:"branch"`
+	Tag     string `json:"tag"`
+	Commit  string `json:"commit"`
+	Status  string `json:"status"`
+	Notes   string `json:"notes"`
+}
+
+// ReleaseHistory holds release history for the frontend.
+type ReleaseHistory struct {
+	Releases    []ReleaseInfo `json:"releases"`
+	TotalCount  int           `json:"total_count"`
+	LastRelease string        `json:"last_release"`
+}
+
+// DeploymentRecord holds a deployment record for the frontend.
+type DeploymentRecord struct {
+	ID          string `json:"id"`
+	Version     string `json:"version"`
+	Environment string `json:"environment"`
+	Status      string `json:"status"`
+	Timestamp   string `json:"timestamp"`
+	Duration    string `json:"duration"`
+	Commit      string `json:"commit"`
+	Trigger     string `json:"trigger"`
+}
+
+// DORAMetrics holds DORA metrics for the frontend.
+type DORAMetrics struct {
+	DeploymentFrequency string  `json:"deployment_frequency"`
+	LeadTimeForChanges  string  `json:"lead_time_for_changes"`
+	ChangeFailureRate   string  `json:"change_failure_rate"`
+	MTTR                string  `json:"mttr"`
+	Period              string  `json:"period"`
+	DeployCount         int     `json:"deploy_count"`
+	IncidentCount       int     `json:"incident_count"`
+	LeadTimeAvgHours    float64 `json:"lead_time_avg_hours"`
+	MTTRAvgMinutes      float64 `json:"mttr_avg_minutes"`
+	FailurePct          float64 `json:"failure_pct"`
+}
+
+// DevOpsDiagCheck holds a single DevOps diagnostic check result for the frontend.
+type DevOpsDiagCheck struct {
+	Name    string `json:"name"`
+	Status  string `json:"status"`
+	Message string `json:"message"`
+	Value   string `json:"value"`
+}
+
+// DevOpsDiagResult holds the complete DevOps diagnostic result for the frontend.
+type DevOpsDiagResult struct {
+	Checks    []DevOpsDiagCheck `json:"checks"`
+	Score     int               `json:"score"`
+	Timestamp string            `json:"timestamp"`
+}
+
+// DevOpsEnvEntry holds an environment comparison entry for the frontend.
+type DevOpsEnvEntry struct {
+	Key       string `json:"key"`
+	FromValue string `json:"from_value"`
+	ToValue   string `json:"to_value"`
+}
+
+// DevOpsEnvironment holds environment comparison data for the frontend.
+type DevOpsEnvironment struct {
+	Name    string            `json:"name"`
+	URL     string            `json:"url"`
+	Version string            `json:"version"`
+	Status  string            `json:"status"`
+	EnvVars map[string]string `json:"env_vars"`
+	Diff    []DevOpsEnvEntry  `json:"diff"`
 }
 
 // AIInsight is a synthesized observation from the AIOps engine.
@@ -927,10 +1339,10 @@ type HealthCheckData struct {
 
 // HealthReportData holds the full network health check report.
 type HealthReportData struct {
-	Score     int                `json:"score"`
-	Checks    []HealthCheckData  `json:"checks"`
-	Summary   string             `json:"summary"`
-	Duration  string             `json:"duration"`
+	Score    int               `json:"score"`
+	Checks   []HealthCheckData `json:"checks"`
+	Summary  string            `json:"summary"`
+	Duration string            `json:"duration"`
 }
 
 // VPNStatusData holds the current VPN connection status.
