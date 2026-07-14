@@ -168,7 +168,9 @@ export interface PingStats {
   sent: number
   received: number
   lost: number
-  lost_pct: number
+  // No lost_pct field is sent by the backend (PingResult in Types.go has no
+  // matching field) — derive it from lost/sent at the call site instead of
+  // relying on this phantom field (H12).
   min_ms: number | null
   max_ms: number | null
   avg_ms: number | null
@@ -362,7 +364,6 @@ export interface KubernetesStatus {
 export interface ServiceInfo {
   name: string
   status: string
-  port: number
 }
 
 export interface ServiceCategory {
@@ -514,6 +515,7 @@ export interface LogStats {
 
 export interface LogTimelinePoint {
   timestamp: string
+  total: number
   errors: number
   warnings: number
   info: number
@@ -522,6 +524,7 @@ export interface LogTimelinePoint {
 export interface LogSummary {
   summaryText: string
   topSource: string
+  topMessage: string
   trend: string
 }
 

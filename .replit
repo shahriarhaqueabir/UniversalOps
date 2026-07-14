@@ -1,4 +1,4 @@
-modules = ["web", "go-1.21", "nodejs-20", "python-3.12"]
+modules = ["web", "go-1.21", "nodejs-20", "python-3.12", "go-1.25"]
 [agent]
 expertMode = true
 

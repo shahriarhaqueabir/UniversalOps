@@ -77,11 +77,15 @@ func parseLogOutput(output, source, goos string) []LogEntry {
 			Message: line,
 		}
 
-		if strings.Contains(strings.ToLower(line), "error") {
+		lower := strings.ToLower(line)
+		switch {
+		case strings.Contains(lower, "error") || strings.Contains(lower, "fatal") || strings.Contains(lower, "critical"):
 			entry.Level = "error"
-		} else if strings.Contains(strings.ToLower(line), "warn") {
+		case strings.Contains(lower, "warn"):
 			entry.Level = "warning"
-		} else {
+		case strings.Contains(lower, "debug") || strings.Contains(lower, "trace"):
+			entry.Level = "debug"
+		default:
 			entry.Level = "info"
 		}
 

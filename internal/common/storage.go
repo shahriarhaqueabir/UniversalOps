@@ -563,12 +563,16 @@ func (s *Storage) TrendingLogErrors(limit int) ([]TrendingLogError, error) {
 	return results, nil
 }
 
-// Prune removes data older than the given duration.
+// Prune removes data older than the given duration. Covers every
+// timestamped table, including alerts and conversations which were
+// previously left out and grew unbounded (M5).
 func (s *Storage) Prune(olderThan time.Duration) {
 	cutoff := time.Now().Add(-olderThan)
 	s.db.Exec(`DELETE FROM metrics WHERE timestamp < ?`, cutoff)
 	s.db.Exec(`DELETE FROM logs WHERE timestamp < ?`, cutoff)
 	s.db.Exec(`DELETE FROM events WHERE timestamp < ?`, cutoff)
+	s.db.Exec(`DELETE FROM alerts WHERE timestamp < ? AND resolved = 1`, cutoff)
+	s.db.Exec(`DELETE FROM conversations WHERE timestamp < ?`, cutoff)
 	LogInfo("Retention policy applied: Pruned data older than %v", olderThan)
 }
 

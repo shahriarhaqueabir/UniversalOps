@@ -401,11 +401,16 @@ export function OverviewTab() {
 
         {pingResult && !pingResult.error && (
           <div className="grid grid-cols-3 gap-4 mt-4">
-            {[
-              { label: 'Latency', value: pingResult.avg_ms != null ? `${pingResult.avg_ms.toFixed(1)}ms` : 'N/A', color: 'var(--color-success)' },
-              { label: 'Jitter', value: pingResult.avg_ms != null && pingResult.min_ms != null ? `${(pingResult.avg_ms - pingResult.min_ms).toFixed(1)}ms` : 'N/A', color: 'var(--color-warning)' },
-              { label: 'Packet Loss', value: pingResult.lost_pct != null ? `${pingResult.lost_pct.toFixed(1)}%` : 'N/A', color: pingResult.lost_pct > 0 ? 'var(--color-danger)' : 'var(--color-success)' },
-            ].map(card => (
+            {(() => {
+              // The backend never sends lost_pct (H12) — derive the
+              // percentage from sent/lost instead of a phantom field.
+              const lostPct = pingResult.sent > 0 ? (pingResult.lost / pingResult.sent) * 100 : null;
+              return [
+                { label: 'Latency', value: pingResult.avg_ms != null ? `${pingResult.avg_ms.toFixed(1)}ms` : 'N/A', color: 'var(--color-success)' },
+                { label: 'Jitter', value: pingResult.avg_ms != null && pingResult.min_ms != null ? `${(pingResult.avg_ms - pingResult.min_ms).toFixed(1)}ms` : 'N/A', color: 'var(--color-warning)' },
+                { label: 'Packet Loss', value: lostPct != null ? `${lostPct.toFixed(1)}%` : 'N/A', color: lostPct != null && lostPct > 0 ? 'var(--color-danger)' : 'var(--color-success)' },
+              ];
+            })().map(card => (
               <div key={card.label} className="bg-panel-2 border border-border rounded-xl p-4">
                 <p className="text-[10px] font-bold text-text-faint uppercase tracking-wider mb-1">{card.label}</p>
                 <p className="text-xl font-bold tabular-nums" style={{ color: card.color }}>{card.value}</p>

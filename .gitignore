@@ -20,12 +20,12 @@ build/bin/
 
 # Logs
 *.log
-hawkward-gui.log
+opsforall-gui.log
 
 # Database
-hawkward.db
-hawkward.db-shm
-hawkward.db-wal
+opsforall.db
+opsforall.db-shm
+opsforall.db-wal
 *.db
 
 # Dependencies

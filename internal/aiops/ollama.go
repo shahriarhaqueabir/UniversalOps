@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/ollama/ollama/api"
@@ -25,7 +26,25 @@ type OllamaStatus struct {
 	AvailableModels []string
 }
 
-var effectiveModel string // resolved by CheckOllama, used by Chat
+// effectiveModel is resolved by CheckOllama and read by Chat. Both can run
+// concurrently (e.g. a status poll while a chat request is in flight), so
+// access is guarded by effectiveModelMu instead of a bare package var (H5).
+var (
+	effectiveModelMu sync.RWMutex
+	effectiveModel   string
+)
+
+func setEffectiveModel(model string) {
+	effectiveModelMu.Lock()
+	effectiveModel = model
+	effectiveModelMu.Unlock()
+}
+
+func getEffectiveModel() string {
+	effectiveModelMu.RLock()
+	defer effectiveModelMu.RUnlock()
+	return effectiveModel
+}
 
 const (
 	defaultOllamaURL   = "http://localhost:11434"
@@ -82,7 +101,7 @@ func CheckOllama() (*OllamaStatus, error) {
 	}
 
 	// Store the effective model so Chat() uses the same resolved model
-	effectiveModel = modelName
+	setEffectiveModel(modelName)
 
 	version := "detected"
 	if len(listResp.Models) > 0 {
@@ -113,7 +132,7 @@ func Chat(messages []ChatMessage) (string, error) {
 	}
 
 	// Use the model resolved by CheckOllama, falling back to env/default
-	model := effectiveModel
+	model := getEffectiveModel()
 	if model == "" {
 		model = getOllamaModel()
 	}
