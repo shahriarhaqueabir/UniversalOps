@@ -129,7 +129,7 @@ export function AIOps() {
 
   return (
     <div className="flex flex-col h-full bg-[var(--color-bg)]">
-      <div className="p-8 border-b border-border bg-panel-2 flex items-center justify-between">
+      <div className="py-4 border-b border-border bg-panel-2 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-text flex items-center gap-3">
             <BrainCircuit size={32} className="text-accent" />
@@ -163,6 +163,7 @@ export function AIOps() {
             <Tabs.Trigger
               key={tab.id}
               value={tab.id}
+              data-automation-id={`aiops-tab-${tab.id}`}
               className={cn(
                 'flex items-center gap-3 px-8 py-5 text-base font-bold transition-all border-b-2 border-transparent',
                 activeTab === tab.id ? 'border-accent text-text bg-accent-soft' : 'text-text-faint hover:text-text hover:bg-[var(--color-sidebar-hover)]',
@@ -463,7 +464,7 @@ function AnomaliesTab() {
   })
 
   return (
-    <div className="flex flex-col h-full p-8 space-y-8">
+    <div className="flex flex-col h-full space-y-8">
       <div className="flex items-center justify-between bg-panel border border-border px-6 py-4 rounded-xl shadow-lg">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-4">
@@ -566,7 +567,7 @@ function InsightsTab() {
   }
 
   return (
-    <div className="flex flex-col h-full p-8 space-y-8">
+    <div className="flex flex-col h-full space-y-8">
       <div className="flex items-center justify-between bg-panel border border-border px-6 py-4 rounded-xl shadow-lg">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-4">

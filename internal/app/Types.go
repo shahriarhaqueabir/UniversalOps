@@ -75,6 +75,22 @@ type CPUInfo struct {
 	LoadAvg15     float64   `json:"load_avg_15"`
 }
 
+// CPUExtendedInfo holds extended CPU details for SysOps.
+type CPUExtendedInfo struct {
+	ModelName    string          `json:"model_name"`
+	FrequencyMHz float64         `json:"frequency_mhz"`
+	CacheSizeKB  int32           `json:"cache_size_kb"`
+	Temperature  float64         `json:"temperature"`
+	PerCPUInfo   []PerCPUInfoData `json:"per_cpu_info"`
+}
+
+// PerCPUInfoData holds per-core info for frontend.
+type PerCPUInfoData struct {
+	Core      int     `json:"core"`
+	Frequency float64 `json:"frequency_mhz"`
+	Usage     float64 `json:"usage_percent"`
+}
+
 // MemoryInfo holds RAM and swap details.
 type MemoryInfo struct {
 	TotalBytes     uint64  `json:"total_bytes"`
@@ -105,6 +121,22 @@ type DiskPartition struct {
 	Device      string  `json:"device"`
 }
 
+// DiskIOEntry holds I/O stats for a single disk.
+type DiskIOEntry struct {
+	Name       string `json:"name"`
+	ReadBytes  uint64 `json:"read_bytes"`
+	WriteBytes uint64 `json:"write_bytes"`
+	ReadCount  uint64 `json:"read_count"`
+	WriteCount uint64 `json:"write_count"`
+}
+
+// DiskIOData holds aggregate disk I/O information.
+type DiskIOData struct {
+	Disks      []DiskIOEntry `json:"disks"`
+	TotalRead  uint64        `json:"total_read_bytes"`
+	TotalWrite uint64        `json:"total_write_bytes"`
+}
+
 // ProcessInfo holds a single process snapshot.
 type ProcessInfo struct {
 	PID    int32   `json:"pid"`
@@ -128,6 +160,98 @@ type SystemInfo struct {
 	Uptime          string `json:"uptime"`
 	ProcessCount    int    `json:"process_count"`
 	Virtualization  string `json:"virtualization"`
+}
+
+// LoggedInUserData holds logged-in user info for frontend.
+type LoggedInUserData struct {
+	User     string `json:"user"`
+	Terminal string `json:"terminal"`
+	Host     string `json:"host"`
+	Started  string `json:"started"`
+}
+
+// CPUTimesData holds CPU time breakdown for frontend.
+type CPUTimesData struct {
+	User   float64 `json:"user"`
+	System float64 `json:"system"`
+	Idle   float64 `json:"idle"`
+	IOWait float64 `json:"iowait"`
+	Steal  float64 `json:"steal"`
+	Total  float64 `json:"total"`
+}
+
+// LoadAverageData holds load average for frontend.
+type LoadAverageData struct {
+	Load1  float64 `json:"load_1"`
+	Load5  float64 `json:"load_5"`
+	Load15 float64 `json:"load_15"`
+}
+
+// PerformanceData holds performance stats for frontend.
+type PerformanceData struct {
+	CPUTimes    CPUTimesData    `json:"cpu_times"`
+	LoadAverage LoadAverageData `json:"load_average"`
+	IOWait      float64         `json:"io_wait"`
+}
+
+// ActionResult holds the result of a system action for frontend.
+type ActionResult struct {
+	Action  string `json:"action"`
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Output  string `json:"output"`
+}
+
+// SystemLogEntry holds a single log entry for frontend.
+type SystemLogEntry struct {
+	Timestamp string `json:"timestamp"`
+	Level     string `json:"level"`
+	Source    string `json:"source"`
+	Message   string `json:"message"`
+}
+
+// SystemLogsResultData holds log results for frontend.
+type SystemLogsResultData struct {
+	Entries []SystemLogEntry `json:"entries"`
+	Source  string           `json:"source"`
+	Total   int              `json:"total"`
+}
+
+// PackageData holds a single package for frontend.
+type PackageData struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+// PackageManagerData holds a package manager and its packages for frontend.
+type PackageManagerData struct {
+	Name     string        `json:"name"`
+	Found    bool          `json:"found"`
+	Packages []PackageData `json:"packages"`
+}
+
+// ScheduledTaskData holds a scheduled task for frontend.
+type ScheduledTaskData struct {
+	Name     string `json:"name"`
+	Schedule string `json:"schedule"`
+	Command  string `json:"command"`
+	Enabled  bool   `json:"enabled"`
+	NextRun  string `json:"next_run"`
+}
+
+// DiagnosticCheckData holds a single diagnostic check for frontend.
+type DiagnosticCheckData struct {
+	Name    string `json:"name"`
+	Status  string `json:"status"`
+	Message string `json:"message"`
+	Value   string `json:"value"`
+}
+
+// ExtendedDiagnosticResult holds the full diagnostic result for frontend.
+type ExtendedDiagnosticResult struct {
+	Checks    []DiagnosticCheckData `json:"checks"`
+	Score     int                   `json:"score"`
+	Timestamp string                `json:"timestamp"`
 }
 
 // ── NetOps Types ─────────────────────────────────────────────────────────────
@@ -722,4 +846,143 @@ type GatewayInfo struct {
 	IP        string `json:"ip"`
 	Interface string `json:"interface"`
 	Reachable bool   `json:"reachable"`
+}
+
+// ── NetOps Extended Types ─────────────────────────────────────────────────────
+
+// ARPEntryData holds a single ARP cache entry.
+type ARPEntryData struct {
+	IP        string `json:"ip"`
+	MAC       string `json:"mac"`
+	Vendor    string `json:"vendor"`
+	Interface string `json:"interface"`
+}
+
+// RouteEntryData holds a single routing table entry.
+type RouteEntryData struct {
+	Destination string `json:"destination"`
+	Mask        string `json:"mask"`
+	Gateway     string `json:"gateway"`
+	Interface   string `json:"interface"`
+	Metric      int    `json:"metric"`
+	IsDefault   bool   `json:"is_default"`
+}
+
+// WiFiNetworkData holds a detected WiFi network.
+type WiFiNetworkData struct {
+	SSID      string `json:"ssid"`
+	Signal    int    `json:"signal"`
+	Channel   int    `json:"channel"`
+	Security  string `json:"security"`
+	BSSID     string `json:"bssid"`
+	Frequency string `json:"frequency"`
+}
+
+// WiFiInfoData holds current WiFi connection info.
+type WiFiInfoData struct {
+	Interface string `json:"interface"`
+	SSID      string `json:"ssid"`
+	Signal    int    `json:"signal"`
+	Speed     string `json:"speed"`
+	Channel   int    `json:"channel"`
+}
+
+// DoHResultData holds the result of a DNS-over-HTTPS test.
+type DoHResultData struct {
+	Server     string  `json:"server"`
+	LatencyMs  float64 `json:"latency_ms"`
+	Success    bool    `json:"success"`
+	ResolvedIP string  `json:"resolved_ip"`
+}
+
+// PingResultMultiData holds multi-target ping results for a single target.
+type PingResultMultiData struct {
+	Target         string    `json:"target"`
+	MinMs          float64   `json:"min_ms"`
+	AvgMs          float64   `json:"avg_ms"`
+	MaxMs          float64   `json:"max_ms"`
+	StdDevMs       float64   `json:"stddev_ms"`
+	PacketLoss     float64   `json:"packet_loss"`
+	JitterMs       float64   `json:"jitter_ms"`
+	IndividualRTTs []float64 `json:"individual_rtts"`
+	Success        bool      `json:"success"`
+	Error          string    `json:"error,omitempty"`
+}
+
+// PingStatsData holds aggregate statistics across multiple ping results.
+type PingStatsData struct {
+	AvgLatency  float64 `json:"avg_latency"`
+	MaxLatency  float64 `json:"max_latency"`
+	TotalLoss   float64 `json:"total_loss"`
+	WorstTarget string  `json:"worst_target"`
+}
+
+// HealthCheckData holds a single health check result.
+type HealthCheckData struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
+	Detail string `json:"detail"`
+	Score  int    `json:"score"`
+}
+
+// HealthReportData holds the full network health check report.
+type HealthReportData struct {
+	Score     int                `json:"score"`
+	Checks    []HealthCheckData  `json:"checks"`
+	Summary   string             `json:"summary"`
+	Duration  string             `json:"duration"`
+}
+
+// VPNStatusData holds the current VPN connection status.
+type VPNStatusData struct {
+	Active    bool   `json:"active"`
+	Type      string `json:"type"`
+	Interface string `json:"interface"`
+	RemoteIP  string `json:"remote_ip"`
+	LocalIP   string `json:"local_ip"`
+	Protocol  string `json:"protocol"`
+}
+
+// FirewallRuleData holds a single firewall rule.
+type FirewallRuleData struct {
+	Name        string `json:"name"`
+	Direction   string `json:"direction"`
+	Action      string `json:"action"`
+	Protocol    string `json:"protocol"`
+	Ports       string `json:"ports"`
+	Enabled     bool   `json:"enabled"`
+	Source      string `json:"source"`
+	Destination string `json:"destination"`
+}
+
+// DiscoveredDeviceData holds info about a discovered network device.
+type DiscoveredDeviceData struct {
+	IP             string `json:"ip"`
+	MAC            string `json:"mac"`
+	Vendor         string `json:"vendor"`
+	Hostname       string `json:"hostname"`
+	OpenPorts      []int  `json:"open_ports"`
+	ResponseTimeMs int64  `json:"response_time_ms"`
+}
+
+// DiscoveryResultData holds the results of a network discovery scan.
+type DiscoveryResultData struct {
+	Devices    []DiscoveredDeviceData `json:"devices"`
+	Subnet     string                 `json:"subnet"`
+	ScanTimeMs int64                  `json:"scan_time_ms"`
+}
+
+// BandwidthSampleData holds a single bandwidth measurement.
+type BandwidthSampleData struct {
+	Timestamp     string  `json:"timestamp"`
+	RxBytesPerSec float64 `json:"rx_bytes_per_sec"`
+	TxBytesPerSec float64 `json:"tx_bytes_per_sec"`
+	Interface     string  `json:"interface"`
+}
+
+// NetworkActionResult holds the result of a network action.
+type NetworkActionResult struct {
+	Action  string `json:"action"`
+	Message string `json:"message"`
+	Success bool   `json:"success"`
 }

@@ -521,83 +521,6 @@ func (d *DevOps) GetContainers() ContainerSummary {
 	}
 }
 
-// ══════════════════════════════════════════════
-//  Git Summary
-// ══════════════════════════════════════════════
-
-// findGitRepos discovers git repositories in common locations.
-func findGitRepos(maxRepos int) []string {
-	var candidates []string
-
-	// Current working directory
-	if cwd, err := os.Getwd(); err == nil {
-		candidates = append(candidates, cwd)
-	}
-
-	// Home directory and common subdirectories
-	home, err := os.UserHomeDir()
-	if err == nil {
-		candidates = append(candidates, home)
-		for _, sub := range []string{"Documents", "Projects", "src", "dev", "code", "repos", "GitHub", "git"} {
-			cand := filepath.Join(home, sub)
-			if info, err := os.Stat(cand); err == nil && info.IsDir() {
-				candidates = append(candidates, cand)
-			}
-		}
-	}
-
-	found := []string{}
-	seen := make(map[string]bool)
-
-	for _, dir := range candidates {
-		// Check if dir itself is a git repo
-		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
-			if !seen[dir] {
-				seen[dir] = true
-				found = append(found, dir)
-			}
-			if len(found) >= maxRepos {
-				return found
-			}
-		}
-
-		// Scan one level deep for git repos
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			continue
-		}
-		for _, entry := range entries {
-			if !entry.IsDir() {
-				continue
-			}
-			path := filepath.Join(dir, entry.Name())
-			if _, err := os.Stat(filepath.Join(path, ".git")); err == nil {
-				if !seen[path] {
-					seen[path] = true
-					found = append(found, path)
-				}
-				if len(found) >= maxRepos {
-					return found
-				}
-			}
-		}
-	}
-	return found
-}
-
-// gitRun runs a git command in the given directory with a timeout.
-func gitRun(dir string, args ...string) string {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "git", args...)
-	cmd.Dir = dir
-	var stdout strings.Builder
-	cmd.Stdout = &stdout
-	_ = cmd.Run()
-	return strings.TrimSpace(stdout.String())
-}
-
 // parseIntOr returns n or fallback if parsing fails.
 func parseIntOr(s string, fallback int) int {
 	n := 0
@@ -606,65 +529,48 @@ func parseIntOr(s string, fallback int) int {
 	}
 	return n
 }
-
-// GetGitSummary returns aggregated git repository status.
 func (d *DevOps) GetGitSummary() GitSummary {
-	if _, err := exec.LookPath("git"); err != nil {
+	summary, err := devops.GetGitSummary()
+	if err != nil {
+		common.LogWarn("GetGitSummary failed: %v", err)
 		return GitSummary{Repositories: []GitRepoInfo{}}
 	}
 
-	paths := findGitRepos(10)
-	repos := []GitRepoInfo{}
-
-	for _, dir := range paths {
-		branch := gitRun(dir, "rev-parse", "--abbrev-ref", "HEAD")
-		if branch == "" {
-			continue
-		}
-
-		statusPorcelain := gitRun(dir, "status", "--porcelain")
-		statusUntracked := gitRun(dir, "status", "--porcelain", "-u")
-
-		modified := 0
-		for _, line := range strings.Split(statusPorcelain, "\n") {
-			line = strings.TrimSpace(line)
-			if line != "" && !strings.HasPrefix(line, "?") {
-				modified++
-			}
-		}
-
-		untracked := 0
-		for _, line := range strings.Split(statusUntracked, "\n") {
-			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "?") {
-				untracked++
-			}
-		}
-
-		ahead, behind := 0, 0
-		upstream := gitRun(dir, "rev-parse", "--abbrev-ref", "@{upstream}")
-		if upstream != "" {
-			counts := gitRun(dir, "rev-list", "--left-right", "--count", "HEAD..."+upstream)
-			if counts != "" {
-				fmt.Sscanf(counts, "%d %d", &ahead, &behind)
-			}
-		}
-
+	repos := make([]GitRepoInfo, 0, len(summary.Repositories))
+	for _, r := range summary.Repositories {
 		repos = append(repos, GitRepoInfo{
-			Path:           dir,
-			Branch:         branch,
-			ModifiedFiles:  modified,
-			UntrackedFiles: untracked,
-			Ahead:          ahead,
-			Behind:         behind,
-			Clean:          modified == 0 && untracked == 0,
+			Path:           r.Path,
+			Branch:         r.Branch,
+			ModifiedFiles:  r.ModifiedFiles,
+			UntrackedFiles: r.UntrackedFiles,
+			Ahead:          r.Ahead,
+			Behind:         r.Behind,
+			Clean:          r.Clean,
 		})
 	}
 
 	return GitSummary{
 		Repositories: repos,
-		TotalRepos:   len(repos),
+		TotalRepos:   summary.TotalRepos,
 	}
+}
+
+// GetGitLog returns the recent commit log for a repository.
+func (d *DevOps) GetGitLog(path string, limit int) string {
+	log, err := devops.GetGitLog(path, limit)
+	if err != nil {
+		return "Error: " + err.Error()
+	}
+	return log
+}
+
+// GetGitDiff returns the current uncommitted changes.
+func (d *DevOps) GetGitDiff(path string) string {
+	diff, err := devops.GetGitDiff(path)
+	if err != nil {
+		return "Error: " + err.Error()
+	}
+	return diff
 }
 
 // ══════════════════════════════════════════════

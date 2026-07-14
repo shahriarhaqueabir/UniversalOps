@@ -1,6 +1,8 @@
 package sysops
 
 import (
+	"fmt"
+
 	"github.com/shirou/gopsutil/v4/host"
 	"github.com/shirou/gopsutil/v4/process"
 )
@@ -48,4 +50,31 @@ func GetSystemInfo() (*SystemInfo, error) {
 		ProcessCount:    procCount,
 		Virtualization:  virt,
 	}, nil
+}
+
+// LoggedInUser holds information about a logged-in user.
+type LoggedInUser struct {
+	User     string `json:"user"`
+	Terminal string `json:"terminal"`
+	Host     string `json:"host"`
+	Started  string `json:"started"`
+}
+
+// GetLoggedInUsers returns all currently logged-in users.
+func GetLoggedInUsers() ([]LoggedInUser, error) {
+	users, err := host.Users()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []LoggedInUser
+	for _, u := range users {
+		result = append(result, LoggedInUser{
+			User:     u.User,
+			Terminal: u.Terminal,
+			Host:     u.Host,
+			Started:  fmt.Sprintf("%d", u.Started),
+		})
+	}
+	return result, nil
 }

@@ -280,7 +280,7 @@ function UsersTab({ call }: { call: BackendCall }) {
 
       {/* ── Summary Stats ── */}
       {users.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           {([
             { label: 'Admins', value: adminCount, cls: 'text-[var(--color-warning)]' },
             { label: 'Disabled', value: disabledCount, cls: 'text-[var(--color-danger)]' },
@@ -295,9 +295,9 @@ function UsersTab({ call }: { call: BackendCall }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-2 gap-8">
         {users.length === 0 ? (
-          <div className="lg:col-span-2">
+          <div className="col-span-2">
             <EmptyState
               icon={<Users size={28} />}
               title="No Users Found"
@@ -367,7 +367,7 @@ function DefenderTab({ call }: { call: BackendCall }) {
         content="Windows Defender provides multiple layers of protection. Ensure 'Real-time' and 'Cloud' protection are both active to detect modern zero-day threats through heuristic analysis."
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-5 gap-6">
         {metrics.map(m => (
           <div key={m.label} className={cn("bg-panel border rounded-[var(--radius-lg)] p-8 shadow-xl transition-all border-l-[8px]", m.active ? "border-l-success border-border" : "border-l-danger border-danger/30")}>
             <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-6 border shadow-inner", m.active ? "bg-success/10 border-success/30 text-success" : "bg-danger/10 border-danger/30 text-danger")}>
@@ -391,7 +391,7 @@ function DefenderTab({ call }: { call: BackendCall }) {
         <h3 className="text-xl font-bold text-text uppercase tracking-widest mb-8 flex items-center gap-4">
           <History size={24} className="text-accent" /> Scan & Integrity Timeline
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+        <div className="grid grid-cols-3 gap-10">
           <div>
             <p className="text-sm font-bold text-text-faint uppercase mb-2">Last Threat Scan</p>
             <p className="text-2xl font-bold text-text">{status.last_scan}</p>
@@ -576,7 +576,7 @@ function EventsTab({ call }: { call: BackendCall }) {
 
         {/* ── Summary Stats ── */}
         {events.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             {([
               { label: 'Failed Logins', value: failedLoginsCount, cls: 'text-[var(--color-danger)]' },
               { label: 'Elevation', value: elevationCount, cls: 'text-[var(--color-warning)]' },
@@ -750,7 +750,7 @@ function SecurityScoreCard({ call }: { call: BackendCall }) {
   const gap = circumference - dash
 
   return (
-    <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 flex flex-col lg:flex-row items-center gap-8 shadow-2xl relative overflow-hidden group">
+    <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 flex flex-row items-center gap-8 shadow-2xl relative overflow-hidden group">
       <div className="absolute top-0 right-0 w-48 h-48 rounded-bl-full pointer-events-none transition-all" style={{ backgroundColor: `${color}08` }} />
 
       {/* ── SVG Score Donut ── */}
@@ -788,7 +788,7 @@ function SecurityScoreCard({ call }: { call: BackendCall }) {
         </div>
 
         {/* Breakdown bars */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-3 gap-3 mb-4">
           {Object.entries(data.breakdown).map(([category, value]) => {
             const maxVal = maxBreakdownValues[category] || 20
             const pct = Math.max(0, Math.min(100, (value / maxVal) * 100))
@@ -1026,7 +1026,7 @@ export function SecOps() {
 
   return (
     <div className="flex flex-col h-full bg-[var(--color-bg)]">
-      <div className="p-8 border-b border-border bg-panel-2 flex items-center justify-between">
+      <div className="py-4 border-b border-border bg-panel-2 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-text flex items-center gap-4">
             <Shield size={32} className="text-danger" /> Security Operations
@@ -1050,6 +1050,7 @@ export function SecOps() {
               role="tab"
               aria-selected={activeTab === tab.id}
               aria-label={`${tab.label} tab`}
+              data-automation-id={`secops-tab-${tab.id}`}
               className={cn(
                 'flex items-center gap-3 px-6 py-3 rounded-xl text-lg font-bold transition-all',
                 activeTab === tab.id ? 'bg-danger text-white shadow-lg' : 'text-text-dim hover:text-text hover:bg-[var(--color-sidebar-hover)]',
@@ -1062,7 +1063,7 @@ export function SecOps() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto pb-6 space-y-6">
         {showOverview && (
           <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
             <SecurityScoreCard call={call} />

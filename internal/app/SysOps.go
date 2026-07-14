@@ -262,3 +262,197 @@ func (s *SysOps) GetRecommendations() []SystemRecommendation {
 
 	return recs
 }
+
+// GetCPUExtended returns extended CPU information.
+func (s *SysOps) GetCPUExtended() CPUExtendedInfo {
+	stats, err := sysops.GetCPUExtended()
+	if err != nil {
+		common.LogWarn("GetCPUExtended failed: %v", err)
+		return CPUExtendedInfo{}
+	}
+	perCPU := make([]PerCPUInfoData, 0, len(stats.PerCPUInfo))
+	for _, p := range stats.PerCPUInfo {
+		perCPU = append(perCPU, PerCPUInfoData{
+			Core:      p.Core,
+			Frequency: p.Frequency,
+			Usage:     p.Usage,
+		})
+	}
+	return CPUExtendedInfo{
+		ModelName:    stats.ModelName,
+		FrequencyMHz: stats.FrequencyMHz,
+		CacheSizeKB:  stats.CacheSizeKB,
+		Temperature:  stats.Temperature,
+		PerCPUInfo:   perCPU,
+	}
+}
+
+// GetDiskIO returns disk I/O throughput statistics.
+func (s *SysOps) GetDiskIO() DiskIOData {
+	stats, err := sysops.GetDiskIO()
+	if err != nil {
+		common.LogWarn("GetDiskIO failed: %v", err)
+		return DiskIOData{}
+	}
+	disks := make([]DiskIOEntry, 0, len(stats.Disks))
+	for _, d := range stats.Disks {
+		disks = append(disks, DiskIOEntry{
+			Name:       d.Name,
+			ReadBytes:  d.ReadBytes,
+			WriteBytes: d.WriteBytes,
+			ReadCount:  d.ReadCount,
+			WriteCount: d.WriteCount,
+		})
+	}
+	return DiskIOData{
+		Disks:      disks,
+		TotalRead:  stats.TotalRead,
+		TotalWrite: stats.TotalWrite,
+	}
+}
+
+// GetLoggedInUsers returns all currently logged-in users.
+func (s *SysOps) GetLoggedInUsers() []LoggedInUserData {
+	users, err := sysops.GetLoggedInUsers()
+	if err != nil {
+		common.LogWarn("GetLoggedInUsers failed: %v", err)
+		return []LoggedInUserData{}
+	}
+	var result []LoggedInUserData
+	for _, u := range users {
+		result = append(result, LoggedInUserData{
+			User:     u.User,
+			Terminal: u.Terminal,
+			Host:     u.Host,
+			Started:  u.Started,
+		})
+	}
+	return result
+}
+
+// GetPerformanceStats returns system performance metrics.
+func (s *SysOps) GetPerformanceStats() PerformanceData {
+	stats, err := sysops.GetPerformanceStats()
+	if err != nil {
+		common.LogWarn("GetPerformanceStats failed: %v", err)
+		return PerformanceData{}
+	}
+	return PerformanceData{
+		CPUTimes: CPUTimesData{
+			User:   stats.CPUTimes.User,
+			System: stats.CPUTimes.System,
+			Idle:   stats.CPUTimes.Idle,
+			IOWait: stats.CPUTimes.IOWait,
+			Steal:  stats.CPUTimes.Steal,
+			Total:  stats.CPUTimes.Total,
+		},
+		LoadAverage: LoadAverageData{
+			Load1:  stats.LoadAverage.Load1,
+			Load5:  stats.LoadAverage.Load5,
+			Load15: stats.LoadAverage.Load15,
+		},
+		IOWait: stats.IOWait,
+	}
+}
+
+// RunSystemAction executes a system action.
+func (s *SysOps) RunSystemAction(action string) ActionResult {
+	result, err := sysops.RunSystemAction(sysops.SystemAction(action))
+	if err != nil {
+		return ActionResult{
+			Action:  action,
+			Success: false,
+			Message: err.Error(),
+		}
+	}
+	return ActionResult{
+		Action:  result.Action,
+		Success: result.Success,
+		Message: result.Message,
+		Output:  result.Output,
+	}
+}
+
+// GetSystemLogs retrieves OS system logs.
+func (s *SysOps) GetSystemLogs(n int, source string) SystemLogsResultData {
+	result, err := sysops.GetSystemLogs(n, source)
+	if err != nil {
+		common.LogWarn("GetSystemLogs failed: %v", err)
+		return SystemLogsResultData{}
+	}
+	entries := make([]SystemLogEntry, 0, len(result.Entries))
+	for _, e := range result.Entries {
+		entries = append(entries, SystemLogEntry{
+			Timestamp: e.Timestamp,
+			Level:     e.Level,
+			Source:    e.Source,
+			Message:   e.Message,
+		})
+	}
+	return SystemLogsResultData{
+		Entries: entries,
+		Source:  result.Source,
+		Total:   result.Total,
+	}
+}
+
+// GetInstalledPackages detects available package managers and lists installed packages.
+func (s *SysOps) GetInstalledPackages() []PackageManagerData {
+	managers := sysops.GetInstalledPackages()
+	var result []PackageManagerData
+	for _, m := range managers {
+		pkgs := make([]PackageData, 0, len(m.Packages))
+		for _, p := range m.Packages {
+			pkgs = append(pkgs, PackageData{Name: p.Name, Version: p.Version})
+		}
+		result = append(result, PackageManagerData{
+			Name:     m.Name,
+			Found:    m.Found,
+			Packages: pkgs,
+		})
+	}
+	return result
+}
+
+// GetScheduledTasks returns all scheduled tasks.
+func (s *SysOps) GetScheduledTasks() []ScheduledTaskData {
+	tasks, err := sysops.GetScheduledTasks()
+	if err != nil {
+		common.LogWarn("GetScheduledTasks failed: %v", err)
+		return []ScheduledTaskData{}
+	}
+	var result []ScheduledTaskData
+	for _, t := range tasks {
+		result = append(result, ScheduledTaskData{
+			Name:     t.Name,
+			Schedule: t.Schedule,
+			Command:  t.Command,
+			Enabled:  t.Enabled,
+			NextRun:  t.NextRun,
+		})
+	}
+	return result
+}
+
+// RunExtendedDiagnostics runs a set of system health checks and returns a score from 0-100.
+func (s *SysOps) RunExtendedDiagnostics() ExtendedDiagnosticResult {
+	result, err := sysops.RunExtendedDiagnostics()
+	if err != nil {
+		common.LogWarn("RunExtendedDiagnostics failed: %v", err)
+		return ExtendedDiagnosticResult{}
+	}
+	checks := make([]DiagnosticCheckData, 0, len(result.Checks))
+	for _, c := range result.Checks {
+		checks = append(checks, DiagnosticCheckData{
+			Name:    c.Name,
+			Status:  c.Status,
+			Message: c.Message,
+			Value:   c.Value,
+		})
+	}
+	return ExtendedDiagnosticResult{
+		Checks:    checks,
+		Score:     result.Score,
+		Timestamp: result.Timestamp,
+	}
+}

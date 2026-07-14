@@ -136,7 +136,7 @@ function OverviewTab() {
   }
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto flex-1">
+    <div className="space-y-6 overflow-y-auto flex-1">
       {/* ── Freshness Indicator ── */}
       <DataFreshnessIndicator lastUpdated={statsUpdatedAt ? new Date(statsUpdatedAt) : null} />
 
@@ -544,7 +544,7 @@ export function Logs() {
   return (
     <div className="flex flex-col h-full bg-[var(--color-bg)]">
       {/* ── Header ── */}
-      <div className="p-6 border-b border-[var(--color-border)] bg-[var(--color-panel-2)] flex items-center justify-between">
+      <div className="py-4 border-b border-[var(--color-border)] bg-[var(--color-panel-2)] flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-3">
             <LayoutList size={24} className="text-[var(--color-accent)]" />
@@ -565,6 +565,7 @@ export function Logs() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
+            data-automation-id={`logs-tab-${tab.id}`}
             className={cn(
               'flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition-all',
               activeTab === tab.id
