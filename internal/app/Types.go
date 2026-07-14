@@ -730,10 +730,13 @@ type LogTimelinePoint struct {
 }
 
 // LogSummary holds a deterministic summary of recent log activity.
+// json tag renamed errorTrend -> trend to match the frontend LogSummary
+// type (IPC-1 / H15); without this, the AI Summary trend line was always
+// undefined on the frontend.
 type LogSummary struct {
 	TopSource   string `json:"topSource"`
 	TopMessage  string `json:"topMessage"`
-	ErrorTrend  string `json:"errorTrend"`  // "increasing", "stable", "decreasing"
+	ErrorTrend  string `json:"trend"`       // "increasing", "stable", "decreasing"
 	SummaryText string `json:"summaryText"` // Human-readable one-liner
 }
 

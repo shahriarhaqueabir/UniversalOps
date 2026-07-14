@@ -3,12 +3,37 @@ package netops
 import (
 	"fmt"
 	"os/exec"
+	"regexp"
 	"runtime"
 )
 
+// validInterfaceName matches typical OS-assigned interface names on
+// Windows/Linux/macOS (letters, digits, dashes, underscores, dots, spaces,
+// parentheses — e.g. "Ethernet", "eth0", "Wi-Fi", "en0", "Local Area
+// Connection* 1"). It intentionally excludes shell metacharacters and
+// backticks so a crafted "interface" value can never be used to inject
+// additional commands.
+var validInterfaceName = regexp.MustCompile(`^[a-zA-Z0-9 ._()*-]{1,128}$`)
+
+// sanitizeInterfaceName rejects interface names containing shell
+// metacharacters or other unexpected content before they ever reach
+// exec.Command. See SEC-1 in the security audit.
+func sanitizeInterfaceName(iface string) (string, error) {
+	if iface == "" {
+		return "", nil
+	}
+	if !validInterfaceName.MatchString(iface) {
+		return "", fmt.Errorf("invalid interface name")
+	}
+	return iface, nil
+}
+
 // RunNetworkAction executes a named network action with optional parameters.
 func RunNetworkAction(action string, params map[string]string) error {
-	iface := params["interface"]
+	iface, err := sanitizeInterfaceName(params["interface"])
+	if err != nil {
+		return err
+	}
 	switch action {
 	case "flush_dns":
 		return FlushDNSCache()

@@ -83,7 +83,7 @@ func (d *Dashboard) GenerateDashboardBriefing() []BriefingSection {
 	// Add alert section if alerts exist
 	alertCount := d.app.alerts.AlertCount()
 	if alertCount > 0 {
-		alerts := d.app.alerts.GetAlerts()
+		alerts := d.app.alerts.ActiveAlerts()
 		alertText := ""
 		for _, a := range alerts {
 			if !a.Resolved {
