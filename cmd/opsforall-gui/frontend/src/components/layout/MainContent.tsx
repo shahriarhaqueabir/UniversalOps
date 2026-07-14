@@ -72,7 +72,7 @@ export function MainContent({ currentPage, onNavigate }: MainContentProps) {
   }
 
   return (
-    <main className="flex-1 overflow-y-auto bg-[var(--color-bg)]">
+    <main className="flex-1 overflow-y-auto bg-[var(--color-bg)] p-8">
       <ErrorBoundary>
         <Suspense fallback={<PageSkeleton />}>
           <AnimatePresence mode="wait">

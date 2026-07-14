@@ -252,7 +252,7 @@ export function Settings() {
   const isDark = theme === 'dark'
 
   return (
-    <div className="h-full overflow-y-auto p-6 space-y-5 max-w-3xl">
+    <div className="h-full overflow-y-auto space-y-5 max-w-3xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-3">
           <Monitor size={24} className="text-[var(--color-accent)]" /> Settings

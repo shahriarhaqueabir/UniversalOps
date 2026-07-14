@@ -457,3 +457,233 @@ func (n *NetOps) GetDefaultGateway() GatewayInfo {
 		Reachable: reachable,
 	}
 }
+
+// GetARPTable returns the system ARP table with vendor resolution.
+func (n *NetOps) GetARPTable() []ARPEntryData {
+	entries, err := netops.GetARPTable()
+	if err != nil {
+		common.LogWarn("GetARPTable failed: %v", err)
+		return []ARPEntryData{}
+	}
+	out := make([]ARPEntryData, 0, len(entries))
+	for _, e := range entries {
+		out = append(out, ARPEntryData{IP: e.IP, MAC: e.MAC, Vendor: e.Vendor, Interface: e.Interface})
+	}
+	return out
+}
+
+// GetRoutingTable returns the system routing table.
+func (n *NetOps) GetRoutingTable() []RouteEntryData {
+	routes, err := netops.GetRoutingTable()
+	if err != nil {
+		common.LogWarn("GetRoutingTable failed: %v", err)
+		return []RouteEntryData{}
+	}
+	out := make([]RouteEntryData, 0, len(routes))
+	for _, r := range routes {
+		out = append(out, RouteEntryData{
+			Destination: r.Destination, Mask: r.Mask, Gateway: r.Gateway,
+			Interface: r.Interface, Metric: r.Metric, IsDefault: r.IsDefault,
+		})
+	}
+	return out
+}
+
+// ManageStaticRoutes adds or deletes a static route.
+func (n *NetOps) ManageStaticRoutes(action, dest, mask, gateway string) NetworkActionResult {
+	err := netops.ManageStaticRoutes(action, dest, mask, gateway)
+	if err != nil {
+		common.LogWarn("ManageStaticRoutes failed: %v", err)
+		return NetworkActionResult{Action: action, Success: false, Message: err.Error()}
+	}
+	return NetworkActionResult{Action: action, Success: true, Message: fmt.Sprintf("Route %s successful", action)}
+}
+
+// ScanWiFiNetworks scans for available WiFi networks.
+func (n *NetOps) ScanWiFiNetworks() []WiFiNetworkData {
+	networks, err := netops.ScanWiFiNetworks()
+	if err != nil {
+		common.LogWarn("ScanWiFiNetworks failed: %v", err)
+		return []WiFiNetworkData{}
+	}
+	out := make([]WiFiNetworkData, 0, len(networks))
+	for _, w := range networks {
+		out = append(out, WiFiNetworkData{
+			SSID: w.SSID, Signal: w.Signal, Channel: w.Channel,
+			Security: w.Security, BSSID: w.BSSID, Frequency: w.Frequency,
+		})
+	}
+	return out
+}
+
+// GetWiFiInfo returns info about the current WiFi connection.
+func (n *NetOps) GetWiFiInfo() WiFiInfoData {
+	info, err := netops.GetWiFiInfo()
+	if err != nil {
+		common.LogWarn("GetWiFiInfo failed: %v", err)
+		return WiFiInfoData{}
+	}
+	return WiFiInfoData{
+		Interface: info.Interface, SSID: info.SSID, Signal: info.Signal,
+		Speed: info.Speed, Channel: info.Channel,
+	}
+}
+
+// FlushDNSCache flushes the system DNS resolver cache.
+func (n *NetOps) FlushDNSCache() NetworkActionResult {
+	err := netops.FlushDNSCache()
+	if err != nil {
+		common.LogWarn("FlushDNSCache failed: %v", err)
+		return NetworkActionResult{Action: "flush_dns", Success: false, Message: err.Error()}
+	}
+	return NetworkActionResult{Action: "flush_dns", Success: true, Message: "DNS cache flushed"}
+}
+
+// ReverseLookup performs a PTR lookup for an IP address.
+func (n *NetOps) ReverseLookup(ip string) string {
+	result, err := netops.ReverseLookup(ip)
+	if err != nil {
+		common.LogWarn("ReverseLookup failed: %v", err)
+		return ""
+	}
+	return result
+}
+
+// TestDoH tests DNS-over-HTTPS connectivity to a given server.
+func (n *NetOps) TestDoH(server string) DoHResultData {
+	result := netops.TestDoH(server)
+	return DoHResultData{
+		Server: result.Server, LatencyMs: result.LatencyMs,
+		Success: result.Success, ResolvedIP: result.ResolvedIP,
+	}
+}
+
+// PingMultiTarget pings multiple targets concurrently.
+func (n *NetOps) PingMultiTarget(targets []string, count int) []PingResultMultiData {
+	results := netops.PingMultiTarget(targets, count)
+	out := make([]PingResultMultiData, 0, len(results))
+	for _, r := range results {
+		out = append(out, PingResultMultiData{
+			Target: r.Target, MinMs: r.MinMs, AvgMs: r.AvgMs, MaxMs: r.MaxMs,
+			StdDevMs: r.StdDevMs, PacketLoss: r.PacketLoss, JitterMs: r.JitterMs,
+			IndividualRTTs: r.IndividualRTTs, Success: r.Success, Error: r.Error,
+		})
+	}
+	return out
+}
+
+// GetPingStats computes aggregate stats across multiple ping results.
+func (n *NetOps) GetPingStats(results []PingResultMultiData) PingStatsData {
+	// Convert frontend types back to backend types
+	bResults := make([]netops.PingResultMulti, 0, len(results))
+	for _, r := range results {
+		bResults = append(bResults, netops.PingResultMulti{
+			Target: r.Target, MinMs: r.MinMs, AvgMs: r.AvgMs, MaxMs: r.MaxMs,
+			StdDevMs: r.StdDevMs, PacketLoss: r.PacketLoss, JitterMs: r.JitterMs,
+			IndividualRTTs: r.IndividualRTTs, Success: r.Success, Error: r.Error,
+		})
+	}
+	stats := netops.GetPingStats(bResults)
+	return PingStatsData{
+		AvgLatency: stats.AvgLatency, MaxLatency: stats.MaxLatency,
+		TotalLoss: stats.TotalLoss, WorstTarget: stats.WorstTarget,
+	}
+}
+
+// RunNetworkHealthCheck runs a comprehensive set of network health checks.
+func (n *NetOps) RunNetworkHealthCheck() HealthReportData {
+	report := netops.RunNetworkHealthCheck()
+	checks := make([]HealthCheckData, 0, len(report.Checks))
+	for _, c := range report.Checks {
+		checks = append(checks, HealthCheckData{Name: c.Name, Status: c.Status, Detail: c.Detail, Score: c.Score})
+	}
+	return HealthReportData{
+		Score: report.Score, Checks: checks, Summary: report.Summary, Duration: report.Duration,
+	}
+}
+
+// GetVPNStatus detects active VPN connections.
+func (n *NetOps) GetVPNStatus() VPNStatusData {
+	status := netops.GetVPNStatus()
+	return VPNStatusData{
+		Active: status.Active, Type: status.Type, Interface: status.Interface,
+		RemoteIP: status.RemoteIP, LocalIP: status.LocalIP, Protocol: status.Protocol,
+	}
+}
+
+// GetFirewallRules retrieves the system firewall rules.
+func (n *NetOps) GetFirewallRules() []FirewallRuleData {
+	rules, err := netops.GetFirewallRules()
+	if err != nil {
+		common.LogWarn("GetFirewallRules failed: %v", err)
+		return []FirewallRuleData{}
+	}
+	out := make([]FirewallRuleData, 0, len(rules))
+	for _, r := range rules {
+		out = append(out, FirewallRuleData{
+			Name: r.Name, Direction: r.Direction, Action: r.Action, Protocol: r.Protocol,
+			Ports: r.Ports, Enabled: r.Enabled, Source: r.Source, Destination: r.Destination,
+		})
+	}
+	return out
+}
+
+// ManageFirewallRules adds or deletes a firewall rule.
+func (n *NetOps) ManageFirewallRules(action string, rule FirewallRuleData) NetworkActionResult {
+	bRule := netops.FirewallRule{
+		Name: rule.Name, Direction: rule.Direction, Action: rule.Action,
+		Protocol: rule.Protocol, Ports: rule.Ports, Source: rule.Source, Destination: rule.Destination,
+	}
+	err := netops.ManageFirewallRules(action, bRule)
+	if err != nil {
+		common.LogWarn("ManageFirewallRules failed: %v", err)
+		return NetworkActionResult{Action: action, Success: false, Message: err.Error()}
+	}
+	return NetworkActionResult{Action: action, Success: true, Message: fmt.Sprintf("Firewall rule %s successful", action)}
+}
+
+// RunNetworkDiscovery discovers devices on a subnet.
+func (n *NetOps) RunNetworkDiscovery(subnet string) DiscoveryResultData {
+	result := netops.RunNetworkDiscovery(subnet)
+	devices := make([]DiscoveredDeviceData, 0, len(result.Devices))
+	for _, d := range result.Devices {
+		devices = append(devices, DiscoveredDeviceData{
+			IP: d.IP, MAC: d.MAC, Vendor: d.Vendor, Hostname: d.Hostname,
+			OpenPorts: d.OpenPorts, ResponseTimeMs: d.ResponseTimeMs,
+		})
+	}
+	return DiscoveryResultData{Devices: devices, Subnet: result.Subnet, ScanTimeMs: result.ScanTimeMs}
+}
+
+// GetBandwidthHistory returns recorded bandwidth samples.
+func (n *NetOps) GetBandwidthHistory() []BandwidthSampleData {
+	samples := netops.GetBandwidthHistory()
+	out := make([]BandwidthSampleData, 0, len(samples))
+	for _, s := range samples {
+		out = append(out, BandwidthSampleData{
+			Timestamp: s.Timestamp.Format(time.RFC3339), RxBytesPerSec: s.RxBytesPerSec,
+			TxBytesPerSec: s.TxBytesPerSec, Interface: s.Interface,
+		})
+	}
+	return out
+}
+
+// StartMonitoring begins periodic bandwidth sampling.
+func (n *NetOps) StartMonitoring(intervalSec int) {
+	netops.StartMonitoring(intervalSec)
+}
+
+// StopMonitoring stops bandwidth monitoring.
+func (n *NetOps) StopMonitoring() {
+	netops.StopMonitoring()
+}
+
+// RunNetworkAction executes a named network action.
+func (n *NetOps) RunNetworkAction(action string, params map[string]string) NetworkActionResult {
+	err := netops.RunNetworkAction(action, params)
+	if err != nil {
+		common.LogWarn("RunNetworkAction failed: %v", err)
+		return NetworkActionResult{Action: action, Success: false, Message: err.Error()}
+	}
+	return NetworkActionResult{Action: action, Success: true, Message: fmt.Sprintf("Action %s completed", action)}
+}

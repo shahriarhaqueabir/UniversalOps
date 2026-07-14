@@ -127,7 +127,7 @@ function AnalystBriefing({ title, objective, redFlags }: { title: string, object
         </div>
         <div>
           <p className="text-xs font-semibold text-[var(--color-danger)] uppercase tracking-wider mb-2">Critical Red-Flags</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {redFlags.map((flag, i) => (
               <div key={i} className="flex items-center gap-2 bg-[var(--color-panel-3)] p-2.5 rounded-lg border border-[var(--color-border)]">
                 <AlertTriangle size={14} className="text-[var(--color-warning)] shrink-0" />
@@ -160,7 +160,7 @@ function HeroSection({ stats, alertBreakdown }: { stats: DashboardData, alertBre
   }, [stats.cpu?.history])
 
   return (
-    <div className="bg-panel border-2 border-accent/20 rounded-[var(--radius-xl)] p-8 flex flex-col lg:flex-row items-center gap-8 shadow-2xl relative overflow-hidden group">
+    <div className="bg-panel border-2 border-accent/20 rounded-[var(--radius-xl)] p-8 flex flex-row items-center gap-8 shadow-2xl relative overflow-hidden group">
       <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--color-accent)]/5 rounded-bl-full pointer-events-none transition-all group-hover:bg-[var(--color-accent)]/10" />
 
       <div className="relative shrink-0">
@@ -245,13 +245,30 @@ function HeroSection({ stats, alertBreakdown }: { stats: DashboardData, alertBre
   )
 }
 
-function KpiCard({ icon, label, value, unit, status, description, onClick }: { icon: React.ReactNode, label: string, value: string, unit?: string, status: string, description: string, onClick?: () => void }) {
+function KpiCard({ icon, label, value, unit, status, description, onClick, variant = 'default' }: { icon: React.ReactNode, label: string, value: string, unit?: string, status: string, description: string, onClick?: () => void, variant?: 'default' | 'accent' | 'success' | 'warning' }) {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.key === 'Enter' || e.key === ' ') && onClick) {
+      e.preventDefault();
+      onClick();
+    }
+  };
+const variantStyles = {
+    default: 'bg-[var(--color-panel)] border-[var(--color-border)]',
+    accent: 'bg-[var(--color-accent)]/5 border-[var(--color-accent)]/20',
+    success: 'bg-[var(--color-success)]/5 border-[var(--color-success)]/20',
+    warning: 'bg-[var(--color-warning)]/5 border-[var(--color-warning)]/20',
+  };
+
   return (
     <div
       onClick={onClick}
+      onKeyDown={handleKeyDown}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
       className={cn(
-        "bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6 transition-all hover:border-[var(--color-accent)]/30 hover:shadow-lg group card-hover",
-        onClick ? "cursor-pointer active:scale-[0.98]" : ""
+        "rounded-[var(--radius-lg)] p-6 transition-all hover:border-[var(--color-accent)]/30 hover:shadow-lg group card-hover focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] focus-visible:outline-offset-2",
+        onClick ? "cursor-pointer active:scale-[0.98]" : "",
+        variantStyles[variant]
       )}
     >
       <div className="flex items-center justify-between mb-4">
@@ -396,17 +413,17 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
   }
 
   if (queryLoading && !liveData) return (
-    <div className="p-10 space-y-12 overflow-y-auto h-full animate-pulse">
+    <div className="space-y-12 overflow-y-auto h-full animate-pulse">
       <div className="h-10 w-64 bg-panel-2 rounded-xl" />
       <div className="h-48 bg-panel-2 rounded-[28px]" />
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8"><div className="h-48 bg-panel-2 rounded-[24px]" /><div className="h-48 bg-panel-2 rounded-[24px]" /><div className="h-48 bg-panel-2 rounded-[24px]" /></div>
+      <div className="grid grid-cols-3 gap-8"><div className="h-48 bg-panel-2 rounded-[24px]" /><div className="h-48 bg-panel-2 rounded-[24px]" /><div className="h-48 bg-panel-2 rounded-[24px]" /></div>
     </div>
   )
 
   if (!data) return null
 
   return (
-    <div className="p-8 space-y-8 overflow-y-auto h-full scroll-smooth">
+    <div className="space-y-8 overflow-y-auto h-full scroll-smooth">
       <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-6">
         <div>
           <h1 className="text-3xl font-bold text-[var(--color-text)] flex items-center gap-3">
@@ -425,21 +442,21 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
 
       <div className="space-y-6">
         <div className="flex items-center gap-4"><div className="h-px flex-1 bg-[var(--color-border)]" /><h2 className="text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-widest">Resource Compute Layer</h2><div className="h-px flex-1 bg-[var(--color-border)]" /></div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <KpiCard icon={<Cpu size={24} />} label="Processor" value={Math.round(data.cpu.value).toString()} unit="%" status={data.cpu.value > 80 ? 'warning' : 'healthy'} description="Measures aggregate clock-cycle pressure." onClick={() => onNavigate?.('sysops')} />
-          <KpiCard icon={<MemoryStick size={24} />} label="Memory" value={Math.round(data.memory.value).toString()} unit="%" status={data.memory.value > 85 ? 'warning' : 'healthy'} description="Percentage of volatile allocation." onClick={() => onNavigate?.('sysops')} />
-          <KpiCard icon={<HardDrive size={24} />} label="Storage" value={Math.round(data.disk.value).toString()} unit="%" status={data.disk.value > 90 ? 'warning' : 'healthy'} description="Local disk occupancy." onClick={() => onNavigate?.('sysops')} />
-          <KpiCard icon={<Gpu size={24} />} label="GPU" value={data.gpu?.detected ? data.gpu.vendor : '—'} status="healthy" description={data.gpu?.detected ? `${data.gpu.name}` : 'No GPU detected.'} onClick={() => onNavigate?.('sysops')} />
-          <KpiCard icon={<Battery size={24} />} label="Battery" value={data.battery?.detected ? Math.round(data.battery.percent).toString() : '—'} unit="%" status="healthy" description={data.battery?.detected ? `${data.battery.status}` : 'AC-powered.'} onClick={() => onNavigate?.('sysops')} />
-          <KpiCard icon={<Network size={24} />} label="Network" value={`${formatBytes(data.network.rx_rate)} \u2193 / ${formatBytes(data.network.tx_rate)} \u2191`} unit="/s" status="healthy" description="Real-time throughput." onClick={() => onNavigate?.('netops')} />
-        </div>
+<div className="grid grid-cols-3 gap-6">
+           <KpiCard icon={<Cpu size={24} />} label="Processor" value={Math.round(data.cpu.value).toString()} unit="%" status={data.cpu.value > 80 ? 'warning' : 'healthy'} description="Measures aggregate clock-cycle pressure." onClick={() => onNavigate?.('sysops')} variant="accent" />
+           <KpiCard icon={<MemoryStick size={24} />} label="Memory" value={Math.round(data.memory.value).toString()} unit="%" status={data.memory.value > 85 ? 'warning' : 'healthy'} description="Percentage of volatile allocation." onClick={() => onNavigate?.('sysops')} variant="success" />
+           <KpiCard icon={<HardDrive size={24} />} label="Storage" value={Math.round(data.disk.value).toString()} unit="%" status={data.disk.value > 90 ? 'warning' : 'healthy'} description="Local disk occupancy." onClick={() => onNavigate?.('sysops')} variant="warning" />
+           <KpiCard icon={<Gpu size={24} />} label="GPU" value={data.gpu?.detected ? data.gpu.vendor : '—'} status="healthy" description={data.gpu?.detected ? `${data.gpu.name}` : 'No GPU detected.'} onClick={() => onNavigate?.('sysops')} variant="default" />
+           <KpiCard icon={<Battery size={24} />} label="Battery" value={data.battery?.detected ? Math.round(data.battery.percent).toString() : '—'} unit="%" status="healthy" description={data.battery?.detected ? `${data.battery.status}` : 'AC-powered.'} onClick={() => onNavigate?.('sysops')} variant="default" />
+           <KpiCard icon={<Network size={24} />} label="Network" value={`${formatBytes(data.network.rx_rate)} \u2193 / ${formatBytes(data.network.tx_rate)} \u2191`} unit="/s" status="healthy" description="Real-time throughput." onClick={() => onNavigate?.('netops')} variant="accent" />
+         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div className="grid grid-cols-2 gap-6">
         <AnalystBriefing title="Compute Logic Analysis" objective="Monitor CPU vs RAM." redFlags={computeRedFlags(data, topProcs)} />
         <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6 shadow-lg flex flex-col">
           <h3 className="text-base font-bold text-[var(--color-text)] uppercase tracking-wider mb-4 flex items-center gap-2"><Activity size={18} className="text-[var(--color-accent)]" /> Compute Timeline</h3>
-          <div className="flex-1 min-h-[240px]">
+          <div className="flex-1" style={{ minHeight: '280px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <RechartsAreaChart data={[...cpuHistory.map(p => ({ ...p, isForecast: false })), ...(data.cpu.forecast || []).map((v, i) => ({ time: `+${i + 1}m`, value: v, isForecast: true }))]}>
                 <defs><linearGradient id="cpuGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--color-accent)" stopOpacity={0.3} /><stop offset="100%" stopColor="var(--color-accent)" stopOpacity={0} /></linearGradient></defs>

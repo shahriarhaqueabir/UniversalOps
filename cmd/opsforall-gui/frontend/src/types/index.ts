@@ -674,3 +674,237 @@ export interface ChatSession {
   last_active: string
   msg_count: number
 }
+
+// ── Extended SysOps Types ──
+
+export interface PerCPUInfo {
+  core: number
+  frequency_mhz: number
+  usage_percent: number
+}
+
+export interface CPUExtendedInfo {
+  model_name: string
+  frequency_mhz: number
+  cache_size_kb: number
+  temperature: number
+  per_cpu_info: PerCPUInfo[]
+}
+
+export interface DiskIOEntry {
+  name: string
+  read_bytes: number
+  write_bytes: number
+  read_count: number
+  write_count: number
+}
+
+export interface DiskIOData {
+  disks: DiskIOEntry[]
+  total_read_bytes: number
+  total_write_bytes: number
+}
+
+export interface LoggedInUserData {
+  user: string
+  terminal: string
+  host: string
+  started: string
+}
+
+export interface CPUTimesData {
+  user: number
+  system: number
+  idle: number
+  iowait: number
+  steal: number
+  total: number
+}
+
+export interface LoadAverageData {
+  load_1: number
+  load_5: number
+  load_15: number
+}
+
+export interface PerformanceData {
+  cpu_times: CPUTimesData
+  load_average: LoadAverageData
+  io_wait: number
+}
+
+export interface ActionResult {
+  action: string
+  success: boolean
+  message: string
+  output: string
+}
+
+export interface SystemLogEntry {
+  timestamp: string
+  level: string
+  source: string
+  message: string
+}
+
+export interface SystemLogsResult {
+  entries: SystemLogEntry[]
+  source: string
+  total: number
+}
+
+export interface PackageData {
+  name: string
+  version: string
+}
+
+export interface PackageManagerData {
+  name: string
+  found: boolean
+  packages: PackageData[]
+}
+
+export interface ScheduledTaskData {
+  name: string
+  schedule: string
+  command: string
+  enabled: boolean
+  next_run: string
+}
+
+export interface DiagnosticCheckData {
+  name: string
+  status: 'pass' | 'warn' | 'fail'
+  message: string
+  value: string
+}
+
+export interface ExtendedDiagnosticResult {
+  checks: DiagnosticCheckData[]
+  score: number
+  timestamp: string
+}
+
+// ── NetOps Extended Types ──
+
+export interface ARPEntryData {
+  ip: string
+  mac: string
+  vendor: string
+  interface: string
+}
+
+export interface RouteEntryData {
+  destination: string
+  mask: string
+  gateway: string
+  interface: string
+  metric: number
+  is_default: boolean
+}
+
+export interface WiFiNetworkData {
+  ssid: string
+  signal: number
+  channel: number
+  security: string
+  bssid: string
+  frequency: string
+}
+
+export interface WiFiInfoData {
+  interface: string
+  ssid: string
+  signal: number
+  speed: string
+  channel: number
+}
+
+export interface DoHResultData {
+  server: string
+  latency_ms: number
+  success: boolean
+  resolved_ip: string
+}
+
+export interface PingResultMultiData {
+  target: string
+  min_ms: number
+  avg_ms: number
+  max_ms: number
+  stddev_ms: number
+  packet_loss: number
+  jitter_ms: number
+  individual_rtts: number[]
+  success: boolean
+  error?: string
+}
+
+export interface PingStatsData {
+  avg_latency: number
+  max_latency: number
+  total_loss: number
+  worst_target: string
+}
+
+export interface HealthCheckData {
+  name: string
+  status: 'pass' | 'warn' | 'fail'
+  detail: string
+  score: number
+}
+
+export interface HealthReportData {
+  score: number
+  checks: HealthCheckData[]
+  summary: string
+  duration: string
+}
+
+export interface VPNStatusData {
+  active: boolean
+  type: string
+  interface: string
+  remote_ip: string
+  local_ip: string
+  protocol: string
+}
+
+export interface NetOpsFirewallRuleData {
+  name: string
+  direction: string
+  action: string
+  protocol: string
+  ports: string
+  enabled: boolean
+  source: string
+  destination: string
+}
+
+export interface DiscoveredDeviceData {
+  ip: string
+  mac: string
+  vendor: string
+  hostname: string
+  open_ports: number[]
+  response_time_ms: number
+}
+
+export interface DiscoveryResultData {
+  devices: DiscoveredDeviceData[]
+  subnet: string
+  scan_time_ms: number
+}
+
+export interface BandwidthSampleData {
+  timestamp: string
+  rx_bytes_per_sec: number
+  tx_bytes_per_sec: number
+  interface: string
+}
+
+export interface NetworkActionResult {
+  action: string
+  message: string
+  success: boolean
+}

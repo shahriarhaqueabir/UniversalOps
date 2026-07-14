@@ -92,6 +92,7 @@ export function DevOps() {
             <Tabs.Trigger
               key={tab.id}
               value={tab.id}
+              data-automation-id={`devops-tab-${tab.id}`}
               className={cn(
                 'flex items-center gap-3 px-6 py-4 text-base font-bold transition-all border-b-2 border-transparent whitespace-nowrap',
                 activeTab === tab.id ? 'border-accent text-text bg-accent/5' : 'text-text-faint hover:text-text hover:bg-[var(--color-sidebar-hover)]',
@@ -164,8 +165,8 @@ function OverviewTab() {
   ]
 
   return (
-    <div className="flex flex-col h-full p-8 space-y-8 overflow-y-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div className="flex flex-col h-full space-y-8 overflow-y-auto">
+      <div className="grid grid-cols-2 gap-8">
         <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -228,7 +229,7 @@ function OverviewTab() {
       </div>
 
       <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-2xl">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-5 gap-4">
           {summaryKpis.map((kpi) => (
             <div key={kpi.label} className="flex flex-col items-center gap-2 bg-panel-2 border border-border rounded-xl p-5">
               <span className={cn('text-3xl font-bold tabular-nums', kpi.colorClass)}>{kpi.value}</span>
@@ -376,10 +377,10 @@ function PowerShellProTab() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 h-full p-8 gap-8 overflow-hidden">
+    <div className="grid grid-cols-3 h-full gap-8 overflow-hidden">
       <ConfirmDialog open={confirmOpen} title="Execute PowerShell Workflow" description={`Run diagnostic workflow "${selectedWorkflow}"?`}
         onConfirm={() => runWorkflow(selectedWorkflow)} onClose={() => setConfirmOpen(false)} />
-      <div className="lg:col-span-1 space-y-4 overflow-y-auto pr-2">
+      <div className="col-span-1 space-y-4 overflow-y-auto pr-2">
         <h3 className="text-lg font-bold text-text-dim uppercase tracking-widest mb-4">Diagnostic Workflows</h3>
         {workflows.map(wf => (
           <button key={wf} onClick={() => { setSelectedWorkflow(wf); setConfirmOpen(true) }} disabled={isRunning}
@@ -391,7 +392,7 @@ function PowerShellProTab() {
           </button>
         ))}
       </div>
-      <div className="lg:col-span-2 flex flex-col space-y-4">
+      <div className="col-span-2 flex flex-col space-y-4">
         <div className="flex-1 bg-black border border-border rounded-2xl p-8 overflow-y-auto font-mono text-lg leading-relaxed whitespace-pre shadow-inner">
           {stripAnsi(output) || 'Select a workflow to begin diagnostic execution.'}
         </div>
@@ -542,7 +543,7 @@ function ToolboxTab() {
   const { call } = useBackend()
   const { data: tools = [] } = useQuery<ToolInfo[]>({ queryKey: ['devops-tools'], queryFn: async () => (await call('DevOps.GetInstalledTools') as ToolInfo[]) || [] })
   return (
-    <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto h-full">
+    <div className="grid grid-cols-3 gap-4 overflow-y-auto h-full">
       {tools.map(t => (
         <div key={t.name} className="p-5 rounded-xl border border-border bg-panel flex justify-between items-center">
           <div><p className="font-bold">{t.name}</p><p className="text-xs font-mono text-text-faint">{t.version || 'not found'}</p></div>

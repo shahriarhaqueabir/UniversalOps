@@ -21,6 +21,51 @@ type CPUStats struct {
 	LoadAvg15     float64
 }
 
+// CPUExtendedStats holds extended CPU information.
+type CPUExtendedStats struct {
+	ModelName    string        `json:"model_name"`
+	FrequencyMHz float64       `json:"frequency_mhz"`
+	CacheSizeKB  int32         `json:"cache_size_kb"`
+	Temperature  float64       `json:"temperature"`
+	PerCPUInfo   []PerCPUInfo  `json:"per_cpu_info"`
+}
+
+// PerCPUInfo holds per-core detailed info.
+type PerCPUInfo struct {
+	Core      int     `json:"core"`
+	Frequency float64 `json:"frequency_mhz"`
+	Usage     float64 `json:"usage_percent"`
+}
+
+// GetCPUExtended returns extended CPU information including model, frequency, temperature, and per-core stats.
+func GetCPUExtended() (*CPUExtendedStats, error) {
+	info, err := cpu.Info()
+	if err != nil {
+		return nil, err
+	}
+
+	result := &CPUExtendedStats{}
+	if len(info) > 0 {
+		result.ModelName = info[0].ModelName
+		result.FrequencyMHz = info[0].Mhz
+		result.CacheSizeKB = info[0].CacheSize
+	}
+
+	// Temperature not available in gopsutil v4 — leave as 0
+
+	// Per-CPU info
+	perCPU, _ := cpu.Percent(0, true)
+	for i, ci := range info {
+		pInfo := PerCPUInfo{Core: i, Frequency: ci.Mhz}
+		if i < len(perCPU) {
+			pInfo.Usage = perCPU[i]
+		}
+		result.PerCPUInfo = append(result.PerCPUInfo, pInfo)
+	}
+
+	return result, nil
+}
+
 // GetCPUStats returns current CPU usage and info.
 func GetCPUStats() (*CPUStats, error) {
 	// Single blocking call for total CPU percentage (500ms delta)

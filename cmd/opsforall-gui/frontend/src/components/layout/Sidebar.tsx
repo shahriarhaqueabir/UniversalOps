@@ -92,6 +92,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             <li key={item.id} className="relative">
               <button
                 onClick={() => onNavigate(item.id)}
+                data-automation-id={`main-tab-${item.id}`}
                 className={cn(
                   'group flex items-center w-full rounded-xl transition-all duration-150',
                   collapsed ? 'justify-center p-3' : 'gap-3 px-3 py-2.5 text-sm',
@@ -133,6 +134,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             <li key={item.id} className="relative">
               <button
                 onClick={() => onNavigate(item.id)}
+                data-automation-id={`main-tab-${item.id}`}
                 className={cn(
                   'group flex items-center w-full rounded-xl transition-all duration-150',
                   collapsed ? 'justify-center p-3' : 'gap-3 px-3 py-2.5 text-sm',

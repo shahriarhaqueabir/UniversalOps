@@ -6,8 +6,8 @@
 - **Core Value**: Universal deep system visibility and automation for everyone.
 
 ## Active Session
-- **Sprint 28: Layer-Driven Code Review** 🔄 IN PROGRESS
-- **Sprint 27: Documentation & Stale Code Audit** ✅ DONE
+- **Sprint 29: DevOps Foundation & Actionability** 🔄 IN PROGRESS
+- **Sprint 28: Layer-Driven Code Review** ✅ DONE
 
 ## Completed Work
 
