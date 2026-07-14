@@ -8,6 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/aiops"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -188,7 +191,7 @@ func (a *AIOps) GetAIInsights() []AIInsight {
 		insights = append(insights, AIInsight{
 			Category:  metricCategory(anom.Metric),
 			Severity:  anom.Severity,
-			Title:     fmt.Sprintf("%s anomaly detected", strings.Title(anom.Metric)),
+			Title:     fmt.Sprintf("%s anomaly detected", cases.Title(language.English).String(anom.Metric)),
 			Message:   fmt.Sprintf("%s is at %.1f (expected ~%.1f, %.1fσ deviation)", anom.Metric, anom.Value, anom.Expected, anom.Deviation),
 			Action:    fmt.Sprintf("Investigate %s usage for runaway processes or resource leaks.", anom.Metric),
 			Timestamp: now,

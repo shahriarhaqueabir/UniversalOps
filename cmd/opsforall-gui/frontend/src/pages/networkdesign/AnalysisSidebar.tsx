@@ -148,17 +148,21 @@ export function AnalysisSidebar({
   const { call } = useBackend()
   const [discovering, setDiscovering] = useState(false)
 
-  // ── Sync topology to backend ──
+  // ── Sync topology to backend (debounced) ──
+  const devicesJson = useMemo(() => JSON.stringify(devices), [devices])
+  const connectionsJson = useMemo(() => JSON.stringify(connections), [connections])
+
   useEffect(() => {
     const sync = async () => {
       try {
-        await call('NetDesign.SetTopology', JSON.stringify(devices), JSON.stringify(connections))
+        await call('NetDesign.SetTopology', devicesJson, connectionsJson)
       } catch (err: unknown) {
         console.error('[NetworkDesign] Sync failed:', err)
       }
     }
-    sync()
-  }, [devices, connections, call])
+    const timeout = setTimeout(sync, 500) // debounce 500ms
+    return () => clearTimeout(timeout)
+  }, [devicesJson, connectionsJson, call])
 
   // ── Backend Analysis ──
   const { data: health = { totalNodes: 0, totalEdges: 0, brokenLinks: 0, missingLabels: 0, orphanNodes: [], duplicateIPs: [], subnetErrors: [], suggestions: [] } } = useQuery<TopologyHealth>({

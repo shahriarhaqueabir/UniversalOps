@@ -4,11 +4,16 @@ import (
 	"fmt"
 	"os/exec"
 	"runtime"
+
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
 // RunNetworkAction executes a named network action with optional parameters.
 func RunNetworkAction(action string, params map[string]string) error {
 	iface := params["interface"]
+	if iface != "" && !common.ValidInterfaceName(iface) {
+		return fmt.Errorf("invalid interface name: %q", iface)
+	}
 	switch action {
 	case "flush_dns":
 		return FlushDNSCache()

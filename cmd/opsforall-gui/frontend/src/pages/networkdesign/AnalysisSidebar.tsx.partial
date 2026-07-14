@@ -1,0 +1,81 @@
+import { useRef, useEffect, useState, useMemo, useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { call } from '../../hooks/useBackend'
+import type { TopologyHealth, InventorySummary } from '../../types'
+import { computeHealthScore, groupByType } from '../../lib/networkUtils'
+import { useBackend } from '../../hooks/useBackend'
+import { useAlertStore } from '../../stores/useAlertStore'
+import { toast } from 'sonner'
+import { LucideIcon, AlertTriangle, CheckCircle, Info, AlertCircle } from 'lucide-react'
+
+interface AnalysisSidebarProps {
+  devices: any[]
+  connections: any[]
+  isOpen: boolean
+  onToggle: () => void
+  onDevicesDiscovered: (devices: any[]) => void
+}
+
+export function AnalysisSidebar({
+  devices,
+  connections,
+  isOpen,
+  onToggle,
+  onDevicesDiscovered,
+}: AnalysisSidebarProps) {
+  const { call } = useBackend()
+  const [discovering, setDiscovering] = useState(false)
+
+  // ── Debounced sync ref ──
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
+
+  // ── Sync topology to backend (debounced 500ms) ──
+  useEffect(() => {
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current)
+    }
+    syncTimeoutRef.current = setTimeout(async () => {
+      try {
+        await call('NetDesign.SetTopology', JSON.stringify(devices), JSON.stringify(connections))
+      } catch (err: unknown) {
+        console.error('[NetworkDesign] Sync failed:', err)
+      }
+    }, 500)
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current)
+      }
+    }
+  }, [devices, connections, call])
+
+  // ── Backend Analysis ──
+  const { data: health = { totalNodes: 0, totalEdges: 0, brokenLinks: 0, missingLabels: 0, orphanNodes: [], duplicateIPs: [], subnetErrors: [], suggestions: [] } } = useQuery<TopologyHealth>({
+    queryKey: ['topology-health', devices.length, connections.length],
+    queryFn: async () => {
+      const res = await call('NetDesign.AnalyzeTopology')
+      return res as TopologyHealth
+    },
+  })
+
+  const { data: inventorySummary } = useQuery<InventorySummary>({
+    queryKey: ['topology-inventory', devices.length],
+    queryFn: async () => {
+      return await call('NetDesign.GetInventory') as any
+    }
+  })
+
+  const healthScore = useMemo(() => computeHealthScore(health), [health])
+  const inventory = useMemo(() => groupByType(devices), [devices])
+  const docGaps = useMemo(() => {
+    const gaps: string[] = []
+    devices.forEach(d => {
+      if (!d.label) gaps.push(`${d.type} at ${d.ip} missing label`)
+      if (!d.vendor) gaps.push(`${d.type} at ${d.ip} missing vendor`)
+    })
+    return gaps
+  }, [devices])
+
+  const scoreColor = healthScore >= 80 ? 'text-[var(--color-success)]' : healthScore >= 50 ? 'text-[var(--color-warning)]' : 'text-[var(--color-danger)]'
+  const scoreBg = healthScore >= 80 ? 'bg-[var(--color-success)]/10' : healthScore >= 50 ? 'bg-[var(--color-warning)]/10' : 'bg-[var(--color-danger)]/10'
+
+  // ... rest of file

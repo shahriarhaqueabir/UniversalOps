@@ -678,3 +678,311 @@ func (s *SecOps) GetSecuritySummary() SecuritySummary {
 		AnalyzedAt:      time.Now().Format(time.RFC3339),
 	}
 }
+
+// ── Phase 2 Bound Methods ─────────────────────────────────────────────────────
+
+// GetPasswordPolicy returns the system password policy.
+func (s *SecOps) GetPasswordPolicy() PasswordPolicy {
+	p, err := secops.GetPasswordPolicy()
+	if err != nil {
+		common.LogWarn("GetPasswordPolicy failed: %v", err)
+		return PasswordPolicy{}
+	}
+	return PasswordPolicy{
+		MaxAge:           p.MaxAge,
+		MinLength:        p.MinLength,
+		Complexity:       p.Complexity,
+		LockoutThreshold: p.LockoutThreshold,
+		LockoutDuration:  p.LockoutDuration,
+	}
+}
+
+// GetFailedLogins returns recent failed login attempts.
+func (s *SecOps) GetFailedLogins() []FailedLogin {
+	logins, err := secops.GetFailedLogins()
+	if err != nil {
+		common.LogWarn("GetFailedLogins failed: %v", err)
+		return []FailedLogin{}
+	}
+	out := make([]FailedLogin, 0, len(logins))
+	for _, l := range logins {
+		out = append(out, FailedLogin{
+			Time:     l.Time,
+			Username: l.Username,
+			SourceIP: l.SourceIP,
+			Count:    l.Count,
+		})
+	}
+	return out
+}
+
+// GetAccountLockouts returns locked accounts.
+func (s *SecOps) GetAccountLockouts() []LockedAccount {
+	locked, err := secops.GetAccountLockouts()
+	if err != nil {
+		common.LogWarn("GetAccountLockouts failed: %v", err)
+		return []LockedAccount{}
+	}
+	out := make([]LockedAccount, 0, len(locked))
+	for _, l := range locked {
+		out = append(out, LockedAccount{
+			Username:    l.Username,
+			LockedSince: l.LockedSince,
+		})
+	}
+	return out
+}
+
+// GetDiskEncryptionStatus returns disk encryption status.
+func (s *SecOps) GetDiskEncryptionStatus() []DiskEncryption {
+	disks, err := secops.GetDiskEncryptionStatus()
+	if err != nil {
+		common.LogWarn("GetDiskEncryptionStatus failed: %v", err)
+		return []DiskEncryption{}
+	}
+	out := make([]DiskEncryption, 0, len(disks))
+	for _, d := range disks {
+		out = append(out, DiskEncryption{
+			Volume:    d.Volume,
+			Encrypted: d.Encrypted,
+			Method:    d.Method,
+			Status:    d.Status,
+		})
+	}
+	return out
+}
+
+// GetSecureBootStatus returns secure boot status.
+func (s *SecOps) GetSecureBootStatus() SecureBoot {
+	sb, err := secops.GetSecureBootStatus()
+	if err != nil {
+		common.LogWarn("GetSecureBootStatus failed: %v", err)
+		return SecureBoot{}
+	}
+	return SecureBoot{
+		Enabled: sb.Enabled,
+		State:   sb.State,
+	}
+}
+
+// GetRunningServices returns running system services.
+func (s *SecOps) GetRunningServices() []SystemService {
+	services, err := secops.GetRunningServices()
+	if err != nil {
+		common.LogWarn("GetRunningServices failed: %v", err)
+		return []SystemService{}
+	}
+	out := make([]SystemService, 0, len(services))
+	for _, sv := range services {
+		out = append(out, SystemService{
+			Name:        sv.Name,
+			DisplayName: sv.DisplayName,
+			Status:      sv.Status,
+			StartupType: sv.StartupType,
+		})
+	}
+	return out
+}
+
+// GetTLSCertificates returns TLS certificate info.
+func (s *SecOps) GetTLSCertificates() []TLSCertificate {
+	certs, err := secops.GetTLSCertificates()
+	if err != nil {
+		common.LogWarn("GetTLSCertificates failed: %v", err)
+		return []TLSCertificate{}
+	}
+	out := make([]TLSCertificate, 0, len(certs))
+	for _, c := range certs {
+		out = append(out, TLSCertificate{
+			Subject:    c.Subject,
+			Issuer:     c.Issuer,
+			NotAfter:   c.NotAfter,
+			KeySize:    c.KeySize,
+			IsExpiring: c.IsExpiring,
+			DaysLeft:   c.DaysLeft,
+		})
+	}
+	return out
+}
+
+// GetPublicExposure returns externally-facing ports.
+func (s *SecOps) GetPublicExposure() []PublicExposure {
+	exposed, err := secops.GetPublicExposure()
+	if err != nil {
+		common.LogWarn("GetPublicExposure failed: %v", err)
+		return []PublicExposure{}
+	}
+	out := make([]PublicExposure, 0, len(exposed))
+	for _, e := range exposed {
+		out = append(out, PublicExposure{
+			Port:        e.Port,
+			Protocol:    e.Protocol,
+			ProcessName: e.ProcessName,
+			Severity:    e.Severity,
+		})
+	}
+	return out
+}
+
+// GetHardeningChecks returns hardening check results.
+func (s *SecOps) GetHardeningChecks() []HardeningCheck {
+	checks, err := secops.GetHardeningChecks()
+	if err != nil {
+		common.LogWarn("GetHardeningChecks failed: %v", err)
+		return []HardeningCheck{}
+	}
+	out := make([]HardeningCheck, 0, len(checks))
+	for _, c := range checks {
+		out = append(out, HardeningCheck{
+			Category:    c.Category,
+			Check:       c.Check,
+			Passed:      c.Passed,
+			Severity:    c.Severity,
+			Remediation: c.Remediation,
+		})
+	}
+	return out
+}
+
+// GetSSHConfig returns SSH configuration.
+func (s *SecOps) GetSSHConfig() SSHConfig {
+	sc, err := secops.GetSSHConfig()
+	if err != nil {
+		common.LogWarn("GetSSHConfig failed: %v", err)
+		return SSHConfig{}
+	}
+	return SSHConfig{
+		PermitRootLogin:        sc.PermitRootLogin,
+		PasswordAuthentication: sc.PasswordAuthentication,
+		PubkeyAuthentication:   sc.PubkeyAuthentication,
+		X11Forwarding:          sc.X11Forwarding,
+		MaxAuthTries:           sc.MaxAuthTries,
+	}
+}
+
+// GetPrivilegeEvents returns privilege escalation events.
+func (s *SecOps) GetPrivilegeEvents() []PrivilegeEvent {
+	events, err := secops.GetPrivilegeEvents()
+	if err != nil {
+		common.LogWarn("GetPrivilegeEvents failed: %v", err)
+		return []PrivilegeEvent{}
+	}
+	out := make([]PrivilegeEvent, 0, len(events))
+	for _, e := range events {
+		out = append(out, PrivilegeEvent{
+			Time:      e.Time,
+			Username:  e.Username,
+			Privilege: e.Privilege,
+			Process:   e.Process,
+		})
+	}
+	return out
+}
+
+// GetEventTimeline returns merged chronological security events.
+func (s *SecOps) GetEventTimeline() []SecTimelineEvent {
+	events, err := secops.GetEventTimeline()
+	if err != nil {
+		common.LogWarn("GetEventTimeline failed: %v", err)
+		return []SecTimelineEvent{}
+	}
+	out := make([]SecTimelineEvent, 0, len(events))
+	for _, e := range events {
+		out = append(out, SecTimelineEvent{
+			Time:     e.Time,
+			Type:     e.Type,
+			Detail:   e.Detail,
+			Severity: e.Severity,
+		})
+	}
+	return out
+}
+
+// RunSecurityAuditChecklist runs a one-click security audit.
+func (s *SecOps) RunSecurityAuditChecklist() SecurityAuditResult {
+	result, err := secops.RunSecurityAuditChecklist()
+	if err != nil {
+		common.LogWarn("RunSecurityAuditChecklist failed: %v", err)
+		return SecurityAuditResult{}
+	}
+	items := make([]AuditCheckItem, 0, len(result.Items))
+	for _, i := range result.Items {
+		items = append(items, AuditCheckItem{
+			Category:    i.Category,
+			Check:       i.Check,
+			Passed:      i.Passed,
+			Description: i.Description,
+			Remediation: i.Remediation,
+		})
+	}
+	return SecurityAuditResult{
+		Score:     result.Score,
+		Total:     result.Total,
+		Passed:    result.Passed,
+		Failed:    result.Failed,
+		Items:     items,
+		Timestamp: result.Timestamp,
+	}
+}
+
+// IsolateHost isolates the host from the network.
+// confirm: requires explicit confirmation (default true for backward compat in binding)
+// autoExpireSeconds: auto-remove isolation rule after N seconds (0 = no auto-expiry)
+func (s *SecOps) IsolateHost(confirm bool, autoExpireSeconds int) SecActionResult {
+	result, err := secops.IsolateHost(confirm, autoExpireSeconds)
+	if err != nil {
+		common.LogWarn("IsolateHost failed: %v", err)
+		return SecActionResult{Success: false, Error: err.Error()}
+	}
+	return SecActionResult{Success: result.Success, Message: result.Message, Error: result.Error}
+}
+
+// KillProcess force-kills a process by PID.
+func (s *SecOps) KillProcess(pid int) SecActionResult {
+	result, err := secops.KillProcess(pid)
+	if err != nil {
+		common.LogWarn("KillProcess failed: %v", err)
+		return SecActionResult{Success: false, Error: err.Error()}
+	}
+	return SecActionResult{Success: result.Success, Message: result.Message, Error: result.Error}
+}
+
+// BlockIP blocks an IP address via firewall.
+func (s *SecOps) BlockIP(ip string) SecActionResult {
+	result, err := secops.BlockIP(ip)
+	if err != nil {
+		common.LogWarn("BlockIP failed: %v", err)
+		return SecActionResult{Success: false, Error: err.Error()}
+	}
+	return SecActionResult{Success: result.Success, Message: result.Message, Error: result.Error}
+}
+
+// DisableAccount disables a local user account.
+func (s *SecOps) DisableAccount(username string) SecActionResult {
+	result, err := secops.DisableAccount(username)
+	if err != nil {
+		common.LogWarn("DisableAccount failed: %v", err)
+		return SecActionResult{Success: false, Error: err.Error()}
+	}
+	return SecActionResult{Success: result.Success, Message: result.Message, Error: result.Error}
+}
+
+// CaptureEvidence collects forensic evidence into a summary.
+func (s *SecOps) CaptureEvidence() SecActionResult {
+	result, err := secops.CaptureEvidence()
+	if err != nil {
+		common.LogWarn("CaptureEvidence failed: %v", err)
+		return SecActionResult{Success: false, Error: err.Error()}
+	}
+	return SecActionResult{Success: result.Success, Message: result.Message, Error: result.Error}
+}
+
+// ExportForensicBundle exports evidence to a file.
+func (s *SecOps) ExportForensicBundle() SecActionResult {
+	result, err := secops.ExportForensicBundle()
+	if err != nil {
+		common.LogWarn("ExportForensicBundle failed: %v", err)
+		return SecActionResult{Success: false, Error: err.Error()}
+	}
+	return SecActionResult{Success: result.Success, Message: result.Message, Error: result.Error}
+}

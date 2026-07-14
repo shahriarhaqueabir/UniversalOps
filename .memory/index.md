@@ -120,6 +120,12 @@
 10. **node_modules previously tracked in git** ✅ RESOLVED — untracked in `237ec56`. CI will use `npm ci` as intended.
 11. **CI setcap for TestPing** ✅ RESOLVED — `setcap cap_net_raw+ep /bin/ping` in test.yml
 
+## Comprehensive Architecture Analysis (2026-07-14)
+- [[comprehensive-analysis-2026-07-14]] — Full three-round analysis: code recon, docs cross-ref, 2026 ops standards. Collector architecture exemplary. Alerting needs notification routing. AI needs RAG/tool calling. Top 3 investments identified.
+
+## Staff Engineering Code Review Audit (2026-07-14)
+- [[audit-report-2026-07-14]] — 4 parallel agents, 61 findings (12 CRITICAL, 20 HIGH, 14 MEDIUM, 15 LOW). 8 cross-cutting themes: command injection in SecOps incident response, data races in shared state, systematic error swallowing, Linux sudo in GUI, sandbox bypass, business logic in bindings, security stubs, frontend systemic issues. Verification pass required before fixes.
+
 ## Settings Audit Results (Sprint 23)
 
 | Page | Settings Used | Status |
