@@ -1,1 +1,0 @@
-- [OpsForAll Go toolchain mismatch](opsforall-go-toolchain.md) — go.mod needs Go ≥1.26.5, sandbox only offers up to 1.25; `go build` cannot fully run here, use gofmt for syntax checks instead.
