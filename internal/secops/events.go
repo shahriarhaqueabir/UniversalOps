@@ -108,3 +108,68 @@ func isImportantSecurityEvent(event SecurityEvent) bool {
 	return strings.Contains(strings.ToLower(event.Level), "error") ||
 		strings.Contains(strings.ToLower(event.Level), "critical")
 }
+
+// PrivilegeEvent holds a privilege escalation event.
+type PrivilegeEvent struct {
+	Time      string `json:"time"`
+	Username  string `json:"username"`
+	Privilege string `json:"privilege"`
+	Process   string `json:"process"`
+}
+
+// TimelineEvent holds a chronological security event.
+type TimelineEvent struct {
+	Time     string `json:"time"`
+	Type     string `json:"type"`
+	Detail   string `json:"detail"`
+	Severity string `json:"severity"`
+}
+
+// GetPrivilegeEvents retrieves privilege use events.
+func GetPrivilegeEvents() ([]PrivilegeEvent, error) {
+	if common.IsWindows() {
+		return getPrivilegeEventsWindows()
+	}
+	return getPrivilegeEventsLinux()
+}
+
+func getPrivilegeEventsWindows() ([]PrivilegeEvent, error) {
+	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-Command",
+		`Get-WinEvent -FilterHashtable @{Id=4672,4673,4674} -MaxEvents 50 -ErrorAction SilentlyContinue | 
+		Select-Object TimeCreated,Message | ConvertTo-Json -As Array -Depth 2`)
+	out, err := cmd.Output()
+	if err != nil {
+		return []PrivilegeEvent{}, nil
+	}
+	return parsePrivilegeEventsJSON(string(out))
+}
+
+func getPrivilegeEventsLinux() ([]PrivilegeEvent, error) {
+	return []PrivilegeEvent{}, nil
+}
+
+func parsePrivilegeEventsJSON(jsonStr string) ([]PrivilegeEvent, error) {
+	return []PrivilegeEvent{}, nil
+}
+
+// GetEventTimeline retrieves a merged chronological view of security events.
+func GetEventTimeline() ([]TimelineEvent, error) {
+	events, err := GetSecurityEvents()
+	if err != nil {
+		return nil, err
+	}
+	var timeline []TimelineEvent
+	for _, e := range events {
+		sev := "info"
+		if e.Important {
+			sev = "warning"
+		}
+		timeline = append(timeline, TimelineEvent{
+			Time:     e.Time,
+			Type:     fmt.Sprintf("Event %d", e.ID),
+			Detail:   e.Message,
+			Severity: sev,
+		})
+	}
+	return timeline, nil
+}

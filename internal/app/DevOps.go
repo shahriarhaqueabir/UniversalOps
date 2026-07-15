@@ -1373,3 +1373,733 @@ func (d *DevOps) GetServiceGroupSummary() ServiceGroupSummary {
 
 	return summary
 }
+
+// ══════════════════════════════════════════════
+//  Extended Git Operations
+// ══════════════════════════════════════════════
+
+// GetGitBranches returns branch info for a repository.
+func (d *DevOps) GetGitBranches(path string) []GitBranchInfo {
+	branches, err := devops.GetGitBranches(path)
+	if err != nil {
+		return []GitBranchInfo{}
+	}
+	out := make([]GitBranchInfo, 0, len(branches))
+	for _, b := range branches {
+		out = append(out, GitBranchInfo{
+			Name:       b.Name,
+			Current:    b.Current,
+			Upstream:   b.Upstream,
+			Ahead:      b.Ahead,
+			Behind:     b.Behind,
+			LastCommit: b.LastCommit,
+		})
+	}
+	return out
+}
+
+// GetGitTags returns tags for a repository.
+func (d *DevOps) GetGitTags(path string) []GitTagInfo {
+	tags, err := devops.GetGitTags(path)
+	if err != nil {
+		return []GitTagInfo{}
+	}
+	out := make([]GitTagInfo, 0, len(tags))
+	for _, t := range tags {
+		out = append(out, GitTagInfo{
+			Name:   t.Name,
+			Commit: t.Commit,
+			Date:   t.Date,
+			Msg:    t.Msg,
+		})
+	}
+	return out
+}
+
+// GetGitStash returns stash entries for a repository.
+func (d *DevOps) GetGitStash(path string) []GitStashEntry {
+	entries, err := devops.GetGitStash(path)
+	if err != nil {
+		return []GitStashEntry{}
+	}
+	out := make([]GitStashEntry, 0, len(entries))
+	for _, e := range entries {
+		out = append(out, GitStashEntry{Index: e.Index, Message: e.Message})
+	}
+	return out
+}
+
+// GetGitRemotes returns remotes for a repository.
+func (d *DevOps) GetGitRemotes(path string) []GitRemoteInfo {
+	remotes, err := devops.GetGitRemotes(path)
+	if err != nil {
+		return []GitRemoteInfo{}
+	}
+	out := make([]GitRemoteInfo, 0, len(remotes))
+	for _, r := range remotes {
+		out = append(out, GitRemoteInfo{Name: r.Name, URL: r.URL, Type: r.Type})
+	}
+	return out
+}
+
+// GitCheckout switches to a branch.
+func (d *DevOps) GitCheckout(path string, branch string) CommandResult {
+	output, err := devops.GitCheckout(path, branch)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// GitCreateBranch creates and switches to a new branch.
+func (d *DevOps) GitCreateBranch(path string, branch string) CommandResult {
+	output, err := devops.GitCreateBranch(path, branch)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// GitDeleteBranch deletes a branch.
+func (d *DevOps) GitDeleteBranch(path string, branch string) CommandResult {
+	output, err := devops.GitDeleteBranch(path, branch)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// GitMerge merges a branch into the current branch.
+func (d *DevOps) GitMerge(path string, branch string) CommandResult {
+	output, err := devops.GitMerge(path, branch)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// GitRebase rebases onto a branch.
+func (d *DevOps) GitRebase(path string, branch string) CommandResult {
+	output, err := devops.GitRebase(path, branch)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// GitPush pushes commits.
+func (d *DevOps) GitPush(path string, remote string, branch string) CommandResult {
+	output, err := devops.GitPush(path, remote, branch)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// GitPull pulls changes.
+func (d *DevOps) GitPull(path string, remote string, branch string) CommandResult {
+	output, err := devops.GitPull(path, remote, branch)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// GitFetch fetches from remote.
+func (d *DevOps) GitFetch(path string, remote string) CommandResult {
+	output, err := devops.GitFetch(path, remote)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// GitCommit creates a commit.
+func (d *DevOps) GitCommit(path string, message string) CommandResult {
+	output, err := devops.GitCommit(path, message)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// GitAdd stages files.
+func (d *DevOps) GitAdd(path string, filespec string) CommandResult {
+	output, err := devops.GitAdd(path, filespec)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// GitStatus returns git status.
+func (d *DevOps) GitStatus(path string) CommandResult {
+	output, err := devops.GitStatus(path)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// GitLogExtended returns an extended commit log.
+func (d *DevOps) GitLogExtended(path string, limit int, branch string) string {
+	log, err := devops.GitLogExtended(path, limit, branch)
+	if err != nil {
+		return "Error: " + err.Error()
+	}
+	return log
+}
+
+// GitStashPush stashes changes.
+func (d *DevOps) GitStashPush(path string, message string) CommandResult {
+	output, err := devops.GitStashPush(path, message)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// GitStashPop pops a stash.
+func (d *DevOps) GitStashPop(path string) CommandResult {
+	output, err := devops.GitStashPop(path)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// GitStashDrop drops a stash entry.
+func (d *DevOps) GitStashDrop(path string, index int) CommandResult {
+	output, err := devops.GitStashDrop(path, index)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// GitTagCreate creates a tag.
+func (d *DevOps) GitTagCreate(path string, tag string, msg string) CommandResult {
+	output, err := devops.GitTagCreate(path, tag, msg)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// GitTagDelete deletes a tag.
+func (d *DevOps) GitTagDelete(path string, tag string) CommandResult {
+	output, err := devops.GitTagDelete(path, tag)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// ══════════════════════════════════════════════
+//  Extended Docker Operations
+// ══════════════════════════════════════════════
+
+// GetDockerStats returns running container stats.
+func (d *DevOps) GetDockerStats() []DockerStatsEntry {
+	entries, err := devops.GetDockerStats()
+	if err != nil {
+		return []DockerStatsEntry{}
+	}
+	out := make([]DockerStatsEntry, 0, len(entries))
+	for _, e := range entries {
+		out = append(out, DockerStatsEntry{
+			ContainerID:   e.ContainerID,
+			Name:          e.Name,
+			CPUPercent:    e.CPUPercent,
+			MemoryUsage:   e.MemoryUsage,
+			MemoryLimit:   e.MemoryLimit,
+			MemoryPercent: e.MemoryPercent,
+			NetIO:         e.NetIO,
+			BlockIO:       e.BlockIO,
+			PIDCount:      e.PIDCount,
+		})
+	}
+	return out
+}
+
+// GetDockerLogs returns logs for a container.
+func (d *DevOps) GetDockerLogs(containerID string, tail int) string {
+	logs, err := devops.GetDockerLogs(containerID, tail)
+	if err != nil {
+		return "Error: " + err.Error()
+	}
+	return logs
+}
+
+// DockerExec runs a command inside a container.
+func (d *DevOps) DockerExec(containerID string, cmd []string) CommandResult {
+	output, err := devops.DockerExec(containerID, cmd)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// DockerPull pulls a docker image.
+func (d *DevOps) DockerPull(image string) CommandResult {
+	output, err := devops.DockerPull(image)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// DockerComposeList lists compose projects.
+func (d *DevOps) DockerComposeList() []DockerComposeProject {
+	projects, err := devops.DockerComposeList()
+	if err != nil {
+		return []DockerComposeProject{}
+	}
+	out := make([]DockerComposeProject, 0, len(projects))
+	for _, p := range projects {
+		svcs, _ := devops.DockerComposePS(p.WorkDir)
+		svcOut := make([]DockerComposeService, 0, len(svcs))
+		for _, s := range svcs {
+			svcOut = append(svcOut, DockerComposeService{Name: s.Name, State: s.State, Ports: s.Ports})
+		}
+		out = append(out, DockerComposeProject{
+			Project:  p.Project,
+			Status:   p.Status,
+			WorkDir:  p.WorkDir,
+			Services: svcOut,
+		})
+	}
+	return out
+}
+
+// DockerComposeUp starts compose services.
+func (d *DevOps) DockerComposeUp(projectDir string, service string) CommandResult {
+	output, err := devops.DockerComposeUp(projectDir, service)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// DockerComposeDown stops compose services.
+func (d *DevOps) DockerComposeDown(projectDir string) CommandResult {
+	output, err := devops.DockerComposeDown(projectDir)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// DockerComposeLogs returns compose logs.
+func (d *DevOps) DockerComposeLogs(projectDir string, service string, tail int) string {
+	logs, err := devops.DockerComposeLogs(projectDir, service, tail)
+	if err != nil {
+		return "Error: " + err.Error()
+	}
+	return logs
+}
+
+// GetDockerNetworks lists docker networks.
+func (d *DevOps) GetDockerNetworks() []DockerNetworkInfo {
+	nets, err := devops.GetDockerNetworks()
+	if err != nil {
+		return []DockerNetworkInfo{}
+	}
+	out := make([]DockerNetworkInfo, 0, len(nets))
+	for _, n := range nets {
+		out = append(out, DockerNetworkInfo{
+			ID: n.ID, Name: n.Name, Driver: n.Driver, Scope: n.Scope,
+			Subnet: n.Subnet, Gateway: n.Gateway, Containers: n.Containers,
+		})
+	}
+	return out
+}
+
+// GetDockerVolumes lists docker volumes.
+func (d *DevOps) GetDockerVolumes() []DockerVolumeInfo {
+	vols, err := devops.GetDockerVolumes()
+	if err != nil {
+		return []DockerVolumeInfo{}
+	}
+	out := make([]DockerVolumeInfo, 0, len(vols))
+	for _, v := range vols {
+		out = append(out, DockerVolumeInfo{
+			Driver: v.Driver, Name: v.Name, Mountpoint: v.Mountpoint, Size: v.Size,
+		})
+	}
+	return out
+}
+
+// DockerPrune cleans unused docker resources.
+func (d *DevOps) DockerPrune() CommandResult {
+	output, err := devops.DockerPrune()
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// DockerImageList lists docker images.
+func (d *DevOps) DockerImageList() string {
+	output, err := devops.DockerImageList()
+	if err != nil {
+		return "Error: " + err.Error()
+	}
+	return output
+}
+
+// DockerKill kills a container.
+func (d *DevOps) DockerKill(containerID string) CommandResult {
+	output, err := devops.DockerKill(containerID)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// DockerPause pauses a container.
+func (d *DevOps) DockerPause(containerID string) CommandResult {
+	output, err := devops.DockerPause(containerID)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// DockerUnpause unpauses a container.
+func (d *DevOps) DockerUnpause(containerID string) CommandResult {
+	output, err := devops.DockerUnpause(containerID)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// ══════════════════════════════════════════════
+//  Extended Kubernetes Operations
+// ══════════════════════════════════════════════
+
+// GetK8sNamespaces returns all namespaces.
+func (d *DevOps) GetK8sNamespaces() []K8sNamespaceInfo {
+	ns, err := devops.GetK8sNamespaces()
+	if err != nil {
+		return []K8sNamespaceInfo{}
+	}
+	out := make([]K8sNamespaceInfo, 0, len(ns))
+	for _, n := range ns {
+		out = append(out, K8sNamespaceInfo{Name: n.Name, Status: n.Status, Age: n.Age})
+	}
+	return out
+}
+
+// GetK8sDeployments returns deployments.
+func (d *DevOps) GetK8sDeployments(namespace string) []K8sResourceItem {
+	items, err := devops.GetK8sDeployments(namespace)
+	if err != nil {
+		return []K8sResourceItem{}
+	}
+	out := make([]K8sResourceItem, 0, len(items))
+	for _, item := range items {
+		out = append(out, K8sResourceItem{Name: item.Name, Namespace: item.Namespace, Status: item.Status, Age: item.Age, Details: item.Details})
+	}
+	return out
+}
+
+// GetK8sServices returns services.
+func (d *DevOps) GetK8sServices(namespace string) []K8sResourceItem {
+	items, err := devops.GetK8sServices(namespace)
+	if err != nil {
+		return []K8sResourceItem{}
+	}
+	out := make([]K8sResourceItem, 0, len(items))
+	for _, item := range items {
+		out = append(out, K8sResourceItem{Name: item.Name, Namespace: item.Namespace, Status: item.Status, Age: item.Age, Details: item.Details})
+	}
+	return out
+}
+
+// GetK8sPods returns pods.
+func (d *DevOps) GetK8sPods(namespace string) []K8sResourceItem {
+	items, err := devops.GetK8sPods(namespace)
+	if err != nil {
+		return []K8sResourceItem{}
+	}
+	out := make([]K8sResourceItem, 0, len(items))
+	for _, item := range items {
+		out = append(out, K8sResourceItem{Name: item.Name, Namespace: item.Namespace, Status: item.Status, Age: item.Age, Details: item.Details})
+	}
+	return out
+}
+
+// GetK8sRollouts returns rollout status.
+func (d *DevOps) GetK8sRollouts(namespace string) []K8sRolloutStatus {
+	rollouts, err := devops.GetK8sRollouts(namespace)
+	if err != nil {
+		return []K8sRolloutStatus{}
+	}
+	out := make([]K8sRolloutStatus, 0, len(rollouts))
+	for _, r := range rollouts {
+		out = append(out, K8sRolloutStatus{Name: r.Name, Kind: r.Kind, Ready: r.Ready, Replicas: r.Replicas, Updated: r.Updated, Available: r.Available})
+	}
+	return out
+}
+
+// K8sRestartDeployment restarts a deployment.
+func (d *DevOps) K8sRestartDeployment(name string, namespace string) CommandResult {
+	output, err := devops.K8sRestartDeployment(name, namespace)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// K8sRollbackDeployment rolls back a deployment.
+func (d *DevOps) K8sRollbackDeployment(name string, namespace string, revision int) CommandResult {
+	output, err := devops.K8sRollbackDeployment(name, namespace, revision)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// K8sScaleDeployment scales a deployment.
+func (d *DevOps) K8sScaleDeployment(name string, namespace string, replicas int) K8sScalingResult {
+	result, _ := devops.K8sScaleDeployment(name, namespace, replicas)
+	return K8sScalingResult{Current: result.Current, Desired: result.Desired, Success: result.Success, Output: result.Output}
+}
+
+// GetK8sEvents returns cluster events.
+func (d *DevOps) GetK8sEvents(namespace string, limit int) []K8sEvent {
+	events, err := devops.GetK8sEvents(namespace, limit)
+	if err != nil {
+		return []K8sEvent{}
+	}
+	out := make([]K8sEvent, 0, len(events))
+	for _, e := range events {
+		out = append(out, K8sEvent{LastSeen: e.LastSeen, Type: e.Type, Reason: e.Reason, Object: e.Object, Message: e.Message})
+	}
+	return out
+}
+
+// K8sDescribeResource describes a K8s resource.
+func (d *DevOps) K8sDescribeResource(kind string, name string, namespace string) string {
+	output, err := devops.K8sDescribeResource(kind, name, namespace)
+	if err != nil {
+		return "Error: " + err.Error()
+	}
+	return output
+}
+
+// K8sGetLogs returns pod logs.
+func (d *DevOps) K8sGetLogs(podName string, namespace string, container string, tail int) string {
+	logs, err := devops.K8sGetLogs(podName, namespace, container, tail)
+	if err != nil {
+		return "Error: " + err.Error()
+	}
+	return logs
+}
+
+// GetK8sConfigMaps returns config maps.
+func (d *DevOps) GetK8sConfigMaps(namespace string) []K8sResourceItem {
+	items, err := devops.K8sGetConfigMaps(namespace)
+	if err != nil {
+		return []K8sResourceItem{}
+	}
+	out := make([]K8sResourceItem, 0, len(items))
+	for _, item := range items {
+		out = append(out, K8sResourceItem{Name: item.Name, Namespace: item.Namespace, Age: item.Age})
+	}
+	return out
+}
+
+// GetK8sSecrets returns secrets.
+func (d *DevOps) GetK8sSecrets(namespace string) []K8sResourceItem {
+	items, err := devops.K8sGetSecrets(namespace)
+	if err != nil {
+		return []K8sResourceItem{}
+	}
+	out := make([]K8sResourceItem, 0, len(items))
+	for _, item := range items {
+		out = append(out, K8sResourceItem{Name: item.Name, Namespace: item.Namespace, Status: item.Status, Age: item.Age})
+	}
+	return out
+}
+
+// GetK8sIngresses returns ingresses.
+func (d *DevOps) GetK8sIngresses(namespace string) []K8sResourceItem {
+	items, err := devops.K8sGetIngresses(namespace)
+	if err != nil {
+		return []K8sResourceItem{}
+	}
+	out := make([]K8sResourceItem, 0, len(items))
+	for _, item := range items {
+		out = append(out, K8sResourceItem{Name: item.Name, Namespace: item.Namespace, Status: item.Status, Age: item.Age})
+	}
+	return out
+}
+
+// GetK8sJobs returns jobs.
+func (d *DevOps) GetK8sJobs(namespace string) []K8sResourceItem {
+	items, err := devops.K8sGetJobs(namespace)
+	if err != nil {
+		return []K8sResourceItem{}
+	}
+	out := make([]K8sResourceItem, 0, len(items))
+	for _, item := range items {
+		out = append(out, K8sResourceItem{Name: item.Name, Namespace: item.Namespace, Status: item.Status, Age: item.Age, Details: item.Details})
+	}
+	return out
+}
+
+// GetK8sNodes returns nodes.
+func (d *DevOps) GetK8sNodes() []K8sResourceItem {
+	items, err := devops.K8sGetNodes()
+	if err != nil {
+		return []K8sResourceItem{}
+	}
+	out := make([]K8sResourceItem, 0, len(items))
+	for _, item := range items {
+		out = append(out, K8sResourceItem{Name: item.Name, Status: item.Status, Age: item.Age})
+	}
+	return out
+}
+
+// ══════════════════════════════════════════════
+//  Build Systems
+// ══════════════════════════════════════════════
+
+// GetBuildSystems detects installed build systems.
+func (d *DevOps) GetBuildSystems() []BuildSystemInfo {
+	systems := devops.DetectBuildSystems()
+	out := make([]BuildSystemInfo, 0, len(systems))
+	for _, s := range systems {
+		out = append(out, BuildSystemInfo{Name: s.Name, Version: s.Version, Found: s.Found, Path: s.Path})
+	}
+	return out
+}
+
+// FindBuildTargets detects build targets in a directory.
+func (d *DevOps) FindBuildTargets(rootDir string) []BuildTargetInfo {
+	targets, err := devops.FindBuildTargets(rootDir)
+	if err != nil {
+		return []BuildTargetInfo{}
+	}
+	out := make([]BuildTargetInfo, 0, len(targets))
+	for _, t := range targets {
+		out = append(out, BuildTargetInfo{
+			Name: t.Name, Type: t.Type, Path: t.Path,
+			HasBuild: t.HasBuild, HasTest: t.HasTest, HasLint: t.HasLint,
+			HasPackage: t.HasPackage, DepCount: t.DepCount,
+		})
+	}
+	return out
+}
+
+// RunBuildCommand runs a build action for a target.
+func (d *DevOps) RunBuildCommand(targetType string, targetPath string, action string) CommandResult {
+	target := devops.BuildTargetInfo{Type: targetType, Path: targetPath}
+	output, err := devops.RunBuildCommand(target, action)
+	if err != nil {
+		return CommandResult{Error: sanitizeError(err), Output: output}
+	}
+	return CommandResult{Output: output}
+}
+
+// ══════════════════════════════════════════════
+//  CI/CD
+// ══════════════════════════════════════════════
+
+// GetCICDStatus returns CI/CD configuration and pipeline status.
+func (d *DevOps) GetCICDStatus(rootDir string) CICDStatus {
+	status := devops.GetCICDStatus(rootDir)
+	configs := devops.DetectCICDConfigs(rootDir)
+
+	cfgOut := make([]CICDConfig, 0, len(configs))
+	for _, c := range configs {
+		cfgOut = append(cfgOut, CICDConfig{Platform: c.Platform, ConfigFiles: c.ConfigFiles, Detected: c.Detected})
+	}
+
+	pipeOut := make([]CICDPipelineInfo, 0, len(status.Pipelines))
+	for _, p := range status.Pipelines {
+		pipeOut = append(pipeOut, CICDPipelineInfo{
+			Name: p.Name, Status: p.Status, Branch: p.Branch,
+			Commit: p.Commit, Duration: p.Duration, UpdatedAt: p.UpdatedAt, URL: p.URL,
+		})
+	}
+
+	return CICDStatus{
+		Platform: status.Platform, Enabled: status.Enabled,
+		ConfigFound: status.ConfigFound, Pipelines: pipeOut, Configs: cfgOut,
+	}
+}
+
+// ══════════════════════════════════════════════
+//  Releases & DORA Metrics
+// ══════════════════════════════════════════════
+
+// GetReleases returns release history for a repository.
+func (d *DevOps) GetReleases(path string) ReleaseHistory {
+	history, err := devops.GetReleases(path)
+	if err != nil {
+		return ReleaseHistory{Releases: []ReleaseInfo{}}
+	}
+	out := make([]ReleaseInfo, 0, len(history.Releases))
+	for _, r := range history.Releases {
+		out = append(out, ReleaseInfo{
+			Version: r.Version, Date: r.Date, Branch: r.Branch,
+			Tag: r.Tag, Commit: r.Commit, Status: r.Status, Notes: r.Notes,
+		})
+	}
+	return ReleaseHistory{Releases: out, TotalCount: history.TotalCount, LastRelease: history.LastRelease}
+}
+
+// GetDeploymentHistory returns deployment records.
+func (d *DevOps) GetDeploymentHistory(path string) []DeploymentRecord {
+	records, err := devops.GetDeploymentHistory(path)
+	if err != nil {
+		return []DeploymentRecord{}
+	}
+	out := make([]DeploymentRecord, 0, len(records))
+	for _, r := range records {
+		out = append(out, DeploymentRecord{
+			ID: r.ID, Version: r.Version, Environment: r.Environment,
+			Status: r.Status, Timestamp: r.Timestamp, Duration: r.Duration,
+			Commit: r.Commit, Trigger: r.Trigger,
+		})
+	}
+	return out
+}
+
+// GetDORAMetrics returns DORA metrics for a repository.
+func (d *DevOps) GetDORAMetrics(path string) DORAMetrics {
+	metrics, err := devops.CalculateDORAMetrics(path)
+	if err != nil {
+		return DORAMetrics{}
+	}
+	return DORAMetrics{
+		DeploymentFrequency: metrics.DeploymentFrequency,
+		LeadTimeForChanges:  metrics.LeadTimeForChanges,
+		ChangeFailureRate:   metrics.ChangeFailureRate,
+		MTTR:                metrics.MTTR,
+		Period:              metrics.Period,
+		DeployCount:         metrics.DeployCount,
+		IncidentCount:       metrics.IncidentCount,
+		LeadTimeAvgHours:    metrics.LeadTimeAvgHours,
+		MTTRAvgMinutes:      metrics.MTTRAvgMinutes,
+		FailurePct:          metrics.FailurePct,
+	}
+}
+
+// ══════════════════════════════════════════════
+//  DevOps Diagnostics
+// ══════════════════════════════════════════════
+
+// RunDevOpsDiagnostics runs a health check on all dev tools.
+func (d *DevOps) RunDevOpsDiagnostics() DevOpsDiagResult {
+	result := devops.RunDevOpsDiagnostics()
+	checks := make([]DevOpsDiagCheck, 0, len(result.Checks))
+	for _, c := range result.Checks {
+		checks = append(checks, DevOpsDiagCheck{Name: c.Name, Status: c.Status, Message: c.Message, Value: c.Value})
+	}
+	return DevOpsDiagResult{Checks: checks, Score: result.Score, Timestamp: result.Timestamp}
+}

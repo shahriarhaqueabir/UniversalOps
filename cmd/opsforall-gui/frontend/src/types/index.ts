@@ -345,6 +345,116 @@ export interface SecuritySummary {
   analyzedAt: string
 }
 
+// ── SecOps Phase 2 Types ──
+
+export interface PasswordPolicy {
+  max_age: number
+  min_length: number
+  complexity: boolean
+  lockout_threshold: number
+  lockout_duration: number
+}
+
+export interface FailedLogin {
+  time: string
+  username: string
+  source_ip: string
+  count: number
+}
+
+export interface LockedAccount {
+  username: string
+  locked_since: string
+}
+
+export interface DiskEncryption {
+  volume: string
+  encrypted: boolean
+  method: string
+  status: string
+}
+
+export interface SecureBoot {
+  enabled: boolean
+  state: string
+}
+
+export interface SystemService {
+  name: string
+  display_name: string
+  status: string
+  startup_type: string
+}
+
+export interface TLSCertificate {
+  subject: string
+  issuer: string
+  not_after: string
+  key_size: number
+  is_expiring: boolean
+  days_left: number
+}
+
+export interface SSHConfig {
+  permit_root_login: string
+  password_authentication: string
+  pubkey_authentication: string
+  x11_forwarding: string
+  max_auth_tries: string
+}
+
+export interface HardeningCheck {
+  category: string
+  check: string
+  passed: boolean
+  severity: string
+  remediation: string
+}
+
+export interface AuditCheckItem {
+  category: string
+  check: string
+  passed: boolean
+  description: string
+  remediation: string
+}
+
+export interface SecurityAuditResult {
+  score: number
+  total: number
+  passed: number
+  failed: number
+  items: AuditCheckItem[]
+  timestamp: string
+}
+
+export interface PrivilegeEvent {
+  time: string
+  username: string
+  privilege: string
+  process: string
+}
+
+export interface SecTimelineEvent {
+  time: string
+  type: string
+  detail: string
+  severity: string
+}
+
+export interface PublicExposure {
+  port: number
+  protocol: string
+  process_name: string
+  severity: string
+}
+
+export interface SecActionResult {
+  success: boolean
+  message: string
+  error?: string
+}
+
 // ── DevOps Types ─────────────────────────────────────────────────────────────
 export interface DockerStatus {
   installed: boolean
@@ -477,6 +587,210 @@ export interface FileEntry {
   is_binary: boolean
   mode: string
   mod_time: string
+}
+
+// ── DevOps Extended Types ──
+
+export interface GitBranchInfo {
+  name: string
+  current: boolean
+  upstream: string
+  ahead: number
+  behind: number
+  last_commit: string
+}
+
+export interface GitTagInfo {
+  name: string
+  commit: string
+  date: string
+  msg: string
+}
+
+export interface GitStashEntry {
+  index: number
+  message: string
+}
+
+export interface GitRemoteInfo {
+  name: string
+  url: string
+  type: string
+}
+
+export interface DockerStatsEntry {
+  container_id: string
+  name: string
+  cpu_percent: string
+  memory_usage: string
+  memory_limit: string
+  memory_percent: string
+  net_io: string
+  block_io: string
+  pid_count: string
+}
+
+export interface DockerComposeService {
+  name: string
+  state: string
+  ports: string
+}
+
+export interface DockerComposeProject {
+  project: string
+  status: string
+  work_dir: string
+  services: DockerComposeService[]
+}
+
+export interface DockerNetworkInfo {
+  id: string
+  name: string
+  driver: string
+  scope: string
+  subnet: string
+  gateway: string
+  containers: number
+}
+
+export interface DockerVolumeInfo {
+  driver: string
+  name: string
+  mountpoint: string
+  size: string
+}
+
+export interface K8sResourceItem {
+  name: string
+  namespace: string
+  status: string
+  age: string
+  details: string
+}
+
+export interface K8sRolloutStatus {
+  name: string
+  kind: string
+  ready: boolean
+  replicas: string
+  updated: string
+  available: string
+}
+
+export interface K8sEvent {
+  last_seen: string
+  type: string
+  reason: string
+  object: string
+  message: string
+}
+
+export interface K8sNamespaceInfo {
+  name: string
+  status: string
+  age: string
+}
+
+export interface K8sScalingResult {
+  current: number
+  desired: number
+  success: boolean
+  output: string
+}
+
+export interface BuildSystemInfo {
+  name: string
+  version: string
+  found: boolean
+  path: string
+}
+
+export interface BuildTargetInfo {
+  name: string
+  type: string
+  path: string
+  has_build: boolean
+  has_test: boolean
+  has_lint: boolean
+  has_package: boolean
+  dep_count: number
+}
+
+export interface CICDConfig {
+  platform: string
+  config_files: string[]
+  detected: boolean
+}
+
+export interface CICDPipelineInfo {
+  name: string
+  status: string
+  branch: string
+  commit: string
+  duration: string
+  updated_at: string
+  url: string
+}
+
+export interface CICDStatus {
+  platform: string
+  enabled: boolean
+  config_found: boolean
+  pipelines: CICDPipelineInfo[]
+  configs: CICDConfig[]
+}
+
+export interface ReleaseInfo {
+  version: string
+  date: string
+  branch: string
+  tag: string
+  commit: string
+  status: string
+  notes: string
+}
+
+export interface ReleaseHistory {
+  releases: ReleaseInfo[]
+  total_count: number
+  last_release: string
+}
+
+export interface DeploymentRecord {
+  id: string
+  version: string
+  environment: string
+  status: string
+  timestamp: string
+  duration: string
+  commit: string
+  trigger: string
+}
+
+export interface DORAMetrics {
+  deployment_frequency: string
+  lead_time_for_changes: string
+  change_failure_rate: string
+  mttr: string
+  period: string
+  deploy_count: number
+  incident_count: number
+  lead_time_avg_hours: number
+  mttr_avg_minutes: number
+  failure_pct: number
+}
+
+export interface DevOpsDiagCheck {
+  name: string
+  status: string
+  message: string
+  value: string
+}
+
+export interface DevOpsDiagResult {
+  checks: DevOpsDiagCheck[]
+  score: number
+  timestamp: string
 }
 
 // ── Log Types ──

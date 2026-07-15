@@ -112,6 +112,9 @@ func GetFirewallRules() ([]FirewallRule, error) {
 
 // SetFirewallRuleState enables or disables a firewall rule by name.
 func SetFirewallRuleState(name string, enable bool) error {
+	if !common.ValidFirewallRuleName(name) {
+		return fmt.Errorf("invalid firewall rule name: %q", name)
+	}
 	state := "no"
 	if enable {
 		state = "yes"

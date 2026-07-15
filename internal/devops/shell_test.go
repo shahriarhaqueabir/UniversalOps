@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -118,9 +119,9 @@ func TestIsDangerousCommand_AllowsSafeCommands(t *testing.T) {
 
 func TestContainsShellMetachar_DetectsMetacharacters(t *testing.T) {
 	malicious := []struct {
-		name    string
-		cmd     string
-		reason  string
+		name   string
+		cmd    string
+		reason string
 	}{
 		{"backticks", "echo `whoami`", "backtick substitution"},
 		{"dollar_paren", "echo $(whoami)", "$() command substitution"},
@@ -227,8 +228,8 @@ func TestRunCommand_BlocksDangerousCommand(t *testing.T) {
 	if err == nil {
 		t.Fatal("RunCommand should return error for dangerous command")
 	}
-	if !errors.Is(err, ErrDangerousCommand) {
-		t.Errorf("RunCommand error should wrap ErrDangerousCommand, got: %v", err)
+	if !strings.Contains(err.Error(), "command not in allowlist") {
+		t.Errorf("RunCommand error should mention allowlist, got: %v", err)
 	}
 }
 
@@ -239,8 +240,8 @@ func TestRunCommandWithLiveOutput_BlocksDangerousCommand(t *testing.T) {
 	if err == nil {
 		t.Fatal("RunCommandWithLiveOutput should return error for dangerous command")
 	}
-	if !errors.Is(err, ErrDangerousCommand) {
-		t.Errorf("RunCommandWithLiveOutput error should wrap ErrDangerousCommand, got: %v", err)
+	if !strings.Contains(err.Error(), "command not in allowlist") {
+		t.Errorf("RunCommandWithLiveOutput error should mention allowlist, got: %v", err)
 	}
 }
 
