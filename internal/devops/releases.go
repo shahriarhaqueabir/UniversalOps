@@ -9,29 +9,29 @@ import (
 )
 
 type ReleaseInfo struct {
-	Version   string
-	Date      string
-	Branch    string
-	Tag       string
-	Commit    string
-	Status    string
-	Notes     string
+	Version string
+	Date    string
+	Branch  string
+	Tag     string
+	Commit  string
+	Status  string
+	Notes   string
 }
 
 type ReleaseHistory struct {
-	Releases     []ReleaseInfo
-	TotalCount   int
-	LastRelease  string
+	Releases    []ReleaseInfo
+	TotalCount  int
+	LastRelease string
 }
 
 type EnvironmentInfo struct {
-	Name        string
-	URL         string
-	Version     string
-	Status      string
-	LastDeploy  string
-	EnvVars     map[string]string
-	ConfigDiff  []ConfigDiffEntry
+	Name       string
+	URL        string
+	Version    string
+	Status     string
+	LastDeploy string
+	EnvVars    map[string]string
+	ConfigDiff []ConfigDiffEntry
 }
 
 type ConfigDiffEntry struct {
@@ -41,14 +41,14 @@ type ConfigDiffEntry struct {
 }
 
 type DeploymentRecord struct {
-	ID        string
-	Version   string
+	ID          string
+	Version     string
 	Environment string
-	Status    string
-	Timestamp string
-	Duration  string
-	Commit    string
-	Trigger   string
+	Status      string
+	Timestamp   string
+	Duration    string
+	Commit      string
+	Trigger     string
 }
 
 func GetReleases(repoDir string) (ReleaseHistory, error) {
@@ -90,19 +90,19 @@ func GetReleases(repoDir string) (ReleaseHistory, error) {
 		}
 
 		releases = append(releases, ReleaseInfo{
-			Version:  tag.Name,
-			Date:     tag.Date,
-			Branch:   branch,
-			Tag:      tag.Name,
-			Commit:   tag.Commit,
-			Status:   status,
-			Notes:    msg,
+			Version: tag.Name,
+			Date:    tag.Date,
+			Branch:  branch,
+			Tag:     tag.Name,
+			Commit:  tag.Commit,
+			Status:  status,
+			Notes:   msg,
 		})
 	}
 
 	history := ReleaseHistory{
-		Releases:    releases,
-		TotalCount:  len(releases),
+		Releases:   releases,
+		TotalCount: len(releases),
 	}
 	if len(releases) > 0 {
 		history.LastRelease = releases[0].Version
@@ -216,7 +216,7 @@ type DORAMetrics struct {
 	DeploymentFrequency string
 	LeadTimeForChanges  string
 	ChangeFailureRate   string
-	MTTR               string
+	MTTR                string
 	Period              string
 	DeployCount         int
 	IncidentCount       int

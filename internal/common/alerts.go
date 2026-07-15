@@ -41,6 +41,11 @@ const (
 	AlertLT                       // value < threshold
 )
 
+// maxStoredAlerts caps the in-memory alert history so a flapping rule can't
+// grow ae.alerts without bound for the lifetime of the process (M2). Oldest
+// *resolved* alerts are dropped first; active alerts are always kept.
+const maxStoredAlerts = 2000
+
 func (c AlertCondition) String() string {
 	switch c {
 	case AlertGT:
@@ -236,6 +241,7 @@ func (ae *AlertEngine) Evaluate() []Alert {
 				ae.alerts = append(ae.alerts, a)
 				ae.alertKeys[alertKey] = len(ae.alerts) - 1
 				fired = append(fired, a)
+				ae.trimLocked()
 			}
 		} else {
 			// Violation cleared
@@ -251,6 +257,35 @@ func (ae *AlertEngine) Evaluate() []Alert {
 	}
 
 	return fired
+}
+
+// trimLocked drops the oldest resolved alerts once the history exceeds
+// maxStoredAlerts, then rebuilds alertKeys to match the new indices. Callers
+// must already hold ae.mu for writing.
+func (ae *AlertEngine) trimLocked() {
+	if len(ae.alerts) <= maxStoredAlerts {
+		return
+	}
+	overflow := len(ae.alerts) - maxStoredAlerts
+	kept := ae.alerts[:0:0]
+	dropped := 0
+	for _, a := range ae.alerts {
+		if dropped < overflow && a.Resolved {
+			dropped++
+			continue
+		}
+		kept = append(kept, a)
+	}
+	ae.alerts = kept
+	for k := range ae.alertKeys {
+		delete(ae.alertKeys, k)
+	}
+	for i, a := range ae.alerts {
+		if !a.Resolved {
+			alertKey := fmt.Sprintf("%s:%.4f:%d", a.Metric, a.Threshold, a.Level)
+			ae.alertKeys[alertKey] = i
+		}
+	}
 }
 
 // ActiveAlerts returns all currently unresolved alerts.
@@ -295,20 +330,6 @@ func (ae *AlertEngine) ResolveAlert(id string) {
 			return
 		}
 	}
-}
-
-// GetAlerts returns all unresolved alerts.
-func (ae *AlertEngine) GetAlerts() []Alert {
-	ae.mu.RLock()
-	defer ae.mu.RUnlock()
-
-	var active []Alert
-	for _, a := range ae.alerts {
-		if !a.Resolved {
-			active = append(active, a)
-		}
-	}
-	return active
 }
 
 // GetRules returns all currently active alert rules.

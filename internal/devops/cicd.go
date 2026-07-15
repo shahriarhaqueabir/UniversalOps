@@ -12,26 +12,26 @@ import (
 )
 
 type CICDStatus struct {
-	Platform string
-	Enabled  bool
+	Platform    string
+	Enabled     bool
 	ConfigFound bool
 	Pipelines   []CICDPipelineInfo
 }
 
 type CICDPipelineInfo struct {
-	Name       string
-	Status     string
-	Branch     string
-	Commit     string
-	Duration   string
-	UpdatedAt  string
-	URL        string
+	Name      string
+	Status    string
+	Branch    string
+	Commit    string
+	Duration  string
+	UpdatedAt string
+	URL       string
 }
 
 type CICDConfig struct {
-	Platform     string
-	ConfigFiles  []string
-	Detected     bool
+	Platform    string
+	ConfigFiles []string
+	Detected    bool
 }
 
 func DetectCICDConfigs(rootDir string) []CICDConfig {
@@ -48,19 +48,19 @@ func DetectCICDConfigs(rootDir string) []CICDConfig {
 			},
 		},
 		{
-			Platform: "GitLab CI",
+			Platform:    "GitLab CI",
 			ConfigFiles: []string{".gitlab-ci.yml"},
 		},
 		{
-			Platform: "Jenkins",
+			Platform:    "Jenkins",
 			ConfigFiles: []string{"Jenkinsfile", "Jenkinsfile.groovy"},
 		},
 		{
-			Platform: "Azure DevOps",
+			Platform:    "Azure DevOps",
 			ConfigFiles: []string{"azure-pipelines.yml", ".azure-pipelines", "azure-pipelines.yaml"},
 		},
 		{
-			Platform: "CircleCI",
+			Platform:    "CircleCI",
 			ConfigFiles: []string{".circleci/config.yml"},
 		},
 	}

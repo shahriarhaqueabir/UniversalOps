@@ -2103,5 +2103,3 @@ func (d *DevOps) RunDevOpsDiagnostics() DevOpsDiagResult {
 	}
 	return DevOpsDiagResult{Checks: checks, Score: result.Score, Timestamp: result.Timestamp}
 }
-
-

@@ -4,11 +4,28 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
+
+// validUsername matches safe username characters: letters, digits, dot, dash, underscore.
+// Max length 64 per POSIX and Windows username limits.
+var validUsername = regexp.MustCompile(`^[a-zA-Z0-9._-]{1,64}$`)
+
+// validateUsername rejects usernames that contain shell metacharacters or
+// unexpected content before they reach exec.Command (SEC-2).
+func validateUsername(name string) error {
+	if name == "" {
+		return fmt.Errorf("username must not be empty")
+	}
+	if !validUsername.MatchString(name) {
+		return fmt.Errorf("invalid username: contains disallowed characters or exceeds length limit")
+	}
+	return nil
+}
 
 // UserInfo represents a local user account.
 type UserInfo struct {
@@ -264,6 +281,12 @@ func collectUserDetails(usernames []string) ([]UserInfo, error) {
 		if strings.EqualFold(name, "DefaultAccount") ||
 			strings.EqualFold(name, "WDAGUtilityAccount") ||
 			strings.EqualFold(name, "Guest") {
+			continue
+		}
+
+		// SEC-2: validate username before use in exec.Command
+		if err := validateUsername(name); err != nil {
+			common.LogWarn("collectUserDetails: skipping user %q: %v", name, err)
 			continue
 		}
 

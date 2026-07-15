@@ -9,6 +9,23 @@ import (
 	"github.com/shirou/gopsutil/v4/process"
 )
 
+// validatePID rejects PIDs that would be dangerous or nonsensical to target:
+// non-positive values, PID 1 (init/systemd — killing it can take down the
+// whole system on Linux), and the current process's own PID (this app).
+// (SEC-3)
+func validatePID(pid int32) error {
+	if pid <= 0 {
+		return fmt.Errorf("invalid pid %d: must be positive", pid)
+	}
+	if pid == 1 {
+		return fmt.Errorf("refusing to target pid 1 (init)")
+	}
+	if int(pid) == os.Getpid() {
+		return fmt.Errorf("refusing to target our own process (pid %d)", pid)
+	}
+	return nil
+}
+
 // ProcessEntry holds process information for the DevOps process manager.
 type ProcessEntry struct {
 	PID     int32
@@ -85,6 +102,9 @@ func processEntryFromProcess(proc *process.Process) (ProcessEntry, bool) {
 
 // KillProcess terminates a process by PID.
 func KillProcess(pid int32) error {
+	if err := validatePID(pid); err != nil {
+		return err
+	}
 	proc, err := os.FindProcess(int(pid))
 	if err != nil {
 		return fmt.Errorf("find process %d: %w", pid, err)
@@ -97,6 +117,9 @@ func KillProcess(pid int32) error {
 
 // RestartProcess attempts to stop and relaunch a process by PID.
 func RestartProcess(pid int32) error {
+	if err := validatePID(pid); err != nil {
+		return err
+	}
 	proc, err := process.NewProcess(pid)
 	if err != nil {
 		return fmt.Errorf("find process %d: %w", pid, err)

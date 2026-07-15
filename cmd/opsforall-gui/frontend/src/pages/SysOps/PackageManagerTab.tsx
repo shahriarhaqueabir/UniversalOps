@@ -3,7 +3,8 @@ import { Package, Search } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import type { PackageManagerData } from '@/types'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 
 export function PackageManagerTab() {
   const { call } = useBackend()
@@ -17,6 +18,19 @@ export function PackageManagerTab() {
   })
 
   const activeManager = managers.find(m => m.found)
+
+  const filteredPackages = activeManager
+    ? activeManager.packages.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+    : []
+
+  const parentRef = useRef<HTMLDivElement>(null)
+
+  const rowVirtualizer = useVirtualizer({
+    count: filteredPackages.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 37,
+    overscan: 10,
+  })
 
   return (
     <div className="space-y-6">
@@ -41,25 +55,50 @@ export function PackageManagerTab() {
             />
           </div>
           <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-xl overflow-hidden">
-            <div className="max-h-[500px] overflow-y-auto">
-              <table className="w-full text-left">
-                <thead className="sticky top-0 bg-[var(--color-panel-2)] border-b border-[var(--color-border)]">
-                  <tr>
-                    <th className="px-4 py-3 text-xs font-bold text-[var(--color-text-faint)] uppercase">Package</th>
-                    <th className="px-4 py-3 text-xs font-bold text-[var(--color-text-faint)] uppercase">Version</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeManager.packages
-                    .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
-                    .map((p, i) => (
-                      <tr key={i} className="border-b border-[var(--color-border)]/20 hover:bg-[var(--color-sidebar-hover)]">
-                        <td className="px-4 py-2 text-sm font-medium text-[var(--color-text)]">{p.name}</td>
-                        <td className="px-4 py-2 text-sm text-[var(--color-text-dim)]">{p.version}</td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
+            {/* Sticky header */}
+            <table className="w-full text-left">
+              <thead className="bg-[var(--color-panel-2)] border-b border-[var(--color-border)]">
+                <tr>
+                  <th className="px-4 py-3 text-xs font-bold text-[var(--color-text-faint)] uppercase">Package</th>
+                  <th className="px-4 py-3 text-xs font-bold text-[var(--color-text-faint)] uppercase">Version</th>
+                </tr>
+              </thead>
+            </table>
+            {/* Virtualised body */}
+            <div ref={parentRef} className="max-h-[500px] overflow-y-auto">
+              <div
+                style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}
+              >
+                <table className="w-full text-left" style={{ tableLayout: 'fixed' }}>
+                  <colgroup>
+                    <col />
+                    <col />
+                  </colgroup>
+                  <tbody>
+                    {rowVirtualizer.getVirtualItems().map(virtualRow => {
+                      const p = filteredPackages[virtualRow.index]
+                      return (
+                        <tr
+                          key={virtualRow.key}
+                          data-index={virtualRow.index}
+                          ref={rowVirtualizer.measureElement}
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            transform: `translateY(${virtualRow.start}px)`,
+                          }}
+                          className="border-b border-[var(--color-border)]/20 hover:bg-[var(--color-sidebar-hover)]"
+                        >
+                          <td className="px-4 py-2 text-sm font-medium text-[var(--color-text)]">{p.name}</td>
+                          <td className="px-4 py-2 text-sm text-[var(--color-text-dim)]">{p.version}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </>

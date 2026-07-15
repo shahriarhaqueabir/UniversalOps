@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Search, Trash2, TreePine, List } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
@@ -6,6 +6,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
 import type { ProcessInfo } from '@/types'
 import { cn } from '@/lib/utils'
+import { useVirtualizer } from '@tanstack/react-virtual'
 
 export function ProcessesTab() {
   const { call } = useBackend()
@@ -28,6 +29,15 @@ export function ProcessesTab() {
   }
 
   const filtered = processes.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+
+  const parentRef = useRef<HTMLDivElement>(null)
+
+  const rowVirtualizer = useVirtualizer({
+    count: filtered.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 49,
+    overscan: 10,
+  })
 
   return (
     <div className="space-y-6">
@@ -64,36 +74,64 @@ export function ProcessesTab() {
       </div>
 
       <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-xl overflow-hidden">
-        <div className="max-h-[600px] overflow-y-auto">
-          <table className="w-full text-left">
-            <thead className="sticky top-0 bg-[var(--color-panel-2)] border-b border-[var(--color-border)]">
-              <tr>
-                <th className="px-4 py-3 text-xs font-bold text-[var(--color-text-faint)] uppercase">Process</th>
-                <th className="px-4 py-3 text-xs font-bold text-[var(--color-text-faint)] uppercase text-right">CPU %</th>
-                <th className="px-4 py-3 text-xs font-bold text-[var(--color-text-faint)] uppercase text-right">RAM (MB)</th>
-                <th className="px-4 py-3 text-xs font-bold text-[var(--color-text-faint)] uppercase text-right">FDs</th>
-                <th className="px-4 py-3 w-12" />
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(p => (
-                <tr key={p.pid} className="border-b border-[var(--color-border)]/20 hover:bg-[var(--color-sidebar-hover)] group">
-                  <td className="px-4 py-3">
-                    <span className="text-sm font-medium text-[var(--color-text)]">{p.name}</span>
-                    <span className="text-xs text-[var(--color-text-faint)] ml-2">PID {p.pid}</span>
-                  </td>
-                  <td className="px-4 py-3 text-right text-sm font-bold text-[var(--color-accent)] tabular-nums">{p.cpu.toFixed(1)}%</td>
-                  <td className="px-4 py-3 text-right text-sm text-[var(--color-text-dim)] tabular-nums">{p.memory.toFixed(0)}</td>
-                  <td className="px-4 py-3 text-right text-sm text-[var(--color-text-faint)] tabular-nums">{p.num_fds}</td>
-                  <td className="px-4 py-3">
-                    <button onClick={() => setKillTarget({ pid: p.pid, name: p.name })} className="opacity-0 group-hover:opacity-100 p-1.5 text-[var(--color-text-faint)] hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 rounded-lg transition-all">
-                      <Trash2 size={14} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Sticky header */}
+        <table className="w-full text-left">
+          <thead className="bg-[var(--color-panel-2)] border-b border-[var(--color-border)]">
+            <tr>
+              <th className="px-4 py-3 text-xs font-bold text-[var(--color-text-faint)] uppercase">Process</th>
+              <th className="px-4 py-3 text-xs font-bold text-[var(--color-text-faint)] uppercase text-right">CPU %</th>
+              <th className="px-4 py-3 text-xs font-bold text-[var(--color-text-faint)] uppercase text-right">RAM (MB)</th>
+              <th className="px-4 py-3 text-xs font-bold text-[var(--color-text-faint)] uppercase text-right">FDs</th>
+              <th className="px-4 py-3 w-12" />
+            </tr>
+          </thead>
+        </table>
+        {/* Virtualised body */}
+        <div ref={parentRef} className="max-h-[600px] overflow-y-auto">
+          <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+            <table className="w-full text-left" style={{ tableLayout: 'fixed' }}>
+              <colgroup>
+                <col />
+                <col style={{ width: '80px' }} />
+                <col style={{ width: '90px' }} />
+                <col style={{ width: '70px' }} />
+                <col style={{ width: '48px' }} />
+              </colgroup>
+              <tbody>
+                {rowVirtualizer.getVirtualItems().map(virtualRow => {
+                  const p = filtered[virtualRow.index]
+                  return (
+                    <tr
+                      key={virtualRow.key}
+                      data-index={virtualRow.index}
+                      ref={rowVirtualizer.measureElement}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                      className="border-b border-[var(--color-border)]/20 hover:bg-[var(--color-sidebar-hover)] group"
+                    >
+                      <td className="px-4 py-3">
+                        <span className="text-sm font-medium text-[var(--color-text)]">{p.name}</span>
+                        <span className="text-xs text-[var(--color-text-faint)] ml-2">PID {p.pid}</span>
+                      </td>
+                      <td className="px-4 py-3 text-right text-sm font-bold text-[var(--color-accent)] tabular-nums">{p.cpu.toFixed(1)}%</td>
+                      <td className="px-4 py-3 text-right text-sm text-[var(--color-text-dim)] tabular-nums">{p.memory.toFixed(0)}</td>
+                      <td className="px-4 py-3 text-right text-sm text-[var(--color-text-faint)] tabular-nums">{p.num_fds}</td>
+                      <td className="px-4 py-3">
+                        <button onClick={() => setKillTarget({ pid: p.pid, name: p.name })} className="opacity-0 group-hover:opacity-100 p-1.5 text-[var(--color-text-faint)] hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 rounded-lg transition-all">
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

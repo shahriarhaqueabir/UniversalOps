@@ -18,16 +18,16 @@ type BuildSystemInfo struct {
 }
 
 type BuildTargetInfo struct {
-	Name        string
-	Type        string
-	Path        string
-	HasBuild    bool
-	HasTest     bool
-	HasLint     bool
-	HasPackage  bool
-	HasClean    bool
-	HasRun      bool
-	DepCount    int
+	Name       string
+	Type       string
+	Path       string
+	HasBuild   bool
+	HasTest    bool
+	HasLint    bool
+	HasPackage bool
+	HasClean   bool
+	HasRun     bool
+	DepCount   int
 }
 
 func firstLine(text string) string {
@@ -42,10 +42,10 @@ func firstLine(text string) string {
 
 func DetectBuildSystems() []BuildSystemInfo {
 	specs := []struct {
-		name    string
-		cmd     string
-		args    []string
-		parse   func(string) string
+		name  string
+		cmd   string
+		args  []string
+		parse func(string) string
 	}{
 		{"npm", "npm", []string{"--version"}, firstLine},
 		{"pnpm", "pnpm", []string{"--version"}, firstLine},

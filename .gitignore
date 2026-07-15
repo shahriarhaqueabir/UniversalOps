@@ -20,12 +20,12 @@ build/bin/
 
 # Logs
 *.log
-hawkward-gui.log
+opsforall-gui.log
 
 # Database
-hawkward.db
-hawkward.db-shm
-hawkward.db-wal
+opsforall.db
+opsforall.db-shm
+opsforall.db-wal
 *.db
 
 # Dependencies
@@ -47,3 +47,15 @@ coverage.out
 coverage.txt
 cmd/hawkward-gui/nul
 nul
+test.err
+vet.err
+
+# Internal / agent / audit artifacts (not for public distribution)
+.agents/
+.memory/
+.playwright-mcp/
+graphify-out/
+attached_assets/
+docs/superpowers/
+plans/
+tests/e2e/artifacts/
