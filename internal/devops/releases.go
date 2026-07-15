@@ -76,7 +76,7 @@ func GetReleases(repoDir string) (ReleaseHistory, error) {
 		}
 
 		branch := ""
-		logOutput := gitRunTimeout(repoDir, 3*time.Second, "log", "-1", "--format=%D", tag.Name)
+		logOutput, _ := gitRunTimeout(repoDir, 3*time.Second, "log", "-1", "--format=%D", tag.Name)
 		if logOutput != "" {
 			for _, part := range strings.Split(logOutput, ",") {
 				part = strings.TrimSpace(part)
@@ -112,7 +112,7 @@ func GetReleases(repoDir string) (ReleaseHistory, error) {
 }
 
 func GetDeploymentHistory(repoDir string) ([]DeploymentRecord, error) {
-	reflogOutput := gitRunTimeout(repoDir, 5*time.Second, "reflog", "-n", "50", "--date=iso", "--format=%cd|%H|%gs")
+	reflogOutput, _ := gitRunTimeout(repoDir, 5*time.Second, "reflog", "-n", "50", "--date=iso", "--format=%cd|%H|%gs")
 	if reflogOutput == "" {
 		return nil, nil
 	}
@@ -274,7 +274,7 @@ func CalculateDORAMetrics(repoDir string) (DORAMetrics, error) {
 		metrics.DeploymentFrequency = "None"
 	}
 
-	logOutput := gitRunTimeout(repoDir, 5*time.Second, "log", "--oneline", "-n", "20", "--format=%H|%ai")
+	logOutput, _ := gitRunTimeout(repoDir, 5*time.Second, "log", "--oneline", "-n", "20", "--format=%H|%ai")
 	if logOutput != "" {
 		totalHours := 0.0
 		count := 0

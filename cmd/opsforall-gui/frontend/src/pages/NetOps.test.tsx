@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import type { ReactNode } from 'react'
@@ -79,13 +78,17 @@ describe('NetOps Page', () => {
     expect(screen.getAllByText('VPN').length).toBeGreaterThanOrEqual(1)
   })
 
-  it('switches categories via sidebar', () => {
+  it('switches categories via sidebar', async () => {
     render(<NetOps />)
 
     fireEvent.click(screen.getByText('Ping'))
-    expect(screen.getByText(/ICMP Probe/i)).toBeTruthy()
+    await waitFor(() => {
+      expect(screen.getByText(/ICMP Probe/i)).toBeInTheDocument()
+    }, { timeout: 5000 })
 
     fireEvent.click(screen.getByText('DNS'))
-    expect(screen.getByText(/Domain Resolution/i)).toBeTruthy()
+    await waitFor(() => {
+      expect(screen.getByText(/Domain Resolution/i)).toBeInTheDocument()
+    }, { timeout: 5000 })
   })
 })

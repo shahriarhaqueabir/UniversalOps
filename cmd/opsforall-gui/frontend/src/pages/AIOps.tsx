@@ -113,17 +113,23 @@ export function AIOps() {
   const [activeTab, setActiveTab] = useState<TabId>('ai-chat')
   const setOllamaStatus = useOllamaStore((s) => s.setStatus)
 
-  // Ollama status via react-query, synced to zustand store
+  // Ollama status via react-query
   const { data: ollamaStatusData } = useQuery<OllamaStatus>({
     queryKey: ['ollama-status'],
     queryFn: async () => {
       const res = await call('AIOps.GetOllamaStatus') as OllamaStatus
-      setOllamaStatus(res)
       return res
     },
     refetchInterval: refreshInterval,
     retry: false,
   })
+
+  // Sync ollama status to zustand store via effect (not inside queryFn)
+  useEffect(() => {
+    if (ollamaStatusData) {
+      setOllamaStatus(ollamaStatusData)
+    }
+  }, [ollamaStatusData, setOllamaStatus])
 
   const ollamaStatus = ollamaStatusData ?? { available: false, model: '', version: '' }
 
@@ -233,7 +239,7 @@ function ChatTab() {
       }
     }
     loadMessages()
-    return () => { cancelled = false }
+    return () => { cancelled = true }
   }, [call, activeSession])
 
   const handleSend = async () => {

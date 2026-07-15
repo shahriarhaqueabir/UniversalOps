@@ -122,7 +122,7 @@ function OverviewTab() {
       const res = await call('Logs.GenerateLogSummary') as LogSummary
       return res || { summaryText: '', topSource: '', trend: '' }
     },
-    refetchInterval: 120000,
+    refetchInterval: refreshInterval * 24,  // ~2min at default 5s
   })
 
   const maxLevel = Math.max(stats?.errorCount ?? 0, stats?.warningCount ?? 0, stats?.infoCount ?? 0, stats?.debugCount ?? 0, 1)

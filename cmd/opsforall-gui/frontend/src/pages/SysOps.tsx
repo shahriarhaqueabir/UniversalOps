@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, Suspense, lazy } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Cpu, Server, MemoryStick, Disc, Activity, Settings, FileText,
@@ -11,20 +11,20 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 import type { CPUInfo, MemoryInfo, SystemInfo, DiskInfo } from '@/types'
 
-// Tab imports
-import { SystemInfoTab } from './SysOps/SystemInfoTab'
-import { CpuTab } from './SysOps/CpuTab'
-import { MemoryTab } from './SysOps/MemoryTab'
-import { DiskTab } from './SysOps/DiskTab'
-import { ProcessesTab } from './SysOps/ProcessesTab'
-import { ServicesTab } from './SysOps/ServicesTab'
-import { LogsTab } from './SysOps/LogsTab'
-import { UsersTab } from './SysOps/UsersTab'
-import { PerformanceTab } from './SysOps/PerformanceTab'
-import { PackageManagerTab } from './SysOps/PackageManagerTab'
-import { SchedulerTab } from './SysOps/SchedulerTab'
-import { DiagnosticsTab } from './SysOps/DiagnosticsTab'
-import { ActionsTab } from './SysOps/ActionsTab'
+// Tab imports (lazy-loaded to reduce initial bundle)
+const SystemInfoTab = lazy(() => import('./SysOps/SystemInfoTab').then(m => ({ default: m.SystemInfoTab })))
+const CpuTab = lazy(() => import('./SysOps/CpuTab').then(m => ({ default: m.CpuTab })))
+const MemoryTab = lazy(() => import('./SysOps/MemoryTab').then(m => ({ default: m.MemoryTab })))
+const DiskTab = lazy(() => import('./SysOps/DiskTab').then(m => ({ default: m.DiskTab })))
+const ProcessesTab = lazy(() => import('./SysOps/ProcessesTab').then(m => ({ default: m.ProcessesTab })))
+const ServicesTab = lazy(() => import('./SysOps/ServicesTab').then(m => ({ default: m.ServicesTab })))
+const LogsTab = lazy(() => import('./SysOps/LogsTab').then(m => ({ default: m.LogsTab })))
+const UsersTab = lazy(() => import('./SysOps/UsersTab').then(m => ({ default: m.UsersTab })))
+const PerformanceTab = lazy(() => import('./SysOps/PerformanceTab').then(m => ({ default: m.PerformanceTab })))
+const PackageManagerTab = lazy(() => import('./SysOps/PackageManagerTab').then(m => ({ default: m.PackageManagerTab })))
+const SchedulerTab = lazy(() => import('./SysOps/SchedulerTab').then(m => ({ default: m.SchedulerTab })))
+const DiagnosticsTab = lazy(() => import('./SysOps/DiagnosticsTab').then(m => ({ default: m.DiagnosticsTab })))
+const ActionsTab = lazy(() => import('./SysOps/ActionsTab').then(m => ({ default: m.ActionsTab })))
 
 export { Bar } from './SysOps/CpuTab'
 
@@ -146,7 +146,9 @@ export function SysOps() {
 
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto p-8">
-          {renderContent()}
+          <Suspense fallback={<div className="flex items-center justify-center h-32 text-text-faint text-sm">Loading...</div>}>
+            {renderContent()}
+          </Suspense>
         </div>
       </div>
     </div>

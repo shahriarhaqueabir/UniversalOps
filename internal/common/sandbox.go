@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -74,7 +75,7 @@ func ValidIP(ip string) bool {
 	if len(ip) == 0 {
 		return false
 	}
-	return true // Placeholder - callers should use net.ParseIP for stricter validation
+	return net.ParseIP(ip) != nil
 }
 
 // Firewall rule name validation: alphanumeric, dash, underscore, space
@@ -86,6 +87,35 @@ func ValidFirewallRuleName(name string) bool {
 		return false
 	}
 	return firewallRuleNameRe.MatchString(name)
+}
+
+// Docker container ID validation: hex characters, 1-64 chars
+var containerIDRe = regexp.MustCompile(`^[a-fA-F0-9]{1,64}$`)
+
+// ValidContainerID validates a Docker container ID or name.
+// Accepts hex container IDs (up to 64 chars) or container names (alphanumeric, dash, underscore, dot, slash).
+func ValidContainerID(id string) bool {
+	if len(id) == 0 || len(id) > 128 {
+		return false
+	}
+	// Hex container ID
+	if containerIDRe.MatchString(id) {
+		return true
+	}
+	// Container name: alphanumeric, dash, underscore, dot, slash (for compose)
+	nameRe := regexp.MustCompile(`^[a-zA-Z0-9._/-]+$`)
+	return nameRe.MatchString(id)
+}
+
+// K8s namespace/resource-type validation: alphanumeric, dash, underscore, dot
+var k8sNameRe = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
+
+// ValidK8sName validates a Kubernetes namespace or resource type name.
+func ValidK8sName(name string) bool {
+	if len(name) == 0 || len(name) > 253 {
+		return false
+	}
+	return k8sNameRe.MatchString(name)
 }
 
 // SandboxConfig controls the sandbox restrictions on a command execution.

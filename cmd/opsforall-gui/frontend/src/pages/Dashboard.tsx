@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, memo } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -141,7 +141,7 @@ function AnalystBriefing({ title, objective, redFlags }: { title: string, object
   )
 }
 
-function HeroSection({ stats, alertBreakdown }: { stats: DashboardData, alertBreakdown?: { critical: number, warning: number, info: number } }) {
+const HeroSection = memo(function HeroSection({ stats, alertBreakdown }: { stats: DashboardData, alertBreakdown?: { critical: number, warning: number, info: number } }) {
   const avgHealth = clamp(((stats.cpu?.value ?? 0) + (stats.memory?.value ?? 0) + (stats.disk?.value ?? 0)) / 3)
   const r = 44
   const circumference = 2 * Math.PI * r
@@ -243,9 +243,9 @@ function HeroSection({ stats, alertBreakdown }: { stats: DashboardData, alertBre
       </div>
     </div>
   )
-}
+})
 
-function KpiCard({ icon, label, value, unit, status, description, onClick, variant = 'default' }: { icon: React.ReactNode, label: string, value: string, unit?: string, status: string, description: string, onClick?: () => void, variant?: 'default' | 'accent' | 'success' | 'warning' }) {
+const KpiCard = memo(function KpiCard({ icon, label, value, unit, status, description, onClick, variant = 'default' }: { icon: React.ReactNode, label: string, value: string, unit?: string, status: string, description: string, onClick?: () => void, variant?: 'default' | 'accent' | 'success' | 'warning' }) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.key === 'Enter' || e.key === ' ') && onClick) {
       e.preventDefault();
@@ -289,7 +289,7 @@ const variantStyles = {
       </p>
     </div>
   )
-}
+})
 
 function computeRedFlags(stats: DashboardData, topProcs?: { cpuProcs: Array<{ name: string, cpu: number }>, memProcs: Array<{ name: string, mem_pct: number }> }): string[] {
   const flags: string[] = []

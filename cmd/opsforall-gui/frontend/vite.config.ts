@@ -11,6 +11,25 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-recharts': ['recharts'],
+          'vendor-radix': [
+            '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-tabs', '@radix-ui/react-tooltip',
+            '@radix-ui/react-select', '@radix-ui/react-scroll-area',
+            '@radix-ui/react-progress', '@radix-ui/react-separator',
+            '@radix-ui/react-slider', '@radix-ui/react-switch',
+            '@radix-ui/react-toggle', '@radix-ui/react-collapsible',
+            '@radix-ui/react-avatar',
+          ],
+          'vendor-motion': ['motion'],
+        },
+      },
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',

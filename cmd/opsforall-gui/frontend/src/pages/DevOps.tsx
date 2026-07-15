@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, memo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Terminal, Server, Folder, Play, Trash2, Search, ChevronRight,
@@ -31,7 +31,7 @@ function stripAnsi(text: string): string {
 
 type TabId = 'overview' | 'terminal' | 'powershell-pro' | 'services' | 'file-browser' | 'toolbox' | 'docker' | 'git' | 'servers' | 'environment' | 'kubernetes' | 'pipelines' | 'releases' | 'diagnostics'
 
-function StatusBadge({ status, variant }: { status: string; variant?: string }) {
+const StatusBadge = memo(function StatusBadge({ status, variant }: { status: string; variant?: string }) {
   const colors: Record<string, string> = {
     running: 'bg-success/20 text-success',
     stopped: 'bg-danger/20 text-danger',
@@ -45,9 +45,9 @@ function StatusBadge({ status, variant }: { status: string; variant?: string }) 
       {status}
     </span>
   )
-}
+})
 
-function ActionButton({ icon, label, onClick, variant, disabled }: { icon: React.ReactNode; label: string; onClick: () => void; variant?: string; disabled?: boolean }) {
+const ActionButton = memo(function ActionButton({ icon, label, onClick, variant, disabled }: { icon: React.ReactNode; label: string; onClick: () => void; variant?: string; disabled?: boolean }) {
   const colors: Record<string, string> = {
     primary: 'bg-accent text-white hover:bg-accent/90',
     danger: 'bg-danger/20 text-danger hover:bg-danger/30',
@@ -60,7 +60,7 @@ function ActionButton({ icon, label, onClick, variant, disabled }: { icon: React
       {icon}{label}
     </button>
   )
-}
+})
 
 export function DevOps() {
   const [activeTab, setActiveTab] = useState<TabId>('overview')
@@ -467,7 +467,7 @@ function GitTabExpanded() {
     <div className="flex flex-col h-full p-6 space-y-4 overflow-y-auto">
       <ConfirmDialog open={confirmOpen} title="Confirm Git Action"
         description={pendingAction?.label || ''}
-        onConfirm={() => { pendingAction?.action(); setConfirmOpen(false) }}
+        onConfirm={() => { pendingAction?.action() }}
         onClose={() => setConfirmOpen(false)} />
 
       <div className="flex items-center gap-3 flex-wrap">
@@ -581,7 +581,7 @@ function DockerTabExpanded() {
     queryKey: ['devops-docker-stats'],
     queryFn: async () => (await call('DevOps.GetDockerStats') as DockerStatsEntry[]) || [],
     enabled: subTab === 'stats',
-    refetchInterval: 5000,
+    refetchInterval: refreshInterval,
   })
 
   const { data: compose } = useQuery<DockerComposeProject[]>({
@@ -612,7 +612,7 @@ function DockerTabExpanded() {
     <div className="flex flex-col h-full p-6 space-y-4">
       <ConfirmDialog open={confirmOpen} title="Confirm Docker Action"
         description={pendingAction?.label || ''}
-        onConfirm={() => { pendingAction?.action(); setConfirmOpen(false) }}
+        onConfirm={() => { pendingAction?.action() }}
         onClose={() => setConfirmOpen(false)} />
 
       <div className="flex gap-2 border-b border-border pb-2">

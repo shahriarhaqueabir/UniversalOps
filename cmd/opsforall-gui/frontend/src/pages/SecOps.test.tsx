@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { SecOps } from './SecOps'
 import { useQuery } from '@tanstack/react-query'
@@ -81,52 +80,72 @@ describe('SecOps Page', () => {
     expect(screen.getByText('Incident Response')).toBeInTheDocument()
   })
 
-  it('shows overview by default with score', () => {
+  it('shows overview by default with score', async () => {
     render(<SecOps />)
-    expect(screen.getByText('Security Operations Center')).toBeInTheDocument()
-    expect(screen.getAllByText('85').length).toBeGreaterThan(0)
-    expect(screen.getByText(/Grade B/i)).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Security Operations Center')).toBeInTheDocument()
+    })
+    await waitFor(() => {
+      expect(screen.getAllByText('85').length).toBeGreaterThan(0)
+    })
+    await waitFor(() => {
+      expect(screen.getByText(/Grade B/i)).toBeInTheDocument()
+    })
   })
 
-  it('navigates to Identity & Access sidebar category', () => {
+  it('navigates to Identity & Access sidebar category', async () => {
     render(<SecOps />)
     fireEvent.click(screen.getByText('Identity & Access'))
-    expect(screen.getByText('Identity & Access', { selector: 'h3' })).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Identity & Access', { selector: 'h3' })).toBeInTheDocument()
+    })
   })
 
-  it('navigates to Network Security sidebar category', () => {
+  it('navigates to Network Security sidebar category', async () => {
     render(<SecOps />)
     fireEvent.click(screen.getByText('Network Security'))
-    expect(screen.getByText('Network Security', { selector: 'h3' })).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Network Security', { selector: 'h3' })).toBeInTheDocument()
+    })
   })
 
-  it('navigates to Endpoint Security sidebar category', () => {
+  it('navigates to Endpoint Security sidebar category', async () => {
     render(<SecOps />)
     fireEvent.click(screen.getByText('Endpoint Security'))
-    expect(screen.getByText('Endpoint Security', { selector: 'h3' })).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Endpoint Security', { selector: 'h3' })).toBeInTheDocument()
+    })
   })
 
-  it('navigates to Log & Events sidebar category', () => {
+  it('navigates to Log & Events sidebar category', async () => {
     render(<SecOps />)
     fireEvent.click(screen.getByText('Log & Events'))
-    expect(screen.getByText('Log & Event Analysis')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Log & Event Analysis')).toBeInTheDocument()
+    })
   })
 
-  it('navigates to Security Hardening sidebar category', () => {
+  it('navigates to Security Hardening sidebar category', async () => {
     render(<SecOps />)
     fireEvent.click(screen.getByText('Security Hardening'))
-    expect(screen.getByText('Security Hardening', { selector: 'h3' })).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Security Hardening', { selector: 'h3' })).toBeInTheDocument()
+    })
   })
 
-  it('navigates to Security Audit sidebar category', () => {
+  it('navigates to Security Audit sidebar category', async () => {
     render(<SecOps />)
     fireEvent.click(screen.getByText('Security Audit'))
-    expect(screen.getByText('Run Security Audit')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Run Security Audit')).toBeInTheDocument()
+    })
   })
 
-  it('navigates to Incident Response sidebar category', () => {
+  it('navigates to Incident Response sidebar category', async () => {
     render(<SecOps />)
     fireEvent.click(screen.getByText('Incident Response'))
-    expect(screen.getByText('Isolate Host')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Isolate Host')).toBeInTheDocument()
+    })
   })
 })

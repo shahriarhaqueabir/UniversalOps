@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect } from 'vitest'
 import { useOllamaStore } from './useOllamaStore'
 import { act } from 'react'

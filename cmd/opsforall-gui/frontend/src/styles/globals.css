@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+/* ── Self-hosted Geist fonts (woff2, bundled in binary) ── */
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/Geist-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/GeistMono-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   /* Squib-inspired dark theme - scaled up */
   --color-bg: #080a0f;

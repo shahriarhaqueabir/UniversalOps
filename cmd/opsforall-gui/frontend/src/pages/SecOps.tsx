@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, Suspense, lazy } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Shield, LayoutDashboard, Users, Wifi, Monitor, AlertTriangle,
@@ -9,15 +9,15 @@ import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 
-// Tab imports
-import { OverviewTab } from './secops/OverviewTab'
-import { IdentityTab } from './secops/IdentityTab'
-import { NetworkSecurityTab } from './secops/NetworkSecurityTab'
-import { EndpointTab } from './secops/EndpointTab'
-import { EventsTab } from './secops/EventsTab'
-import { HardeningTab } from './secops/HardeningTab'
-import { AuditTab } from './secops/AuditTab'
-import { ResponseTab } from './secops/ResponseTab'
+// Tab imports (lazy-loaded to reduce initial bundle)
+const OverviewTab = lazy(() => import('./secops/OverviewTab').then(m => ({ default: m.OverviewTab })))
+const IdentityTab = lazy(() => import('./secops/IdentityTab').then(m => ({ default: m.IdentityTab })))
+const NetworkSecurityTab = lazy(() => import('./secops/NetworkSecurityTab').then(m => ({ default: m.NetworkSecurityTab })))
+const EndpointTab = lazy(() => import('./secops/EndpointTab').then(m => ({ default: m.EndpointTab })))
+const EventsTab = lazy(() => import('./secops/EventsTab').then(m => ({ default: m.EventsTab })))
+const HardeningTab = lazy(() => import('./secops/HardeningTab').then(m => ({ default: m.HardeningTab })))
+const AuditTab = lazy(() => import('./secops/AuditTab').then(m => ({ default: m.AuditTab })))
+const ResponseTab = lazy(() => import('./secops/ResponseTab').then(m => ({ default: m.ResponseTab })))
 
 type SecOpsCategory =
   | 'overview' | 'identity' | 'network' | 'endpoint'
@@ -101,7 +101,9 @@ export function SecOps() {
 
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto p-8">
-          {renderContent()}
+          <Suspense fallback={<div className="flex items-center justify-center h-32 text-[var(--color-text-faint)] text-sm">Loading...</div>}>
+            {renderContent()}
+          </Suspense>
         </div>
       </div>
     </div>
