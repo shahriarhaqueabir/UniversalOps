@@ -24,7 +24,7 @@ export function SectionBriefing({ title, objective, checklist }: { title: string
 export function MiniStat({ label, value, icon, unit }: { label: string; value: string | number; icon?: React.ReactNode; unit?: string }) {
   return (
     <div className="bg-panel border border-border rounded-2xl p-6 flex items-center gap-6 shadow-lg transition-all hover:scale-105 active:scale-95 cursor-default group">
-      <div className="w-14 h-14 rounded-2xl bg-panel-3 flex items-center justify-center text-accent border border-border shadow-inner group-hover:bg-accent-soft group-hover:text-white transition-all">
+      <div className="w-14 h-14 rounded-2xl bg-panel-3 flex items-center justify-center text-accent border border-border shadow-inner group-hover:bg-accent-soft group-hover:text-[var(--color-accent)] transition-all">
         {icon}
       </div>
       <div>

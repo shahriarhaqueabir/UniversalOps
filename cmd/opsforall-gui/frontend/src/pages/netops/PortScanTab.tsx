@@ -6,6 +6,7 @@ import {
   Network,
   Search,
   RefreshCw,
+  AlertTriangle,
 } from 'lucide-react'
 import type { PortResult } from '@/types'
 import { SectionBriefing } from './components'
@@ -16,15 +17,17 @@ export function PortScanTab() {
   const [portScanPorts, setPortScanPorts] = useState('21,22,23,25,53,80,110,143,443,445,993,1433,1521,3306,3389,5432,6379,8080,8443,27017')
   const [portScanResults, setPortScanResults] = useState<PortResult[]>([])
   const [portScanLoading, setPortScanLoading] = useState(false)
+  const [portScanError, setPortScanError] = useState<string | null>(null)
 
   const handlePortScan = useCallback(async () => {
-    setPortScanLoading(true); setPortScanResults([])
+    setPortScanLoading(true); setPortScanResults([]); setPortScanError(null)
     try {
       const ports = portScanPorts.split(',').map(p => parseInt(p.trim(), 10)).filter(p => !isNaN(p))
       const res = await call('NetOps.PortScan', portScanTarget, ports) as PortResult[]
       setPortScanResults(res || [])
     } catch (err: unknown) {
       console.error('Port scan failed:', err)
+      setPortScanError(err instanceof Error ? err.message : String(err))
     } finally {
       setPortScanLoading(false)
     }
@@ -119,8 +122,19 @@ export function PortScanTab() {
         </div>
       )}
 
+      {/* Error state */}
+      {portScanError && !portScanLoading && (
+        <div className="bg-danger/10 border border-danger/30 rounded-[var(--radius-lg)] p-6 flex items-start gap-3">
+          <AlertTriangle size={20} className="text-danger shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-danger">Port scan failed</p>
+            <p className="text-sm text-[var(--color-text-dim)] mt-1">{portScanError}</p>
+          </div>
+        </div>
+      )}
+
       {/* Empty state */}
-      {portScanResults.length === 0 && !portScanLoading && (
+      {portScanResults.length === 0 && !portScanLoading && !portScanError && (
         <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-12 shadow-xl text-center">
           <Search size={48} className="mx-auto mb-4 text-text-faint" />
           <p className="text-sm font-medium text-[var(--color-text-dim)]">

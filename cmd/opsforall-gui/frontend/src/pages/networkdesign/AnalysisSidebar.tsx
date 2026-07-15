@@ -149,15 +149,19 @@ export function AnalysisSidebar({
   const [discovering, setDiscovering] = useState(false)
 
   // ── Sync topology to backend ──
+  // FE-1: `devices`/`connections` are new array references on nearly every
+  // parent render (e.g. while dragging a node), so firing the backend call
+  // directly off this effect floods the IPC channel. Debounce so only the
+  // settled value after a short pause of inactivity gets synced.
   useEffect(() => {
-    const sync = async () => {
-      try {
-        await call('NetDesign.SetTopology', JSON.stringify(devices), JSON.stringify(connections))
-      } catch (err: unknown) {
-        console.error('[NetworkDesign] Sync failed:', err)
-      }
-    }
-    sync()
+    const timer = setTimeout(() => {
+      call('NetDesign.SetTopology', JSON.stringify(devices), JSON.stringify(connections)).catch(
+        (err: unknown) => {
+          console.error('[NetworkDesign] Sync failed:', err)
+        },
+      )
+    }, 400)
+    return () => clearTimeout(timer)
   }, [devices, connections, call])
 
   // ── Backend Analysis ──
