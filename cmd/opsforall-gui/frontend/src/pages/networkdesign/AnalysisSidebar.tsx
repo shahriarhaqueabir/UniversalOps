@@ -149,6 +149,10 @@ export function AnalysisSidebar({
   const [discovering, setDiscovering] = useState(false)
 
   // ── Sync topology to backend (debounced) ──
+  // FE-1: `devices`/`connections` are new array references on nearly every
+  // parent render (e.g. while dragging a node), so firing the backend call
+  // directly off this effect floods the IPC channel. Debounce so only the
+  // settled value after a short pause of inactivity gets synced.
   const devicesJson = useMemo(() => JSON.stringify(devices), [devices])
   const connectionsJson = useMemo(() => JSON.stringify(connections), [connections])
 

@@ -62,9 +62,26 @@ func ContainsShellMetachar(cmd string) bool {
 	return false
 }
 
+// normalizeWhitespace collapses tabs and repeated spaces to a single space.
+// H1: DangerousCommands matches rely on a literal trailing space (e.g. "rm ");
+// without this, a command using a tab instead of a space (e.g. "rm\tfile" or
+// "kill\t1") would silently bypass the blocklist.
+func normalizeWhitespace(cmd string) string {
+	replaced := strings.Map(func(r rune) rune {
+		if r == '\t' || r == '\v' || r == '\f' {
+			return ' '
+		}
+		return r
+	}, cmd)
+	for strings.Contains(replaced, "  ") {
+		replaced = strings.ReplaceAll(replaced, "  ", " ")
+	}
+	return replaced
+}
+
 // IsDangerousCommand checks if a command contains dangerous patterns (case-insensitive).
 func IsDangerousCommand(cmd string) bool {
-	lower := strings.ToLower(cmd)
+	lower := strings.ToLower(normalizeWhitespace(cmd))
 	for _, dangerous := range DangerousCommands {
 		if strings.Contains(lower, dangerous) {
 			return true

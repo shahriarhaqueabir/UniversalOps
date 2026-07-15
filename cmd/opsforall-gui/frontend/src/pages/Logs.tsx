@@ -233,6 +233,11 @@ function OverviewTab() {
                   <span className="font-bold text-[var(--color-accent)]">Top Source:</span> {logSummary.topSource}
                 </span>
               )}
+              {logSummary.topMessage && (
+                <span className="text-[var(--color-text-dim)]">
+                  <span className="font-bold text-[var(--color-accent)]">Top Message:</span> {logSummary.topMessage}
+                </span>
+              )}
               {logSummary.trend && (
                 <span className="text-[var(--color-text-dim)]">
                   <span className="font-bold text-[var(--color-warning)]">Trend:</span> {logSummary.trend}

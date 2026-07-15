@@ -48,10 +48,11 @@ type App struct {
 	alertQuit chan struct{}
 	alertWg   sync.WaitGroup
 
-	// Mutex for protecting lastCPU/lastMem/lastDisk accessed from multiple goroutines
-	mu sync.Mutex
-
-	// Previous metric values for significant-change detection
+	// Previous metric values for significant-change detection.
+	// Guarded by lastMu since evaluateAndEmit() can run concurrently from
+	// both the periodic alert-loop ticker and TriggerCollector() (a Wails
+	// binding invoked directly from the frontend goroutine). See IPC-3.
+	lastMu                     sync.Mutex
 	lastCPU, lastMem, lastDisk float64
 }
 
@@ -322,41 +323,43 @@ func (a *App) evaluateAndEmit() {
 		Connections: 0, // fetched on-demand
 	}
 
-	// Detect significant changes and emit timeline events
-	a.mu.Lock()
+	// Detect significant changes and emit timeline events.
+	// lastCPU/lastMem/lastDisk are shared with concurrent callers (the
+	// alert-loop ticker and TriggerCollector), so the read-compare-write
+	// sequence is done under lastMu to avoid a data race (IPC-3).
 	currCPU := cpuMF.LastValue
 	currMem := memMF.LastValue
 	currDisk := diskMF.LastValue
-	lastCPU := a.lastCPU
-	lastMem := a.lastMem
-	lastDisk := a.lastDisk
+
+	a.lastMu.Lock()
+	prevCPU, prevMem, prevDisk := a.lastCPU, a.lastMem, a.lastDisk
 	a.lastCPU = currCPU
 	a.lastMem = currMem
 	a.lastDisk = currDisk
-	a.mu.Unlock()
+	a.lastMu.Unlock()
 
-	if currCPU > lastCPU+15 && lastCPU > 0 {
+	if currCPU > prevCPU+15 && prevCPU > 0 {
 		a.eventBus.Emit(common.NewEventWithMeta(
 			common.CatSystem, common.EventWarning, "sysops",
 			"CPU spiked",
-			fmt.Sprintf("CPU usage jumped from %.0f%% to %.0f%%", lastCPU, currCPU),
-			map[string]string{"from": fmt.Sprintf("%.1f", lastCPU), "to": fmt.Sprintf("%.1f", currCPU)},
+			fmt.Sprintf("CPU usage jumped from %.0f%% to %.0f%%", prevCPU, currCPU),
+			map[string]string{"from": fmt.Sprintf("%.1f", prevCPU), "to": fmt.Sprintf("%.1f", currCPU)},
 		))
 	}
-	if currMem > lastMem+10 && lastMem > 0 {
+	if currMem > prevMem+10 && prevMem > 0 {
 		a.eventBus.Emit(common.NewEventWithMeta(
 			common.CatSystem, common.EventWarning, "sysops",
 			"Memory pressure increasing",
-			fmt.Sprintf("Memory usage increased from %.0f%% to %.0f%%", lastMem, currMem),
-			map[string]string{"from": fmt.Sprintf("%.1f", lastMem), "to": fmt.Sprintf("%.1f", currMem)},
+			fmt.Sprintf("Memory usage increased from %.0f%% to %.0f%%", prevMem, currMem),
+			map[string]string{"from": fmt.Sprintf("%.1f", prevMem), "to": fmt.Sprintf("%.1f", currMem)},
 		))
 	}
-	if currDisk > lastDisk+10 && lastDisk > 0 {
+	if currDisk > prevDisk+10 && prevDisk > 0 {
 		a.eventBus.Emit(common.NewEventWithMeta(
 			common.CatSystem, common.EventWarning, "sysops",
 			"Disk usage increasing",
-			fmt.Sprintf("Disk usage increased from %.0f%% to %.0f%%", lastDisk, currDisk),
-			map[string]string{"from": fmt.Sprintf("%.1f", lastDisk), "to": fmt.Sprintf("%.1f", currDisk)},
+			fmt.Sprintf("Disk usage increased from %.0f%% to %.0f%%", prevDisk, currDisk),
+			map[string]string{"from": fmt.Sprintf("%.1f", prevDisk), "to": fmt.Sprintf("%.1f", currDisk)},
 		))
 	}
 

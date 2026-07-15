@@ -21,25 +21,25 @@ type DockerStatsEntry struct {
 }
 
 type DockerComposeInfo struct {
-	Project      string
-	Status       string
-	WorkDir      string
-	Services     []DockerComposeService
+	Project  string
+	Status   string
+	WorkDir  string
+	Services []DockerComposeService
 }
 
 type DockerComposeService struct {
-	Name    string
-	State   string
-	Ports   string
+	Name  string
+	State string
+	Ports string
 }
 
 type DockerNetworkInfo struct {
-	ID       string
-	Name     string
-	Driver   string
-	Scope    string
-	Subnet   string
-	Gateway  string
+	ID         string
+	Name       string
+	Driver     string
+	Scope      string
+	Subnet     string
+	Gateway    string
 	Containers int
 }
 

@@ -306,9 +306,29 @@ func (s *Storage) dailyPruneLoop() {
 // ── Metrics CRUD ────────────────────────────────────────────────────────────
 
 // InsertMetric enqueues a single metric value for asynchronous batch write.
+// M3: use a non-blocking send with a timeout to prevent the caller from
+// stalling indefinitely if the writer loop is backed up. Dropped samples are
+// logged at most once per 10-second window to avoid log spam.
+var (
+	lastDropLog   time.Time
+	lastDropLogMu sync.Mutex
+)
+
 func (s *Storage) InsertMetric(name, unit string, value float64) error {
-	s.metricsCh <- MetricWrite{Name: name, Unit: unit, Value: value, Time: time.Now()}
-	return nil
+	w := MetricWrite{Name: name, Unit: unit, Value: value, Time: time.Now()}
+	select {
+	case s.metricsCh <- w:
+		return nil
+	default:
+		// Channel full — drop sample and log a warning (rate-limited)
+		lastDropLogMu.Lock()
+		if time.Since(lastDropLog) > 10*time.Second {
+			lastDropLog = time.Now()
+			LogWarn("InsertMetric: metrics channel full, dropping sample (name=%s)", name)
+		}
+		lastDropLogMu.Unlock()
+		return nil
+	}
 }
 
 // GetMetricHistory retrieves historical values for a metric.
@@ -563,12 +583,16 @@ func (s *Storage) TrendingLogErrors(limit int) ([]TrendingLogError, error) {
 	return results, nil
 }
 
-// Prune removes data older than the given duration.
+// Prune removes data older than the given duration. Covers every
+// timestamped table, including alerts and conversations which were
+// previously left out and grew unbounded (M5).
 func (s *Storage) Prune(olderThan time.Duration) {
 	cutoff := time.Now().Add(-olderThan)
 	s.db.Exec(`DELETE FROM metrics WHERE timestamp < ?`, cutoff)
 	s.db.Exec(`DELETE FROM logs WHERE timestamp < ?`, cutoff)
 	s.db.Exec(`DELETE FROM events WHERE timestamp < ?`, cutoff)
+	s.db.Exec(`DELETE FROM alerts WHERE timestamp < ? AND resolved = 1`, cutoff)
+	s.db.Exec(`DELETE FROM conversations WHERE timestamp < ?`, cutoff)
 	LogInfo("Retention policy applied: Pruned data older than %v", olderThan)
 }
 

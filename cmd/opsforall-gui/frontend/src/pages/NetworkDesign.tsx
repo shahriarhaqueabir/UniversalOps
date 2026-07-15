@@ -398,10 +398,7 @@ export function NetworkDesign() {
       )
       if (path) {
         const data = JSON.stringify({ devices, connections }, null, 2)
-        const success = await WriteFile(path, data)
-        if (success) {
-          console.log('Topology saved to', path)
-        }
+        await WriteFile(path, data)
       }
     } catch (err: unknown) {
       console.error('Failed to save topology:', err)

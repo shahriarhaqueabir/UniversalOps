@@ -25,8 +25,8 @@ type GitTagInfo struct {
 }
 
 type GitStashEntry struct {
-	Index int
-	Branch string
+	Index   int
+	Branch  string
 	Message string
 }
 
@@ -37,11 +37,11 @@ type GitRemoteInfo struct {
 }
 
 type GitBlameEntry struct {
-	Commit    string
-	Author    string
-	Date      string
-	LineNum   int
-	Content   string
+	Commit  string
+	Author  string
+	Date    string
+	LineNum int
+	Content string
 }
 
 type GitCommitInfo struct {

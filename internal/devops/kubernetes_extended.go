@@ -17,12 +17,12 @@ type K8sResourceItem struct {
 }
 
 type K8sRolloutStatus struct {
-	Name       string
-	Kind       string
-	Ready      bool
-	Replicas   string
-	Updated    string
-	Available  string
+	Name      string
+	Kind      string
+	Ready     bool
+	Replicas  string
+	Updated   string
+	Available string
 }
 
 type K8sEvent struct {
@@ -40,10 +40,10 @@ type K8sNamespaceInfo struct {
 }
 
 type K8sScalingResult struct {
-	Current  int
-	Desired  int
-	Success  bool
-	Output   string
+	Current int
+	Desired int
+	Success bool
+	Output  string
 }
 
 func kubectlExec(args ...string) (string, error) {
@@ -129,7 +129,7 @@ func GetK8sDeployments(namespace string) ([]K8sResourceItem, error) {
 			if namespace != "" {
 				ns = namespace
 			}
-				items = append(items, K8sResourceItem{
+			items = append(items, K8sResourceItem{
 				Name:      fields[0],
 				Namespace: ns,
 				Status:    fields[2],
