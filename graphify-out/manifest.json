@@ -35,8 +35,8 @@
     "semantic_hash": ""
   },
   "internal/app/AIOps.go": {
-    "mtime": 1783876762.3359993,
-    "ast_hash": "b10f6b00c516e5bbdd1df3739e2e720c",
+    "mtime": 1784062753.1651804,
+    "ast_hash": "4713095343bbcdd4ecd171b873513408",
     "semantic_hash": ""
   },
   "internal/app/Alerts.go": {
@@ -45,8 +45,8 @@
     "semantic_hash": ""
   },
   "internal/app/App.go": {
-    "mtime": 1783883793.0007534,
-    "ast_hash": "c6d38b57444d69a882416a48bc67fd30",
+    "mtime": 1784062851.6762795,
+    "ast_hash": "538f3b70a5fd6ae7710f0d0c67ab4721",
     "semantic_hash": ""
   },
   "internal/app/App_test.go": {
@@ -95,8 +95,8 @@
     "semantic_hash": ""
   },
   "internal/app/SecOps.go": {
-    "mtime": 1784050830.7537494,
-    "ast_hash": "2a3b01f496627e220218979094293d21",
+    "mtime": 1784062281.9509892,
+    "ast_hash": "ff9efeba70af94f434b6a718756642ed",
     "semantic_hash": ""
   },
   "internal/app/SysOps.go": {
@@ -115,8 +115,8 @@
     "semantic_hash": ""
   },
   "internal/app/Types.go": {
-    "mtime": 1784050819.2413282,
-    "ast_hash": "5f953d140cf56846394fb255b3808ed6",
+    "mtime": 1784062621.0710795,
+    "ast_hash": "847caaaa0108ff8a8529804027ad1802",
     "semantic_hash": ""
   },
   "internal/common/alerts.go": {
@@ -185,8 +185,8 @@
     "semantic_hash": ""
   },
   "internal/common/sandbox.go": {
-    "mtime": 1783942484.1096504,
-    "ast_hash": "437166bd12c8b54e5602bcf1d84e657d",
+    "mtime": 1784063156.7252493,
+    "ast_hash": "7dd05a16b7f841bde96baa5413c4ab76",
     "semantic_hash": ""
   },
   "internal/common/sandbox_linux.go": {
@@ -275,13 +275,13 @@
     "semantic_hash": "97001511089c3eb4fd5f597a52f95c75"
   },
   "internal/devops/shell.go": {
-    "mtime": 1783944562.0061307,
-    "ast_hash": "ac2821a5ae5f27586b6b05f3d8d75e1e",
+    "mtime": 1784063257.0942786,
+    "ast_hash": "6b1690b1acbca5038609642fe0dafb8c",
     "semantic_hash": ""
   },
   "internal/devops/shell_test.go": {
-    "mtime": 1783946254.7446775,
-    "ast_hash": "7c26e8a6113d0aa7d42457f9db0940a8",
+    "mtime": 1784063290.5991051,
+    "ast_hash": "7c33a39e0b6903096224c348e7d545f4",
     "semantic_hash": ""
   },
   "internal/devops/workflows.go": {
@@ -340,8 +340,8 @@
     "semantic_hash": ""
   },
   "internal/secops/firewall.go": {
-    "mtime": 1783712696.4718618,
-    "ast_hash": "62f36108025f3dc576076c06eba1282c",
+    "mtime": 1784063208.8873734,
+    "ast_hash": "7c62ffa0a8f7f8a11b3607e41295302b",
     "semantic_hash": ""
   },
   "internal/secops/listening.go": {
@@ -575,8 +575,8 @@
     "semantic_hash": ""
   },
   "cmd/opsforall-gui/frontend/src/hooks/useBackend.ts": {
-    "mtime": 1783877132.777785,
-    "ast_hash": "3f16733b78a93ffb610a5a851da75aed",
+    "mtime": 1784062600.2400541,
+    "ast_hash": "8a0748dc006e5011ac00b7baa5ca3530",
     "semantic_hash": ""
   },
   "cmd/opsforall-gui/frontend/src/hooks/useEvents.test.ts": {
@@ -850,8 +850,8 @@
     "semantic_hash": ""
   },
   "cmd/opsforall-gui/frontend/src/pages/networkdesign/AnalysisSidebar.tsx": {
-    "mtime": 1783956272.59959,
-    "ast_hash": "ca7d2a73af95c49cdfffc68d72ae0d2c",
+    "mtime": 1784063012.7566607,
+    "ast_hash": "aceb6fe80092fb8ed5dc23397aaaff86",
     "semantic_hash": ""
   },
   "cmd/opsforall-gui/frontend/src/pages/networkdesign/topologyApi.ts": {
@@ -1285,8 +1285,8 @@
     "semantic_hash": ""
   },
   "internal/netops/actions.go": {
-    "mtime": 1784028139.577076,
-    "ast_hash": "b748bb0de4715f8ba4cefb83b5fcbd65",
+    "mtime": 1784062136.8830085,
+    "ast_hash": "f1cc644562d276ef0381cdd50a0ccf6b",
     "semantic_hash": ""
   },
   "internal/netops/actions_test.go": {
@@ -1470,8 +1470,8 @@
     "semantic_hash": ""
   },
   "internal/secops/response.go": {
-    "mtime": 1784050270.7951016,
-    "ast_hash": "300ae05b601682f7a16d19f6f91ee2f4",
+    "mtime": 1784062235.0068889,
+    "ast_hash": "77f28b06e5e8d5b3378c9dd21b1eaf8d",
     "semantic_hash": ""
   },
   "internal/secops/response_test.go": {
@@ -1480,8 +1480,8 @@
     "semantic_hash": ""
   },
   "internal/secops/security.go": {
-    "mtime": 1784050086.0412846,
-    "ast_hash": "0e4ff7d5051e93f78ce3771371649f16",
+    "mtime": 1784062150.5416498,
+    "ast_hash": "54de47154c021311028ab85928ad9fec",
     "semantic_hash": ""
   },
   "internal/secops/security_test.go": {
@@ -1615,8 +1615,8 @@
     "semantic_hash": ""
   },
   ".memory/index.md": {
-    "mtime": 1784018409.4778144,
-    "ast_hash": "ac8061b6eb4cb4d94de784e184ccb377",
+    "mtime": 1784060280.3379993,
+    "ast_hash": "5c9b9c3de9cf879d1cdd6114af34ba23",
     "semantic_hash": ""
   },
   ".memory/kanban-audit.md": {
@@ -1625,8 +1625,8 @@
     "semantic_hash": ""
   },
   ".memory/state.md": {
-    "mtime": 1783858272.2100906,
-    "ast_hash": "0658c01238d439ffe50915b964192217",
+    "mtime": 1784060137.482356,
+    "ast_hash": "d30bd9482d2b2aa0da71a8b222dd74f6",
     "semantic_hash": ""
   },
   ".memory/topics/codebase-research.md": {
@@ -1799,11 +1799,6 @@
     "ast_hash": "ec310b95e8728d88844ef9a9362141c4",
     "semantic_hash": ""
   },
-  "reviewandaudits/New Text Document.txt": {
-    "mtime": 1784055482.0825837,
-    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
-    "semantic_hash": ""
-  },
   "tests/e2e/README.md": {
     "mtime": 1783973587.1567879,
     "ast_hash": "46f81534f0b10fb044a71487ea97f94e",
@@ -1817,6 +1812,71 @@
   "tests/e2e/requirements.txt": {
     "mtime": 1783974513.2826228,
     "ast_hash": "d2b36e2db9ebe36b096bbc10b940b53f",
+    "semantic_hash": ""
+  },
+  "g.py": {
+    "mtime": 1784059866.1336737,
+    "ast_hash": "039170b159de91fa28c75cb0ca3bd31f",
+    "semantic_hash": ""
+  },
+  "gg.js": {
+    "mtime": 1784059912.5142453,
+    "ast_hash": "b5536d45cc11d4daa45ea45c5345ac67",
+    "semantic_hash": ""
+  },
+  "gg.py": {
+    "mtime": 1784059825.9783275,
+    "ast_hash": "218097c1109c39964ba8ed507d135209",
+    "semantic_hash": ""
+  },
+  "graphify-out.json": {
+    "mtime": 1784060179.9923909,
+    "ast_hash": "42cb5acdbc2c61f188ceb7d8f1fc1376",
+    "semantic_hash": ""
+  },
+  "graphify-run.py": {
+    "mtime": 1784059784.4444628,
+    "ast_hash": "353b8d21a8629c3068f8b8ab2f62ba61",
+    "semantic_hash": ""
+  },
+  "run-graphify.sh": {
+    "mtime": 1784059779.643455,
+    "ast_hash": "a4699c8560c9b8dcd4688e649c49daf3",
+    "semantic_hash": ""
+  },
+  ".memory/topics/audit-report-2026-07-14.md": {
+    "mtime": 1784060274.9400265,
+    "ast_hash": "a8c356ad5d4fd31a7136b956341b90d5",
+    "semantic_hash": ""
+  },
+  ".memory/topics/audit-verification-critical.md": {
+    "mtime": 1784060965.3236375,
+    "ast_hash": "14ceae2ddf6fc6420dbd1c3ebe420bba",
+    "semantic_hash": ""
+  },
+  ".memory/topics/comprehensive-analysis-2026-07-14.md": {
+    "mtime": 1784060155.6150055,
+    "ast_hash": "63abbfdd2a33b3997ed1a634d78e176a",
+    "semantic_hash": ""
+  },
+  "ANALYSIS_REPORT.md": {
+    "mtime": 1784060082.8090613,
+    "ast_hash": "cc73b9f74e779c490b09d9d9877d9116",
+    "semantic_hash": ""
+  },
+  "graphify-prompt.txt": {
+    "mtime": 1784059765.5932174,
+    "ast_hash": "8215e5a527c19bbe82ed52186749a15f",
+    "semantic_hash": ""
+  },
+  "reviewandaudits/AuditReport.md": {
+    "mtime": 1784054798.1531732,
+    "ast_hash": "5001f308415e93fffeb4f1b577e21ed4",
+    "semantic_hash": ""
+  },
+  "reviewandaudits/AuditReportRemediation.md": {
+    "mtime": 1784055520.7927673,
+    "ast_hash": "4cb8a58667e50c4f5f42ed483cd44c5f",
     "semantic_hash": ""
   }
 }

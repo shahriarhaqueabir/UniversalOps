@@ -1,0 +1,1822 @@
+{
+  "go.mod": {
+    "mtime": 1783811704.8169374,
+    "ast_hash": "7892c6399044f54f2c8d129eccf41b0a",
+    "semantic_hash": ""
+  },
+  "internal/aiops/ollama.go": {
+    "mtime": 1783669805.240956,
+    "ast_hash": "6430df62813668799489a4ed7a3ab411",
+    "semantic_hash": "6430df62813668799489a4ed7a3ab411"
+  },
+  "internal/aiops/ollama_test.go": {
+    "mtime": 1783638968.646817,
+    "ast_hash": "2d51c1ae04c77f0fd111fa21524e1737",
+    "semantic_hash": "2d51c1ae04c77f0fd111fa21524e1737"
+  },
+  "internal/aiops/reporting.go": {
+    "mtime": 1783548366.2436154,
+    "ast_hash": "949409bb709d5cb75829f0dbd4800bf6",
+    "semantic_hash": "949409bb709d5cb75829f0dbd4800bf6"
+  },
+  "internal/aiops/state_query.go": {
+    "mtime": 1783548366.2446642,
+    "ast_hash": "28f156796e75df93ef7bea4bd8ce4ceb",
+    "semantic_hash": "28f156796e75df93ef7bea4bd8ce4ceb"
+  },
+  "internal/aiops/state_query_test.go": {
+    "mtime": 1783946270.8666852,
+    "ast_hash": "42583b44d6cb341edddd7f82c07ae3a4",
+    "semantic_hash": ""
+  },
+  "internal/aiops/workflows.go": {
+    "mtime": 1783872143.3849704,
+    "ast_hash": "0e32f538ff6f7860167195a88f011483",
+    "semantic_hash": ""
+  },
+  "internal/app/AIOps.go": {
+    "mtime": 1783876762.3359993,
+    "ast_hash": "b10f6b00c516e5bbdd1df3739e2e720c",
+    "semantic_hash": ""
+  },
+  "internal/app/Alerts.go": {
+    "mtime": 1783812351.859948,
+    "ast_hash": "edd5055b3dc0eff577d98fd3a1471f7b",
+    "semantic_hash": ""
+  },
+  "internal/app/App.go": {
+    "mtime": 1783883793.0007534,
+    "ast_hash": "c6d38b57444d69a882416a48bc67fd30",
+    "semantic_hash": ""
+  },
+  "internal/app/App_test.go": {
+    "mtime": 1783876870.8240707,
+    "ast_hash": "76c9d6dea824ee9117f9d2333be27ff0",
+    "semantic_hash": ""
+  },
+  "internal/app/Dashboard.go": {
+    "mtime": 1783861091.7429428,
+    "ast_hash": "d28ba63a6d5600dfc330170de6797212",
+    "semantic_hash": ""
+  },
+  "internal/app/Dashboard_test.go": {
+    "mtime": 1783876118.6750517,
+    "ast_hash": "7b4e5dd8ec1de4f2fa882515a210c56d",
+    "semantic_hash": ""
+  },
+  "internal/app/DevOps.go": {
+    "mtime": 1784050259.929408,
+    "ast_hash": "a4f29482e0605b7c9e861d706a1309c4",
+    "semantic_hash": ""
+  },
+  "internal/app/Events.go": {
+    "mtime": 1783677381.3961997,
+    "ast_hash": "cc70633e10cc2477566d421786a7c72c",
+    "semantic_hash": "cc70633e10cc2477566d421786a7c72c"
+  },
+  "internal/app/Logs.go": {
+    "mtime": 1783875446.7731733,
+    "ast_hash": "699f267dfe19b9a869221b3c5b119055",
+    "semantic_hash": ""
+  },
+  "internal/app/Logs_test.go": {
+    "mtime": 1783625006.4184673,
+    "ast_hash": "260ee2b442415d297f55d613fd6dab83",
+    "semantic_hash": "260ee2b442415d297f55d613fd6dab83"
+  },
+  "internal/app/NetOps.go": {
+    "mtime": 1784028487.3290744,
+    "ast_hash": "d542c6223443f28648c83684e61009aa",
+    "semantic_hash": ""
+  },
+  "internal/app/Pipeline.go": {
+    "mtime": 1783883172.071309,
+    "ast_hash": "b112b01f41f50367179b9b5c43e70861",
+    "semantic_hash": ""
+  },
+  "internal/app/SecOps.go": {
+    "mtime": 1784050830.7537494,
+    "ast_hash": "2a3b01f496627e220218979094293d21",
+    "semantic_hash": ""
+  },
+  "internal/app/SysOps.go": {
+    "mtime": 1784023298.1800308,
+    "ast_hash": "82e0e80f716a31e23b64a44c1db80e27",
+    "semantic_hash": ""
+  },
+  "internal/app/SysOps_test.go": {
+    "mtime": 1783452284.9137714,
+    "ast_hash": "305866adf31f257bebc435563758d141",
+    "semantic_hash": "305866adf31f257bebc435563758d141"
+  },
+  "internal/app/Timeline.go": {
+    "mtime": 1783875448.9159427,
+    "ast_hash": "9496e914ea8f04cee4f2183d5f2832d1",
+    "semantic_hash": ""
+  },
+  "internal/app/Types.go": {
+    "mtime": 1784050819.2413282,
+    "ast_hash": "5f953d140cf56846394fb255b3808ed6",
+    "semantic_hash": ""
+  },
+  "internal/common/alerts.go": {
+    "mtime": 1783942534.375323,
+    "ast_hash": "c0cf453ecfe7f6c4818e7e7dda7a3d22",
+    "semantic_hash": ""
+  },
+  "internal/common/alerts_test.go": {
+    "mtime": 1783543031.60553,
+    "ast_hash": "4a71bcf639c7bd1d21576df8bbb5f8b5",
+    "semantic_hash": "4a71bcf639c7bd1d21576df8bbb5f8b5"
+  },
+  "internal/common/common_extra_test.go": {
+    "mtime": 1783942576.1911664,
+    "ast_hash": "b8c2583efb840f8e778d9473f1053838",
+    "semantic_hash": ""
+  },
+  "internal/common/common_test.go": {
+    "mtime": 1783872059.9754312,
+    "ast_hash": "dec0f20e31e07f4425c45a4db352fe47",
+    "semantic_hash": ""
+  },
+  "internal/common/events.go": {
+    "mtime": 1783677343.2676244,
+    "ast_hash": "83258b2b324514bbb462f18f0482a479",
+    "semantic_hash": "83258b2b324514bbb462f18f0482a479"
+  },
+  "internal/common/forecast.go": {
+    "mtime": 1783439644.6952603,
+    "ast_hash": "6c3aece57d02480ab1bafc52c8e6f8ed",
+    "semantic_hash": "6c3aece57d02480ab1bafc52c8e6f8ed"
+  },
+  "internal/common/formatters.go": {
+    "mtime": 1783636716.8185554,
+    "ast_hash": "7e87847790e86fa9034657f18517bef4",
+    "semantic_hash": "7e87847790e86fa9034657f18517bef4"
+  },
+  "internal/common/logger.go": {
+    "mtime": 1783954862.935779,
+    "ast_hash": "d14e99526badf4dada5d7ff54a82c5f9",
+    "semantic_hash": ""
+  },
+  "internal/common/metrics.go": {
+    "mtime": 1783441466.9593184,
+    "ast_hash": "eed4a3cc118f64728665e0cf439b3b75",
+    "semantic_hash": "eed4a3cc118f64728665e0cf439b3b75"
+  },
+  "internal/common/metrics_exporter.go": {
+    "mtime": 1783879220.1154108,
+    "ast_hash": "1fac60c85379fcb4c23775c676b6241c",
+    "semantic_hash": ""
+  },
+  "internal/common/pipeline.go": {
+    "mtime": 1783809675.9500184,
+    "ast_hash": "58a5cc5a194deeb5140084f19bea1a63",
+    "semantic_hash": ""
+  },
+  "internal/common/pipeline_test.go": {
+    "mtime": 1783441548.6909356,
+    "ast_hash": "0497445f161e31ce122ca3e3ca386cde",
+    "semantic_hash": "0497445f161e31ce122ca3e3ca386cde"
+  },
+  "internal/common/platform.go": {
+    "mtime": 1783872058.817079,
+    "ast_hash": "a01b48c5fbbec9c0d0e4c182ff9ecdeb",
+    "semantic_hash": ""
+  },
+  "internal/common/sandbox.go": {
+    "mtime": 1783942484.1096504,
+    "ast_hash": "437166bd12c8b54e5602bcf1d84e657d",
+    "semantic_hash": ""
+  },
+  "internal/common/sandbox_linux.go": {
+    "mtime": 1783590071.330017,
+    "ast_hash": "7f9f138cbb216070546d22b66bd23602",
+    "semantic_hash": "7f9f138cbb216070546d22b66bd23602"
+  },
+  "internal/common/sandbox_other.go": {
+    "mtime": 1783590071.330017,
+    "ast_hash": "d5791c5051dac9d01b4cdef78745f298",
+    "semantic_hash": "d5791c5051dac9d01b4cdef78745f298"
+  },
+  "internal/common/sandbox_test.go": {
+    "mtime": 1783942657.9737883,
+    "ast_hash": "438afa72d02f0adeeaacdac9f59a3f4f",
+    "semantic_hash": ""
+  },
+  "internal/common/sandbox_windows.go": {
+    "mtime": 1783954266.8191483,
+    "ast_hash": "e7ebde98c168db1af0f71e48ac2384a5",
+    "semantic_hash": ""
+  },
+  "internal/common/sandbox_windows_test.go": {
+    "mtime": 1783527462.905466,
+    "ast_hash": "1d1dd663474515c0fb4aa07cb43f4888",
+    "semantic_hash": "1d1dd663474515c0fb4aa07cb43f4888"
+  },
+  "internal/common/storage.go": {
+    "mtime": 1783874288.762282,
+    "ast_hash": "850efb79b3cd3df6a580f1f99d5e6873",
+    "semantic_hash": ""
+  },
+  "internal/common/storage_test.go": {
+    "mtime": 1783942591.5734715,
+    "ast_hash": "93fc5b6437827d03442a7772b02006fd",
+    "semantic_hash": ""
+  },
+  "internal/common/theme.go": {
+    "mtime": 1783861091.7484553,
+    "ast_hash": "364407c979a0cb95abdecefef947e53d",
+    "semantic_hash": ""
+  },
+  "internal/common/theme_test.go": {
+    "mtime": 1783861091.7494614,
+    "ast_hash": "1dda9cf7ef708436652efaaf7abf70f0",
+    "semantic_hash": "1dda9cf7ef708436652efaaf7abf70f0"
+  },
+  "internal/common/timeseries.go": {
+    "mtime": 1783439627.6516385,
+    "ast_hash": "9464fb175fed794123592d402ec672bf",
+    "semantic_hash": "9464fb175fed794123592d402ec672bf"
+  },
+  "internal/common/types.go": {
+    "mtime": 1783548229.4894,
+    "ast_hash": "deb6e7cec6874c81092314a8399ffe50",
+    "semantic_hash": "deb6e7cec6874c81092314a8399ffe50"
+  },
+  "internal/devops/filebrowser.go": {
+    "mtime": 1783872147.0629325,
+    "ast_hash": "0a1ac840bafd0a1a94a4c3cf966fc7f7",
+    "semantic_hash": ""
+  },
+  "internal/devops/filebrowser_test.go": {
+    "mtime": 1783872146.2467442,
+    "ast_hash": "a974338c8338da852d62aba359ba83c9",
+    "semantic_hash": ""
+  },
+  "internal/devops/logtail.go": {
+    "mtime": 1783529442.4813633,
+    "ast_hash": "57987505363682a79905284206e20ae5",
+    "semantic_hash": "57987505363682a79905284206e20ae5"
+  },
+  "internal/devops/processes.go": {
+    "mtime": 1783548366.2869966,
+    "ast_hash": "e24aef22f9a2813f7496c55e23c2aab0",
+    "semantic_hash": "e24aef22f9a2813f7496c55e23c2aab0"
+  },
+  "internal/devops/services.go": {
+    "mtime": 1783636613.2379267,
+    "ast_hash": "644ebf897f4eb8a824f9615527755118",
+    "semantic_hash": "644ebf897f4eb8a824f9615527755118"
+  },
+  "internal/devops/services_test.go": {
+    "mtime": 1783636695.4764445,
+    "ast_hash": "97001511089c3eb4fd5f597a52f95c75",
+    "semantic_hash": "97001511089c3eb4fd5f597a52f95c75"
+  },
+  "internal/devops/shell.go": {
+    "mtime": 1783944562.0061307,
+    "ast_hash": "ac2821a5ae5f27586b6b05f3d8d75e1e",
+    "semantic_hash": ""
+  },
+  "internal/devops/shell_test.go": {
+    "mtime": 1783946254.7446775,
+    "ast_hash": "7c26e8a6113d0aa7d42457f9db0940a8",
+    "semantic_hash": ""
+  },
+  "internal/devops/workflows.go": {
+    "mtime": 1783255340.9145994,
+    "ast_hash": "c1bfd777366c224b1bb0d8305d6be2fe",
+    "semantic_hash": "c1bfd777366c224b1bb0d8305d6be2fe"
+  },
+  "internal/netops/connections.go": {
+    "mtime": 1783861091.7514668,
+    "ast_hash": "3f2efcd6f99d6f5267c506b0ebfbcdf1",
+    "semantic_hash": ""
+  },
+  "internal/netops/dns.go": {
+    "mtime": 1783611879.534242,
+    "ast_hash": "0458eda4f333f5cb27345d20ba5ad6f1",
+    "semantic_hash": "0458eda4f333f5cb27345d20ba5ad6f1"
+  },
+  "internal/netops/interfaces.go": {
+    "mtime": 1783548366.2441401,
+    "ast_hash": "9870a041be3e3e16a1f7a3b544aa66a3",
+    "semantic_hash": "9870a041be3e3e16a1f7a3b544aa66a3"
+  },
+  "internal/netops/netops_test.go": {
+    "mtime": 1783672471.2637804,
+    "ast_hash": "8f1b225d34c01a1c435891f0b444fb9a",
+    "semantic_hash": "8f1b225d34c01a1c435891f0b444fb9a"
+  },
+  "internal/netops/ping.go": {
+    "mtime": 1783872146.247749,
+    "ast_hash": "a19e80d3c0085ea076cf70ee02bf1d5d",
+    "semantic_hash": ""
+  },
+  "internal/netops/portscan.go": {
+    "mtime": 1783874395.2755811,
+    "ast_hash": "0c87828ee14837aadbee16f889caea05",
+    "semantic_hash": ""
+  },
+  "internal/netops/traceroute.go": {
+    "mtime": 1783515021.3960774,
+    "ast_hash": "0ae74a710c1e81762274350591e49b30",
+    "semantic_hash": "0ae74a710c1e81762274350591e49b30"
+  },
+  "internal/netops/workflows.go": {
+    "mtime": 1783954342.9114687,
+    "ast_hash": "bd4de1fd655759974dfa9a942d2910c3",
+    "semantic_hash": ""
+  },
+  "internal/secops/defender.go": {
+    "mtime": 1783712630.2126496,
+    "ast_hash": "3cc0f0b9587a106538734eafd3a37356",
+    "semantic_hash": ""
+  },
+  "internal/secops/events.go": {
+    "mtime": 1784050290.494448,
+    "ast_hash": "5d9037c03af7c156d7626bd7b49466cb",
+    "semantic_hash": ""
+  },
+  "internal/secops/firewall.go": {
+    "mtime": 1783712696.4718618,
+    "ast_hash": "62f36108025f3dc576076c06eba1282c",
+    "semantic_hash": ""
+  },
+  "internal/secops/listening.go": {
+    "mtime": 1783611989.2828968,
+    "ast_hash": "3c5a75be33b4afd53faabb220dea2be5",
+    "semantic_hash": "3c5a75be33b4afd53faabb220dea2be5"
+  },
+  "internal/secops/secops_test.go": {
+    "mtime": 1783636679.5655942,
+    "ast_hash": "a0de7f59cc3ff74aa0749587c226534c",
+    "semantic_hash": "a0de7f59cc3ff74aa0749587c226534c"
+  },
+  "internal/secops/tasks.go": {
+    "mtime": 1783256322.7156363,
+    "ast_hash": "b1c3ecb606039952dd1c219a910f984f",
+    "semantic_hash": "b1c3ecb606039952dd1c219a910f984f"
+  },
+  "internal/secops/users.go": {
+    "mtime": 1783809675.9540193,
+    "ast_hash": "23b1a190665da7f73250415500d90a49",
+    "semantic_hash": ""
+  },
+  "internal/secops/workflows.go": {
+    "mtime": 1783548254.2309735,
+    "ast_hash": "b2c172d2964a18d097194b1395d4e609",
+    "semantic_hash": "b2c172d2964a18d097194b1395d4e609"
+  },
+  "internal/sysops/collector.go": {
+    "mtime": 1783256322.7205882,
+    "ast_hash": "9536ea395486c439e4ec068ea163d0a2",
+    "semantic_hash": "9536ea395486c439e4ec068ea163d0a2"
+  },
+  "internal/sysops/cpu.go": {
+    "mtime": 1784021591.2766967,
+    "ast_hash": "4bec16bc5c434a8c2cb7149703720336",
+    "semantic_hash": ""
+  },
+  "internal/sysops/cpu_test.go": {
+    "mtime": 1783527674.446584,
+    "ast_hash": "4f9e194d60d9273208db1de87dd116ee",
+    "semantic_hash": "4f9e194d60d9273208db1de87dd116ee"
+  },
+  "internal/sysops/disk.go": {
+    "mtime": 1784021677.9830348,
+    "ast_hash": "00588b5ece054c86e2ee0ff0a957cfc4",
+    "semantic_hash": ""
+  },
+  "internal/sysops/disk_test.go": {
+    "mtime": 1783624259.4909108,
+    "ast_hash": "da4537e3200ffe2664cd57b51ca18bbd",
+    "semantic_hash": "da4537e3200ffe2664cd57b51ca18bbd"
+  },
+  "internal/sysops/memory.go": {
+    "mtime": 1783708744.189688,
+    "ast_hash": "b710669971167e5bc59fa19ededb5d2f",
+    "semantic_hash": ""
+  },
+  "internal/sysops/memory_test.go": {
+    "mtime": 1783624256.057955,
+    "ast_hash": "f04894ccd896e1d0ee6a639605934066",
+    "semantic_hash": "f04894ccd896e1d0ee6a639605934066"
+  },
+  "internal/sysops/processes.go": {
+    "mtime": 1783861091.7524614,
+    "ast_hash": "8b2ae84a890d8a621add164c2eaa2954",
+    "semantic_hash": ""
+  },
+  "internal/sysops/system.go": {
+    "mtime": 1784021850.873989,
+    "ast_hash": "051a00ca71d466a0a9e7e02b0466d4b0",
+    "semantic_hash": ""
+  },
+  "internal/sysops/system_test.go": {
+    "mtime": 1783624262.5320058,
+    "ast_hash": "d8b5bc337ba7215d782a54d4746f40fa",
+    "semantic_hash": "d8b5bc337ba7215d782a54d4746f40fa"
+  },
+  "internal/sysops/workflows.go": {
+    "mtime": 1783538990.8675106,
+    "ast_hash": "72290da9f0b9b037ab4ce5260872d9fd",
+    "semantic_hash": "72290da9f0b9b037ab4ce5260872d9fd"
+  },
+  "main.go": {
+    "mtime": 1783862204.031473,
+    "ast_hash": "133a2a08993f250fc6d3c01ab534d9ed",
+    "semantic_hash": ""
+  },
+  "profiles/powershell_profile.ps1": {
+    "mtime": 1783673923.9575574,
+    "ast_hash": "cf751a8d25a7a31b54a0f40e04fb4e03",
+    "semantic_hash": "cf751a8d25a7a31b54a0f40e04fb4e03"
+  },
+  "scripts/build.sh": {
+    "mtime": 1783546572.1292336,
+    "ast_hash": "6894950383a8b7b6b890ca5eabc02c3a",
+    "semantic_hash": "6894950383a8b7b6b890ca5eabc02c3a"
+  },
+  "scripts/package-homebrew.ps1": {
+    "mtime": 1782973726.419652,
+    "ast_hash": "6868e34af85162a1b32f96c650f2864e",
+    "semantic_hash": "6868e34af85162a1b32f96c650f2864e"
+  },
+  "scripts/package-scoop.ps1": {
+    "mtime": 1782973726.421265,
+    "ast_hash": "9c2be9ec6bf3f2548e0b54e769581d07",
+    "semantic_hash": "9c2be9ec6bf3f2548e0b54e769581d07"
+  },
+  "scripts/release-gh.sh": {
+    "mtime": 1783861091.7534606,
+    "ast_hash": "8cfc3507c538f86acc006f45b385e8e9",
+    "semantic_hash": ""
+  },
+  "scripts/release.ps1": {
+    "mtime": 1783861091.7544603,
+    "ast_hash": "362d41017c9fc7c6d82a1cf45f39d6fd",
+    "semantic_hash": ""
+  },
+  "scripts/release.sh": {
+    "mtime": 1783861091.7544603,
+    "ast_hash": "33c477ba5c0b230b688d30f68e584071",
+    "semantic_hash": ""
+  },
+  "wails.json": {
+    "mtime": 1783864852.0905645,
+    "ast_hash": "79a4a6864fac1daf34a66c7287ec186f",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/eslint.config.js": {
+    "mtime": 1783812082.8809004,
+    "ast_hash": "67dc776789f8cb1c2120a3b10a258765",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/package.json": {
+    "mtime": 1783932486.5069933,
+    "ast_hash": "20a70ab38f38fe0a280042a95cc002a0",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/run-tsc.sh": {
+    "mtime": 1783717097.223993,
+    "ast_hash": "5a0e17a92b842b82aaad76b4ab8fc08d",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/App.tsx": {
+    "mtime": 1783970293.7891705,
+    "ast_hash": "2c94e3db5544d536fd0a325ac10a0ff0",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/components/dialogs/ConfirmDialog.test.tsx": {
+    "mtime": 1783956361.664009,
+    "ast_hash": "0e8e1a1c0dc55aa8c186ebb774a10849",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/components/dialogs/ConfirmDialog.tsx": {
+    "mtime": 1783636682.2238255,
+    "ast_hash": "0d292b0d881a06e3c697e5b904b11183",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/components/layout/MainContent.tsx": {
+    "mtime": 1783978834.4307587,
+    "ast_hash": "c4344feb64dbe6bc0e88b41fea7f1930",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/components/layout/Sidebar.test.tsx": {
+    "mtime": 1783956361.6651795,
+    "ast_hash": "129b5a3a26644dd53aca43fe382a2288",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/components/layout/Sidebar.tsx": {
+    "mtime": 1783973657.487554,
+    "ast_hash": "b33dbee82c263d090f4dde1d81627e90",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/components/layout/TopBar.test.tsx": {
+    "mtime": 1783956361.6651795,
+    "ast_hash": "03f3ce707f654b76441b32554be7ab92",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/components/layout/TopBar.tsx": {
+    "mtime": 1783971227.3274052,
+    "ast_hash": "cb079bee9314ba1050a1ec1a2b0fe207",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/components/network/ConnectionLine.tsx": {
+    "mtime": 1783874901.3659887,
+    "ast_hash": "bf791940513fefec94d665233df7a644",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/components/network/DeviceNode.tsx": {
+    "mtime": 1783874900.507766,
+    "ast_hash": "e43c986347483ab0477717c6d1ce4948",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/components/sysops/CommandOutput.tsx": {
+    "mtime": 1784023844.21297,
+    "ast_hash": "5b0fc59ac3b2e0b42bad9f181500e0eb",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/components/sysops/HealthBadge.tsx": {
+    "mtime": 1784023836.3913023,
+    "ast_hash": "f5c297b2dac7d7bb8ab01a90825365a7",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/components/ui/DataFreshnessIndicator.tsx": {
+    "mtime": 1783874902.8484783,
+    "ast_hash": "dce593da1de202aeb0c499bdea7d13b6",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/components/ui/EmptyState.tsx": {
+    "mtime": 1783672557.443218,
+    "ast_hash": "268e5b7a64ac8098e697e3e0355116d9",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/components/ui/ErrorBoundary.test.tsx": {
+    "mtime": 1783956361.6651795,
+    "ast_hash": "e892abb86609ec13a1e54ca2a6de880b",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/components/ui/ErrorBoundary.tsx": {
+    "mtime": 1783457616.9637702,
+    "ast_hash": "fed8b92744d722a078a97f12dc2db9c8",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/hooks/index.ts": {
+    "mtime": 1783879248.2187042,
+    "ast_hash": "2b6d56ac7f8e72a608a7a8d4d1f9bce6",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/hooks/useBackend.test.ts": {
+    "mtime": 1783956361.6661782,
+    "ast_hash": "da90eef1d6fd55892dac225e27fea54b",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/hooks/useBackend.ts": {
+    "mtime": 1783877132.777785,
+    "ast_hash": "3f16733b78a93ffb610a5a851da75aed",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/hooks/useEvents.test.ts": {
+    "mtime": 1783956361.6661782,
+    "ast_hash": "394797e2a76fd46b65006603a744375a",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/hooks/useEvents.ts": {
+    "mtime": 1783877140.7249136,
+    "ast_hash": "37cc081f1d3228ad051e10aa9025b78f",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/lib/constants.ts": {
+    "mtime": 1783874894.3456166,
+    "ast_hash": "ade04f545deeff1b13176d7c192afb5b",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/lib/utils.ts": {
+    "mtime": 1783443674.4065907,
+    "ast_hash": "6e7a2d4f1fa6b69ad722be7d66f8d57f",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/main.tsx": {
+    "mtime": 1783638677.9744346,
+    "ast_hash": "7d42cce96a5bddfccc30d1d48199eea9",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/AIOps.test.tsx": {
+    "mtime": 1783956361.6661782,
+    "ast_hash": "9aa9eff5bc90486e42fe11413d37cdc7",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/AIOps.tsx": {
+    "mtime": 1784017137.222128,
+    "ast_hash": "ecac6c07ffe51686a1dd9476da938e37",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/Dashboard.test.tsx": {
+    "mtime": 1783956361.6671765,
+    "ast_hash": "92a8d25bf6a352422f59d6fcb37eb5f6",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/Dashboard.tsx": {
+    "mtime": 1784016845.697794,
+    "ast_hash": "4eb5a47f357675d63b832fb8fa7d5e9b",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/DevOps.test.tsx": {
+    "mtime": 1783956361.6671765,
+    "ast_hash": "a10db4da359329600fcaeca757f7215d",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/DevOps.tsx": {
+    "mtime": 1784050259.9284096,
+    "ast_hash": "df49d684156c45e929c63d36811b9a25",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/Logs.test.tsx": {
+    "mtime": 1783956361.6671765,
+    "ast_hash": "f1148f14103fd25498926a3f04728ea1",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/Logs.tsx": {
+    "mtime": 1784017121.7917523,
+    "ast_hash": "0e9808326b2f2ae3bbd045a302fdd5b8",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/NetOps.test.tsx": {
+    "mtime": 1784030496.4433434,
+    "ast_hash": "802acfdcc8d8d429df4fd20c1392cfb6",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/NetOps.tsx": {
+    "mtime": 1784030075.2187507,
+    "ast_hash": "46917408c68b1d84cb36d107947d5c5f",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/NetworkDesign.test.tsx": {
+    "mtime": 1783956361.6685734,
+    "ast_hash": "cbf085e83f99f5f0df460d852bd75730",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/NetworkDesign.tsx": {
+    "mtime": 1784017074.6506655,
+    "ast_hash": "c11fc20affcfabffdede90f7a3edc2f0",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/SecOps.test.tsx": {
+    "mtime": 1784052229.3011677,
+    "ast_hash": "927834383c9f6a29982c1794d5fde377",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/SecOps.tsx": {
+    "mtime": 1784051258.8071094,
+    "ast_hash": "b599c73927855a1a253adb0f358eeb1d",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/Settings.test.tsx": {
+    "mtime": 1783956361.6696754,
+    "ast_hash": "087575a95547bb103955a341b649608e",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/Settings.tsx": {
+    "mtime": 1784017052.0548751,
+    "ast_hash": "4004900123cae9087397ef620399e668",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/SysOps.tsx": {
+    "mtime": 1784024133.782025,
+    "ast_hash": "299826f4f16cc060d0adc59d3fac336d",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/SysOps/ActionsTab.tsx": {
+    "mtime": 1784024085.4374878,
+    "ast_hash": "0a28945b6dbf230befec45f593c94b85",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/SysOps/CpuTab.tsx": {
+    "mtime": 1784023907.9499896,
+    "ast_hash": "47c5f124bc631d030a7a63fcd58190c5",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/SysOps/DiagnosticsTab.tsx": {
+    "mtime": 1784023988.3028383,
+    "ast_hash": "b3178882079de92e4281524c21472b61",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/SysOps/DiskTab.tsx": {
+    "mtime": 1784023935.344712,
+    "ast_hash": "aa15afe47360ffaefed8c4afe96b2dc1",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/SysOps/LogsTab.tsx": {
+    "mtime": 1784024015.1790662,
+    "ast_hash": "7685a32eb6166c1519d0fb43df4180ca",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/SysOps/MemoryTab.tsx": {
+    "mtime": 1784023920.3344505,
+    "ast_hash": "cc083fb6ff87905b68792f80ae2dd143",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/SysOps/PackageManagerTab.tsx": {
+    "mtime": 1784024055.8296223,
+    "ast_hash": "5f4185cf8b2c6dd017a824701efeb4af",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/SysOps/PerformanceTab.tsx": {
+    "mtime": 1784024040.454115,
+    "ast_hash": "ae7cebb8fbc848442983b07e933f1e1b",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/SysOps/ProcessesTab.tsx": {
+    "mtime": 1784023954.5755336,
+    "ast_hash": "7b734812535846dc336c9ec85f68f7e7",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/SysOps/SchedulerTab.tsx": {
+    "mtime": 1784024066.7742975,
+    "ast_hash": "c85bb99402fd2b4c396e58e92827698e",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/SysOps/ServicesTab.tsx": {
+    "mtime": 1784024003.7776675,
+    "ast_hash": "36f838616a937746a8df696964247a98",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/SysOps/SystemInfoTab.tsx": {
+    "mtime": 1784024181.855262,
+    "ast_hash": "4f370f9c88f48cfb30135390f819f93f",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/SysOps/UsersTab.tsx": {
+    "mtime": 1784024023.8457336,
+    "ast_hash": "f2e278b25bdfd4e209a05b4d1c60d61a",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/netops/ActionsTab.tsx": {
+    "mtime": 1784029094.7994454,
+    "ast_hash": "659d9354032736b2076718004b70f454",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/netops/ArpTab.tsx": {
+    "mtime": 1784029384.6180918,
+    "ast_hash": "83fe31cac2f604ca756fdffec4781336",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/netops/BandwidthTab.tsx": {
+    "mtime": 1784029063.9207337,
+    "ast_hash": "42a5bdeb1643110eb5dd80eabf718b52",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/netops/ConnectionsTab.tsx": {
+    "mtime": 1784028970.8334665,
+    "ast_hash": "e7eab4b18c5a82a5fc7a76c5c9cd5d03",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/netops/DiscoveryTab.tsx": {
+    "mtime": 1784029074.1629908,
+    "ast_hash": "1a710c300510901d18ad19d2b5da17d5",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/netops/DnsAdvancedTab.tsx": {
+    "mtime": 1784029386.041854,
+    "ast_hash": "adf7fa4c31fdd5e983e80f90f7e55976",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/netops/DnsTab.tsx": {
+    "mtime": 1784028958.2913847,
+    "ast_hash": "f032ef128fd9fb52bfc379c973715b69",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/netops/FirewallTab.tsx": {
+    "mtime": 1784029056.0840735,
+    "ast_hash": "0389bcc12c5ec85e6bfdc24f53ef8b70",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/netops/HealthCheckTab.tsx": {
+    "mtime": 1784029023.4548192,
+    "ast_hash": "799077a51f85f3d06eb22111503119da",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/netops/InterfacesTab.tsx": {
+    "mtime": 1784028996.370985,
+    "ast_hash": "9f33760c3289af399e0c8ad434ee87f2",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/netops/MultiPingTab.tsx": {
+    "mtime": 1784029391.6332772,
+    "ast_hash": "025e5fff081836000ff15deb9aa89764",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/netops/OverviewTab.tsx": {
+    "mtime": 1783877860.975623,
+    "ast_hash": "aeb8aac7ba867f44868fb066995e6682",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/netops/PingTab.tsx": {
+    "mtime": 1784028935.902525,
+    "ast_hash": "b6948a8d8ea49c1e8bf98e0ab8b61d83",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/netops/PortScanTab.tsx": {
+    "mtime": 1784029041.6863534,
+    "ast_hash": "d49fdb1cf9bfa505fe4c594ba4ead869",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/netops/RoutingTab.tsx": {
+    "mtime": 1784029393.5278726,
+    "ast_hash": "d27a8691189fae19f1ee8dd6446141c7",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/netops/TracerouteTab.tsx": {
+    "mtime": 1784029013.9485824,
+    "ast_hash": "bb99e51a218b7e0f7aa4c3da530ad1c5",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/netops/VpnTab.tsx": {
+    "mtime": 1784029187.5532992,
+    "ast_hash": "5cfbd5ba75e8880aeac438a8e2b46a28",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/netops/WifiTab.tsx": {
+    "mtime": 1784029396.5166714,
+    "ast_hash": "577388acb111da63c2df270fd6158f00",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/netops/components.tsx": {
+    "mtime": 1784028908.9709759,
+    "ast_hash": "9ba94a760c17df0cbaa1e179c4a1b3e0",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/networkdesign/AnalysisSidebar.tsx": {
+    "mtime": 1783956272.59959,
+    "ast_hash": "ca7d2a73af95c49cdfffc68d72ae0d2c",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/networkdesign/topologyApi.ts": {
+    "mtime": 1783956272.600938,
+    "ast_hash": "50c41b1b552b70d9fd86d5950bd7e03c",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/secops/AuditTab.tsx": {
+    "mtime": 1784051682.396445,
+    "ast_hash": "9a3bfafe3a5d0c8e5bd55274b8d28203",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/secops/EndpointTab.tsx": {
+    "mtime": 1784051626.3896215,
+    "ast_hash": "a7e83170ff2ff79610789e6b8ec66c98",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/secops/EventsTab.tsx": {
+    "mtime": 1784051646.3698218,
+    "ast_hash": "0d548bf655329bf87d8a86e9db342955",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/secops/HardeningTab.tsx": {
+    "mtime": 1784051665.2698915,
+    "ast_hash": "f735375abf8cb5f4c40c54dd0b37c571",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/secops/IdentityTab.tsx": {
+    "mtime": 1784051574.8837664,
+    "ast_hash": "9da83c1942b17f7abe7448d0f360e7b3",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/secops/NetworkSecurityTab.tsx": {
+    "mtime": 1784051583.018268,
+    "ast_hash": "dba4e011b5ae0b8f844a32bdc9d7fdc5",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/secops/OverviewTab.tsx": {
+    "mtime": 1784051772.8004477,
+    "ast_hash": "7ed5b970c73563dfa317edb6031b9a0e",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/secops/ResponseTab.tsx": {
+    "mtime": 1784051732.2856822,
+    "ast_hash": "a47de0d2f54d2d495002086cfb1fd126",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/pages/secops/components.tsx": {
+    "mtime": 1784050986.6605694,
+    "ast_hash": "0c182e3e6ca9d4e0216f1000cc926bb1",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/stores/index.ts": {
+    "mtime": 1783879284.8872316,
+    "ast_hash": "6c78894448f2dabd9259e2ae53f87f35",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/stores/useOllamaStore.test.ts": {
+    "mtime": 1783956361.6696754,
+    "ast_hash": "06750ef433bd87814f946038b4683f0f",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/stores/useOllamaStore.ts": {
+    "mtime": 1783638669.934488,
+    "ast_hash": "9838729e5fde122806536aa3d924c1a2",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/stores/useSettingsStore.test.ts": {
+    "mtime": 1783956361.6696754,
+    "ast_hash": "0c8c4719ea9b751593bab7fd6bc9f732",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/stores/useSettingsStore.ts": {
+    "mtime": 1783851492.3409147,
+    "ast_hash": "874cf7e2688801c7579b2cc4fa9735f3",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/test/setup.ts": {
+    "mtime": 1783878884.794358,
+    "ast_hash": "d3bbbb739da9e9ebf954def64e816db3",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/test/utils.test.tsx": {
+    "mtime": 1783956361.6696754,
+    "ast_hash": "27fee8f98abfb2424d13c702e89f3cdc",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/types/index.ts": {
+    "mtime": 1784050920.4742925,
+    "ast_hash": "ffaf78fb430f123d8fa1acdcbab031cf",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/src/vite-env.d.ts": {
+    "mtime": 1783443666.2205236,
+    "ast_hash": "8f68c27c3fc38817b2726b20e2d4f1ee",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/tsconfig.app.json": {
+    "mtime": 1783443639.7105236,
+    "ast_hash": "60b3890f46fbce0744ab122304bdfd2c",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/tsconfig.json": {
+    "mtime": 1783443635.6524248,
+    "ast_hash": "852c3a5df14a4b43ac28e9554ebedf4a",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/tsconfig.node.json": {
+    "mtime": 1783443643.5677598,
+    "ast_hash": "1a57d92c4ca85af3626ea7e667e6754f",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/vite.config.ts": {
+    "mtime": 1783955139.8734846,
+    "ast_hash": "834b925229fe93632b677667d20b1266",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/vitest.config.ts": {
+    "mtime": 1783453443.4298048,
+    "ast_hash": "e701669967cf205d7bf8a1b508614db3",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/AIOps.d.ts": {
+    "mtime": 1783975205.831159,
+    "ast_hash": "1166a43ca6b389a4ada581d67c597d13",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/AIOps.js": {
+    "mtime": 1783975205.8306303,
+    "ast_hash": "14626ba2850aa571dafe616b02cebbb1",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/AlertAPI.d.ts": {
+    "mtime": 1783975205.8289003,
+    "ast_hash": "65dd2b6d8fa0785b92a42af47de22a65",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/AlertAPI.js": {
+    "mtime": 1783975205.8283582,
+    "ast_hash": "8ce98dea9b8bff48c6106cffcf230e06",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/App.d.ts": {
+    "mtime": 1783975205.8260684,
+    "ast_hash": "e6086c0fb9986ad473e374f2d8d60c37",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/App.js": {
+    "mtime": 1783975205.8260684,
+    "ast_hash": "ad6b912d01ef4289d2e165b660fff75a",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/Dashboard.d.ts": {
+    "mtime": 1783975205.8316796,
+    "ast_hash": "6923a7b84fc1b823681de96e7c22223b",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/Dashboard.js": {
+    "mtime": 1783975205.831159,
+    "ast_hash": "88a31f12578e0fda565d1cc06f869562",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/DevOps.d.ts": {
+    "mtime": 1783975205.8283582,
+    "ast_hash": "20babef0a158078ae1a1a2aca2313f06",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/DevOps.js": {
+    "mtime": 1783975205.8277125,
+    "ast_hash": "295c2b562e28facfd1bee70d72f9e69d",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/Logs.d.ts": {
+    "mtime": 1783975205.8289003,
+    "ast_hash": "84bfbeac418164582ba5f46530d0cf90",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/Logs.js": {
+    "mtime": 1783975205.8289003,
+    "ast_hash": "53d944881f575c313c58e428c1b1a131",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/NetOps.d.ts": {
+    "mtime": 1783975205.8271048,
+    "ast_hash": "6923c3ecfbd7398ea290a16081110869",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/NetOps.js": {
+    "mtime": 1783975205.8271048,
+    "ast_hash": "626f63b13ea29342f19c4aa4a0069813",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/NetworkDesignAPI.d.ts": {
+    "mtime": 1783975205.8300986,
+    "ast_hash": "541c1c2821cc8d0c92d66217ac9a9bbd",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/NetworkDesignAPI.js": {
+    "mtime": 1783975205.8295195,
+    "ast_hash": "1219ce6cfd51cefa6f9af63479bba625",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/PipelineAPI.d.ts": {
+    "mtime": 1783975205.8322203,
+    "ast_hash": "2721975de1bff2c03c9034597ace3b96",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/PipelineAPI.js": {
+    "mtime": 1783975205.8316796,
+    "ast_hash": "dd9e3e24aaa98fa0c24ad859475f1860",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/SecOps.d.ts": {
+    "mtime": 1783975205.8306303,
+    "ast_hash": "43b076adb6fec9358f5672b310b0f6c2",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/SecOps.js": {
+    "mtime": 1783975205.8300986,
+    "ast_hash": "04aa65db065ed2d4f161736c46767707",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/SysOps.d.ts": {
+    "mtime": 1783975205.8265786,
+    "ast_hash": "33904c18f50a0788050af154a5fa2427",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/SysOps.js": {
+    "mtime": 1783975205.8265786,
+    "ast_hash": "12fe390a1e2dfe76542d48565afc7020",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/Timeline.d.ts": {
+    "mtime": 1783975205.8295195,
+    "ast_hash": "d861e009f0d3b682742c439d751bb37e",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/app/Timeline.js": {
+    "mtime": 1783975205.8295195,
+    "ast_hash": "0dba0885f9cbc143980a2baa61771ae3",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/go/models.ts": {
+    "mtime": 1783975205.8456068,
+    "ast_hash": "d169db82b75edfb12bcce1102d1bc19f",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/runtime/package.json": {
+    "mtime": 1783975223.0294788,
+    "ast_hash": "a79e9c39ebcda0fdeb14a44939bc489e",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/runtime/runtime.d.ts": {
+    "mtime": 1783975223.0308225,
+    "ast_hash": "dcd9fca4af1912f552547c22f315c25e",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/wailsjs/runtime/runtime.js": {
+    "mtime": 1783975223.0308225,
+    "ast_hash": "efc7f0ddc7f96e446ad0252df27b477f",
+    "semantic_hash": ""
+  },
+  "install.ps1": {
+    "mtime": 1783858272.2230885,
+    "ast_hash": "c7be175028361e1309179834e7c10109",
+    "semantic_hash": ""
+  },
+  "install.sh": {
+    "mtime": 1783858272.224574,
+    "ast_hash": "ab73f708ea783897df63b84045d96d8a",
+    "semantic_hash": ""
+  },
+  "internal/app/AIOps_test.go": {
+    "mtime": 1783876852.686988,
+    "ast_hash": "1ae8e5d9d7d40c9ee4760b78055ced7a",
+    "semantic_hash": ""
+  },
+  "internal/app/Alerts_test.go": {
+    "mtime": 1783875930.7872648,
+    "ast_hash": "e0a85179c22beb85d8c9dfc041fb7c3d",
+    "semantic_hash": ""
+  },
+  "internal/app/DevOps_test.go": {
+    "mtime": 1783875919.9282796,
+    "ast_hash": "d9e8484b47624a40ba2c46ab588af356",
+    "semantic_hash": ""
+  },
+  "internal/app/Events_test.go": {
+    "mtime": 1783875949.1166701,
+    "ast_hash": "f3b94bb1734f3590d29b478dbb30d5c6",
+    "semantic_hash": ""
+  },
+  "internal/app/NetOps_test.go": {
+    "mtime": 1783875897.757557,
+    "ast_hash": "e267f74ab0ce97a4cfc1dad6ce0d92ba",
+    "semantic_hash": ""
+  },
+  "internal/app/NetworkDesign.go": {
+    "mtime": 1783774818.4270082,
+    "ast_hash": "03a2b8018a34c3f5de29a0208d46ce09",
+    "semantic_hash": ""
+  },
+  "internal/app/NetworkDesign_test.go": {
+    "mtime": 1783876335.1628983,
+    "ast_hash": "9ed9082f7af958c42a9fd6c991943840",
+    "semantic_hash": ""
+  },
+  "internal/app/Pipeline_test.go": {
+    "mtime": 1783876932.3454704,
+    "ast_hash": "2fe7e9542fce83ffb10b47fa11b03262",
+    "semantic_hash": ""
+  },
+  "internal/app/SecOps_test.go": {
+    "mtime": 1783876989.1305985,
+    "ast_hash": "f65e8687bcbe089ed573db9ad29df272",
+    "semantic_hash": ""
+  },
+  "internal/app/Timeline_test.go": {
+    "mtime": 1783875938.0285187,
+    "ast_hash": "5bad521a54a30d5551582a5211b0b43a",
+    "semantic_hash": ""
+  },
+  "internal/app/collectors.go": {
+    "mtime": 1783882992.919129,
+    "ast_hash": "2aad59701c4288c0e3a989ab2157de23",
+    "semantic_hash": ""
+  },
+  "internal/common/alerts_extra_test.go": {
+    "mtime": 1783942547.0819707,
+    "ast_hash": "a63892424a15c9bb28787f3ccbf0e347",
+    "semantic_hash": ""
+  },
+  "internal/common/collector.go": {
+    "mtime": 1783882902.7766705,
+    "ast_hash": "7a7fd5d14083e41197f7f08d4ff1b1fd",
+    "semantic_hash": ""
+  },
+  "internal/common/collector_test.go": {
+    "mtime": 1783883850.7191265,
+    "ast_hash": "b8b40426533172a4adf56876bf8887da",
+    "semantic_hash": ""
+  },
+  "internal/common/forecast_edge_test.go": {
+    "mtime": 1783942511.4922125,
+    "ast_hash": "1ec9d18bbf6618d3c483474746451fdb",
+    "semantic_hash": ""
+  },
+  "internal/common/panic.go": {
+    "mtime": 1783874232.5693529,
+    "ast_hash": "2668f1c63ce7095f1fb2370da15f4412",
+    "semantic_hash": ""
+  },
+  "internal/common/registry.go": {
+    "mtime": 1783882937.3832104,
+    "ast_hash": "f0448d974094ae8f900c31a2d133da35",
+    "semantic_hash": ""
+  },
+  "internal/common/registry_test.go": {
+    "mtime": 1783883927.261718,
+    "ast_hash": "0cfc37b068e0b4d16e58358bd582b79c",
+    "semantic_hash": ""
+  },
+  "internal/common/sandbox_investigation_test.go": {
+    "mtime": 1783942448.7011497,
+    "ast_hash": "393fa34a52adab8d165c9c1418ce65fe",
+    "semantic_hash": ""
+  },
+  "internal/common/sandbox_review_test.go": {
+    "mtime": 1783954301.6324887,
+    "ast_hash": "fbb4c1f83c7be682785fa75acb98d79a",
+    "semantic_hash": ""
+  },
+  "internal/common/scheduler.go": {
+    "mtime": 1783883755.0546615,
+    "ast_hash": "d3c3912ddb5995e6cc11419389cff981",
+    "semantic_hash": ""
+  },
+  "internal/common/scheduler_test.go": {
+    "mtime": 1783883846.8339925,
+    "ast_hash": "4cf4db6e8cb3ce3d0dfe29f6787df684",
+    "semantic_hash": ""
+  },
+  "internal/devops/builds.go": {
+    "mtime": 1784050093.4376135,
+    "ast_hash": "7381e059876846595cee79f3e695422d",
+    "semantic_hash": ""
+  },
+  "internal/devops/cicd.go": {
+    "mtime": 1784049696.836736,
+    "ast_hash": "5ad8553d57789c64c21d47b69fe5cc7e",
+    "semantic_hash": ""
+  },
+  "internal/devops/diagnostics.go": {
+    "mtime": 1784050137.135649,
+    "ast_hash": "9c76917e2d5c04882a35cc497590dad8",
+    "semantic_hash": ""
+  },
+  "internal/devops/docker.go": {
+    "mtime": 1784050259.9304087,
+    "ast_hash": "9908fda0384e42232589c8b239c172ee",
+    "semantic_hash": ""
+  },
+  "internal/devops/docker_extended.go": {
+    "mtime": 1784049643.7171707,
+    "ast_hash": "ce386360e112db992604068a78130f35",
+    "semantic_hash": ""
+  },
+  "internal/devops/git.go": {
+    "mtime": 1784018562.17,
+    "ast_hash": "d5629fd763e1696cdf4651283bb8aafc",
+    "semantic_hash": ""
+  },
+  "internal/devops/git_extended.go": {
+    "mtime": 1784049622.3884072,
+    "ast_hash": "da224cccd2c9261593106ac8b9b4d127",
+    "semantic_hash": ""
+  },
+  "internal/devops/kubernetes.go": {
+    "mtime": 1784034425.560657,
+    "ast_hash": "0739fc13d387cf102d124a8a3ca1da82",
+    "semantic_hash": ""
+  },
+  "internal/devops/kubernetes_extended.go": {
+    "mtime": 1784050124.6896942,
+    "ast_hash": "6043272fe25b10303d80d7fe1ba0ac2b",
+    "semantic_hash": ""
+  },
+  "internal/devops/releases.go": {
+    "mtime": 1784050132.9732876,
+    "ast_hash": "dae03366fd7897c454071e67eff144bb",
+    "semantic_hash": ""
+  },
+  "internal/netops/actions.go": {
+    "mtime": 1784028139.577076,
+    "ast_hash": "b748bb0de4715f8ba4cefb83b5fcbd65",
+    "semantic_hash": ""
+  },
+  "internal/netops/actions_test.go": {
+    "mtime": 1784028140.8422103,
+    "ast_hash": "76f4e2cb33627cd9e42e28e2930a1f3e",
+    "semantic_hash": ""
+  },
+  "internal/netops/arp.go": {
+    "mtime": 1784028613.1806643,
+    "ast_hash": "b6e1cb7e8c766a76ef692449ca78cd72",
+    "semantic_hash": ""
+  },
+  "internal/netops/arp_test.go": {
+    "mtime": 1784028024.675711,
+    "ast_hash": "fc93c2b6b2a43e6b9d618f9f141b4d37",
+    "semantic_hash": ""
+  },
+  "internal/netops/discovery.go": {
+    "mtime": 1784028217.2449813,
+    "ast_hash": "3a6ab59874903650c1bf6c558f04e00b",
+    "semantic_hash": ""
+  },
+  "internal/netops/discovery_test.go": {
+    "mtime": 1784028219.996634,
+    "ast_hash": "a9b9dc4617592c8f476cb5d8bd87fb02",
+    "semantic_hash": ""
+  },
+  "internal/netops/dns_advanced.go": {
+    "mtime": 1784028312.0858974,
+    "ast_hash": "8652b443e535a162928e39835e4c203d",
+    "semantic_hash": ""
+  },
+  "internal/netops/dns_advanced_test.go": {
+    "mtime": 1784028079.5029447,
+    "ast_hash": "593d96323e866b462c450f43b1aa5c5e",
+    "semantic_hash": ""
+  },
+  "internal/netops/firewall.go": {
+    "mtime": 1784028131.8174279,
+    "ast_hash": "f3c81fd5f4796550851256e872ea2c41",
+    "semantic_hash": ""
+  },
+  "internal/netops/firewall_test.go": {
+    "mtime": 1784028135.806898,
+    "ast_hash": "c0e096e6ee32982abed58fb63b89faa1",
+    "semantic_hash": ""
+  },
+  "internal/netops/gateway.go": {
+    "mtime": 1783773148.0562377,
+    "ast_hash": "16ce724d9443fa262af2c8643be8a0a3",
+    "semantic_hash": ""
+  },
+  "internal/netops/health.go": {
+    "mtime": 1784028363.6547213,
+    "ast_hash": "27c69cb0bb29bfb085f340205bced931",
+    "semantic_hash": ""
+  },
+  "internal/netops/health_test.go": {
+    "mtime": 1784028154.4167435,
+    "ast_hash": "76b598d65788986cae1e6baeff450c1d",
+    "semantic_hash": ""
+  },
+  "internal/netops/monitoring.go": {
+    "mtime": 1784028584.8250952,
+    "ast_hash": "471124d50ecd798c2f5b3eb53327e93f",
+    "semantic_hash": ""
+  },
+  "internal/netops/monitoring_test.go": {
+    "mtime": 1784028224.9416265,
+    "ast_hash": "5e1274ad6e3f19c8d384ad64e63076f1",
+    "semantic_hash": ""
+  },
+  "internal/netops/oui.go": {
+    "mtime": 1784028014.2549653,
+    "ast_hash": "04e47330b9b21a841345e26da699162d",
+    "semantic_hash": ""
+  },
+  "internal/netops/oui_test.go": {
+    "mtime": 1784028018.147264,
+    "ast_hash": "19e589d8dd887adda6ea9db9f0c2db77",
+    "semantic_hash": ""
+  },
+  "internal/netops/ping_multi.go": {
+    "mtime": 1784028196.8783617,
+    "ast_hash": "ada2b611b03604e91165fdc41928819b",
+    "semantic_hash": ""
+  },
+  "internal/netops/ping_multi_test.go": {
+    "mtime": 1784028135.8118968,
+    "ast_hash": "4efe18c67a865775ce01dd4c314c7257",
+    "semantic_hash": ""
+  },
+  "internal/netops/routing.go": {
+    "mtime": 1784028035.7686167,
+    "ast_hash": "3e4f1f0bc76a4b5fb9870058b89c987d",
+    "semantic_hash": ""
+  },
+  "internal/netops/routing_test.go": {
+    "mtime": 1784028035.7686167,
+    "ast_hash": "5b7e83cee8c7c67858c40b846d2a836d",
+    "semantic_hash": ""
+  },
+  "internal/netops/vpn.go": {
+    "mtime": 1784028378.5280445,
+    "ast_hash": "0323809c67a0ad2948475e6602c97460",
+    "semantic_hash": ""
+  },
+  "internal/netops/vpn_test.go": {
+    "mtime": 1784028118.7966425,
+    "ast_hash": "b98fa47b9b20112fb2c97c7080184748",
+    "semantic_hash": ""
+  },
+  "internal/netops/wifi.go": {
+    "mtime": 1784028070.4180956,
+    "ast_hash": "3788a5ceba8fd9d11355caf86621ca5b",
+    "semantic_hash": ""
+  },
+  "internal/netops/wifi_test.go": {
+    "mtime": 1784028071.951202,
+    "ast_hash": "6ab67463c939d258ef0fbc366cd7f882",
+    "semantic_hash": ""
+  },
+  "internal/networkdesign/analysis.go": {
+    "mtime": 1783774703.8502083,
+    "ast_hash": "58a37e1d125f6bf9b2230ac2e2ad8690",
+    "semantic_hash": ""
+  },
+  "internal/networkdesign/analysis_test.go": {
+    "mtime": 1783774666.623694,
+    "ast_hash": "33a48f9020dbf769a42721eea20aae83",
+    "semantic_hash": ""
+  },
+  "internal/networkdesign/discovery.go": {
+    "mtime": 1783774764.7060065,
+    "ast_hash": "ffeb7c9c08ed501c673406045f32f539",
+    "semantic_hash": ""
+  },
+  "internal/networkdesign/types.go": {
+    "mtime": 1783774399.444451,
+    "ast_hash": "bddfed0233454b585ee40e589fcfc639",
+    "semantic_hash": ""
+  },
+  "internal/secops/audit.go": {
+    "mtime": 1784050255.355644,
+    "ast_hash": "8160321af431c1f14e411805926ad4e4",
+    "semantic_hash": ""
+  },
+  "internal/secops/audit_test.go": {
+    "mtime": 1784050258.1287498,
+    "ast_hash": "700d37e253a697f50888af78d0259185",
+    "semantic_hash": ""
+  },
+  "internal/secops/endpoint.go": {
+    "mtime": 1784050144.3487065,
+    "ast_hash": "5a55740bf94216819e76f0ee34f7ae5f",
+    "semantic_hash": ""
+  },
+  "internal/secops/endpoint_test.go": {
+    "mtime": 1784050117.5006635,
+    "ast_hash": "290aa263851d0c88a0f0be589a6bc620",
+    "semantic_hash": ""
+  },
+  "internal/secops/hardening.go": {
+    "mtime": 1784050237.81197,
+    "ast_hash": "d888eb62b04f18e21cc2281de095395c",
+    "semantic_hash": ""
+  },
+  "internal/secops/hardening_test.go": {
+    "mtime": 1784050237.8139703,
+    "ast_hash": "aaff96cc07b9d50f7f99a07e8975f3a6",
+    "semantic_hash": ""
+  },
+  "internal/secops/network.go": {
+    "mtime": 1784050208.375517,
+    "ast_hash": "eb46213518bf9c8979b938dfc8717f4d",
+    "semantic_hash": ""
+  },
+  "internal/secops/network_test.go": {
+    "mtime": 1784050213.6505835,
+    "ast_hash": "41548e49628e900382a6fdad62dab64a",
+    "semantic_hash": ""
+  },
+  "internal/secops/response.go": {
+    "mtime": 1784050270.7951016,
+    "ast_hash": "300ae05b601682f7a16d19f6f91ee2f4",
+    "semantic_hash": ""
+  },
+  "internal/secops/response_test.go": {
+    "mtime": 1784050271.922451,
+    "ast_hash": "173e63097d3786bb89e47bda7399907e",
+    "semantic_hash": ""
+  },
+  "internal/secops/security.go": {
+    "mtime": 1784050086.0412846,
+    "ast_hash": "0e4ff7d5051e93f78ce3771371649f16",
+    "semantic_hash": ""
+  },
+  "internal/secops/security_test.go": {
+    "mtime": 1784050090.5268347,
+    "ast_hash": "b62541311a283c8516ab898aa3fe4c77",
+    "semantic_hash": ""
+  },
+  "internal/sysops/actions.go": {
+    "mtime": 1784022136.076158,
+    "ast_hash": "469e2f05cc560f223dab8e3328abbbd9",
+    "semantic_hash": ""
+  },
+  "internal/sysops/actions_test.go": {
+    "mtime": 1784022194.2133987,
+    "ast_hash": "006a510183b1af67327e04f5041eba70",
+    "semantic_hash": ""
+  },
+  "internal/sysops/battery.go": {
+    "mtime": 1783725803.1780035,
+    "ast_hash": "0f00e5e1fa23dc0bfafafb348ffed601",
+    "semantic_hash": ""
+  },
+  "internal/sysops/cpu_extended_test.go": {
+    "mtime": 1784021526.9239945,
+    "ast_hash": "bc8d213ecdacd02e2e2b021f2c9a6154",
+    "semantic_hash": ""
+  },
+  "internal/sysops/diagnostics.go": {
+    "mtime": 1784023230.0861938,
+    "ast_hash": "5815657f348c86684d045dacc5d32692",
+    "semantic_hash": ""
+  },
+  "internal/sysops/diagnostics_test.go": {
+    "mtime": 1784023234.4930475,
+    "ast_hash": "38989909cbce72f65fb8ef0ad76076ec",
+    "semantic_hash": ""
+  },
+  "internal/sysops/disk_io_test.go": {
+    "mtime": 1784021762.7295723,
+    "ast_hash": "21c21d43cccf421d975d689b6fd395a2",
+    "semantic_hash": ""
+  },
+  "internal/sysops/gpu.go": {
+    "mtime": 1783725803.1780035,
+    "ast_hash": "76b00ab4a21ea634e657424deb966ed3",
+    "semantic_hash": ""
+  },
+  "internal/sysops/logs.go": {
+    "mtime": 1784022554.128498,
+    "ast_hash": "af2f3d9dad66bb6368762df8ede2370d",
+    "semantic_hash": ""
+  },
+  "internal/sysops/logs_test.go": {
+    "mtime": 1784022617.4294338,
+    "ast_hash": "70a116b83a43fde02ad593ac9c7f2c4d",
+    "semantic_hash": ""
+  },
+  "internal/sysops/packages.go": {
+    "mtime": 1784022663.8625848,
+    "ast_hash": "63103a758131f65bea9a3d77b4f2d905",
+    "semantic_hash": ""
+  },
+  "internal/sysops/packages_test.go": {
+    "mtime": 1784022753.1072934,
+    "ast_hash": "4a4fd21f25e6059f9d3957b188b7e7f6",
+    "semantic_hash": ""
+  },
+  "internal/sysops/performance.go": {
+    "mtime": 1784022016.916077,
+    "ast_hash": "5a8ebda3071bce88e4dac16bbc14fdc8",
+    "semantic_hash": ""
+  },
+  "internal/sysops/performance_test.go": {
+    "mtime": 1784022082.5021012,
+    "ast_hash": "d5e8b447e1a3cffe5537a7cb2c153b41",
+    "semantic_hash": ""
+  },
+  "internal/sysops/scheduler.go": {
+    "mtime": 1784022899.526454,
+    "ast_hash": "a819ec134c90568180e911707001c742",
+    "semantic_hash": ""
+  },
+  "internal/sysops/scheduler_test.go": {
+    "mtime": 1784023217.3121452,
+    "ast_hash": "a410eae81981ae6973a6a547e8bb76d1",
+    "semantic_hash": ""
+  },
+  "internal/sysops/users_test.go": {
+    "mtime": 1784021966.3292403,
+    "ast_hash": "b3240b6cc94953562b0e6747848e8c09",
+    "semantic_hash": ""
+  },
+  "tests/e2e/config.py": {
+    "mtime": 1783973452.551473,
+    "ast_hash": "df75692e9f3881b2b256ee654d6a040a",
+    "semantic_hash": ""
+  },
+  "tests/e2e/conftest.py": {
+    "mtime": 1783973555.8996565,
+    "ast_hash": "442e79f7fcbbb271c2f430fae90a6588",
+    "semantic_hash": ""
+  },
+  "tests/e2e/pages.py": {
+    "mtime": 1783974653.2508943,
+    "ast_hash": "2a45983ddf4dfcbd8f001e241a653b3d",
+    "semantic_hash": ""
+  },
+  "tests/e2e/test_tabs.py": {
+    "mtime": 1783974560.350454,
+    "ast_hash": "fb656e11793cdccb870593a24f45873c",
+    "semantic_hash": ""
+  },
+  ".github/dependabot.yml": {
+    "mtime": 1783871913.4680712,
+    "ast_hash": "9dd4546b89412d7e2a455355d440ac6e",
+    "semantic_hash": ""
+  },
+  ".github/workflows/release.yml": {
+    "mtime": 1783880670.3293264,
+    "ast_hash": "b5416f5ee91f163330a5cc4ca9591a94",
+    "semantic_hash": ""
+  },
+  ".github/workflows/test.yml": {
+    "mtime": 1783935830.6879854,
+    "ast_hash": "b5be08d55fa7ae8956c22e35bee3ec5d",
+    "semantic_hash": ""
+  },
+  ".memory/handoff-sprint20.md": {
+    "mtime": 1783641106.7186816,
+    "ast_hash": "491a23b3bc34432751d3283f941a05be",
+    "semantic_hash": ""
+  },
+  ".memory/index.md": {
+    "mtime": 1784018409.4778144,
+    "ast_hash": "ac8061b6eb4cb4d94de784e184ccb377",
+    "semantic_hash": ""
+  },
+  ".memory/kanban-audit.md": {
+    "mtime": 1783875790.5389323,
+    "ast_hash": "7c6ac3d9dce275056f476bf481754a0e",
+    "semantic_hash": ""
+  },
+  ".memory/state.md": {
+    "mtime": 1783858272.2100906,
+    "ast_hash": "0658c01238d439ffe50915b964192217",
+    "semantic_hash": ""
+  },
+  ".memory/topics/codebase-research.md": {
+    "mtime": 1783636498.8109145,
+    "ast_hash": "724a653839dcd88ecb7dd956361b00e7",
+    "semantic_hash": ""
+  },
+  ".memory/topics/library-research.md": {
+    "mtime": 1783637241.6603262,
+    "ast_hash": "764ae10c0f7778e8bdb6c26d4cf3b063",
+    "semantic_hash": ""
+  },
+  ".memory/topics/opsforall-architecture.md": {
+    "mtime": 1783850239.5135996,
+    "ast_hash": "b4ed74178af6ddd1f5d189ac838d71be",
+    "semantic_hash": ""
+  },
+  ".memory/topics/opsforall-known-issues.md": {
+    "mtime": 1783585745.2123094,
+    "ast_hash": "46ef4adc91e2b57602e571289ca90ecd",
+    "semantic_hash": ""
+  },
+  ".memory/topics/opsforall-sandbox.md": {
+    "mtime": 1782944473.6670558,
+    "ast_hash": "e08c211cd99a902a9003cbaf50a1b013",
+    "semantic_hash": ""
+  },
+  ".memory/topics/project-graph.md": {
+    "mtime": 1783861091.738939,
+    "ast_hash": "54fcda5e972d3b4eefa0aea26e449c5a",
+    "semantic_hash": ""
+  },
+  ".memory/topics/sprint-19-production-stabilization.md": {
+    "mtime": 1783636414.6584537,
+    "ast_hash": "3440b8bebb7b77f24fa020221bb4add4",
+    "semantic_hash": ""
+  },
+  ".memory/topics/sprint-23-stabilization.md": {
+    "mtime": 1783670686.0078342,
+    "ast_hash": "a9768fafad350aa915ad0a0117307985",
+    "semantic_hash": ""
+  },
+  ".memory/topics/ui-ux-review.md": {
+    "mtime": 1783636956.5091107,
+    "ast_hash": "f9c03b8099784c0a182f154b22f81e09",
+    "semantic_hash": ""
+  },
+  ".playwright-mcp/page-2026-07-10T07-46-39-106Z.yml": {
+    "mtime": 1783669599.1083503,
+    "ast_hash": "3ccd0780644ff7574fb126837dd35aac",
+    "semantic_hash": ""
+  },
+  ".playwright-mcp/page-2026-07-10T07-46-51-064Z.yml": {
+    "mtime": 1783669611.064547,
+    "ast_hash": "5c6b5e4477fe61b87a005ed56293752a",
+    "semantic_hash": ""
+  },
+  ".playwright-mcp/page-2026-07-10T07-47-09-247Z.yml": {
+    "mtime": 1783669629.2482846,
+    "ast_hash": "b850422690521ea25434cbf9f7284741",
+    "semantic_hash": ""
+  },
+  "CLAUDE.md": {
+    "mtime": 1783878655.645155,
+    "ast_hash": "b5969a6a1097b03fce597b19f9008da0",
+    "semantic_hash": ""
+  },
+  "CONTRIBUTING.md": {
+    "mtime": 1783861091.7399397,
+    "ast_hash": "5fe73c91072fd50816f2367ce13cc3a3",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1783861091.7399397,
+    "ast_hash": "42ffdf081a4f82a28fa2c9c543d043dc",
+    "semantic_hash": ""
+  },
+  "cmd/opsforall-gui/frontend/index.html": {
+    "mtime": 1783850367.1301205,
+    "ast_hash": "dee4effbcb3ecbc842db6b95b22e16df",
+    "semantic_hash": ""
+  },
+  "docs/ARCHITECTURE.md": {
+    "mtime": 1783858272.2180877,
+    "ast_hash": "495843a3faa9e7e0dbb8e4b695c5f8e9",
+    "semantic_hash": ""
+  },
+  "docs/MustHaves.md": {
+    "mtime": 1783858272.2190888,
+    "ast_hash": "d14c04e57070874d5b96ecad6561f61d",
+    "semantic_hash": ""
+  },
+  "docs/ONBOARDING.md": {
+    "mtime": 1783858272.2200885,
+    "ast_hash": "b6d10834ba2675d85eaa534aa4b50a77",
+    "semantic_hash": ""
+  },
+  "docs/STANDARDS.md": {
+    "mtime": 1783858272.2210884,
+    "ast_hash": "ca0e80353a772747032106e0fa36bfee",
+    "semantic_hash": ""
+  },
+  "docs/ToolsCommands.md": {
+    "mtime": 1783858272.2220883,
+    "ast_hash": "288efe2fc988995b203853724561ac7b",
+    "semantic_hash": ""
+  },
+  "docs/USER_GUIDE.md": {
+    "mtime": 1783858272.2230885,
+    "ast_hash": "7b5d8165bc3bb3533f18b44a53b83d1c",
+    "semantic_hash": ""
+  },
+  "docs/collector-architecture.md": {
+    "mtime": 1783882846.9812977,
+    "ast_hash": "bbc0a30c9b3e8ec4d069e00a53fee4e4",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-07-14-netops-rework.md": {
+    "mtime": 1784021186.7058914,
+    "ast_hash": "b613629b374359f2e8b03999a0d16bda",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-07-14-secops-rework.md": {
+    "mtime": 1784049864.2552335,
+    "ast_hash": "a3556fd0a2b7ded821e0a626362573b4",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-07-14-sysops-rework.md": {
+    "mtime": 1784018157.3313465,
+    "ast_hash": "943dd7f95affbd737c888b6ed2663fb1",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/specs/2026-07-14-secops-rework-design.md": {
+    "mtime": 1784049263.768092,
+    "ast_hash": "8839a96f92abfeb861f23a0de58f093a",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260710_175630_what_are_the_architectural_blind_spots_in_hawkwrd.md": {
+    "mtime": 1783706190.8680954,
+    "ast_hash": "773d294cf9966f5e5f3bbc95a37bb15d",
+    "semantic_hash": ""
+  },
+  "internal/netops/review_report.md": {
+    "mtime": 1784052514.804322,
+    "ast_hash": "c2d2e8f4eadfd74462f4cd740c0e526f",
+    "semantic_hash": ""
+  },
+  "plans/2025-05-22-sprint-24-quality-polish.md": {
+    "mtime": 1783858272.2636228,
+    "ast_hash": "01800809ea9acb883e97676f64fb1b37",
+    "semantic_hash": ""
+  },
+  "plans/2025-05-25-devops-parallel-track.md": {
+    "mtime": 1784018270.158911,
+    "ast_hash": "5d0701aaf6bed1c4b4058d3150829897",
+    "semantic_hash": ""
+  },
+  "plans/2025-05-25-hyper-focused-code-review.md": {
+    "mtime": 1783954071.0559587,
+    "ast_hash": "fabe05f1f853e112a50917b8fa7fb3fc",
+    "semantic_hash": ""
+  },
+  "plans/2026-07-09-sprint-18-release-hardening.md": {
+    "mtime": 1783624657.7257872,
+    "ast_hash": "53f60d2cd4276449d2e5e215637ea73a",
+    "semantic_hash": ""
+  },
+  "plans/2026-07-10-sprint-20-release-completion.md": {
+    "mtime": 1783638712.9951596,
+    "ast_hash": "ec310b95e8728d88844ef9a9362141c4",
+    "semantic_hash": ""
+  },
+  "reviewandaudits/New Text Document.txt": {
+    "mtime": 1784055482.0825837,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "tests/e2e/README.md": {
+    "mtime": 1783973587.1567879,
+    "ast_hash": "46f81534f0b10fb044a71487ea97f94e",
+    "semantic_hash": ""
+  },
+  "tests/e2e/artifacts/report.html": {
+    "mtime": 1783975369.9164858,
+    "ast_hash": "26841d1c53f87e0ce8489c04f3f4783b",
+    "semantic_hash": ""
+  },
+  "tests/e2e/requirements.txt": {
+    "mtime": 1783974513.2826228,
+    "ast_hash": "d2b36e2db9ebe36b096bbc10b940b53f",
+    "semantic_hash": ""
+  }
+}
