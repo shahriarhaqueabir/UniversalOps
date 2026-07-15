@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useSettingsStore, useAlertStore, useThemeStore } from './useSettingsStore'
 import type { AlertInfo } from '../types'

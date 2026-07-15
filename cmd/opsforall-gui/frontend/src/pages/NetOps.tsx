@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, Suspense, lazy } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Network, LayoutDashboard, Activity, Globe, Cable, Wifi, Map, Search,
@@ -10,25 +10,25 @@ import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 
-// Tab imports
-import { OverviewTab } from './netops/OverviewTab'
-import { PingTab } from './netops/PingTab'
-import { DnsTab } from './netops/DnsTab'
-import { ConnectionsTab } from './netops/ConnectionsTab'
-import { InterfacesTab } from './netops/InterfacesTab'
-import { TracerouteTab } from './netops/TracerouteTab'
-import { PortScanTab } from './netops/PortScanTab'
-import { BandwidthTab } from './netops/BandwidthTab'
-import { ArpTab } from './netops/ArpTab'
-import { RoutingTab } from './netops/RoutingTab'
-import { WifiTab } from './netops/WifiTab'
-import { DnsAdvancedTab } from './netops/DnsAdvancedTab'
-import { MultiPingTab } from './netops/MultiPingTab'
-import { HealthCheckTab } from './netops/HealthCheckTab'
-import { VpnTab } from './netops/VpnTab'
-import { FirewallTab } from './netops/FirewallTab'
-import { DiscoveryTab } from './netops/DiscoveryTab'
-import { ActionsTab } from './netops/ActionsTab'
+// Tab imports (lazy-loaded to reduce initial bundle)
+const OverviewTab = lazy(() => import('./netops/OverviewTab').then(m => ({ default: m.OverviewTab })))
+const PingTab = lazy(() => import('./netops/PingTab').then(m => ({ default: m.PingTab })))
+const DnsTab = lazy(() => import('./netops/DnsTab').then(m => ({ default: m.DnsTab })))
+const ConnectionsTab = lazy(() => import('./netops/ConnectionsTab').then(m => ({ default: m.ConnectionsTab })))
+const InterfacesTab = lazy(() => import('./netops/InterfacesTab').then(m => ({ default: m.InterfacesTab })))
+const TracerouteTab = lazy(() => import('./netops/TracerouteTab').then(m => ({ default: m.TracerouteTab })))
+const PortScanTab = lazy(() => import('./netops/PortScanTab').then(m => ({ default: m.PortScanTab })))
+const BandwidthTab = lazy(() => import('./netops/BandwidthTab').then(m => ({ default: m.BandwidthTab })))
+const ArpTab = lazy(() => import('./netops/ArpTab').then(m => ({ default: m.ArpTab })))
+const RoutingTab = lazy(() => import('./netops/RoutingTab').then(m => ({ default: m.RoutingTab })))
+const WifiTab = lazy(() => import('./netops/WifiTab').then(m => ({ default: m.WifiTab })))
+const DnsAdvancedTab = lazy(() => import('./netops/DnsAdvancedTab').then(m => ({ default: m.DnsAdvancedTab })))
+const MultiPingTab = lazy(() => import('./netops/MultiPingTab').then(m => ({ default: m.MultiPingTab })))
+const HealthCheckTab = lazy(() => import('./netops/HealthCheckTab').then(m => ({ default: m.HealthCheckTab })))
+const VpnTab = lazy(() => import('./netops/VpnTab').then(m => ({ default: m.VpnTab })))
+const FirewallTab = lazy(() => import('./netops/FirewallTab').then(m => ({ default: m.FirewallTab })))
+const DiscoveryTab = lazy(() => import('./netops/DiscoveryTab').then(m => ({ default: m.DiscoveryTab })))
+const ActionsTab = lazy(() => import('./netops/ActionsTab').then(m => ({ default: m.ActionsTab })))
 
 type NetOpsCategory =
   | 'overview' | 'connections' | 'interfaces' | 'arp' | 'routing' | 'wifi'
@@ -132,7 +132,9 @@ export function NetOps() {
 
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto p-8">
-          {renderContent()}
+          <Suspense fallback={<div className="flex items-center justify-center h-32 text-[var(--color-text-faint)] text-sm">Loading...</div>}>
+            {renderContent()}
+          </Suspense>
         </div>
       </div>
     </div>

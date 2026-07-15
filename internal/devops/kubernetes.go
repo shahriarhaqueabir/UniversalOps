@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
 // KubernetesStatus holds kubectl and cluster connectivity info.
@@ -84,6 +86,12 @@ func GetKubernetesStatus() (KubernetesStatus, error) {
 
 // GetK8sResources retrieves basic info about resources in a namespace.
 func GetK8sResources(namespace string, resourceType string) (string, error) {
+	if namespace != "" && !common.ValidK8sName(namespace) {
+		return "", fmt.Errorf("invalid namespace: %q", namespace)
+	}
+	if !common.ValidK8sName(resourceType) {
+		return "", fmt.Errorf("invalid resource type: %q", resourceType)
+	}
 	kubectlPath, err := exec.LookPath("kubectl")
 	if err != nil {
 		return "", fmt.Errorf("kubectl binary not found")

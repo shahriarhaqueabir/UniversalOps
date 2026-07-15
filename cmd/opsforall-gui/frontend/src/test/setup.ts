@@ -26,8 +26,8 @@ const mockWails = {
   },
 }
 
-Object.defineProperty(window, 'go', { value: mockWails.go })
-Object.defineProperty(window, 'runtime', { value: mockWails.runtime })
+Object.defineProperty(window, 'go', { value: mockWails.go, writable: true, configurable: true })
+Object.defineProperty(window, 'runtime', { value: mockWails.runtime, writable: true, configurable: true })
 
 // Force a consistent localStorage mock for vitest/jsdom
 const localStorageMock = (() => {

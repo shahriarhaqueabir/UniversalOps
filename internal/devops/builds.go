@@ -114,7 +114,14 @@ func DetectBuildSystems() []BuildSystemInfo {
 		cmd := exec.CommandContext(ctx, spec.cmd, spec.args...)
 		var stdout strings.Builder
 		cmd.Stdout = &stdout
-		_ = cmd.Run()
+		if err := cmd.Run(); err != nil && ctx.Err() == nil {
+			// Command failed for a reason other than timeout (e.g., binary crashed).
+			// Context deadline means the probe timed out, which is expected.
+			info.Found = false
+			results = append(results, info)
+			cancel()
+			continue
+		}
 		cancel()
 		info.Version = spec.parse(stdout.String())
 		results = append(results, info)

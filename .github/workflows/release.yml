@@ -6,7 +6,46 @@ on:
       - "v*"
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.5"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: cmd/opsforall-gui/frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: cd cmd/opsforall-gui/frontend && npm ci
+
+      - name: Build frontend
+        run: cd cmd/opsforall-gui/frontend && npm run build
+
+      - name: Go vet
+        run: go vet ./...
+
+      - name: Go test
+        run: go test -race ./internal/... -count=1
+
+      - name: TypeScript check
+        run: cd cmd/opsforall-gui/frontend && npx tsc --noEmit
+
+      - name: Frontend test
+        run: cd cmd/opsforall-gui/frontend && npx vitest run
+
+      - name: Lint
+        run: cd cmd/opsforall-gui/frontend && npm run lint
+
   build-windows:
+    needs: [test]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,6 +81,7 @@ jobs:
           path: build/bin/*
 
   build-linux:
+    needs: [test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -80,6 +120,7 @@ jobs:
           path: build/bin/*
 
   build-macos:
+    needs: [test]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4

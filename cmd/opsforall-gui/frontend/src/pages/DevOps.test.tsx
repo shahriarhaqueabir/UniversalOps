@@ -1,5 +1,5 @@
-// @ts-nocheck
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { DevOps } from './DevOps'
 import { useQuery } from '@tanstack/react-query'
@@ -33,13 +33,30 @@ const mockServices = [
 ]
 
 const mockContainers = { containers: [
-  { id: 'abc123', name: 'web-app', image: 'node:20', status: 'running' as const, ports: '3000->3000', uptime: '2d' },
-  { id: 'def456', name: 'redis-cache', image: 'redis:7', status: 'exited' as const, ports: '', uptime: '0s' },
+  { id: 'abc123', name: 'web-app', image: 'node:20', status: 'running' as const, ports: '3000->3000', uptime: '2d', state: 'running' },
+  { id: 'def456', name: 'redis-cache', image: 'redis:7', status: 'exited' as const, ports: '', uptime: '0s', state: 'exited' },
 ]}
 
 const mockGit = { repositories: [
   { path: '/repo/app', branch: 'main', clean: true, ahead: 0, behind: 0, lastCommit: 'fix: update config' },
 ]}
+
+const mockGitBranches = [
+  { name: 'main', current: true, last_commit: 'fix: update config' },
+  { name: 'develop', current: false, last_commit: 'feat: add feature' },
+]
+
+const mockGitTags = [
+  { name: 'v1.3.0', date: '2025-01-15' },
+]
+
+const mockGitStash = [
+  { index: 0, message: 'WIP: temp changes' },
+]
+
+const mockGitRemotes = [
+  { name: 'origin', url: 'https://github.com/test/repo.git' },
+]
 
 const mockServers = [
   { port: 3000, protocol: 'tcp', process: 'node', pid: 1234, framework: 'express', health: 'healthy' },
@@ -50,10 +67,18 @@ const mockTools = [
   { name: 'node', version: '22', status: 'available' as const },
 ]
 
-const mockEnv = { key_vars: [
-  { name: 'NODE_ENV', value: 'production' },
-  { name: 'DB_HOST', value: 'localhost' },
-]}
+const mockEnv = {
+  key_vars: [
+    { name: 'NODE_ENV', value: 'production' },
+    { name: 'DB_HOST', value: 'localhost' },
+  ],
+  sdks: [
+    { name: 'Node.js', version: '22.0' },
+  ],
+  package_managers: [
+    { name: 'npm', version: '10.8' },
+  ],
+}
 
 describe('DevOps Page', () => {
   const mockCall = vi.fn()
@@ -64,17 +89,22 @@ describe('DevOps Page', () => {
     vi.mocked(useQuery).mockImplementation((opts: any) => {
       const key = opts.queryKey[0]
       if (key === 'devops-services') return { data: mockServices, isLoading: false }
-      if (key === 'devops-docker-status') return { data: null, isLoading: false }
+      if (key === 'devops-docker-status') return { data: { installed: true, running: true, version: '24.0', containers: { running: 1, stopped: 1, failed: 0, total: 2, containers: mockContainers.containers } }, isLoading: false }
       if (key === 'devops-k8s-status') return { data: null, isLoading: false }
       if (key === 'devops-service-summary') return { data: null, isLoading: false }
+      if (key === 'devops-dora') return { data: null, isLoading: false }
       if (key === 'devops-workflows') return { data: null, isLoading: false }
       if (key === 'devops-containers') return { data: mockContainers, isLoading: false }
       if (key === 'devops-git') return { data: mockGit, isLoading: false }
+      if (key === 'devops-git-branches') return { data: mockGitBranches, isLoading: false }
+      if (key === 'devops-git-tags') return { data: mockGitTags, isLoading: false }
+      if (key === 'devops-git-stash') return { data: mockGitStash, isLoading: false }
+      if (key === 'devops-git-remotes') return { data: mockGitRemotes, isLoading: false }
       if (key === 'devops-servers') return { data: mockServers, isLoading: false }
       if (key === 'devops-env') return { data: mockEnv, isLoading: false }
       if (key === 'devops-tools') return { data: mockTools, isLoading: false }
       if (key === 'devops-ai-suggestions') return { data: [], isLoading: false }
-      return { data: null, isLoading: false }
+      return { data: undefined, isLoading: false }
     })
     mockCall.mockResolvedValue(null)
   })
@@ -86,33 +116,36 @@ describe('DevOps Page', () => {
 
   it('shows tabs', () => {
     render(<DevOps />)
-    expect(screen.getByText(/Interactive Terminal/i)).toBeInTheDocument()
-    expect(screen.getByText(/System Services/i)).toBeInTheDocument()
+    expect(screen.getByText(/Terminal/i)).toBeInTheDocument()
+    expect(screen.getByText(/Services/i)).toBeInTheDocument()
     expect(screen.getByText(/Git/i)).toBeInTheDocument()
   })
 
   it('switches to Git tab', async () => {
+    const user = userEvent.setup()
     render(<DevOps />)
-    fireEvent.click(screen.getByRole('tab', { name: /Git/i }))
+    await user.click(screen.getByRole('tab', { name: /Git/i }))
     await waitFor(() => {
-      expect(screen.getByText(/main/i)).toBeInTheDocument()
-      expect(screen.getByText(/Clean/i)).toBeInTheDocument()
+      expect(screen.getByText(/main \*/)).toBeInTheDocument()
     })
   })
 
   it('switches to Services tab and shows services', async () => {
+    const user = userEvent.setup()
     render(<DevOps />)
-    fireEvent.click(screen.getByRole('tab', { name: /System Services/i }))
+    await user.click(screen.getByRole('tab', { name: /Services/i }))
     await waitFor(() => {
-      expect(screen.getByText(/Nginx/i)).toBeInTheDocument()
-      expect(screen.getByText(/SSH Daemon/i)).toBeInTheDocument()
-      expect(screen.getByText(/CUPS/i)).toBeInTheDocument()
+      // Use exact text to avoid matching both "Nginx" (display_name) and "nginx" (name)
+      expect(screen.getByText('Nginx')).toBeInTheDocument()
+      expect(screen.getByText('SSH Daemon')).toBeInTheDocument()
+      expect(screen.getByText('CUPS')).toBeInTheDocument()
     })
   })
 
-  it('switches to Containers tab', async () => {
+  it('switches to Docker tab and shows containers', async () => {
+    const user = userEvent.setup()
     render(<DevOps />)
-    fireEvent.click(screen.getByRole('tab', { name: /Containers/i }))
+    await user.click(screen.getByRole('tab', { name: /Docker/i }))
     await waitFor(() => {
       expect(screen.getByText(/web-app/i)).toBeInTheDocument()
       expect(screen.getByText(/redis-cache/i)).toBeInTheDocument()
@@ -120,35 +153,42 @@ describe('DevOps Page', () => {
   })
 
   it('switches to Servers tab', async () => {
+    const user = userEvent.setup()
     render(<DevOps />)
-    fireEvent.click(screen.getByRole('tab', { name: /Servers/i }))
+    await user.click(screen.getByRole('tab', { name: /Servers/i }))
     await waitFor(() => {
       expect(screen.getByText(/:3000/i)).toBeInTheDocument()
       expect(screen.getByText(/node/i)).toBeInTheDocument()
     })
   })
 
-  it('switches to Terminal tab', () => {
+  it('switches to Terminal tab', async () => {
+    const user = userEvent.setup()
     render(<DevOps />)
-    fireEvent.click(screen.getByRole('tab', { name: /Interactive Terminal/i }))
-    expect(screen.getByPlaceholderText(/Enter shell command/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: /Terminal/i }))
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/Enter shell command/i)).toBeInTheDocument()
+    })
   })
 
   it('switches to Toolbox tab', async () => {
+    const user = userEvent.setup()
     render(<DevOps />)
-    fireEvent.click(screen.getByRole('tab', { name: /Toolbox/i }))
+    await user.click(screen.getByRole('tab', { name: /Toolbox/i }))
     await waitFor(() => {
-      expect(screen.getByText(/git/i)).toBeInTheDocument()
-      expect(screen.getByText(/node/i)).toBeInTheDocument()
+      // Use exact text (lowercase) to avoid matching "Git" tab trigger (uppercase)
+      expect(screen.getByText('git')).toBeInTheDocument()
+      expect(screen.getByText('node')).toBeInTheDocument()
     })
   })
 
   it('switches to Environment tab', async () => {
+    const user = userEvent.setup()
     render(<DevOps />)
-    fireEvent.click(screen.getByRole('tab', { name: /Environment/i }))
+    await user.click(screen.getByRole('tab', { name: /Env/i }))
     await waitFor(() => {
-      expect(screen.getByText(/NODE_ENV/i)).toBeInTheDocument()
-      expect(screen.getByText(/DB_HOST/i)).toBeInTheDocument()
+      expect(screen.getByText('NODE_ENV')).toBeInTheDocument()
+      expect(screen.getByText('DB_HOST')).toBeInTheDocument()
     })
   })
 })

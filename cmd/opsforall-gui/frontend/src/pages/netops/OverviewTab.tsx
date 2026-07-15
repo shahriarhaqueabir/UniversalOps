@@ -128,7 +128,7 @@ export function OverviewTab() {
         return { status: 'error' as ConnectivityStatus, detail: 'Ping failed' }
       }
     },
-    refetchInterval: 15000,
+    refetchInterval: refreshInterval,
     retry: false,
   })
 
@@ -144,7 +144,7 @@ export function OverviewTab() {
         return { status: 'error' as ConnectivityStatus, detail: 'Resolution failed' }
       }
     },
-    refetchInterval: 15000,
+    refetchInterval: refreshInterval,
     retry: false,
   })
 

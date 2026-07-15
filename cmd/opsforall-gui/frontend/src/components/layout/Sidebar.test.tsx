@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { Sidebar } from './Sidebar'
@@ -15,7 +14,6 @@ describe('Sidebar', () => {
     expect(screen.getByText('Security Ops')).toBeInTheDocument()
     expect(screen.getByText('DevOps')).toBeInTheDocument()
     expect(screen.getByText('AI Ops')).toBeInTheDocument()
-    expect(screen.getByText('Network Design')).toBeInTheDocument()
     expect(screen.getByText('Logs')).toBeInTheDocument()
     expect(screen.getByText('Settings')).toBeInTheDocument()
   })

@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
 // ContainerInfo holds information about a single container.
@@ -134,6 +136,9 @@ func GetDockerStatus() (DockerStatus, error) {
 
 // ControlContainer performs actions on a container.
 func ControlContainer(id string, action string) error {
+	if !common.ValidContainerID(id) {
+		return fmt.Errorf("invalid container ID: %q", id)
+	}
 	dockerPath, err := exec.LookPath("docker")
 	if err != nil {
 		return fmt.Errorf("docker binary not found")

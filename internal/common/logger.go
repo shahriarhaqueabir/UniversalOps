@@ -9,11 +9,33 @@ import (
 	"github.com/rs/zerolog"
 )
 
+const logChanCap = 1024
+
+type logEntry struct {
+	level string
+	msg   string
+}
+
 var (
 	logFile *os.File
 	zlog    zerolog.Logger
 	logWg   sync.WaitGroup
+	logChan chan logEntry
+	logOnce sync.Once
 )
+
+func startLogWorker() {
+	logChan = make(chan logEntry, logChanCap)
+	logWg.Add(1)
+	go func() {
+		defer logWg.Done()
+		for entry := range logChan {
+			if s := GetStorage(); s != nil {
+				s.InsertLog(entry.level, "SYSTEM", entry.msg)
+			}
+		}
+	}()
+}
 
 // InitLogger initializes the session logger with zerolog.
 func InitLogger(filename string) error {
@@ -40,17 +62,32 @@ func InitLogger(filename string) error {
 		Str("app", "opsforall").
 		Logger()
 
+	logOnce.Do(startLogWorker)
+
 	LogInfo("Session started")
 	return nil
 }
 
-// CloseLogger closes the log file.
+// CloseLogger closes the log file and drains pending log writes.
 func CloseLogger() {
 	if logFile != nil {
 		LogInfo("Session ended")
-		// Wait for any pending log writes to the DB to finish
+		// Close channel to signal worker, then wait for drain
+		if logChan != nil {
+			close(logChan)
+		}
 		logWg.Wait()
 		logFile.Close()
+	}
+}
+
+// enqueueLog sends a log entry to the worker channel, dropping if full.
+func enqueueLog(level, msg string) {
+	logOnce.Do(startLogWorker)
+	select {
+	case logChan <- logEntry{level: level, msg: msg}:
+	default:
+		// Channel full — drop to avoid blocking callers
 	}
 }
 
@@ -58,42 +95,21 @@ func CloseLogger() {
 func LogInfo(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
 	zlog.Info().Msg(msg)
-	if s := GetStorage(); s != nil {
-		logWg.Add(1)
-		go func() {
-			defer logWg.Done()
-			defer RecoverPanic()
-			s.InsertLog("INFO", "SYSTEM", msg)
-		}()
-	}
+	enqueueLog("INFO", msg)
 }
 
 // LogWarn logs a warning message.
 func LogWarn(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
 	zlog.Warn().Msg(msg)
-	if s := GetStorage(); s != nil {
-		logWg.Add(1)
-		go func() {
-			defer logWg.Done()
-			defer RecoverPanic()
-			s.InsertLog("WARN", "SYSTEM", msg)
-		}()
-	}
+	enqueueLog("WARN", msg)
 }
 
 // LogError logs an error message.
 func LogError(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
 	zlog.Error().Msg(msg)
-	if s := GetStorage(); s != nil {
-		logWg.Add(1)
-		go func() {
-			defer logWg.Done()
-			defer RecoverPanic()
-			s.InsertLog("ERROR", "SYSTEM", msg)
-		}()
-	}
+	enqueueLog("ERROR", msg)
 }
 
 // LogDebug logs a debug message (only in dev builds or when enabled).

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
+import { useSettingsStore } from '@/stores/useSettingsStore'
 import {
   Shield,
   ShieldOff,
@@ -49,6 +50,7 @@ function VpnFieldCard({
 
 export function VpnTab() {
   const { call } = useBackend()
+  const { refreshInterval } = useSettingsStore()
 
   const { data: vpn, isLoading } = useQuery<VPNStatusData>({
     queryKey: ['netops-vpn-status'],
@@ -56,7 +58,7 @@ export function VpnTab() {
       const res = (await call('NetOps.GetVPNStatus')) as VPNStatusData
       return res
     },
-    refetchInterval: 15000,
+    refetchInterval: refreshInterval,
     retry: false,
   })
 

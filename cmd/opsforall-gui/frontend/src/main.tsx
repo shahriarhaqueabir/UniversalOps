@@ -10,7 +10,7 @@ const queryClient = new QueryClient({
     queries: {
       refetchInterval: false,       // we control polling per-page
       retry: 1,
-      staleTime: 1000,
+      staleTime: 5000,              // 5s — reduces re-renders from identical refetches
       refetchOnWindowFocus: false,
     },
   },
