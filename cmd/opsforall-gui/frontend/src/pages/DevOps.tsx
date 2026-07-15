@@ -346,7 +346,7 @@ function TerminalTab() {
         </button>
       </div>
 
-      <div ref={outputRef} className="flex-1 bg-black border border-border rounded-2xl p-8 overflow-y-auto font-mono text-lg leading-relaxed whitespace-pre-wrap shadow-inner">
+      <div ref={outputRef} className="flex-1 bg-[var(--color-terminal-bg)] border border-border rounded-2xl p-8 overflow-y-auto font-mono text-lg leading-relaxed whitespace-pre-wrap shadow-inner">
         {output.map((block, i) => <div key={i} className="mb-1">{stripAnsi(block)}</div>)}
         {isRunning && <div className="flex items-center gap-2 mt-2"><span className="inline-block w-3 h-6 bg-success animate-pulse" /><span className="text-sm font-bold text-success uppercase tracking-widest animate-pulse">Running...</span></div>}
       </div>
@@ -393,7 +393,7 @@ function PowerShellProTab() {
         ))}
       </div>
       <div className="col-span-2 flex flex-col space-y-4">
-        <div className="flex-1 bg-black border border-border rounded-2xl p-8 overflow-y-auto font-mono text-lg leading-relaxed whitespace-pre shadow-inner">
+        <div className="flex-1 bg-[var(--color-terminal-bg)] border border-border rounded-2xl p-8 overflow-y-auto font-mono text-lg leading-relaxed whitespace-pre shadow-inner">
           {stripAnsi(output) || 'Select a workflow to begin diagnostic execution.'}
         </div>
         <button onClick={() => setOutput('')} className="self-end px-6 py-3 text-lg font-bold text-text-dim border border-border rounded-xl hover:bg-panel-3 transition-all">Clear</button>
@@ -528,7 +528,7 @@ function FileBrowserTab() {
       {previewFile && (
         <div className="w-1/2 flex flex-col space-y-4">
           <div className="flex items-center justify-between"><h3 className="font-bold truncate">{previewFile.name}</h3><button onClick={() => setPreviewFile(null)}><X /></button></div>
-          <div className="flex-1 bg-black border border-border rounded-2xl p-6 overflow-auto font-mono text-sm">
+          <div className="flex-1 bg-[var(--color-terminal-bg)] border border-border rounded-2xl p-6 overflow-auto font-mono text-sm">
             {previewFile.is_binary ? 'Binary content hidden' : fileContent}
           </div>
         </div>

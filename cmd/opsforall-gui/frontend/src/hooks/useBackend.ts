@@ -25,13 +25,11 @@ export function useBackend() {
         }
       }
 
-      console.warn(`[useBackend] Wails method not found: ${method}`)
+      throw new Error(`[useBackend] Wails method not found: ${method}`)
     } catch (err: unknown) {
       console.error(`[useBackend] Wails call failed for ${method}:`, err)
       throw err
     }
-
-    return null
   }, [])
 
   return { call }
