@@ -148,21 +148,25 @@ export function AnalysisSidebar({
   const { call } = useBackend()
   const [discovering, setDiscovering] = useState(false)
 
-  // ── Sync topology to backend ──
+  // ── Sync topology to backend (debounced) ──
   // FE-1: `devices`/`connections` are new array references on nearly every
   // parent render (e.g. while dragging a node), so firing the backend call
   // directly off this effect floods the IPC channel. Debounce so only the
   // settled value after a short pause of inactivity gets synced.
+  const devicesJson = useMemo(() => JSON.stringify(devices), [devices])
+  const connectionsJson = useMemo(() => JSON.stringify(connections), [connections])
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      call('NetDesign.SetTopology', JSON.stringify(devices), JSON.stringify(connections)).catch(
-        (err: unknown) => {
-          console.error('[NetworkDesign] Sync failed:', err)
-        },
-      )
-    }, 400)
-    return () => clearTimeout(timer)
-  }, [devices, connections, call])
+    const sync = async () => {
+      try {
+        await call('NetDesign.SetTopology', devicesJson, connectionsJson)
+      } catch (err: unknown) {
+        console.error('[NetworkDesign] Sync failed:', err)
+      }
+    }
+    const timeout = setTimeout(sync, 500) // debounce 500ms
+    return () => clearTimeout(timeout)
+  }, [devicesJson, connectionsJson, call])
 
   // ── Backend Analysis ──
   const { data: health = { totalNodes: 0, totalEdges: 0, brokenLinks: 0, missingLabels: 0, orphanNodes: [], duplicateIPs: [], subnetErrors: [], suggestions: [] } } = useQuery<TopologyHealth>({

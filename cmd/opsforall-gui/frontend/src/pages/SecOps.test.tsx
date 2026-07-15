@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { SecOps } from './SecOps'
 import { useQuery } from '@tanstack/react-query'
@@ -18,20 +18,9 @@ vi.mock('@/stores/useSettingsStore', () => ({
   useSettingsStore: () => ({ refreshInterval: 5000 }),
 }))
 
-const mockFirewallRules = [
-  { name: 'Block SSH', enabled: true, action: 'BLOCK', protocol: 'TCP', port: 22, direction: 'inbound' as const, remote_ip: '0.0.0.0/0' },
-  { name: 'Allow HTTP', enabled: false, action: 'ALLOW', protocol: 'TCP', port: 80, direction: 'inbound' as const, remote_ip: '0.0.0.0/0' },
-]
-
-const mockUsers = [
-  { name: 'admin', uid: 500, gid: 500, groups: ['wheel'], shell: '/bin/bash', home: '/home/admin', status: 'active' as const, last_login: '2026-07-01' },
-  { name: 'guest', uid: 1000, gid: 1000, groups: ['users'], shell: '/sbin/nologin', home: '/home/guest', status: 'locked' as const, last_login: '' },
-]
-
-const mockListeningPorts = [
-  { port: 443, protocol: 'tcp', process_name: 'nginx', pid: 1234, state: 'listening', is_external: false },
-  { port: 3306, protocol: 'tcp', process_name: 'mysqld', pid: 5678, state: 'listening', is_external: false },
-]
+const mockScore = { score: 85, grade: 'B', breakdown: { Defender: 30, Firewall: 18, Users: 8, Ports: 9, Events: 10 }, recommendations: ['Keep Defender signatures up to date'] }
+const mockDefender = { enabled: true, real_time_protection: true, cloud_protection: true, up_to_date: true, threats_detected: 0, last_scan: '2026-07-13', signature_age: '1 day', full_scan_age: 3 }
+const mockFwStatus = { enabled: true, profiles: [{ name: 'Domain', enabled: true }, { name: 'Private', enabled: true }, { name: 'Public', enabled: true }] }
 
 describe('SecOps Page', () => {
   const mockCall = vi.fn()
@@ -41,21 +30,26 @@ describe('SecOps Page', () => {
     vi.mocked(useBackend).mockReturnValue({ call: mockCall })
     vi.mocked(useQuery).mockImplementation((opts: any) => {
       const key = opts.queryKey[0]
-      if (key === 'secops-firewall') return { data: mockFirewallRules, isLoading: false }
-      if (key === 'secops-firewall-status') return { data: { enabled: true, profiles: [] }, isLoading: false }
-      if (key === 'secops-users') return { data: mockUsers, isLoading: false }
-      if (key === 'secops-listening') return { data: mockListeningPorts, isLoading: false }
-      if (key === 'secops-risks') return { data: [], isLoading: false }
+      if (key === 'secops-score') return { data: mockScore, isLoading: false }
+      if (key === 'secops-defender') return { data: mockDefender, isLoading: false }
+      if (key === 'secops-firewall-status') return { data: mockFwStatus, isLoading: false }
+      if (key === 'secops-users') return { data: [], isLoading: false }
+      if (key === 'secops-listening') return { data: [], isLoading: false }
       if (key === 'secops-events') return { data: [], isLoading: false }
-      if (key === 'secops-tasks') return { data: [], isLoading: false }
-      if (key === 'secops-security-score') {
-        return { data: { score: 85, grade: 'B', breakdown: {}, recommendations: [] }, isLoading: false }
-      }
-      if (key === 'secops-security-summary') {
-        return { data: { score: 85, summary: 'Good', risks: [], recommendations: [], analyzedAt: new Date().toISOString() }, isLoading: false }
-      }
-      if (key === 'secops-defender') return { data: { enabled: true, status: 'active', definitions: [] }, isLoading: false }
       if (key === 'secops-health') return { data: {}, isLoading: false }
+      if (key === 'secops-password-policy') return { data: { max_age: 90, min_length: 8, complexity: true, lockout_threshold: 5, lockout_duration: 30 }, isLoading: false }
+      if (key === 'secops-failed-logins') return { data: [], isLoading: false }
+      if (key === 'secops-lockouts') return { data: [], isLoading: false }
+      if (key === 'secops-tls-certs') return { data: [], isLoading: false }
+      if (key === 'secops-public-exposure') return { data: [], isLoading: false }
+      if (key === 'secops-disk-encryption') return { data: [], isLoading: false }
+      if (key === 'secops-secure-boot') return { data: { enabled: true, state: 'OK' }, isLoading: false }
+      if (key === 'secops-services') return { data: [], isLoading: false }
+      if (key === 'secops-tasks') return { data: [], isLoading: false }
+      if (key === 'secops-privilege-events') return { data: [], isLoading: false }
+      if (key === 'secops-timeline') return { data: [], isLoading: false }
+      if (key === 'secops-hardening') return { data: [], isLoading: false }
+      if (key === 'secops-ssh-config') return { data: null, isLoading: false }
       return { data: null, isLoading: false }
     })
     mockCall.mockResolvedValue(null)
@@ -63,63 +57,76 @@ describe('SecOps Page', () => {
 
   it('renders page header', () => {
     render(<SecOps />)
-    expect(screen.getByText(/Security Operations/i)).toBeInTheDocument()
+    const headings = screen.getAllByRole('heading')
+    const hasHeader = headings.some(h => /SECURITY OPERATIONS/i.test(h.textContent ?? ''))
+    expect(hasHeader).toBe(true)
   })
 
-  it('shows security score', () => {
+  it('renders sidebar category groups', () => {
     render(<SecOps />)
-    expect(screen.getByText(/Security Score/i)).toBeInTheDocument()
-    expect(screen.getAllByText(/85/i).length).toBeGreaterThan(0)
+    expect(screen.getByText('ASSESSMENT')).toBeInTheDocument()
+    expect(screen.getByText('DETECTION')).toBeInTheDocument()
+    expect(screen.getByText('RESPONSE')).toBeInTheDocument()
   })
 
-  it('navigates to Users tab', () => {
+  it('renders sidebar category buttons', () => {
     render(<SecOps />)
-    const usersTab = screen.getByRole('tab', { name: /Users tab/i })
-    fireEvent.click(usersTab)
-    expect(screen.getByText(/Identity & Access/i)).toBeInTheDocument()
+    expect(screen.getByText('Overview')).toBeInTheDocument()
+    expect(screen.getByText('Identity & Access')).toBeInTheDocument()
+    expect(screen.getByText('Network Security')).toBeInTheDocument()
+    expect(screen.getByText('Endpoint Security')).toBeInTheDocument()
+    expect(screen.getByText('Log & Events')).toBeInTheDocument()
+    expect(screen.getByText('Security Hardening')).toBeInTheDocument()
+    expect(screen.getByText('Security Audit')).toBeInTheDocument()
+    expect(screen.getByText('Incident Response')).toBeInTheDocument()
   })
 
-  it('navigates to Firewall tab and shows rules', async () => {
+  it('shows overview by default with score', () => {
     render(<SecOps />)
-    const firewallTab = screen.getByRole('tab', { name: /Firewall tab/i })
-    fireEvent.click(firewallTab)
-    await waitFor(() => {
-      expect(screen.getByText(/Block SSH/i)).toBeInTheDocument()
-      expect(screen.getByText(/Allow HTTP/i)).toBeInTheDocument()
-    })
+    expect(screen.getByText('Security Operations Center')).toBeInTheDocument()
+    expect(screen.getAllByText('85').length).toBeGreaterThan(0)
+    expect(screen.getByText(/Grade B/i)).toBeInTheDocument()
   })
 
-  it('navigates to Listening Ports tab', () => {
+  it('navigates to Identity & Access sidebar category', () => {
     render(<SecOps />)
-    const portsTab = screen.getByRole('tab', { name: /Listening tab/i })
-    fireEvent.click(portsTab)
-    expect(screen.getByText(/Total Listening/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Identity & Access'))
+    expect(screen.getByText('Identity & Access', { selector: 'h3' })).toBeInTheDocument()
   })
 
-  it('shows security summary panel', () => {
+  it('navigates to Network Security sidebar category', () => {
     render(<SecOps />)
-    expect(screen.getByText(/Security Summary/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Network Security'))
+    expect(screen.getByText('Network Security', { selector: 'h3' })).toBeInTheDocument()
   })
 
-  it('displays fallback score when summary is missing', () => {
-    vi.mocked(useQuery).mockImplementation((opts: any) => {
-      const key = opts.queryKey[0]
-      if (key === 'secops-security-summary') return { data: null, isLoading: false }
-      if (key === 'secops-security-score') return { data: { score: 85, grade: 'B', breakdown: {}, recommendations: [] }, isLoading: false }
-      const emptyKeys = ['secops-firewall', 'secops-listening', 'secops-risks', 'secops-events', 'secops-tasks', 'secops-users']
-      return { data: emptyKeys.includes(key) ? [] : null, isLoading: false, refetch: vi.fn() }
-    })
+  it('navigates to Endpoint Security sidebar category', () => {
     render(<SecOps />)
-    expect(screen.getByText(/Security Score/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Endpoint Security'))
+    expect(screen.getByText('Endpoint Security', { selector: 'h3' })).toBeInTheDocument()
   })
 
-  it('renders risk assessment panel', () => {
+  it('navigates to Log & Events sidebar category', () => {
     render(<SecOps />)
-    expect(screen.getByText(/Risk Assessment/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Log & Events'))
+    expect(screen.getByText('Log & Event Analysis')).toBeInTheDocument()
   })
 
-  it('renders DataFreshnessIndicator in summary', () => {
+  it('navigates to Security Hardening sidebar category', () => {
     render(<SecOps />)
-    expect(screen.getByText(/Last Analyzed/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Security Hardening'))
+    expect(screen.getByText('Security Hardening', { selector: 'h3' })).toBeInTheDocument()
+  })
+
+  it('navigates to Security Audit sidebar category', () => {
+    render(<SecOps />)
+    fireEvent.click(screen.getByText('Security Audit'))
+    expect(screen.getByText('Run Security Audit')).toBeInTheDocument()
+  })
+
+  it('navigates to Incident Response sidebar category', () => {
+    render(<SecOps />)
+    fireEvent.click(screen.getByText('Incident Response'))
+    expect(screen.getByText('Isolate Host')).toBeInTheDocument()
   })
 })

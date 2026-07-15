@@ -92,12 +92,65 @@ func IsDangerousCommand(cmd string) bool {
 
 // RunCommand executes a shell command and returns the combined output.
 // It uses cmd /c on Windows and sh -c on Unix.
+// RunCommand executes a shell command and returns the combined output.
+// It uses cmd /c on Windows and sh -c on Unix.
+// Only commands matching the allowlist are permitted.
+var allowedShellCommands = map[string]bool{
+	"dir":        true,
+	"ls":         true,
+	"ps":         true,
+	"tasklist":   true,
+	"netstat":    true,
+	"ss":         true,
+	"ping":       true,
+	"traceroute": true,
+	"tracert":    true,
+	"nslookup":   true,
+	"dig":        true,
+	"whoami":     true,
+	"id":         true,
+	"uptime":     true,
+	"df":         true,
+	"du":         true,
+	"free":       true,
+	"top":        true,
+	"htop":       true,
+	"systemctl":  true,
+	"service":    true,
+	"sc":         true,
+	"net":        true,
+	"ipconfig":   true,
+	"ifconfig":   true,
+	"route":      true,
+	"arp":        true,
+	"netsh":      true,
+}
+
+func isAllowedShellCommand(cmd string) bool {
+	// Extract the base command (first word)
+	fields := strings.Fields(cmd)
+	if len(fields) == 0 {
+		return false
+	}
+	base := fields[0]
+	// Remove path if present
+	if idx := strings.LastIndex(base, "/"); idx >= 0 {
+		base = base[idx+1:]
+	}
+	if idx := strings.LastIndex(base, "\\"); idx >= 0 {
+		base = base[idx+1:]
+	}
+	// Remove .exe extension
+	base = strings.TrimSuffix(base, ".exe")
+	return allowedShellCommands[strings.ToLower(base)]
+}
+
 func RunCommand(cmd string) (*ShellResult, error) {
 	if ContainsShellMetachar(cmd) {
 		return nil, fmt.Errorf("%w: %s", ErrShellMetachar, cmd)
 	}
-	if IsDangerousCommand(cmd) {
-		return nil, fmt.Errorf("%w: %s", ErrDangerousCommand, cmd)
+	if !isAllowedShellCommand(cmd) {
+		return nil, fmt.Errorf("command not in allowlist: %s", cmd)
 	}
 
 	start := time.Now()
@@ -138,8 +191,8 @@ func RunCommandWithLiveOutput(cmd string, output chan string) (result *ShellResu
 	if ContainsShellMetachar(cmd) {
 		return nil, fmt.Errorf("%w: %s", ErrShellMetachar, cmd)
 	}
-	if IsDangerousCommand(cmd) {
-		return nil, fmt.Errorf("%w: %s", ErrDangerousCommand, cmd)
+	if !isAllowedShellCommand(cmd) {
+		return nil, fmt.Errorf("command not in allowlist: %s", cmd)
 	}
 
 	start := time.Now()
