@@ -47,3 +47,15 @@ coverage.out
 coverage.txt
 cmd/hawkward-gui/nul
 nul
+test.err
+vet.err
+
+# Internal / agent / audit artifacts (not for public distribution)
+.agents/
+.memory/
+.playwright-mcp/
+graphify-out/
+attached_assets/
+docs/superpowers/
+plans/
+tests/e2e/artifacts/
