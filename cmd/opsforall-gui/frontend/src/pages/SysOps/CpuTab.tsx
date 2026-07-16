@@ -2,6 +2,7 @@ import { Cpu, Activity } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { ProgressBar } from '@/components/ui/ProgressBar'
 import type { CPUInfo, CPUExtendedInfo, PerformanceData } from '@/types'
 
 interface CpuTabProps {
@@ -58,7 +59,7 @@ export function CpuTab({ cpuInfo }: CpuTabProps) {
         </div>
         <div className="grid grid-cols-2 gap-x-8 gap-y-3">
           {cpuInfo.per_cpu.map((p, i) => (
-            <Bar key={i} label={`Core ${i}`} value={p} />
+            <ProgressBar key={i} label={`Core ${i}`} value={p} showValue />
           ))}
         </div>
       </div>
@@ -86,22 +87,6 @@ export function CpuTab({ cpuInfo }: CpuTabProps) {
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-export function Bar({ label, value, max = 100, unit = '%' }: { label: string; value: number; max?: number; unit?: string }) {
-  const pct = Math.min((value / max) * 100, 100)
-  const barColor = pct >= 70 ? 'var(--color-danger)' : pct >= 25 ? 'var(--color-warning)' : 'var(--color-success)'
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between">
-        <span className="text-[var(--color-text-dim)] text-sm font-medium">{label}</span>
-        <span className="text-[var(--color-text)] font-bold text-sm tabular-nums">{value.toFixed(1)}{unit}</span>
-      </div>
-      <div className="h-3 bg-[var(--color-panel-3)] rounded-full overflow-hidden border border-[var(--color-border)]">
-        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${barColor}88, ${barColor})` }} />
-      </div>
     </div>
   )
 }
