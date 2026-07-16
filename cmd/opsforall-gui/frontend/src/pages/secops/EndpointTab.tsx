@@ -2,7 +2,9 @@ import { useQuery } from '@tanstack/react-query'
 import { HardDrive, ShieldCheck, Server, Lock } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
-import { SectionBriefing, MiniStat, StatusBadge } from './components'
+import { SectionBriefing } from '@/components/ui/SectionBriefing'
+import { MiniStat } from '@/components/ui/MiniStat'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import type { DiskEncryption, SecureBoot, SystemService } from '@/types'
 
 export function EndpointTab() {

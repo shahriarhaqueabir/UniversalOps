@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { ClipboardCheck, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
-import { SectionBriefing, StatusBadge } from './components'
+import { SectionBriefing } from '@/components/ui/SectionBriefing'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import type { SecurityAuditResult } from '@/types'
 
 export function AuditTab() {
