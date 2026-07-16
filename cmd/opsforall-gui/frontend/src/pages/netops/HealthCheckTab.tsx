@@ -12,7 +12,7 @@ import {
   Clock,
   BarChart3,
 } from 'lucide-react'
-import { SectionBriefing } from './components'
+import { SectionBriefing } from '@/components/ui/SectionBriefing'
 import type { HealthReportData } from '@/types'
 
 // ── Score Ring ──

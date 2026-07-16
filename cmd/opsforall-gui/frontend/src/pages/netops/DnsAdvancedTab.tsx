@@ -16,22 +16,8 @@ import {
   Clock,
   Globe,
 } from 'lucide-react'
+import { SectionHeader } from '@/components/ui/SectionHeader'
 import type { DoHResultData } from '@/types'
-
-// ── Helpers ──
-
-function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
-  return (
-    <div className="flex items-center gap-3 mb-4">
-      <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-panel-3 border border-border">
-        {icon}
-      </div>
-      <h3 className="text-sm font-bold text-text uppercase tracking-widest">{title}</h3>
-    </div>
-  )
-}
-
-// ── Main DnsAdvancedTab ──
 
 export function DnsAdvancedTab() {
   const { call } = useBackend()

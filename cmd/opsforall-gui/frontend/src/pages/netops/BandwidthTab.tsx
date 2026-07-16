@@ -15,7 +15,8 @@ import {
   CartesianGrid,
 } from 'recharts'
 import type { InterfaceInfo } from '@/types'
-import { SectionBriefing, MiniStat } from './components'
+import { SectionBriefing } from '@/components/ui/SectionBriefing'
+import { MiniStat } from '@/components/ui/MiniStat'
 
 export function BandwidthTab() {
   const { call } = useBackend()

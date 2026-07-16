@@ -11,7 +11,7 @@ import {
   XCircle,
   Zap,
 } from 'lucide-react'
-import { SectionBriefing } from './components'
+import { SectionBriefing } from '@/components/ui/SectionBriefing'
 import type { NetworkActionResult } from '@/types'
 
 // ── Action Result Banner ──
