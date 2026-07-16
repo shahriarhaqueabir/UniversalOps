@@ -1,4 +1,5 @@
 import { MemoryStick } from 'lucide-react'
+import { StatCard } from '@/components/ui/StatCard'
 import type { MemoryInfo } from '@/types'
 
 interface MemoryTabProps {
@@ -25,10 +26,10 @@ export function MemoryTab({ memInfo }: MemoryTabProps) {
           <div className="h-full rounded-full bg-gradient-to-r from-[var(--color-success)]/60 to-[var(--color-success)] transition-all duration-700" style={{ width: `${memInfo.used_percent}%` }} />
         </div>
         <div className="grid grid-cols-4 gap-6">
-          <StatBox label="Total" value={`${memInfo.total_gb.toFixed(1)} GB`} />
-          <StatBox label="Used" value={`${memInfo.used_gb.toFixed(1)} GB`} color="text-[var(--color-success)]" />
-          <StatBox label="Available" value={`${availableGB.toFixed(1)} GB`} />
-          <StatBox label="Cached" value={`${cachedGB.toFixed(1)} GB`} />
+          <StatCard label="Total" value={`${memInfo.total_gb.toFixed(1)} GB`} />
+          <StatCard label="Used" value={`${memInfo.used_gb.toFixed(1)} GB`} valueClassName="text-[var(--color-success)]" />
+          <StatCard label="Available" value={`${availableGB.toFixed(1)} GB`} />
+          <StatCard label="Cached" value={`${cachedGB.toFixed(1)} GB`} />
         </div>
       </div>
 
@@ -47,15 +48,6 @@ export function MemoryTab({ memInfo }: MemoryTabProps) {
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-function StatBox({ label, value, color = 'text-[var(--color-text)]' }: { label: string; value: string; color?: string }) {
-  return (
-    <div className="text-center">
-      <p className={`text-xl font-bold tabular-nums ${color}`}>{value}</p>
-      <p className="text-xs font-bold text-[var(--color-text-faint)] uppercase">{label}</p>
     </div>
   )
 }
