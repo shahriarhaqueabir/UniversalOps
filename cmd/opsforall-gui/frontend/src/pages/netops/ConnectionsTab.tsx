@@ -8,7 +8,9 @@ import {
   Timer,
 } from 'lucide-react'
 import type { ConnectionInfo } from '@/types'
-import { SectionBriefing, MiniStat, StatusBadge } from './components'
+import { SectionBriefing } from '@/components/ui/SectionBriefing'
+import { MiniStat } from '@/components/ui/MiniStat'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useVirtualizer } from '@tanstack/react-virtual'
 
 export function ConnectionsTab() {

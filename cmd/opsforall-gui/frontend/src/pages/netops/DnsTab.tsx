@@ -10,7 +10,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import type { DNSResult } from '@/types'
-import { SectionBriefing } from './components'
+import { SectionBriefing } from '@/components/ui/SectionBriefing'
 
 export function DnsTab() {
   const { call } = useBackend()

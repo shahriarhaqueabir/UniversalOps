@@ -9,7 +9,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import type { PortResult } from '@/types'
-import { SectionBriefing } from './components'
+import { SectionBriefing } from '@/components/ui/SectionBriefing'
 
 export function PortScanTab() {
   const { call } = useBackend()

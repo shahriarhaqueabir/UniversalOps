@@ -7,7 +7,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import type { TraceResult } from '@/types'
-import { SectionBriefing } from './components'
+import { SectionBriefing } from '@/components/ui/SectionBriefing'
 
 export function TracerouteTab() {
   const { call } = useBackend()

@@ -28,6 +28,7 @@ import {
   CheckCircle2,
   Radio,
 } from 'lucide-react'
+import { SectionHeader } from '@/components/ui/SectionHeader'
 import type {
   ConnectionInfo,
   InterfaceInfo,
@@ -86,24 +87,6 @@ function ConnectivityCard({ label, icon, status, detail }: ConnectivityCardData)
         </div>
         <p className="text-[11px] font-medium text-text-faint truncate">{detail}</p>
       </div>
-    </div>
-  )
-}
-
-// ── Section Header ──
-
-function SectionHeader({ icon, title, count }: { icon: React.ReactNode; title: string; count?: number }) {
-  return (
-    <div className="flex items-center gap-3 mb-4">
-      <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-panel-3 border border-border">
-        {icon}
-      </div>
-      <h3 className="text-sm font-bold text-text uppercase tracking-widest">{title}</h3>
-      {count !== undefined && (
-        <span className="ml-auto px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-accent/15 text-accent border border-accent/30">
-          {count}
-        </span>
-      )}
     </div>
   )
 }

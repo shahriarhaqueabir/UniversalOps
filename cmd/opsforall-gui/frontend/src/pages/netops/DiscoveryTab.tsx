@@ -10,7 +10,7 @@ import {
   Wifi,
   RefreshCw,
 } from 'lucide-react'
-import { SectionBriefing } from './components'
+import { SectionBriefing } from '@/components/ui/SectionBriefing'
 import type { DiscoveryResultData } from '@/types'
 
 // ── Main DiscoveryTab ──
