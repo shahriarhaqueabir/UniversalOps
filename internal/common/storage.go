@@ -33,7 +33,7 @@ type Storage struct {
 
 var (
 	// DefaultDBName is the name of the SQLite database file.
-	DefaultDBName = "opsforall.db"
+	DefaultDBName = "ops_core.db"
 	globalStorage *Storage
 )
 
@@ -588,11 +588,23 @@ func (s *Storage) TrendingLogErrors(limit int) ([]TrendingLogError, error) {
 // previously left out and grew unbounded (M5).
 func (s *Storage) Prune(olderThan time.Duration) {
 	cutoff := time.Now().Add(-olderThan)
-	s.db.Exec(`DELETE FROM metrics WHERE timestamp < ?`, cutoff)
-	s.db.Exec(`DELETE FROM logs WHERE timestamp < ?`, cutoff)
-	s.db.Exec(`DELETE FROM events WHERE timestamp < ?`, cutoff)
-	s.db.Exec(`DELETE FROM alerts WHERE timestamp < ? AND resolved = 1`, cutoff)
-	s.db.Exec(`DELETE FROM conversations WHERE timestamp < ?`, cutoff)
+	tx, err := s.db.Begin()
+	if err != nil {
+		LogWarn("Prune tx begin failed: %v", err)
+		return
+	}
+	defer tx.Rollback()
+
+	tx.Exec(`DELETE FROM metrics WHERE timestamp < ?`, cutoff)
+	tx.Exec(`DELETE FROM logs WHERE timestamp < ?`, cutoff)
+	tx.Exec(`DELETE FROM events WHERE timestamp < ?`, cutoff)
+	tx.Exec(`DELETE FROM alerts WHERE timestamp < ? AND resolved = 1`, cutoff)
+	tx.Exec(`DELETE FROM conversations WHERE timestamp < ?`, cutoff)
+
+	if err := tx.Commit(); err != nil {
+		LogWarn("Prune tx commit failed: %v", err)
+		return
+	}
 	LogInfo("Retention policy applied: Pruned data older than %v", olderThan)
 }
 

@@ -51,14 +51,14 @@ function renderWithProviders(ui: React.ReactElement) {
 describe('Settings Page', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useQuery).mockImplementation(({ queryKey }) => {
+    vi.mocked(useQuery).mockImplementation(({ queryKey }: any) => {
       if (queryKey.includes('app-info')) {
-        return { data: { name: 'OpsForAll', version: '1.3.0', go_version: 'go1.26', uptime: '1h' }, isLoading: false }
+        return { data: { name: 'OpsForAll', version: '1.3.0', go_version: 'go1.26', uptime: '1h' }, isLoading: false } as any
       }
       if (queryKey.includes('alert-rules')) {
-        return { data: [], isLoading: false }
+        return { data: [], isLoading: false } as any
       }
-      return { data: null, isLoading: false }
+      return { data: null, isLoading: false } as any
     })
   })
 

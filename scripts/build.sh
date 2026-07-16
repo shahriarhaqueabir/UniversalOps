@@ -1,7 +1,12 @@
 #!/bin/bash
-# Build script for Hawkward GUI on Linux/macOS
-# Requires: Go 1.26.4+, Node.js, npm, Wails CLI
-set -e
-echo "Building Hawkward GUI..."
-wails build -o hawkward-gui
-echo "Build successful: build/bin/hawkward-gui"
+# Build script for OpsForAll GUI on Linux/macOS
+
+# Prerequisites: Go, Node.js, npm, Wails CLI
+echo "Building OpsForAll GUI..."
+wails build -o opsforall-gui
+if [ $? -eq 0 ]; then
+    echo "Build successful: build/bin/opsforall-gui"
+else
+    echo "Build failed."
+    exit 1
+fi

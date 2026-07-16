@@ -7,6 +7,6 @@ interface OllamaState {
 }
 
 export const useOllamaStore = create<OllamaState>((set) => ({
-  status: { available: false, model: '', version: '' },
+  status: { available: false, binary_exists: false, model: '', version: '' },
   setStatus: (status) => set({ status }),
 }))

@@ -46,13 +46,13 @@ describe('AIOps Page', () => {
     vi.mocked(useBackend).mockReturnValue({ call: mockCall })
     vi.mocked(useQuery).mockImplementation((opts: any) => {
       const key = opts.queryKey[0]
-      if (key === 'chat-sessions') return { data: mockSessions, isLoading: false, refetch: vi.fn() }
+      if (key === 'chat-sessions') return { data: mockSessions, isLoading: false, refetch: vi.fn() } as any
       if (key === 'ollama-status') {
-        return { data: { available: true, model: 'agentic-coder', version: '1.0' }, isLoading: false, refetch: vi.fn() }
+        return { data: { available: true, binary_exists: true, model: 'opsforall', version: '1.0' }, isLoading: false, refetch: vi.fn() } as any
       }
-      if (key === 'anomalies') return { data: mockAnomalies, isLoading: false }
-      if (key === 'ai-insights') return { data: mockInsights, isLoading: false }
-      return { data: { available: true, model: 'agentic-coder', version: '1.0' }, isLoading: false, refetch: vi.fn() }
+      if (key === 'anomalies') return { data: mockAnomalies, isLoading: false } as any
+      if (key === 'ai-insights') return { data: mockInsights, isLoading: false } as any
+      return { data: { available: true, binary_exists: true, model: 'opsforall', version: '1.0' }, isLoading: false, refetch: vi.fn() } as any
     })
     mockCall.mockResolvedValue(null)
   })
@@ -65,7 +65,7 @@ describe('AIOps Page', () => {
   it('shows ollama status', () => {
     render(<AIOps />)
     expect(screen.getByText(/Ollama Online/i)).toBeInTheDocument()
-    expect(screen.getByText(/agentic-coder/i)).toBeInTheDocument()
+    expect(screen.getByText(/opsforall/i)).toBeInTheDocument()
   })
 
   it('switches to AI Insights tab', async () => {
@@ -101,10 +101,10 @@ describe('AIOps Page', () => {
     vi.mocked(useQuery).mockImplementation((opts: any) => {
       const key = opts.queryKey[0]
       if (key === 'ollama-status') {
-        return { data: null, isLoading: false, refetch: vi.fn() }
+        return { data: null, isLoading: false, refetch: vi.fn() } as any
       }
-      if (key === 'chat-sessions') return { data: [], isLoading: false, refetch: vi.fn() }
-      return { data: null, isLoading: false }
+      if (key === 'chat-sessions') return { data: [], isLoading: false, refetch: vi.fn() } as any
+      return { data: null, isLoading: false } as any
     })
     render(<AIOps />)
     expect(screen.getByText(/Ollama Offline/i)).toBeInTheDocument()

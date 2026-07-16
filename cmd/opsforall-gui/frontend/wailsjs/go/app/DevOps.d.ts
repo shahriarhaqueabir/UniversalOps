@@ -4,21 +4,95 @@ import {app} from '../models';
 
 export function ControlService(arg1:string,arg2:string):Promise<boolean>;
 
+export function DockerComposeDown(arg1:string):Promise<app.CommandResult>;
+
+export function DockerComposeList():Promise<Array<app.DockerComposeProject>>;
+
+export function DockerComposeLogs(arg1:string,arg2:string,arg3:number):Promise<string>;
+
+export function DockerComposeUp(arg1:string,arg2:string):Promise<app.CommandResult>;
+
+export function DockerExec(arg1:string,arg2:Array<string>):Promise<app.CommandResult>;
+
+export function DockerImageList():Promise<string>;
+
+export function DockerKill(arg1:string):Promise<app.CommandResult>;
+
+export function DockerPause(arg1:string):Promise<app.CommandResult>;
+
+export function DockerPrune():Promise<app.CommandResult>;
+
+export function DockerPull(arg1:string):Promise<app.CommandResult>;
+
+export function DockerUnpause(arg1:string):Promise<app.CommandResult>;
+
+export function FindBuildTargets(arg1:string):Promise<Array<app.BuildTargetInfo>>;
+
 export function GetAISuggestions():Promise<Array<app.DevOpsSuggestion>>;
+
+export function GetBuildSystems():Promise<Array<app.BuildSystemInfo>>;
+
+export function GetCICDStatus(arg1:string):Promise<app.CICDStatus>;
 
 export function GetContainers():Promise<app.ContainerSummary>;
 
+export function GetDORAMetrics(arg1:string):Promise<app.DORAMetrics>;
+
 export function GetDefaultPath():Promise<string>;
+
+export function GetDeploymentHistory(arg1:string):Promise<Array<app.DeploymentRecord>>;
 
 export function GetDevProcesses():Promise<Array<app.ProcessInfo>>;
 
+export function GetDockerLogs(arg1:string,arg2:number):Promise<string>;
+
+export function GetDockerNetworks():Promise<Array<app.DockerNetworkInfo>>;
+
+export function GetDockerStats():Promise<Array<app.DockerStatsEntry>>;
+
 export function GetDockerStatus():Promise<app.DockerStatus>;
+
+export function GetDockerVolumes():Promise<Array<app.DockerVolumeInfo>>;
 
 export function GetEnvironment():Promise<app.EnvironmentInfo>;
 
+export function GetGitBranches(arg1:string):Promise<Array<app.GitBranchInfo>>;
+
+export function GetGitDiff(arg1:string):Promise<string>;
+
+export function GetGitLog(arg1:string,arg2:number):Promise<string>;
+
+export function GetGitRemotes(arg1:string):Promise<Array<app.GitRemoteInfo>>;
+
+export function GetGitStash(arg1:string):Promise<Array<app.GitStashEntry>>;
+
 export function GetGitSummary():Promise<app.GitSummary>;
 
+export function GetGitTags(arg1:string):Promise<Array<app.GitTagInfo>>;
+
 export function GetInstalledTools():Promise<Array<app.ToolInfo>>;
+
+export function GetK8sConfigMaps(arg1:string):Promise<Array<app.K8sResourceItem>>;
+
+export function GetK8sDeployments(arg1:string):Promise<Array<app.K8sResourceItem>>;
+
+export function GetK8sEvents(arg1:string,arg2:number):Promise<Array<app.K8sEvent>>;
+
+export function GetK8sIngresses(arg1:string):Promise<Array<app.K8sResourceItem>>;
+
+export function GetK8sJobs(arg1:string):Promise<Array<app.K8sResourceItem>>;
+
+export function GetK8sNamespaces():Promise<Array<app.K8sNamespaceInfo>>;
+
+export function GetK8sNodes():Promise<Array<app.K8sResourceItem>>;
+
+export function GetK8sPods(arg1:string):Promise<Array<app.K8sResourceItem>>;
+
+export function GetK8sRollouts(arg1:string):Promise<Array<app.K8sRolloutStatus>>;
+
+export function GetK8sSecrets(arg1:string):Promise<Array<app.K8sResourceItem>>;
+
+export function GetK8sServices(arg1:string):Promise<Array<app.K8sResourceItem>>;
 
 export function GetKubernetesStatus():Promise<app.KubernetesStatus>;
 
@@ -26,11 +100,57 @@ export function GetLocalServers():Promise<Array<app.LocalServer>>;
 
 export function GetPowerShellWorkflows():Promise<Array<string>>;
 
+export function GetReleases(arg1:string):Promise<app.ReleaseHistory>;
+
 export function GetServiceCategories():Promise<Array<app.ServiceCategory>>;
 
 export function GetServiceGroupSummary():Promise<app.ServiceGroupSummary>;
 
 export function GetServices():Promise<Array<app.ServiceEntry>>;
+
+export function GitAdd(arg1:string,arg2:string):Promise<app.CommandResult>;
+
+export function GitCheckout(arg1:string,arg2:string):Promise<app.CommandResult>;
+
+export function GitCommit(arg1:string,arg2:string):Promise<app.CommandResult>;
+
+export function GitCreateBranch(arg1:string,arg2:string):Promise<app.CommandResult>;
+
+export function GitDeleteBranch(arg1:string,arg2:string):Promise<app.CommandResult>;
+
+export function GitFetch(arg1:string,arg2:string):Promise<app.CommandResult>;
+
+export function GitLogExtended(arg1:string,arg2:number,arg3:string):Promise<string>;
+
+export function GitMerge(arg1:string,arg2:string):Promise<app.CommandResult>;
+
+export function GitPull(arg1:string,arg2:string,arg3:string):Promise<app.CommandResult>;
+
+export function GitPush(arg1:string,arg2:string,arg3:string):Promise<app.CommandResult>;
+
+export function GitRebase(arg1:string,arg2:string):Promise<app.CommandResult>;
+
+export function GitStashDrop(arg1:string,arg2:number):Promise<app.CommandResult>;
+
+export function GitStashPop(arg1:string):Promise<app.CommandResult>;
+
+export function GitStashPush(arg1:string,arg2:string):Promise<app.CommandResult>;
+
+export function GitStatus(arg1:string):Promise<app.CommandResult>;
+
+export function GitTagCreate(arg1:string,arg2:string,arg3:string):Promise<app.CommandResult>;
+
+export function GitTagDelete(arg1:string,arg2:string):Promise<app.CommandResult>;
+
+export function K8sDescribeResource(arg1:string,arg2:string,arg3:string):Promise<string>;
+
+export function K8sGetLogs(arg1:string,arg2:string,arg3:string,arg4:number):Promise<string>;
+
+export function K8sRestartDeployment(arg1:string,arg2:string):Promise<app.CommandResult>;
+
+export function K8sRollbackDeployment(arg1:string,arg2:string,arg3:number):Promise<app.CommandResult>;
+
+export function K8sScaleDeployment(arg1:string,arg2:string,arg3:number):Promise<app.K8sScalingResult>;
 
 export function KillProcess(arg1:number):Promise<app.CommandResult>;
 
@@ -38,9 +158,13 @@ export function ListDirectory(arg1:string):Promise<Array<app.FileEntry>>;
 
 export function ReadFile(arg1:string):Promise<string>;
 
+export function RunBuildCommand(arg1:string,arg2:string,arg3:string):Promise<app.CommandResult>;
+
 export function RunCommand(arg1:string):Promise<app.CommandResult>;
 
 export function RunCommandLive(arg1:string,arg2:string):Promise<app.CommandResult>;
+
+export function RunDevOpsDiagnostics():Promise<app.DevOpsDiagResult>;
 
 export function RunPowerShell(arg1:string):Promise<app.CommandResult>;
 

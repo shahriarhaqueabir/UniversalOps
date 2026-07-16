@@ -45,7 +45,7 @@ vendor/
 # Coverage
 coverage.out
 coverage.txt
-cmd/hawkward-gui/nul
+cmd/opsforall-gui/nul
 nul
 test.err
 vet.err

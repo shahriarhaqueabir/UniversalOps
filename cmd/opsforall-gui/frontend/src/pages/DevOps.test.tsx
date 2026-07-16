@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { DevOps } from './DevOps'
@@ -88,23 +88,23 @@ describe('DevOps Page', () => {
     vi.mocked(useBackend).mockReturnValue({ call: mockCall })
     vi.mocked(useQuery).mockImplementation((opts: any) => {
       const key = opts.queryKey[0]
-      if (key === 'devops-services') return { data: mockServices, isLoading: false }
-      if (key === 'devops-docker-status') return { data: { installed: true, running: true, version: '24.0', containers: { running: 1, stopped: 1, failed: 0, total: 2, containers: mockContainers.containers } }, isLoading: false }
-      if (key === 'devops-k8s-status') return { data: null, isLoading: false }
-      if (key === 'devops-service-summary') return { data: null, isLoading: false }
-      if (key === 'devops-dora') return { data: null, isLoading: false }
-      if (key === 'devops-workflows') return { data: null, isLoading: false }
-      if (key === 'devops-containers') return { data: mockContainers, isLoading: false }
-      if (key === 'devops-git') return { data: mockGit, isLoading: false }
-      if (key === 'devops-git-branches') return { data: mockGitBranches, isLoading: false }
-      if (key === 'devops-git-tags') return { data: mockGitTags, isLoading: false }
-      if (key === 'devops-git-stash') return { data: mockGitStash, isLoading: false }
-      if (key === 'devops-git-remotes') return { data: mockGitRemotes, isLoading: false }
-      if (key === 'devops-servers') return { data: mockServers, isLoading: false }
-      if (key === 'devops-env') return { data: mockEnv, isLoading: false }
-      if (key === 'devops-tools') return { data: mockTools, isLoading: false }
-      if (key === 'devops-ai-suggestions') return { data: [], isLoading: false }
-      return { data: undefined, isLoading: false }
+      if (key === 'devops-services') return { data: mockServices, isLoading: false } as any
+      if (key === 'devops-docker-status') return { data: { installed: true, running: true, version: '24.0', containers: { running: 1, stopped: 1, failed: 0, total: 2, containers: mockContainers.containers } }, isLoading: false } as any
+      if (key === 'devops-k8s-status') return { data: null, isLoading: false } as any
+      if (key === 'devops-service-summary') return { data: null, isLoading: false } as any
+      if (key === 'devops-dora') return { data: null, isLoading: false } as any
+      if (key === 'devops-workflows') return { data: null, isLoading: false } as any
+      if (key === 'devops-containers') return { data: mockContainers, isLoading: false } as any
+      if (key === 'devops-git') return { data: mockGit, isLoading: false } as any
+      if (key === 'devops-git-branches') return { data: mockGitBranches, isLoading: false } as any
+      if (key === 'devops-git-tags') return { data: mockGitTags, isLoading: false } as any
+      if (key === 'devops-git-stash') return { data: mockGitStash, isLoading: false } as any
+      if (key === 'devops-git-remotes') return { data: mockGitRemotes, isLoading: false } as any
+      if (key === 'devops-servers') return { data: mockServers, isLoading: false } as any
+      if (key === 'devops-env') return { data: mockEnv, isLoading: false } as any
+      if (key === 'devops-tools') return { data: mockTools, isLoading: false } as any
+      if (key === 'devops-ai-suggestions') return { data: [], isLoading: false } as any
+      return { data: undefined, isLoading: false } as any
     })
     mockCall.mockResolvedValue(null)
   })

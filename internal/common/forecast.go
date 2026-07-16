@@ -9,34 +9,52 @@ import (
 type ForecastEngine struct {
 	values   []float64
 	capacity int
+	head     int // index to the next insert position
+	full     bool
 }
 
 // NewForecastEngine creates a forecast engine with a lookback window.
 func NewForecastEngine(capacity int) *ForecastEngine {
+	if capacity <= 0 {
+		capacity = 10 // fallback
+	}
 	return &ForecastEngine{
-		values:   make([]float64, 0, capacity),
+		values:   make([]float64, capacity),
 		capacity: capacity,
 	}
 }
 
 // Push adds a new observed value.
 func (fe *ForecastEngine) Push(v float64) {
-	if len(fe.values) >= fe.capacity {
-		fe.values = fe.values[1:]
+	fe.values[fe.head] = v
+	fe.head = (fe.head + 1) % fe.capacity
+	if fe.head == 0 {
+		fe.full = true
 	}
-	fe.values = append(fe.values, v)
 }
 
 // Values returns the current observation window.
 func (fe *ForecastEngine) Values() []float64 {
-	out := make([]float64, len(fe.values))
-	copy(out, fe.values)
+	size := fe.head
+	if fe.full {
+		size = fe.capacity
+	}
+	out := make([]float64, size)
+
+	if !fe.full {
+		copy(out, fe.values[:fe.head])
+	} else {
+		// [head...capacity-1] [0...head-1]
+		copy(out, fe.values[fe.head:])
+		copy(out[fe.capacity-fe.head:], fe.values[:fe.head])
+	}
 	return out
 }
 
 // Clear resets the engine.
 func (fe *ForecastEngine) Clear() {
-	fe.values = fe.values[:0]
+	fe.head = 0
+	fe.full = false
 }
 
 // TrendInfo describes the direction and magnitude of a trend.
@@ -59,14 +77,15 @@ const (
 
 // DetectTrend performs linear regression on the current values.
 func (fe *ForecastEngine) DetectTrend() TrendInfo {
-	n := len(fe.values)
+	values := fe.Values()
+	n := len(values)
 	if n < 2 {
 		return TrendInfo{Direction: TrendStable}
 	}
 
 	// Compute means
 	var sumX, sumY float64
-	for i, y := range fe.values {
+	for i, y := range values {
 		x := float64(i)
 		sumX += x
 		sumY += y
@@ -76,7 +95,7 @@ func (fe *ForecastEngine) DetectTrend() TrendInfo {
 
 	// Compute slope (least squares)
 	var num, den float64
-	for i, y := range fe.values {
+	for i, y := range values {
 		x := float64(i)
 		dx := x - meanX
 		dy := y - meanY
@@ -92,7 +111,7 @@ func (fe *ForecastEngine) DetectTrend() TrendInfo {
 
 	// Correlation (Pearson R)
 	var ssRes, ssTot float64
-	for i, y := range fe.values {
+	for i, y := range values {
 		x := float64(i)
 		pred := slope*x + intercept
 		dy := y - meanY
@@ -113,9 +132,9 @@ func (fe *ForecastEngine) DetectTrend() TrendInfo {
 
 	// Percent change (first value to last)
 	changePct := 0.0
-	first := fe.values[0]
+	first := values[0]
 	if first != 0 {
-		changePct = (fe.values[n-1] - first) / math.Abs(first) * 100
+		changePct = (values[n-1] - first) / math.Abs(first) * 100
 	}
 
 	dir := TrendStable
@@ -137,17 +156,24 @@ func (fe *ForecastEngine) DetectTrend() TrendInfo {
 // Predict estimates the value at a future step using the linear trend.
 func (fe *ForecastEngine) Predict(stepsAhead int) float64 {
 	trend := fe.DetectTrend()
-	nextX := float64(len(fe.values) + stepsAhead - 1)
+	size := fe.head
+	if fe.full {
+		size = fe.capacity
+	}
+	nextX := float64(size + stepsAhead - 1)
 	return trend.Slope*nextX + trend.Intercept
 }
 
 // PredictSeries generates a forecast series for the given number of steps.
 func (fe *ForecastEngine) PredictSeries(steps int) []float64 {
 	trend := fe.DetectTrend()
-	n := len(fe.values)
+	size := fe.head
+	if fe.full {
+		size = fe.capacity
+	}
 	out := make([]float64, steps)
 	for i := 0; i < steps; i++ {
-		x := float64(n + i)
+		x := float64(size + i)
 		out[i] = trend.Slope*x + trend.Intercept
 	}
 	return out
@@ -193,11 +219,12 @@ func (fe *ForecastEngine) TimeToThreshold(threshold float64) int {
 	if trend.Slope == 0 {
 		return -1
 	}
-	n := len(fe.values)
+	values := fe.Values()
+	n := len(values)
 	if n == 0 {
 		return -1
 	}
-	lastValue := fe.values[n-1]
+	lastValue := values[n-1]
 	// Only compute if moving toward threshold
 	if trend.Slope > 0 && threshold <= lastValue {
 		return 0 // already past

@@ -4,18 +4,56 @@ import {app} from '../models';
 
 export function DNSLookup(arg1:string,arg2:string,arg3:number):Promise<app.DNSResult>;
 
+export function FlushDNSCache():Promise<app.NetworkActionResult>;
+
+export function GetARPTable():Promise<Array<app.ARPEntryData>>;
+
+export function GetBandwidthHistory():Promise<Array<app.BandwidthSampleData>>;
+
 export function GetConnections():Promise<Array<app.ConnectionInfo>>;
 
 export function GetDefaultGateway():Promise<app.GatewayInfo>;
+
+export function GetFirewallRules():Promise<Array<app.FirewallRuleData>>;
 
 export function GetInterfaces():Promise<Array<app.InterfaceInfo>>;
 
 export function GetNetworkSummary():Promise<app.NetworkSummary>;
 
+export function GetPingStats(arg1:Array<app.PingResultMultiData>):Promise<app.PingStatsData>;
+
 export function GetRecentChanges():Promise<Array<app.NetworkChange>>;
+
+export function GetRoutingTable():Promise<Array<app.RouteEntryData>>;
+
+export function GetVPNStatus():Promise<app.VPNStatusData>;
+
+export function GetWiFiInfo():Promise<app.WiFiInfoData>;
+
+export function ManageFirewallRules(arg1:string,arg2:app.FirewallRuleData):Promise<app.NetworkActionResult>;
+
+export function ManageStaticRoutes(arg1:string,arg2:string,arg3:string,arg4:string):Promise<app.NetworkActionResult>;
 
 export function Ping(arg1:string,arg2:number):Promise<app.PingResult>;
 
+export function PingMultiTarget(arg1:Array<string>,arg2:number):Promise<Array<app.PingResultMultiData>>;
+
 export function PortScan(arg1:string,arg2:Array<number>):Promise<Array<app.PortResult>>;
+
+export function ReverseLookup(arg1:string):Promise<string>;
+
+export function RunNetworkAction(arg1:string,arg2:Record<string, string>):Promise<app.NetworkActionResult>;
+
+export function RunNetworkDiscovery(arg1:string):Promise<app.DiscoveryResultData>;
+
+export function RunNetworkHealthCheck():Promise<app.HealthReportData>;
+
+export function ScanWiFiNetworks():Promise<Array<app.WiFiNetworkData>>;
+
+export function StartMonitoring(arg1:number):Promise<void>;
+
+export function StopMonitoring():Promise<void>;
+
+export function TestDoH(arg1:string):Promise<app.DoHResultData>;
 
 export function Traceroute(arg1:string):Promise<app.TraceResult>;

@@ -6,8 +6,16 @@ export function GetBatteryInfo() {
   return window['go']['app']['SysOps']['GetBatteryInfo']();
 }
 
+export function GetCPUExtended() {
+  return window['go']['app']['SysOps']['GetCPUExtended']();
+}
+
 export function GetCPUInfo() {
   return window['go']['app']['SysOps']['GetCPUInfo']();
+}
+
+export function GetDiskIO() {
+  return window['go']['app']['SysOps']['GetDiskIO']();
 }
 
 export function GetDiskInfo() {
@@ -18,8 +26,20 @@ export function GetGPUInfo() {
   return window['go']['app']['SysOps']['GetGPUInfo']();
 }
 
+export function GetInstalledPackages() {
+  return window['go']['app']['SysOps']['GetInstalledPackages']();
+}
+
+export function GetLoggedInUsers() {
+  return window['go']['app']['SysOps']['GetLoggedInUsers']();
+}
+
 export function GetMemoryInfo() {
   return window['go']['app']['SysOps']['GetMemoryInfo']();
+}
+
+export function GetPerformanceStats() {
+  return window['go']['app']['SysOps']['GetPerformanceStats']();
 }
 
 export function GetProcessTree() {
@@ -30,8 +50,16 @@ export function GetRecommendations() {
   return window['go']['app']['SysOps']['GetRecommendations']();
 }
 
+export function GetScheduledTasks() {
+  return window['go']['app']['SysOps']['GetScheduledTasks']();
+}
+
 export function GetSystemInfo() {
   return window['go']['app']['SysOps']['GetSystemInfo']();
+}
+
+export function GetSystemLogs(arg1, arg2) {
+  return window['go']['app']['SysOps']['GetSystemLogs'](arg1, arg2);
 }
 
 export function GetTopProcesses(arg1) {
@@ -40,4 +68,12 @@ export function GetTopProcesses(arg1) {
 
 export function ListAllProcesses(arg1) {
   return window['go']['app']['SysOps']['ListAllProcesses'](arg1);
+}
+
+export function RunExtendedDiagnostics() {
+  return window['go']['app']['SysOps']['RunExtendedDiagnostics']();
+}
+
+export function RunSystemAction(arg1) {
+  return window['go']['app']['SysOps']['RunSystemAction'](arg1);
 }

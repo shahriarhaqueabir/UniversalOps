@@ -10,6 +10,10 @@ export function Chat(arg1) {
   return window['go']['app']['AIOps']['Chat'](arg1);
 }
 
+export function CreateOpsPersona() {
+  return window['go']['app']['AIOps']['CreateOpsPersona']();
+}
+
 export function DeleteSession(arg1) {
   return window['go']['app']['AIOps']['DeleteSession'](arg1);
 }
@@ -44,6 +48,10 @@ export function GetOllamaStatus() {
 
 export function ListSessions() {
   return window['go']['app']['AIOps']['ListSessions']();
+}
+
+export function PullModel(arg1) {
+  return window['go']['app']['AIOps']['PullModel'](arg1);
 }
 
 export function QuerySystemState(arg1) {

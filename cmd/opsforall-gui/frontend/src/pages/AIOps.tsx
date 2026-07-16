@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Send,
   Trash2,
@@ -19,6 +19,7 @@ import {
   Lightbulb,
 } from 'lucide-react'
 import { format } from 'date-fns'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
@@ -112,6 +113,8 @@ export function AIOps() {
   const { refreshInterval } = useSettingsStore()
   const [activeTab, setActiveTab] = useState<TabId>('ai-chat')
   const setOllamaStatus = useOllamaStore((s) => s.setStatus)
+  const queryClient = useQueryClient()
+  const [initializing, setInitializing] = useState(false)
 
   // Ollama status via react-query
   const { data: ollamaStatusData } = useQuery<OllamaStatus>({
@@ -124,38 +127,65 @@ export function AIOps() {
     retry: false,
   })
 
-  // Sync ollama status to zustand store via effect (not inside queryFn)
   useEffect(() => {
     if (ollamaStatusData) {
       setOllamaStatus(ollamaStatusData)
     }
   }, [ollamaStatusData, setOllamaStatus])
 
-  const ollamaStatus = ollamaStatusData ?? { available: false, model: '', version: '' }
+  const ollamaStatus: OllamaStatus = ollamaStatusData ?? { available: false, binary_exists: false, model: '', version: '' }
+  const isPersonaMissing = ollamaStatus.available && !ollamaStatus.model.startsWith('opsforall')
+
+  const handleInitializePersona = async () => {
+    if (initializing) return
+    setInitializing(true)
+    const tid = toast.loading('Initializing specialized AI persona...')
+    try {
+      await call('AIOps.CreateOpsPersona')
+      toast.success('Persona initialized successfully', { id: tid })
+      queryClient.invalidateQueries({ queryKey: ['ollama-status'] })
+    } catch (err: any) {
+      toast.error(`Initialization failed: ${err.message}`, { id: tid })
+    } finally {
+      setInitializing(false)
+    }
+  }
 
   return (
     <div className="flex flex-col h-full bg-[var(--color-bg)]">
-      <div className="py-4 border-b border-border bg-panel-2 flex items-center justify-between">
+      <div className="py-4 border-b border-border bg-panel-2 flex items-center justify-between px-6">
         <div>
           <h1 className="text-2xl font-bold text-text flex items-center gap-3">
             <BrainCircuit size={32} className="text-accent" />
             AI Operations Analyst
           </h1>
-          <p className="text-text-dim text-lg mt-2">
+          <p className="text-text-dim text-sm mt-1">
             Local intelligence for system diagnostics, trend analysis, and anomaly detection.
           </p>
         </div>
-        <div className="flex items-center gap-4 bg-panel border border-border px-6 py-3 rounded-2xl shadow-inner">
-          <div className="flex items-center gap-2">
-            <div className={cn("w-2 h-2 rounded-full", ollamaStatus.available ? "bg-success animate-pulse shadow-[0_0_8px_var(--color-success)]" : "bg-danger")} />
-            <span className="text-sm font-bold text-text-dim uppercase tracking-widest">
-              {ollamaStatus.available ? 'Ollama Online' : 'Ollama Offline'}
+        <div className="flex items-center gap-4">
+          {isPersonaMissing && (
+            <button
+              onClick={handleInitializePersona}
+              disabled={initializing}
+              className="flex items-center gap-2 px-4 py-2 bg-warning/10 border border-warning/30 text-warning rounded-xl text-xs font-bold hover:bg-warning/20 transition-all disabled:opacity-50"
+            >
+              {initializing ? <RefreshCw size={14} className="animate-spin" /> : <Bot size={14} />}
+              Initialize Persona
+            </button>
+          )}
+          <div className="flex items-center gap-4 bg-panel border border-border px-6 py-3 rounded-2xl shadow-inner">
+            <div className="flex items-center gap-2">
+              <div className={cn("w-2 h-2 rounded-full", ollamaStatus.available ? "bg-success animate-pulse shadow-[0_0_8px_var(--color-success)]" : "bg-danger")} />
+              <span className="text-sm font-bold text-text-dim uppercase tracking-widest">
+                {ollamaStatus.available ? 'Ollama Online' : 'Ollama Offline'}
+              </span>
+            </div>
+            <div className="w-px h-4 bg-border" />
+            <span className="text-sm font-bold text-accent">
+              {ollamaStatus.available ? ollamaStatus.model : (ollamaStatus.error || '—')}
             </span>
           </div>
-          <div className="w-px h-4 bg-border" />
-          <span className="text-sm font-bold text-accent">
-            {ollamaStatus.available ? ollamaStatus.model : (ollamaStatus.error || '—')}
-          </span>
         </div>
       </div>
 

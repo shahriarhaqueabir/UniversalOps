@@ -268,13 +268,13 @@ func RunCommandWithLiveOutput(cmd string, output chan string) (result *ShellResu
 // AllowedPowerShellWorkflows is the list of approved PowerShell workflow commands
 // that may be executed through RunPowerShell.
 var AllowedPowerShellWorkflows = []string{
-	"Invoke-HawkDailyOps",
-	"Invoke-HawkSystemReview",
-	"Invoke-HawkSecurityAudit",
-	"Invoke-HawkNetworkDiagnostics",
-	"Invoke-HawkThreatHunt",
-	"Invoke-HawkChangeAudit",
-	"Invoke-HawkComplianceCheck",
+	"Invoke-OpsDailyOps",
+	"Invoke-OpsSystemReview",
+	"Invoke-OpsSecurityAudit",
+	"Invoke-OpsNetworkDiagnostics",
+	"Invoke-OpsThreatHunt",
+	"Invoke-OpsChangeAudit",
+	"Invoke-OpsComplianceCheck",
 }
 
 // PowerShellProfilePath is the path to the PowerShell profile script.

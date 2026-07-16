@@ -66,15 +66,20 @@ type EventHandler func(TimelineEvent)
 type EventBus struct {
 	mu       sync.RWMutex
 	handlers []EventHandler
-	history  []TimelineEvent // bounded ring buffer for recent events
+	history  []TimelineEvent // circular buffer for recent events
 	capacity int
+	head     int  // index to the next insert position
+	full     bool // true if history has been filled at least once
 }
 
 // NewEventBus creates an event bus that retains up to capacity events.
 func NewEventBus(capacity int) *EventBus {
+	if capacity <= 0 {
+		capacity = 100 // fallback
+	}
 	return &EventBus{
 		capacity: capacity,
-		history:  make([]TimelineEvent, 0, capacity),
+		history:  make([]TimelineEvent, capacity),
 	}
 }
 
@@ -89,11 +94,11 @@ func (eb *EventBus) Subscribe(h EventHandler) {
 func (eb *EventBus) Emit(evt TimelineEvent) {
 	eb.mu.Lock()
 
-	// Ring-buffer append
-	if len(eb.history) >= eb.capacity {
-		eb.history = append(eb.history[1:], evt)
-	} else {
-		eb.history = append(eb.history, evt)
+	// Ring-buffer insert
+	eb.history[eb.head] = evt
+	eb.head = (eb.head + 1) % eb.capacity
+	if eb.head == 0 {
+		eb.full = true
 	}
 
 	// Snapshot handlers under lock
@@ -112,14 +117,23 @@ func (eb *EventBus) Recent(n int) []TimelineEvent {
 	eb.mu.RLock()
 	defer eb.mu.RUnlock()
 
-	if n <= 0 || n > len(eb.history) {
-		n = len(eb.history)
+	size := eb.head
+	if eb.full {
+		size = eb.capacity
 	}
 
-	// Return newest first
+	if n <= 0 || n > size {
+		n = size
+	}
+
 	out := make([]TimelineEvent, n)
 	for i := 0; i < n; i++ {
-		out[i] = eb.history[len(eb.history)-1-i]
+		// Newest is at (head - 1 - i) mod capacity
+		idx := (eb.head - 1 - i)
+		if idx < 0 {
+			idx += eb.capacity
+		}
+		out[i] = eb.history[idx]
 	}
 	return out
 }
@@ -129,8 +143,19 @@ func (eb *EventBus) All() []TimelineEvent {
 	eb.mu.RLock()
 	defer eb.mu.RUnlock()
 
-	out := make([]TimelineEvent, len(eb.history))
-	copy(out, eb.history)
+	size := eb.head
+	if eb.full {
+		size = eb.capacity
+	}
+
+	out := make([]TimelineEvent, size)
+	if !eb.full {
+		copy(out, eb.history[:eb.head])
+	} else {
+		// [head...capacity-1] [0...head-1]
+		copy(out, eb.history[eb.head:])
+		copy(out[eb.capacity-eb.head:], eb.history[:eb.head])
+	}
 	return out
 }
 
@@ -139,10 +164,20 @@ func (eb *EventBus) FilterByCategory(cat EventCategory, n int) []TimelineEvent {
 	eb.mu.RLock()
 	defer eb.mu.RUnlock()
 
+	size := eb.head
+	if eb.full {
+		size = eb.capacity
+	}
+
 	var filtered []TimelineEvent
-	for i := len(eb.history) - 1; i >= 0 && len(filtered) < n; i-- {
-		if eb.history[i].Category == cat {
-			filtered = append(filtered, eb.history[i])
+	for i := 0; i < size && len(filtered) < n; i++ {
+		// Traverse newest to oldest
+		idx := (eb.head - 1 - i)
+		if idx < 0 {
+			idx += eb.capacity
+		}
+		if eb.history[idx].Category == cat {
+			filtered = append(filtered, eb.history[idx])
 		}
 	}
 	return filtered

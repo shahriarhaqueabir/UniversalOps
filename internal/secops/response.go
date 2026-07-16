@@ -6,10 +6,14 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
+
+// AutoExpireWG tracks background goroutines for auto-expire isolation.
+var AutoExpireWG sync.WaitGroup
 
 // ActionResult holds the result of an incident response action.
 type ActionResult struct {
@@ -63,7 +67,9 @@ func isolateHostWindows(autoExpireSeconds int) (*ActionResult, error) {
 	msg := "Host isolated — all inbound and outbound traffic blocked"
 	if autoExpireSeconds > 0 {
 		msg += fmt.Sprintf(" (auto-expires in %d seconds)", autoExpireSeconds)
+		AutoExpireWG.Add(1)
 		go func() {
+			defer AutoExpireWG.Done()
 			time.Sleep(time.Duration(autoExpireSeconds) * time.Second)
 			if _, err := RemoveIsolation(); err != nil {
 				common.LogError("auto-expire isolation failed: %v", err)
@@ -95,7 +101,9 @@ func isolateHostLinux(autoExpireSeconds int) (*ActionResult, error) {
 	msg := "Host isolated — all inbound and outbound traffic dropped"
 	if autoExpireSeconds > 0 {
 		msg += fmt.Sprintf(" (auto-expires in %d seconds)", autoExpireSeconds)
+		AutoExpireWG.Add(1)
 		go func() {
+			defer AutoExpireWG.Done()
 			time.Sleep(time.Duration(autoExpireSeconds) * time.Second)
 			if _, err := RemoveIsolation(); err != nil {
 				common.LogError("auto-expire isolation failed: %v", err)

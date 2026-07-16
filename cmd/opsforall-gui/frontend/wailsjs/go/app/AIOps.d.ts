@@ -8,6 +8,8 @@ export function AskAI(arg1:context.Context,arg2:string):Promise<string>;
 
 export function Chat(arg1:string):Promise<string>;
 
+export function CreateOpsPersona():Promise<void>;
+
 export function DeleteSession(arg1:string):Promise<void>;
 
 export function DetectAnomalies():Promise<Array<app.AnomalyInfo>>;
@@ -25,6 +27,8 @@ export function GetMessages(arg1:string):Promise<Array<app.ConversationMessage>>
 export function GetOllamaStatus():Promise<app.OllamaStatus>;
 
 export function ListSessions():Promise<Array<Record<string, any>>>;
+
+export function PullModel(arg1:string):Promise<void>;
 
 export function QuerySystemState(arg1:string):Promise<string>;
 

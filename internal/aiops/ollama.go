@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -48,7 +50,7 @@ func getEffectiveModel() string {
 
 const (
 	defaultOllamaURL   = "http://localhost:11434"
-	defaultOllamaModel = "agentic-coder"
+	defaultOllamaModel = "opsforall"
 	httpTimeout        = 30 * time.Second
 )
 
@@ -75,6 +77,46 @@ func newClient() *api.Client {
 	return api.NewClient(u, &http.Client{Timeout: httpTimeout})
 }
 
+// CheckOllamaBinary returns true if the ollama binary is found in the system PATH.
+func CheckOllamaBinary() bool {
+	_, err := exec.LookPath("ollama")
+	return err == nil
+}
+
+// PullModel downloads a model from the Ollama library.
+func PullModel(name string, onProgress func(api.ProgressResponse) error) error {
+	client := newClient()
+	req := &api.PullRequest{
+		Model: name,
+	}
+
+	err := client.Pull(context.Background(), req, onProgress)
+	if err != nil {
+		return fmt.Errorf("failed to pull model: %w", err)
+	}
+	return nil
+}
+
+// CreateModel creates a new model from structured parameters.
+// Note: v0.31.2 SDK uses structured fields instead of a raw Modelfile string.
+func CreateModel(name string, from string, system string, parameters map[string]any) error {
+	client := newClient()
+	req := &api.CreateRequest{
+		Model:      name,
+		From:       from,
+		System:     system,
+		Parameters: parameters,
+	}
+
+	err := client.Create(context.Background(), req, func(resp api.ProgressResponse) error {
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create model: %w", err)
+	}
+	return nil
+}
+
 // CheckOllama checks if the Ollama service is available using the typed SDK.
 func CheckOllama() (*OllamaStatus, error) {
 	client := newClient()
@@ -91,8 +133,10 @@ func CheckOllama() (*OllamaStatus, error) {
 		found := false
 		for _, m := range listResp.Models {
 			availableModels = append(availableModels, m.Name)
-			if m.Name == modelName {
+			// Fuzzy match to handle :latest or other tags
+			if m.Name == modelName || strings.HasPrefix(m.Name, modelName+":") {
 				found = true
+				modelName = m.Name // Use the fully qualified name
 			}
 		}
 		if !found {

@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { Sidebar } from './components/layout/Sidebar'
 import { TopBar } from './components/layout/TopBar'
 import { MainContent } from './components/layout/MainContent'
+import { OnboardingModal } from './components/dialogs/OnboardingModal'
 import { useThemeStore, useAlertStore, useSettingsStore } from './stores'
 import type { AlertInfo } from './types'
 
@@ -20,11 +21,32 @@ function getRuntime(): WailsRuntime | null {
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
+  const [onboarded, setOnboarded] = useState<boolean | null>(null)
   const { theme } = useThemeStore()
   const refreshInterval = useSettingsStore((s) => s.refreshInterval)
   const pingCount = useSettingsStore((s) => s.pingCount)
   const dnsTimeout = useSettingsStore((s) => s.dnsTimeout)
   const addAlert = useAlertStore((s) => s.addAlert)
+
+  // Check onboarding status on mount
+  useEffect(() => {
+    const checkOnboarded = async () => {
+      try {
+        const go = (window as any).go
+        const method = go?.app?.App?.IsOnboarded
+        if (method) {
+          const res = await method()
+          setOnboarded(res)
+        } else {
+          // Retry logic or wait for runtime
+          setTimeout(checkOnboarded, 500)
+        }
+      } catch {
+        setOnboarded(true)
+      }
+    }
+    checkOnboarded()
+  }, [])
 
   // Sync all settings to backend whenever they change
   useEffect(() => {
@@ -96,6 +118,7 @@ function App() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[var(--color-bg)] noise-overlay">
+      {onboarded === false && <OnboardingModal onComplete={() => setOnboarded(true)} />}
       <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar currentPage={currentPage} />

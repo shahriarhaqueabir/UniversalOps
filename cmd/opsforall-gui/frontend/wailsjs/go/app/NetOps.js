@@ -6,12 +6,28 @@ export function DNSLookup(arg1, arg2, arg3) {
   return window['go']['app']['NetOps']['DNSLookup'](arg1, arg2, arg3);
 }
 
+export function FlushDNSCache() {
+  return window['go']['app']['NetOps']['FlushDNSCache']();
+}
+
+export function GetARPTable() {
+  return window['go']['app']['NetOps']['GetARPTable']();
+}
+
+export function GetBandwidthHistory() {
+  return window['go']['app']['NetOps']['GetBandwidthHistory']();
+}
+
 export function GetConnections() {
   return window['go']['app']['NetOps']['GetConnections']();
 }
 
 export function GetDefaultGateway() {
   return window['go']['app']['NetOps']['GetDefaultGateway']();
+}
+
+export function GetFirewallRules() {
+  return window['go']['app']['NetOps']['GetFirewallRules']();
 }
 
 export function GetInterfaces() {
@@ -22,16 +38,76 @@ export function GetNetworkSummary() {
   return window['go']['app']['NetOps']['GetNetworkSummary']();
 }
 
+export function GetPingStats(arg1) {
+  return window['go']['app']['NetOps']['GetPingStats'](arg1);
+}
+
 export function GetRecentChanges() {
   return window['go']['app']['NetOps']['GetRecentChanges']();
+}
+
+export function GetRoutingTable() {
+  return window['go']['app']['NetOps']['GetRoutingTable']();
+}
+
+export function GetVPNStatus() {
+  return window['go']['app']['NetOps']['GetVPNStatus']();
+}
+
+export function GetWiFiInfo() {
+  return window['go']['app']['NetOps']['GetWiFiInfo']();
+}
+
+export function ManageFirewallRules(arg1, arg2) {
+  return window['go']['app']['NetOps']['ManageFirewallRules'](arg1, arg2);
+}
+
+export function ManageStaticRoutes(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['NetOps']['ManageStaticRoutes'](arg1, arg2, arg3, arg4);
 }
 
 export function Ping(arg1, arg2) {
   return window['go']['app']['NetOps']['Ping'](arg1, arg2);
 }
 
+export function PingMultiTarget(arg1, arg2) {
+  return window['go']['app']['NetOps']['PingMultiTarget'](arg1, arg2);
+}
+
 export function PortScan(arg1, arg2) {
   return window['go']['app']['NetOps']['PortScan'](arg1, arg2);
+}
+
+export function ReverseLookup(arg1) {
+  return window['go']['app']['NetOps']['ReverseLookup'](arg1);
+}
+
+export function RunNetworkAction(arg1, arg2) {
+  return window['go']['app']['NetOps']['RunNetworkAction'](arg1, arg2);
+}
+
+export function RunNetworkDiscovery(arg1) {
+  return window['go']['app']['NetOps']['RunNetworkDiscovery'](arg1);
+}
+
+export function RunNetworkHealthCheck() {
+  return window['go']['app']['NetOps']['RunNetworkHealthCheck']();
+}
+
+export function ScanWiFiNetworks() {
+  return window['go']['app']['NetOps']['ScanWiFiNetworks']();
+}
+
+export function StartMonitoring(arg1) {
+  return window['go']['app']['NetOps']['StartMonitoring'](arg1);
+}
+
+export function StopMonitoring() {
+  return window['go']['app']['NetOps']['StopMonitoring']();
+}
+
+export function TestDoH(arg1) {
+  return window['go']['app']['NetOps']['TestDoH'](arg1);
 }
 
 export function Traceroute(arg1) {

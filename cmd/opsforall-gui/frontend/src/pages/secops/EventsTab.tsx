@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { History, Clock, AlertTriangle } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
@@ -7,6 +7,7 @@ import { SectionBriefing, MiniStat, StatusBadge } from './components'
 import { EmptyState } from '@/components/ui/EmptyState'
 import type { SecurityEvent, ScheduledTask, PrivilegeEvent, SecTimelineEvent } from '@/types'
 import { cn } from '@/lib/utils'
+import { useVirtualizer } from '@tanstack/react-virtual'
 
 export function EventsTab() {
   const { call } = useBackend()
@@ -52,6 +53,15 @@ export function EventsTab() {
       return cat?.ids?.includes(e.id)
     })
 
+  const parentRef = useRef<HTMLDivElement>(null)
+
+  const rowVirtualizer = useVirtualizer({
+    count: filtered.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 60,
+    overscan: 5,
+  })
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <SectionBriefing
@@ -92,7 +102,7 @@ export function EventsTab() {
 
       {/* Events Table */}
       <div className="bg-panel border border-border rounded-[var(--radius-lg)] overflow-hidden shadow-xl">
-        <div className="max-h-[500px] overflow-y-auto">
+        <div ref={parentRef} className="max-h-[600px] overflow-y-auto">
           {filtered.length === 0 ? (
             <div className="py-12">
               <EmptyState
@@ -102,24 +112,49 @@ export function EventsTab() {
               />
             </div>
           ) : (
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse table-fixed">
               <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border">
                 <tr>
-                  <th className="px-6 py-4 text-xs font-bold text-text-faint uppercase tracking-wider">ID</th>
-                  <th className="px-6 py-4 text-xs font-bold text-text-faint uppercase tracking-wider">Level</th>
-                  <th className="px-6 py-4 text-xs font-bold text-text-faint uppercase tracking-wider">Origin</th>
+                  <th className="w-[100px] px-6 py-4 text-xs font-bold text-text-faint uppercase tracking-wider">ID</th>
+                  <th className="w-[120px] px-6 py-4 text-xs font-bold text-text-faint uppercase tracking-wider">Level</th>
+                  <th className="w-[200px] px-6 py-4 text-xs font-bold text-text-faint uppercase tracking-wider">Origin</th>
                   <th className="px-6 py-4 text-xs font-bold text-text-faint uppercase tracking-wider">Message</th>
                 </tr>
               </thead>
-              <tbody>
-                {filtered.map((e, i) => (
-                  <tr key={i} className={cn('border-b border-border/20 hover:bg-[var(--color-sidebar-hover)]', e.level === 'Error' ? 'bg-danger/5' : '')}>
-                    <td className="px-6 py-4 text-sm font-bold text-text-faint tabular-nums">{e.id}</td>
-                    <td className="px-6 py-4"><StatusBadge status={e.level} /></td>
-                    <td className="px-6 py-4 text-sm text-text truncate max-w-[200px]">{e.provider}</td>
-                    <td className="px-6 py-4 text-sm text-text-dim truncate max-w-md">{e.message}</td>
-                  </tr>
-                ))}
+              <tbody
+                style={{
+                  height: `${rowVirtualizer.getTotalSize()}px`,
+                  width: '100%',
+                  position: 'relative',
+                }}
+              >
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const e = filtered[virtualRow.index]
+                  return (
+                    <tr
+                      key={virtualRow.key}
+                      data-index={virtualRow.index}
+                      ref={rowVirtualizer.measureElement}
+                      className={cn(
+                        'border-b border-border/20 hover:bg-[var(--color-sidebar-hover)]',
+                        e.level === 'Error' ? 'bg-danger/5' : ''
+                      )}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                    >
+                      <td className="px-6 py-4 text-sm font-bold text-text-faint tabular-nums">{e.id}</td>
+                      <td className="px-6 py-4"><StatusBadge status={e.level} /></td>
+                      <td className="px-6 py-4 text-sm text-text truncate">{e.provider}</td>
+                      <td className="px-6 py-4 text-sm text-text-dim truncate">{e.message}</td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           )}

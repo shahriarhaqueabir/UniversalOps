@@ -62,6 +62,23 @@ const ActionButton = memo(function ActionButton({ icon, label, onClick, variant,
   )
 })
 
+const TAB_LIST = [
+  { id: 'overview', label: 'Overview', icon: <Activity size={20} className="text-accent" /> },
+  { id: 'terminal', label: 'Terminal', icon: <Terminal size={20} /> },
+  { id: 'powershell-pro', label: 'PowerShell', icon: <Zap size={20} className="text-warning" /> },
+  { id: 'git', label: 'Git', icon: <GitBranch size={20} /> },
+  { id: 'docker', label: 'Docker', icon: <Container size={20} /> },
+  { id: 'kubernetes', label: 'K8s', icon: <Layers size={20} /> },
+  { id: 'pipelines', label: 'Pipelines', icon: <GanttChart size={20} /> },
+  { id: 'releases', label: 'Releases', icon: <Rocket size={20} /> },
+  { id: 'diagnostics', label: 'Health', icon: <Shield size={20} /> },
+  { id: 'services', label: 'Services', icon: <Server size={20} /> },
+  { id: 'servers', label: 'Servers', icon: <Globe size={20} /> },
+  { id: 'environment', label: 'Env', icon: <Variable size={20} /> },
+  { id: 'file-browser', label: 'Files', icon: <Folder size={20} /> },
+  { id: 'toolbox', label: 'Toolbox', icon: <Wrench size={20} /> },
+] as const
+
 export function DevOps() {
   const [activeTab, setActiveTab] = useState<TabId>('overview')
 
@@ -79,22 +96,7 @@ export function DevOps() {
 
       <Tabs.Root defaultValue="overview" onValueChange={(v) => setActiveTab(v as TabId)} className="flex-1 flex flex-col min-w-0">
         <Tabs.List className="flex border-b border-border bg-panel px-4 overflow-x-auto no-scrollbar">
-          {[
-            { id: 'overview', label: 'Overview', icon: <Activity size={20} className="text-accent" /> },
-            { id: 'terminal', label: 'Terminal', icon: <Terminal size={20} /> },
-            { id: 'powershell-pro', label: 'PowerShell', icon: <Zap size={20} className="text-warning" /> },
-            { id: 'git', label: 'Git', icon: <GitBranch size={20} /> },
-            { id: 'docker', label: 'Docker', icon: <Container size={20} /> },
-            { id: 'kubernetes', label: 'K8s', icon: <Layers size={20} /> },
-            { id: 'pipelines', label: 'Pipelines', icon: <GanttChart size={20} /> },
-            { id: 'releases', label: 'Releases', icon: <Rocket size={20} /> },
-            { id: 'diagnostics', label: 'Health', icon: <Shield size={20} /> },
-            { id: 'services', label: 'Services', icon: <Server size={20} /> },
-            { id: 'servers', label: 'Servers', icon: <Globe size={20} /> },
-            { id: 'environment', label: 'Env', icon: <Variable size={20} /> },
-            { id: 'file-browser', label: 'Files', icon: <Folder size={20} /> },
-            { id: 'toolbox', label: 'Toolbox', icon: <Wrench size={20} /> },
-          ].map((tab) => (
+          {TAB_LIST.map((tab) => (
             <Tabs.Trigger key={tab.id} value={tab.id}
               data-automation-id={`devops-tab-${tab.id}`}
               className={cn(
@@ -568,6 +570,7 @@ function GitTabExpanded() {
 
 function DockerTabExpanded() {
   const { call } = useBackend()
+  const { refreshInterval } = useSettingsStore()
   const [subTab, setSubTab] = useState<'containers' | 'stats' | 'compose' | 'networks' | 'volumes'>('containers')
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState<{ label: string; action: () => void } | null>(null)

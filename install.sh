@@ -1,74 +1,29 @@
 #!/bin/bash
-# OpsForAll Linux/macOS Installer
-# One-liner: curl -fsSL https://opsforall.app/install.sh | sh
+# OpsForAll Installation Script for Linux/macOS
+# Usage: curl -fsSL https://raw.githubusercontent.com/shahriarhaqueabir/AllOpsFull/main/install.sh | bash
 
-set -e
+VERSION="1.3.0"
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
 
-OWNER="shahriarhaqueabir"
-REPO="AllOpsFull"
-BIN_NAME="opsforall"
-
-echo "--- OpsForAll Installer ---"
-
-# 1. Detect OS and Architecture
-OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
-ARCH="$(uname -m)"
-
-case "$ARCH" in
-    x86_64) ARCH="amd64" ;;
-    aarch64|arm64) ARCH="arm64" ;;
-    *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
-esac
-
-case "$OS" in
-    linux) PLATFORM="linux-$ARCH" ;;
-    darwin) PLATFORM="darwin-$ARCH" ;;
-    *) echo "Unsupported OS: $OS"; exit 1 ;;
-esac
-
-# 2. Get latest release version
-echo "Checking for latest release..."
-LATEST_RELEASE=$(curl -s "https://api.github.com/repos/$OWNER/$REPO/releases/latest")
-VERSION=$(echo "$LATEST_RELEASE" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-
-if [ -z "$VERSION" ]; then
-    echo "Failed to fetch latest release version."
-    exit 1
+if [ "$OS" == "darwin" ]; then
+    URL="https://github.com/shahriarhaqueabir/AllOpsFull/releases/download/v$VERSION/opsforall-v$VERSION-darwin-universal"
+else
+    URL="https://github.com/shahriarhaqueabir/AllOpsFull/releases/download/v$VERSION/opsforall-v$VERSION-linux-amd64"
 fi
 
-echo "Found version: $VERSION"
+DEST="/usr/local/bin/opsforall"
 
-# 3. Download binary
-ASSET_NAME="OpsForAll-$VERSION-$PLATFORM"
-DOWNLOAD_URL=$(echo "$LATEST_RELEASE" | grep "browser_download_url" | grep "$ASSET_NAME" | cut -d '"' -f 4)
+echo "Installing OpsForAll v$VERSION..."
 
-# Fallback for dev naming
-if [ -z "$DOWNLOAD_URL" ]; then
-    CLEAN_VERSION=$(echo "$VERSION" | sed 's/^v//')
-    ASSET_NAME="OpsForAll-$CLEAN_VERSION-$PLATFORM"
-    DOWNLOAD_URL=$(echo "$LATEST_RELEASE" | grep "browser_download_url" | grep "$ASSET_NAME" | cut -d '"' -f 4)
+curl -L "$URL" -o opsforall
+chmod +x opsforall
+
+if [ "$EUID" -ne 0 ]; then
+    echo "Requesting sudo to install to $DEST"
+    sudo mv opsforall "$DEST"
+else
+    mv opsforall "$DEST"
 fi
 
-if [ -z "$DOWNLOAD_URL" ]; then
-    echo "Could not find asset $ASSET_NAME in release $VERSION"
-    exit 1
-fi
-
-INSTALL_DIR="$HOME/.local/bin"
-mkdir -p "$INSTALL_DIR"
-DEST_PATH="$INSTALL_DIR/$BIN_NAME"
-
-echo "Downloading OpsForAll to $DEST_PATH..."
-curl -L -o "$DEST_PATH" "$DOWNLOAD_URL"
-chmod +x "$DEST_PATH"
-
-# 4. Check PATH
-if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
-    echo "Adding $INSTALL_DIR to PATH in ~/.bashrc and ~/.zshrc..."
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
-    [ -f "$HOME/.zshrc" ] && echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
-    echo "Please restart your terminal or run 'source ~/.bashrc' to use $BIN_NAME"
-fi
-
-echo -e "\nSuccessfully installed OpsForAll $VERSION!"
-echo "You can now run '$BIN_NAME' from your terminal."
+echo "Installation complete. Type 'opsforall' to start."
