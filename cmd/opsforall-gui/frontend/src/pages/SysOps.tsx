@@ -26,8 +26,6 @@ const SchedulerTab = lazy(() => import('./SysOps/SchedulerTab').then(m => ({ def
 const DiagnosticsTab = lazy(() => import('./SysOps/DiagnosticsTab').then(m => ({ default: m.DiagnosticsTab })))
 const ActionsTab = lazy(() => import('./SysOps/ActionsTab').then(m => ({ default: m.ActionsTab })))
 
-export { Bar } from './SysOps/CpuTab'
-
 type SysOpsCategory = 'system-info' | 'cpu' | 'memory' | 'disk' | 'processes' | 'services' | 'logs' | 'storage' | 'users' | 'performance' | 'packages' | 'scheduler' | 'diagnostics' | 'actions'
 
 interface CategoryDef {
