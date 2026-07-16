@@ -14,6 +14,7 @@ import { useBackend } from '@/hooks/useBackend'
 import { useEvents } from '@/hooks/useEvents'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import { nanoid } from 'nanoid'
 import type {
   CommandResult, ServiceEntry, FileEntry, ToolInfo, ContainerSummary,
@@ -30,22 +31,6 @@ function stripAnsi(text: string): string {
 }
 
 type TabId = 'overview' | 'terminal' | 'powershell-pro' | 'services' | 'file-browser' | 'toolbox' | 'docker' | 'git' | 'servers' | 'environment' | 'kubernetes' | 'pipelines' | 'releases' | 'diagnostics'
-
-const StatusBadge = memo(function StatusBadge({ status, variant }: { status: string; variant?: string }) {
-  const colors: Record<string, string> = {
-    running: 'bg-success/20 text-success',
-    stopped: 'bg-danger/20 text-danger',
-    auto: 'bg-accent/20 text-accent',
-    manual: 'bg-warning/20 text-warning',
-    disabled: 'bg-text-faint/20 text-text-faint',
-  }
-  const v = variant || status
-  return (
-    <span className={cn('px-2 py-0.5 rounded text-xs font-medium border border-current opacity-80', colors[v.toLowerCase()] || 'bg-text-faint/20 text-text-faint')}>
-      {status}
-    </span>
-  )
-})
 
 const ActionButton = memo(function ActionButton({ icon, label, onClick, variant, disabled }: { icon: React.ReactNode; label: string; onClick: () => void; variant?: string; disabled?: boolean }) {
   const colors: Record<string, string> = {
@@ -561,8 +546,8 @@ function GitTabExpanded() {
         </div>
       </div>
 
-      <div className="bg-black border border-border rounded-2xl p-4 overflow-y-auto max-h-48">
-        <pre className="text-xs font-mono text-green-400 leading-relaxed whitespace-pre-wrap">{logOutput}</pre>
+      <div className="bg-[var(--color-terminal-bg)] border border-border rounded-2xl p-4 overflow-y-auto max-h-48">
+        <pre className="text-xs font-mono text-[var(--color-success)] leading-relaxed whitespace-pre-wrap">{logOutput}</pre>
       </div>
     </div>
   )
