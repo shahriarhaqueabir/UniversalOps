@@ -738,10 +738,19 @@ type ChatMessage struct {
 // OllamaStatus holds Ollama service status.
 type OllamaStatus struct {
 	Available       bool     `json:"available"`
+	BinaryExists    bool     `json:"binary_exists"`
 	Model           string   `json:"model"`
 	Version         string   `json:"version"`
 	AvailableModels []string `json:"available_models"`
 	Error           string   `json:"error,omitempty"`
+}
+
+// OllamaProgress holds progress information for Ollama operations.
+type OllamaProgress struct {
+	Status    string  `json:"status"`
+	Percent   float64 `json:"percent"`
+	Total     int64   `json:"total"`
+	Completed int64   `json:"completed"`
 }
 
 // AnomalyInfo holds a detected anomaly.

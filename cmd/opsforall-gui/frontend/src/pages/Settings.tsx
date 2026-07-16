@@ -58,13 +58,14 @@ function SettingRow({ label, description, children }: { label: string; descripti
 // ── Collector Manager ──
 
 function CollectorList({ call }: { call: ReturnType<typeof useBackend>['call'] }) {
+  const { refreshInterval } = useSettingsStore()
   const { data: collectors, refetch } = useQuery<CollectorStatus[]>({
     queryKey: ['collectors'],
     queryFn: async () => {
       const res = await call('App.ListCollectors')
       return (res as CollectorStatus[]) || []
     },
-    refetchInterval: 10000,
+    refetchInterval: refreshInterval,
   })
 
   const toggleEnabled = async (id: string, current: boolean) => {
@@ -498,30 +499,60 @@ export function Settings() {
         </SettingRow>
       </Section>
 
-      {/* ── Reset ── */}
+      {/* ── Management ── */}
       <Section title="Management" icon={<Monitor size={20} />}>
         <div className="space-y-4">
-          <p className="text-sm text-text-faint">
-            Reset all settings to their factory defaults.
-          </p>
-          <button
-            onClick={() => {
-              setRefreshInterval(DEFAULT_SETTINGS.refreshInterval)
-              setPingCount(DEFAULT_SETTINGS.pingCount)
-              setDnsTimeout(DEFAULT_SETTINGS.dnsTimeout)
-              // Overwrite localStorage directly
-              localStorage.setItem('opsforall_refreshInterval', JSON.stringify(DEFAULT_SETTINGS.refreshInterval))
-              localStorage.setItem('opsforall_pingCount', JSON.stringify(DEFAULT_SETTINGS.pingCount))
-              localStorage.setItem('opsforall_dnsTimeout', JSON.stringify(DEFAULT_SETTINGS.dnsTimeout))
-              // Push all defaults to backend
-              call('PipelineAPI.UpdateSettings', DEFAULT_SETTINGS.refreshInterval, 0, DEFAULT_SETTINGS.pingCount, DEFAULT_SETTINGS.dnsTimeout)
-              toast.success('All settings reset to defaults')
-            }}
-            className="px-5 py-2.5 bg-[var(--color-danger)]/10 hover:bg-[var(--color-danger)]/20 text-[var(--color-danger)] text-sm font-semibold rounded-lg border border-[var(--color-danger)]/30 hover:border-[var(--color-danger)]/50 transition-all"
-          >
-            <RotateCcw size={16} className="inline mr-2" />
-            Reset to Defaults
-          </button>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between p-4 rounded-xl bg-panel-2 border border-border">
+              <div>
+                <p className="text-sm font-bold text-text">Factory Reset</p>
+                <p className="text-xs text-text-faint">Clear all settings and restore defaults.</p>
+              </div>
+              <button
+                onClick={() => {
+                  setRefreshInterval(DEFAULT_SETTINGS.refreshInterval)
+                  setPingCount(DEFAULT_SETTINGS.pingCount)
+                  setDnsTimeout(DEFAULT_SETTINGS.dnsTimeout)
+                  localStorage.setItem('opsforall_refreshInterval', JSON.stringify(DEFAULT_SETTINGS.refreshInterval))
+                  localStorage.setItem('opsforall_pingCount', JSON.stringify(DEFAULT_SETTINGS.pingCount))
+                  localStorage.setItem('opsforall_dnsTimeout', JSON.stringify(DEFAULT_SETTINGS.dnsTimeout))
+                  call('PipelineAPI.UpdateSettings', DEFAULT_SETTINGS.refreshInterval, 0, DEFAULT_SETTINGS.pingCount, DEFAULT_SETTINGS.dnsTimeout)
+                  toast.success('All settings reset to defaults')
+                }}
+                className="px-4 py-2 bg-danger/10 hover:bg-danger/20 text-danger text-xs font-bold rounded-lg border border-danger/30 transition-all"
+              >
+                <RotateCcw size={14} className="inline mr-2" />
+                Reset Defaults
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between p-4 rounded-xl bg-panel-2 border border-border">
+              <div>
+                <p className="text-sm font-bold text-text">Onboarding Wizard</p>
+                <p className="text-xs text-text-faint">Re-run the first-time setup experience.</p>
+              </div>
+              <button
+                onClick={async () => {
+                  if (confirm('Are you sure you want to reset onboarding? The app will reload.')) {
+                    // We don't have a direct 'ClearOnboarded' binding yet, but we can add one
+                    // or just use a generic command if DevOps allowed it.
+                    // Better to use the App facade.
+                    try {
+                      // We'll assume the user has access to App.ClearOnboarded once we add it
+                      await call('App.ClearOnboarded')
+                      window.location.reload()
+                    } catch {
+                      toast.error('Failed to reset onboarding')
+                    }
+                  }
+                }}
+                className="px-4 py-2 bg-accent/10 hover:bg-accent/20 text-accent text-xs font-bold rounded-lg border border-accent/30 transition-all"
+              >
+                <RefreshCw size={14} className="inline mr-2" />
+                Reset Onboarding
+              </button>
+            </div>
+          </div>
         </div>
       </Section>
 

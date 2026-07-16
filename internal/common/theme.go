@@ -336,9 +336,9 @@ func ParseThemeName(name string) ThemeName {
 	}
 }
 
-// ThemeFromEnv returns the configured theme from HAWKWARD_THEME.
+// ThemeFromEnv returns the configured theme from OPS_THEME.
 func ThemeFromEnv() ThemeName {
-	return ParseThemeName(os.Getenv("HAWKWARD_THEME"))
+	return ParseThemeName(os.Getenv("OPS_THEME"))
 }
 
 // SetTheme updates the shared common styles for a theme.

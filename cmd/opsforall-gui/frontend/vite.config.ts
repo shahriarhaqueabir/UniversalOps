@@ -3,9 +3,10 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
+import compression from 'vite-plugin-compression'
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), compression()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -17,35 +18,13 @@ export default defineConfig({
         manualChunks: {
           'vendor-recharts': ['recharts'],
           'vendor-radix': [
-            '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu',
-            '@radix-ui/react-tabs', '@radix-ui/react-tooltip',
-            '@radix-ui/react-select', '@radix-ui/react-scroll-area',
-            '@radix-ui/react-progress', '@radix-ui/react-separator',
-            '@radix-ui/react-slider', '@radix-ui/react-switch',
-            '@radix-ui/react-toggle', '@radix-ui/react-collapsible',
-            '@radix-ui/react-avatar',
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-slider',
           ],
           'vendor-motion': ['motion'],
         },
       },
-    },
-  },
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: './src/test/setup.ts',
-    css: true,
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'lcov'],
-      include: ['src/**/*.{ts,tsx}'],
-      exclude: [
-        'src/**/*.test.{ts,tsx}',
-        'src/**/*.d.ts',
-        'src/test/**',
-        'src/types/**',
-        'src/**/index.ts',
-      ],
     },
   },
 })

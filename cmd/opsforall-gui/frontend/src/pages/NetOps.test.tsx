@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { NetOps } from './NetOps'
 import { useQuery } from '@tanstack/react-query'
@@ -36,7 +36,7 @@ describe('NetOps Page', () => {
     vi.clearAllMocks()
 
     vi.mocked(useQuery).mockImplementation(() => {
-      return { data: [], isLoading: false, dataUpdatedAt: Date.now() }
+      return { data: [], isLoading: false, dataUpdatedAt: Date.now() } as any
     })
 
     mockCall.mockImplementation(async (method: string) => {

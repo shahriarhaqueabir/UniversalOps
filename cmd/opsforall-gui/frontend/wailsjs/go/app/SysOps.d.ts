@@ -4,20 +4,38 @@ import {app} from '../models';
 
 export function GetBatteryInfo():Promise<app.BatteryInfo>;
 
+export function GetCPUExtended():Promise<app.CPUExtendedInfo>;
+
 export function GetCPUInfo():Promise<app.CPUInfo>;
+
+export function GetDiskIO():Promise<app.DiskIOData>;
 
 export function GetDiskInfo():Promise<app.DiskInfo>;
 
 export function GetGPUInfo():Promise<app.GPUInfo>;
 
+export function GetInstalledPackages():Promise<Array<app.PackageManagerData>>;
+
+export function GetLoggedInUsers():Promise<Array<app.LoggedInUserData>>;
+
 export function GetMemoryInfo():Promise<app.MemoryInfo>;
+
+export function GetPerformanceStats():Promise<app.PerformanceData>;
 
 export function GetProcessTree():Promise<Array<app.ProcessInfo>>;
 
 export function GetRecommendations():Promise<Array<app.SystemRecommendation>>;
 
+export function GetScheduledTasks():Promise<Array<app.ScheduledTaskData>>;
+
 export function GetSystemInfo():Promise<app.SystemInfo>;
+
+export function GetSystemLogs(arg1:number,arg2:string):Promise<app.SystemLogsResultData>;
 
 export function GetTopProcesses(arg1:number):Promise<Array<app.ProcessInfo>>;
 
 export function ListAllProcesses(arg1:number):Promise<Array<app.ProcessInfo>>;
+
+export function RunExtendedDiagnostics():Promise<app.ExtendedDiagnosticResult>;
+
+export function RunSystemAction(arg1:string):Promise<app.ActionResult>;

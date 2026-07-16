@@ -104,8 +104,8 @@ func TestThemePersistence(t *testing.T) {
 }
 
 func TestThemeFromEnv(t *testing.T) {
-	os.Setenv("HAWKWARD_THEME", "dark")
-	defer os.Unsetenv("HAWKWARD_THEME")
+	os.Setenv("OPS_THEME", "dark")
+	defer os.Unsetenv("OPS_THEME")
 
 	if ThemeFromEnv() != ThemeDark {
 		t.Errorf("ThemeFromEnv() = %q, want dark", ThemeFromEnv())

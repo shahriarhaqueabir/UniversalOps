@@ -865,10 +865,18 @@ export interface ChatMessage {
 
 export interface OllamaStatus {
   available: boolean
+  binary_exists: boolean
   model: string
   version: string
   available_models?: string[]
   error?: string
+}
+
+export interface OllamaProgress {
+  status: string
+  percent: number
+  total: number
+  completed: number
 }
 
 export interface AnomalyInfo {

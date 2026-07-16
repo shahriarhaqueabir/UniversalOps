@@ -10,13 +10,13 @@ import (
 
 func TestIsAllowedWorkflow_Allowed(t *testing.T) {
 	workflows := []string{
-		"Invoke-HawkDailyOps",
-		"Invoke-HawkSystemReview",
-		"Invoke-HawkSecurityAudit",
-		"Invoke-HawkNetworkDiagnostics",
-		"Invoke-HawkThreatHunt",
-		"Invoke-HawkChangeAudit",
-		"Invoke-HawkComplianceCheck",
+		"Invoke-OpsDailyOps",
+		"Invoke-OpsSystemReview",
+		"Invoke-OpsSecurityAudit",
+		"Invoke-OpsNetworkDiagnostics",
+		"Invoke-OpsThreatHunt",
+		"Invoke-OpsChangeAudit",
+		"Invoke-OpsComplianceCheck",
 	}
 	for _, wf := range workflows {
 		if !isAllowedWorkflow(wf) {
@@ -30,9 +30,9 @@ func TestIsAllowedWorkflow_Disallowed(t *testing.T) {
 		"",
 		"Remove-Item -Recurse C:\\",
 		"Get-Process -Name explorer",
-		"Invoke-HawkUnknown",
+		"Invoke-OpsUnknown",
 		"anything",
-		"Invoke-HawkDailyOps; Remove-Item -Recurse C:\\",
+		"Invoke-OpsDailyOps; Remove-Item -Recurse C:\\",
 	}
 	for _, cmd := range cmds {
 		if isAllowedWorkflow(cmd) {
@@ -55,7 +55,7 @@ func TestRunPowerShell_MissingProfileProceeds(t *testing.T) {
 	// Point to a non-existent profile — profile is now optional
 	PowerShellProfilePath = filepath.Join(os.TempDir(), "nonexistent_test_profile.ps1")
 
-	_, err := RunPowerShell("Invoke-HawkDailyOps")
+	_, err := RunPowerShell("Invoke-OpsDailyOps")
 	// The command should proceed past the profile check and attempt execution.
 	// This may fail because PowerShell isn't available in the test environment,
 	// but that proves the profile gate was passed.
@@ -257,7 +257,7 @@ func TestRunPowerShell_ProceedsToSandbox(t *testing.T) {
 	}
 	PowerShellProfilePath = profilePath
 
-	_, err := RunPowerShell("Invoke-HawkDailyOps")
+	_, err := RunPowerShell("Invoke-OpsDailyOps")
 	// The command should proceed past the allowlist and profile checks,
 	// and attempt execution. This may fail because PowerShell isn't
 	// available in the test environment, but that's the OS-layer error

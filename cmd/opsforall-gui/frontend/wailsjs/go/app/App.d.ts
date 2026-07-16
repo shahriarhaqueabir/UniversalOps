@@ -3,9 +3,15 @@
 import {app} from '../models';
 import {common} from '../models';
 
+export function ClearOnboarded():Promise<void>;
+
 export function GetAppInfo():Promise<app.AppInfo>;
 
+export function IsOnboarded():Promise<boolean>;
+
 export function ListCollectors():Promise<Array<common.CollectorStatus>>;
+
+export function MarkOnboarded():Promise<void>;
 
 export function OpenFileDialog(arg1:string,arg2:Array<string>):Promise<string>;
 

@@ -5,11 +5,11 @@ import { act } from 'react'
 describe('useOllamaStore', () => {
   it('should have default state', () => {
     const state = useOllamaStore.getState()
-    expect(state.status).toEqual({ available: false, model: '', version: '' })
+    expect(state.status).toEqual({ available: false, binary_exists: false, model: '', version: '' })
   })
 
   it('should update status', () => {
-    const newStatus = { available: true, model: 'llama3', version: '0.1.0' }
+    const newStatus = { available: true, binary_exists: true, model: 'llama3', version: '0.1.0' }
     act(() => {
       useOllamaStore.getState().setStatus(newStatus)
     })

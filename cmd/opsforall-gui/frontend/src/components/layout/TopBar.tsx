@@ -4,7 +4,7 @@ import { Sun, Moon, Bell, Trash2, RefreshCw, AlertTriangle, AlertOctagon, Info, 
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import type { Page } from '../../App'
-import { useThemeStore, useAlertStore } from '../../stores/useSettingsStore'
+import { useThemeStore, useAlertStore, useSettingsStore } from '../../stores/useSettingsStore'
 import type { AlertInfo } from '@/types'
 
 interface TopBarProps {
@@ -31,6 +31,7 @@ const severityIcon: Record<string, { icon: typeof Info; color: string }> = {
 export function TopBar({ currentPage }: TopBarProps) {
   const { theme, toggle } = useThemeStore()
   const { call } = useBackend()
+  const { refreshInterval } = useSettingsStore()
   const queryClient = useQueryClient()
   const alertCount = useAlertStore((s) => s.alertCount)
   const clearAlerts = useAlertStore((s) => s.clearAlerts)
@@ -45,7 +46,7 @@ export function TopBar({ currentPage }: TopBarProps) {
       return (res as AlertInfo[]) || []
     },
     enabled: showAlertPanel,
-    refetchInterval: showAlertPanel ? 5000 : false,
+    refetchInterval: showAlertPanel ? refreshInterval : false,
   })
 
   const resolveMutation = useMutation({

@@ -1,9 +1,12 @@
 package netops
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
+
+	"golang.org/x/sync/semaphore"
 )
 
 // DiscoveredDevice holds info about a discovered network device.
@@ -41,13 +44,23 @@ func RunNetworkDiscovery(subnet string) DiscoveryResult {
 	if subnet != "" {
 		var mu sync.Mutex
 		var wg sync.WaitGroup
+		sem := semaphore.NewWeighted(32) // Limit concurrency to 32 pings
+		ctx := context.Background()
+
 		for _, host := range generateSubnetHosts(subnet) {
 			if seen[host] {
 				continue
 			}
 			wg.Add(1)
+			if err := sem.Acquire(ctx, 1); err != nil {
+				wg.Done()
+				continue
+			}
+
 			go func(ip string) {
 				defer wg.Done()
+				defer sem.Release(1)
+
 				pingStart := time.Now()
 				pingResult, err := Ping(ip, 1)
 				if err == nil && pingResult.Lost < pingResult.Sent {

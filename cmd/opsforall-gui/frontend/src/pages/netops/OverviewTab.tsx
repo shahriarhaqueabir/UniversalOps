@@ -167,7 +167,7 @@ export function OverviewTab() {
         return null
       }
     },
-    refetchInterval: 30000,
+    refetchInterval: refreshInterval,
     retry: false,
   })
 
@@ -245,7 +245,7 @@ export function OverviewTab() {
         return { resolver: 'N/A', latency: 0, error: 'Lookup failed' }
       }
     },
-    refetchInterval: 30000,
+    refetchInterval: refreshInterval,
     retry: false,
   })
 
@@ -272,7 +272,7 @@ export function OverviewTab() {
         return { summaryText: '', topInterface: '', issues: [] }
       }
     },
-    refetchInterval: 60000,
+    refetchInterval: refreshInterval,
     retry: false,
   })
 

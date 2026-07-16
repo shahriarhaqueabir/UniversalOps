@@ -74,3 +74,55 @@ func TestNewClient(t *testing.T) {
 		t.Fatal("Expected non-nil client")
 	}
 }
+
+func TestCheckOllamaBinary(t *testing.T) {
+	// This function should exist in ollama.go
+	exists := CheckOllamaBinary()
+	// We don't necessarily know if it exists on the host, but the test
+	// serves to verify the function signature and availability.
+	t.Logf("Ollama binary exists: %v", exists)
+}
+
+func TestPullModel_Mock(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/pull" {
+			resp := api.ProgressResponse{Status: "success"}
+			json.NewEncoder(w).Encode(resp)
+		}
+	}))
+	defer server.Close()
+
+	os.Setenv("OLLAMA_HOST", server.URL)
+	defer os.Unsetenv("OLLAMA_HOST")
+
+	var progressCalled bool
+	err := PullModel("test-model", func(p api.ProgressResponse) error {
+		progressCalled = true
+		return nil
+	})
+
+	if err != nil {
+		t.Fatalf("PullModel failed: %v", err)
+	}
+	if !progressCalled {
+		t.Error("Expected progress callback to be called")
+	}
+}
+
+func TestCreateModel_Mock(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/create" {
+			resp := api.ProgressResponse{Status: "success"}
+			json.NewEncoder(w).Encode(resp)
+		}
+	}))
+	defer server.Close()
+
+	os.Setenv("OLLAMA_HOST", server.URL)
+	defer os.Unsetenv("OLLAMA_HOST")
+
+	err := CreateModel("test-persona", "llama3", "You are a test", map[string]any{"temperature": 0.1})
+	if err != nil {
+		t.Fatalf("CreateModel failed: %v", err)
+	}
+}

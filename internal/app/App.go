@@ -173,6 +173,25 @@ func (a *App) GetAppInfo() AppInfo {
 	}
 }
 
+// IsOnboarded returns true if the user has completed the onboarding flow.
+func (a *App) IsOnboarded() bool {
+	return common.IsOnboarded()
+}
+
+// MarkOnboarded marks the onboarding flow as completed.
+func (a *App) MarkOnboarded() {
+	if err := common.MarkOnboarded(); err != nil {
+		common.LogWarn("MarkOnboarded: %v", err)
+	}
+}
+
+// ClearOnboarded removes the onboarding marker, forcing setup on next run.
+func (a *App) ClearOnboarded() {
+	if err := common.ClearOnboarded(); err != nil {
+		common.LogWarn("ClearOnboarded: %v", err)
+	}
+}
+
 // ── Dialogs ─────────────────────────────────────────────────────────────────
 
 // OpenFileDialog shows a file open dialog and returns the selected path.
@@ -484,7 +503,7 @@ func validateOllamaEnv() {
 	}
 	model := os.Getenv("OLLAMA_MODEL")
 	if model == "" {
-		common.LogInfo("OLLAMA_MODEL not set, defaulting to agentic-coder")
+		common.LogInfo("OLLAMA_MODEL not set, defaulting to opsforall")
 	} else {
 		common.LogInfo("OLLAMA_MODEL=%s", model)
 	}

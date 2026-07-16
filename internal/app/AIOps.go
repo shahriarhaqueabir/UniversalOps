@@ -4,13 +4,16 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"os"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
+	"github.com/ollama/ollama/api"
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/aiops"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -94,18 +97,87 @@ func (a *AIOps) GenerateReport(sections []string) string {
 // GetOllamaStatus returns the current Ollama service status.
 func (a *AIOps) GetOllamaStatus() OllamaStatus {
 	status, err := aiops.CheckOllama()
+	binaryExists := aiops.CheckOllamaBinary()
+
 	if err != nil {
 		return OllamaStatus{
-			Available: false,
-			Error:     err.Error(),
+			Available:    false,
+			BinaryExists: binaryExists,
+			Error:        err.Error(),
 		}
 	}
 	return OllamaStatus{
 		Available:       status.Available,
+		BinaryExists:    binaryExists,
 		Model:           status.Model,
 		Version:         status.Version,
 		AvailableModels: status.AvailableModels,
 	}
+}
+
+// PullModel initiates a model pull and emits progress events to the frontend.
+func (a *AIOps) PullModel(modelName string) error {
+	common.LogInfo("AIOps: Pulling model %q", modelName)
+	err := aiops.PullModel(modelName, func(resp api.ProgressResponse) error {
+		if a.app.ctx != nil {
+			percent := 0.0
+			if resp.Total > 0 {
+				percent = float64(resp.Completed) / float64(resp.Total) * 100
+			}
+			runtime.EventsEmit(a.app.ctx, "ollama:progress", OllamaProgress{
+				Status:    resp.Status,
+				Percent:   percent,
+				Total:     resp.Total,
+				Completed: resp.Completed,
+			})
+		}
+		return nil
+	})
+
+	if err != nil {
+		common.LogWarn("AIOps: PullModel failed: %v", err)
+		return err
+	}
+	return nil
+}
+
+// CreateOpsPersona creates the specialized 'opsforall' model from the local Modelfile.
+func (a *AIOps) CreateOpsPersona() error {
+	common.LogInfo("AIOps: Creating opsforall persona")
+
+	// In a real build, we'd find the Modelfile relative to the executable or in assets.
+	// For now, we assume it's in the current working directory as per project root.
+	modelfilePath := "Modelfile"
+
+	// If running via 'wails dev', it might be in the project root.
+	if _, err := os.Stat(modelfilePath); os.IsNotExist(err) {
+		// Try to find it in common locations or from embed if we had it there.
+		// For this implementation, we'll try to find it in the project root.
+		common.LogWarn("AIOps: Modelfile not found at %s", modelfilePath)
+		return fmt.Errorf("Modelfile not found. Please ensure it exists in the application directory.")
+	}
+
+	// Read the base model name from the Modelfile 'FROM' line if we wanted to be dynamic,
+	// but we'll use structured parameters for the SDK v0.31.2.
+
+	// Default values matching our Modelfile:
+	from := "hf.co/empero-ai/Qwythos-9B-Claude-Mythos-5-1M-GGUF:Q6_K"
+	system := "You are the OpsForAll Technical Auditor, a professional system, network, and security intelligence agent.\nYour primary objective is to synthesize complex telemetry into high-density technical briefings.\nMuted industrial tone. Mechanics-first explanation. Zero fluff.\nAnchor all claims in metrics and specific protocol mechanisms."
+	params := map[string]any{
+		"temperature":    0.1,
+		"top_p":          0.95,
+		"repeat_penalty": 1.1,
+		"stop":           []string{"──"},
+	}
+
+	err := aiops.CreateModel("opsforall", from, system, params)
+	if err != nil {
+		common.LogWarn("AIOps: CreateModel failed: %v", err)
+		return err
+	}
+
+	common.LogInfo("AIOps: Successfully created opsforall persona")
+	return nil
 }
 
 // DetectAnomalies performs anomaly detection on pipeline metrics.

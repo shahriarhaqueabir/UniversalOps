@@ -1,6 +1,7 @@
 package netops
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"sort"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"golang.org/x/sync/semaphore"
 )
 
 // PortResult holds the result of a single port scan.
@@ -62,12 +64,22 @@ func ScanPorts(host string, ports []int) ([]PortResult, error) {
 
 	results := make([]PortResult, len(ports))
 	var wg sync.WaitGroup
+	// Limit concurrency to 64 workers
+	sem := semaphore.NewWeighted(64)
+	ctx := context.Background()
 
 	for i, port := range ports {
 		wg.Add(1)
+		if err := sem.Acquire(ctx, 1); err != nil {
+			wg.Done()
+			continue
+		}
+
 		go func(idx int, p int) {
 			defer common.RecoverPanic()
 			defer wg.Done()
+			defer sem.Release(1)
+
 			result := PortResult{
 				Port:    p,
 				Service: serviceFromPort(p),

@@ -269,13 +269,13 @@ func (d *DevOps) GetDefaultPath() string {
 // GetPowerShellWorkflows returns a list of available PowerShell diagnostic workflows.
 func (d *DevOps) GetPowerShellWorkflows() []string {
 	return []string{
-		"Invoke-HawkDailyOps",
-		"Invoke-HawkSystemReview",
-		"Invoke-HawkSecurityAudit",
-		"Invoke-HawkNetworkDiagnostics",
-		"Invoke-HawkThreatHunt",
-		"Invoke-HawkChangeAudit",
-		"Invoke-HawkComplianceCheck",
+		"Invoke-OpsDailyOps",
+		"Invoke-OpsSystemReview",
+		"Invoke-OpsSecurityAudit",
+		"Invoke-OpsNetworkDiagnostics",
+		"Invoke-OpsThreatHunt",
+		"Invoke-OpsChangeAudit",
+		"Invoke-OpsComplianceCheck",
 	}
 }
 
@@ -529,6 +529,25 @@ func parseIntOr(s string, fallback int) int {
 	}
 	return n
 }
+
+// findGitRepos is a helper for testing and internal use.
+func findGitRepos(maxRepos int) []string {
+	return devops.FindGitRepos(maxRepos)
+}
+
+// gitRun is a helper for testing and internal use.
+func gitRun(dir string, args ...string) string {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd.Dir = dir
+	var stdout strings.Builder
+	cmd.Stdout = &stdout
+	_ = cmd.Run()
+	return strings.TrimSpace(stdout.String())
+}
+
 func (d *DevOps) GetGitSummary() GitSummary {
 	summary, err := devops.GetGitSummary()
 	if err != nil {

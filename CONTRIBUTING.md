@@ -1,10 +1,10 @@
-# Contributing to Hawkward
+# Contributing to OpsForAll
 
-Thank you for considering contributing to Hawkward! This document outlines the process for contributing to the project.
+Thank you for considering contributing to OpsForAll! This document outlines the process for contributing to the project.
 
 ## Code of Conduct
 
-Be respectful, constructive, and inclusive. We're all here to build something useful.
+Be respectful, constructive, and inclusive.
 
 ## Prerequisites
 
@@ -15,7 +15,7 @@ Be respectful, constructive, and inclusive. We're all here to build something us
 ## Getting Started
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/your-username/hawkward.git`
+2. Clone your fork: `git clone https://github.com/your-username/opsforall.git`
 3. Create a branch: `git checkout -b feat/your-feature-name`
 
 ## Development Workflow
@@ -23,7 +23,6 @@ Be respectful, constructive, and inclusive. We're all here to build something us
 ### Quick Start
 
 ```bash
-cd AllOpsFull
 wails dev        # development with hot-reload
 wails build      # production binary
 ```
@@ -32,41 +31,34 @@ wails build      # production binary
 
 ```bash
 go test ./internal/...                                          # backend tests
-cd cmd/hawkward-gui/frontend && npm test                        # frontend tests
-cd cmd/hawkward-gui/frontend && npx tsc --noEmit                # type check
+npm test --prefix cmd/opsforall-gui/frontend                    # frontend tests
+npx tsc --noEmit --project cmd/opsforall-gui/frontend           # type check
 ```
 
 ### Linting
 
 ```bash
 golangci-lint run ./...
-cd cmd/hawkward-gui/frontend && npm run lint
+npm run lint --prefix cmd/opsforall-gui/frontend
 ```
 
 ## Pull Request Guidelines
 
-- Follow the existing code style (run `gofmt` and `goimports`)
+- Follow the existing technical style
 - Write tests for new functionality
 - Update documentation where applicable
-- Keep commits small and focused
 - Use [Conventional Commits](https://www.conventionalcommits.org/) format
 
 ### Commit Format
 
 ```
 <type>(<scope>): <description>
-
-[optional body]
 ```
 
 Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 Scopes: `sysops`, `netops`, `secops`, `devops`, `aiops`, `common`, `frontend`, `docs`
 
 ## Project Structure
-
-See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for a detailed overview.
-
-Key directories:
 
 ```
 AllOpsFull/
@@ -79,25 +71,20 @@ AllOpsFull/
 │   ├── secops/              ← Security operations
 │   ├── devops/              ← Shell/services/file ops
 │   └── aiops/               ← AI operations (Ollama)
-├── cmd/hawkward-gui/
+├── cmd/opsforall-gui/
 │   └── frontend/            ← React + Vite + Tailwind
-├── scripts/                 ← Build & release scripts
 └── docs/                    ← Documentation
 ```
 
 ## Coding Standards
 
-- **Go**: Follow standard Go project layout, error wrapping, idiomatic Go patterns. Use `common.LogInfo` for logging.
-- **Frontend**: React + TypeScript with `camelCase` naming, Tailwind v4 utility classes, Lucide React icons, Recharts for charts, Radix UI primitives.
-- Follow existing patterns in each subsystem rather than introducing new styles.
+- **Go**: Follow standard Go project layout and idiomatic patterns. Use `common.LogInfo` for logging.
+- **Frontend**: React + TypeScript with Tailwind v4 and Radix UI.
+- **Database**: Use `ops_core.db` for all persistent storage logic.
 
 ## Security
 
-- Never commit secrets, tokens, or credentials
-- Use environment variables for configuration
-- All command execution must go through the sandbox layer
-- Report vulnerabilities by opening an issue
-
-## Questions?
-
-Open an issue or start a discussion. We're happy to help!
+- All processing must remain local.
+- Never commit secrets or credentials.
+- Command execution must go through the sandbox layer.
+- Report vulnerabilities by opening an issue.

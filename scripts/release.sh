@@ -1,33 +1,32 @@
-#!/bin/sh
-set -eu
+#!/bin/bash
+VERSION=$1
+if [ -z "$VERSION" ]; then
+  echo "Usage: ./release.sh <version>"
+  exit 1
+fi
 
-VERSION="${1:-dev}"
-OUTPUT_DIR="${2:-dist}"
+PLATFORMS=("windows/amd64" "linux/amd64" "darwin/universal")
 
-mkdir -p "$OUTPUT_DIR"
+for p in "${PLATFORMS[@]}"; do
+  IFS="/" read -r goos goarch <<< "$p"
+  ext=""
+  if [ "$goos" == "windows" ]; then ext=".exe"; fi
+  name="opsforall-${VERSION}-${goos}-${goarch}${ext}"
 
-build_target() {
-  goos="$1"
-  goarch="$2"
-  ext="$3"
-  name="hawkward-${VERSION}-${goos}-${goarch}${ext}"
-  echo "Building ${name}"
-  wails build -platform "${goos}/${goarch}" -trimpath -ldflags="-s -w" -o "${OUTPUT_DIR}/${name}"
-}
+  echo "Building for $p..."
+  wails build -platform "$p" -o "$name"
 
-build_target windows amd64 .exe
-build_target linux amd64 ""
-build_target darwin amd64 ""
-build_target darwin arm64 ""
-
-(
-  cd "$OUTPUT_DIR"
-  if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum hawkward-"${VERSION}"-* > checksums.txt
-  else
-    shasum -a 256 hawkward-"${VERSION}"-* > checksums.txt
+  if [ $? -ne 0 ]; then
+    echo "Build failed for $p"
+    exit 1
   fi
-)
+done
 
-echo "Release artifacts written to ${OUTPUT_DIR}"
-echo "Checksums written to ${OUTPUT_DIR}/checksums.txt"
+# Generate checksums
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  sha256sum opsforall-"${VERSION}"-* > checksums.txt
+else
+  shasum -a 256 opsforall-"${VERSION}"-* > checksums.txt
+fi
+
+echo "Builds and checksums complete."
