@@ -31,6 +31,8 @@ import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import type { LogEntry, LogStats, LogTimelinePoint, LogSummary } from '@/types'
 import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
+import { SearchInput } from '@/components/ui/SearchInput'
+import { Panel } from '@/components/ui/Panel'
 
 // ── Constants ──
 const ROW_HEIGHT = 76          // px per collapsed row
@@ -141,7 +143,7 @@ function OverviewTab() {
       <DataFreshnessIndicator lastUpdated={statsUpdatedAt ? new Date(statsUpdatedAt) : null} />
 
       {/* ── Log Volume Cards ── */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {[
           { label: 'Today', value: stats?.totalToday ?? 0, icon: <LayoutList size={20} />, color: 'var(--color-accent)' },
           { label: 'This Hour', value: stats?.totalThisHour ?? 0, icon: <Clock size={20} />, color: 'var(--color-success)' },
@@ -163,7 +165,7 @@ function OverviewTab() {
       </div>
 
       {/* ── Timeline Chart ── */}
-      <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-xl p-6">
+      <Panel padding="md">
         <h3 className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider mb-4">Log Volume Timeline (24h)</h3>
         {timeline.length === 0 ? (
           <p className="text-sm text-[var(--color-text-faint)] italic text-center py-8">No timeline data available.</p>
@@ -212,10 +214,10 @@ function OverviewTab() {
             </ResponsiveContainer>
           </div>
         )}
-      </div>
+      </Panel>
 
       {/* ── AI Summary ── */}
-      <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-xl p-6">
+      <Panel padding="md">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'color-mix(in srgb, var(--color-accent) 15%, transparent)', color: 'var(--color-accent)' }}>
             <Brain size={20} />
@@ -246,10 +248,10 @@ function OverviewTab() {
             </div>
           </div>
         )}
-      </div>
+      </Panel>
 
       {/* ── Error Breakdown ── */}
-      <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-xl p-6">
+      <Panel padding="md">
         <h3 className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider mb-4">Level Breakdown</h3>
         <div className="space-y-3">
           {[
@@ -275,11 +277,11 @@ function OverviewTab() {
             </div>
           ))}
         </div>
-      </div>
+      </Panel>
 
       <div className="grid grid-cols-2 gap-4">
         {/* ── Top Sources ── */}
-        <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-xl p-6">
+        <Panel padding="md">
           <h3 className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider mb-4">Top Sources</h3>
           {(stats?.topSources ?? []).length === 0 ? (
             <p className="text-sm text-[var(--color-text-faint)] italic">No source data available.</p>
@@ -293,10 +295,10 @@ function OverviewTab() {
               ))}
             </div>
           )}
-        </div>
+        </Panel>
 
         {/* ── Trending Errors ── */}
-        <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-xl p-6">
+        <Panel padding="md">
           <h3 className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider mb-4 flex items-center gap-2">
             <AlertOctagon size={16} className="text-[var(--color-danger)]" />
             Trending Errors
@@ -316,7 +318,7 @@ function OverviewTab() {
               ))}
             </div>
           )}
-        </div>
+        </Panel>
       </div>
     </div>
   )
@@ -400,15 +402,8 @@ function LiveStreamTab() {
     <>
       {/* ── Toolbar ── */}
       <div className="border-b border-[var(--color-border)] px-6 py-3 bg-[var(--color-panel)] flex items-center gap-4 flex-wrap">
-        <div className="relative group flex-1 max-w-md">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)] group-focus-within:text-[var(--color-accent)] transition-colors" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search live stream..."
-            className="w-full bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-lg pl-10 pr-3 py-2 text-sm text-[var(--color-text)] placeholder-[var(--color-text-faint)] focus:outline-none focus:border-[var(--color-accent)]"
-          />
+        <div className="flex-1 max-w-md">
+          <SearchInput size="sm" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search live stream..." />
         </div>
 
         <DataFreshnessIndicator lastUpdated={logsUpdatedAt ? new Date(logsUpdatedAt) : null} />

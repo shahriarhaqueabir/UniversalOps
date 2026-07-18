@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import type { DNSResult } from '@/types'
 import { SectionBriefing } from '@/components/ui/SectionBriefing'
+import { SearchInput } from '@/components/ui/SearchInput'
 
 export function DnsTab() {
   const { call } = useBackend()
@@ -45,31 +46,26 @@ export function DnsTab() {
           "MX-Records: Confirm mail routing topology."
         ]}
       />
-      <div className="flex items-center gap-6 bg-panel-2 border border-border p-6 rounded-[var(--radius-lg)] shadow-inner">
-        <div className="relative group flex-[2]">
-          <Search size={24} className="absolute left-5 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-accent transition-colors" />
-          <input
-            type="text"
-            value={dnsHost}
-            onChange={(e) => setDnsHost(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleDns()}
-            className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-3 text-sm font-medium text-[var(--color-text)] placeholder-[var(--color-text-faint)] focus:outline-none focus:border-accent shadow-xl"
-            placeholder="Hostname (e.g. google.com)"
-          />
-        </div>
-        <div className="relative group flex-1">
-          <Server size={24} className="absolute left-5 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-accent transition-colors" />
-          <input
-            type="text"
-            value={dnsServer}
-            onChange={(e) => setDnsServer(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleDns()}
-            className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-5 text-lg font-bold text-text placeholder-text-faint focus:outline-none focus:border-accent shadow-xl"
-            placeholder="Resolver (e.g. 8.8.8.8)"
-          />
-        </div>
-        <button onClick={handleDns} disabled={dnsLoading} className="flex items-center gap-3 px-5 py-2.5 bg-[var(--color-accent)] text-white text-sm font-semibold rounded-xl hover:bg-accent/90 shadow-xl transition-all">
-          {dnsLoading ? <RefreshCw size={24} className="animate-spin" /> : <Search size={24} />}
+      <div className="flex items-center gap-4 bg-[var(--color-panel-2)] border border-[var(--color-border)] p-5 rounded-[var(--radius-lg)]">
+        <SearchInput
+          size="lg"
+          value={dnsHost}
+          onChange={(e) => setDnsHost(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleDns()}
+          placeholder="Hostname (e.g. google.com)"
+          className="flex-[2]"
+        />
+        <SearchInput
+          size="lg"
+          icon={<Server size={18} />}
+          value={dnsServer}
+          onChange={(e) => setDnsServer(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleDns()}
+          placeholder="Resolver (e.g. 8.8.8.8)"
+          className="flex-1"
+        />
+        <button onClick={handleDns} disabled={dnsLoading} className="flex items-center gap-2 px-5 py-2.5 bg-[var(--color-accent)] text-white text-sm font-bold rounded-xl hover:bg-[var(--color-accent)]/90 transition-all h-12 shrink-0">
+          {dnsLoading ? <RefreshCw size={16} className="animate-spin" /> : <Search size={16} />}
           {dnsLoading ? 'RESOLVING...' : 'RESOLVE'}
         </button>
       </div>

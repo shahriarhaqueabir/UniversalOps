@@ -7,6 +7,9 @@ import { useBackend } from '@/hooks/useBackend'
 
 vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn(),
+  useQueryClient: vi.fn(() => ({
+    invalidateQueries: vi.fn(),
+  })),
 }))
 
 vi.mock('@/hooks/useBackend', () => ({
@@ -52,6 +55,7 @@ describe('AIOps Page', () => {
       }
       if (key === 'anomalies') return { data: mockAnomalies, isLoading: false } as any
       if (key === 'ai-insights') return { data: mockInsights, isLoading: false } as any
+      if (key === 'dashboard-mini') return { data: { cpu: { value: 45 }, memory: { value: 62 }, disk: { value: 55 } }, isLoading: false } as any
       return { data: { available: true, binary_exists: true, model: 'opsforall', version: '1.0' }, isLoading: false, refetch: vi.fn() } as any
     })
     mockCall.mockResolvedValue(null)

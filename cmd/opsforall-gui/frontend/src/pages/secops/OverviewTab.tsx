@@ -6,6 +6,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { SectionBriefing } from '@/components/ui/SectionBriefing'
 import { MiniStat } from '@/components/ui/MiniStat'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { Panel } from '@/components/ui/Panel'
 import type { SecurityScore, DefenderStatus, FirewallStatus, UserInfo, ListeningPort, SecurityEvent } from '@/types'
 
 export function OverviewTab() {
@@ -62,7 +63,7 @@ export function OverviewTab() {
 
       {/* Score */}
       {score && (
-        <div className="bg-panel border border-border rounded-[2.5rem] p-10 shadow-2xl flex items-center gap-12 group overflow-hidden relative">
+        <Panel padding="lg" category="security" className="flex items-center gap-12 group overflow-hidden relative">
           <div className={cn(
             "absolute top-0 right-0 w-64 h-64 opacity-5 rounded-bl-full pointer-events-none transition-opacity group-hover:opacity-10",
             gradeColor[score.grade]?.replace('text-', 'bg-') || 'bg-danger'
@@ -74,7 +75,7 @@ export function OverviewTab() {
               Grade {score.grade}
             </p>
           </div>
-          <div className="flex-1 grid grid-cols-3 gap-6 relative z-10">
+          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
             {Object.entries(score.breakdown).map(([cat, val]) => (
               <div key={cat} className="bg-panel-2 border border-border rounded-2xl p-5 hover:border-accent/40 transition-colors group/card">
                 <p className="text-[10px] font-black text-text-faint uppercase tracking-[0.2em] mb-2">{cat}</p>
@@ -91,7 +92,7 @@ export function OverviewTab() {
               </div>
             ))}
           </div>
-        </div>
+        </Panel>
       )}
 
       {/* Quick Stats */}
@@ -105,7 +106,7 @@ export function OverviewTab() {
       {/* Defender & Firewall Status */}
       <div className="grid grid-cols-2 gap-8">
         {defender && (
-          <div className="bg-panel border border-border rounded-[2rem] p-10 shadow-xl group">
+          <Panel padding="lg" category="security" className="group">
             <h3 className="text-lg font-black text-text uppercase tracking-[0.2em] mb-8 flex items-center gap-4">
               <div className="p-2 rounded-xl bg-accent/10 border border-accent/20">
                 <ShieldCheck size={24} className="text-accent" />
@@ -125,11 +126,11 @@ export function OverviewTab() {
                 </div>
               ))}
             </div>
-          </div>
+          </Panel>
         )}
 
         {fwStatus && (
-          <div className="bg-panel border border-border rounded-[2rem] p-10 shadow-xl group">
+          <Panel padding="lg" category="security" className="group">
             <h3 className="text-lg font-black text-text uppercase tracking-[0.2em] mb-8 flex items-center gap-4">
               <div className="p-2 rounded-xl bg-warning/10 border border-warning/20">
                 <ShieldAlert size={24} className="text-warning" />
@@ -148,13 +149,13 @@ export function OverviewTab() {
                 </div>
               ))}
             </div>
-          </div>
+          </Panel>
         )}
       </div>
 
       {/* Recommendations */}
       {score && score.recommendations.length > 0 && (
-        <div className="bg-panel border border-border rounded-[2rem] p-10 shadow-xl">
+        <Panel padding="lg" category="security">
           <h3 className="text-lg font-black text-text uppercase tracking-[0.2em] mb-8 flex items-center gap-4">
             <div className="p-2 rounded-xl bg-warning/10 border border-warning/20">
               <Zap size={24} className="text-warning" />
@@ -169,7 +170,7 @@ export function OverviewTab() {
               </div>
             ))}
           </div>
-        </div>
+        </Panel>
       )}
     </div>
   )

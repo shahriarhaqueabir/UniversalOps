@@ -49,6 +49,8 @@ describe('SecOps Page', () => {
       if (key === 'secops-timeline') return { data: [], isLoading: false } as any
       if (key === 'secops-hardening') return { data: [], isLoading: false } as any
       if (key === 'secops-ssh-config') return { data: null, isLoading: false } as any
+      if (key === 'secops-firewall-rules') return { data: [], isLoading: false } as any
+      if (key === 'secops-listening-ports') return { data: [], isLoading: false } as any
       return { data: null, isLoading: false } as any
     })
     mockCall.mockResolvedValue(null)
@@ -72,7 +74,7 @@ describe('SecOps Page', () => {
     render(<SecOps />)
     expect(screen.getByText('Overview')).toBeInTheDocument()
     expect(screen.getByText('Identity & Access')).toBeInTheDocument()
-    expect(screen.getByText('Network Security')).toBeInTheDocument()
+    expect(screen.getByText('Perimeter Security')).toBeInTheDocument()
     expect(screen.getByText('Endpoint Security')).toBeInTheDocument()
     expect(screen.getByText('Log & Events')).toBeInTheDocument()
     expect(screen.getByText('Security Hardening')).toBeInTheDocument()
@@ -103,9 +105,9 @@ describe('SecOps Page', () => {
 
   it('navigates to Network Security sidebar category', async () => {
     render(<SecOps />)
-    fireEvent.click(screen.getByText('Network Security'))
+    fireEvent.click(screen.getByText('Perimeter Security'))
     await waitFor(() => {
-      expect(screen.getByText('Network Security', { selector: 'h3' })).toBeInTheDocument()
+      expect(screen.getByText('Perimeter Security', { selector: 'h3' })).toBeInTheDocument()
     })
   })
 

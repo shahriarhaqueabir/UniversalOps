@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import type { PortResult } from '@/types'
 import { SectionBriefing } from '@/components/ui/SectionBriefing'
+import { SearchInput } from '@/components/ui/SearchInput'
 
 export function PortScanTab() {
   const { call } = useBackend()
@@ -47,30 +48,26 @@ export function PortScanTab() {
       />
 
       {/* Input + Scan Button */}
-      <div className="flex items-center gap-6 bg-panel-2 border border-border p-6 rounded-[var(--radius-lg)] shadow-inner">
-        <div className="relative group flex-1">
-          <Globe size={24} className="absolute left-5 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-accent transition-colors" />
-          <input
-            type="text"
-            value={portScanTarget}
-            onChange={(e) => setPortScanTarget(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handlePortScan()}
-            placeholder="Target hostname or IP"
-            className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-3 text-sm font-medium text-[var(--color-text)] placeholder-[var(--color-text-faint)] focus:outline-none focus:border-accent shadow-xl"
-          />
-        </div>
-        <div className="relative group w-96">
-          <Network size={24} className="absolute left-5 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-accent transition-colors" />
-          <input
-            type="text"
-            value={portScanPorts}
-            onChange={(e) => setPortScanPorts(e.target.value)}
-            placeholder="Ports (e.g. 80,443,8080 or comma-separated)"
-            className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-5 text-lg font-bold text-text placeholder-text-faint focus:outline-none focus:border-accent shadow-xl"
-          />
-        </div>
-        <button onClick={handlePortScan} disabled={portScanLoading} className="flex items-center gap-3 px-5 py-2.5 bg-[var(--color-accent)] text-white text-sm font-semibold rounded-xl hover:bg-accent/90 shadow-xl transition-all disabled:opacity-50">
-          {portScanLoading ? <RefreshCw size={24} className="animate-spin" /> : <Search size={24} />}
+      <div className="flex items-center gap-4 bg-[var(--color-panel-2)] border border-[var(--color-border)] p-5 rounded-[var(--radius-lg)]">
+        <SearchInput
+          size="lg"
+          icon={<Globe size={18} />}
+          value={portScanTarget}
+          onChange={(e) => setPortScanTarget(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handlePortScan()}
+          placeholder="Target hostname or IP"
+          className="flex-1"
+        />
+        <SearchInput
+          size="lg"
+          icon={<Network size={18} />}
+          value={portScanPorts}
+          onChange={(e) => setPortScanPorts(e.target.value)}
+          placeholder="Ports (e.g. 80,443,8080)"
+          className="w-80"
+        />
+        <button onClick={handlePortScan} disabled={portScanLoading} className="flex items-center gap-2 px-5 py-2.5 bg-[var(--color-accent)] text-white text-sm font-bold rounded-xl hover:bg-[var(--color-accent)]/90 transition-all h-12 shrink-0 disabled:opacity-50">
+          {portScanLoading ? <RefreshCw size={16} className="animate-spin" /> : <Search size={16} />}
           {portScanLoading ? 'SCANNING...' : 'SCAN'}
         </button>
       </div>

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Users } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { Panel } from '@/components/ui/Panel'
 import type { LoggedInUserData } from '@/types'
 
 export function UsersTab() {
@@ -16,7 +17,7 @@ export function UsersTab() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-8 shadow-2xl">
+      <Panel variant="elevated" padding="lg" category="system">
         <div className="flex items-center gap-3 mb-6">
           <Users size={20} className="text-[var(--color-success)]" />
           <h3 className="text-lg font-bold text-[var(--color-text)] uppercase tracking-widest">Active Users</h3>
@@ -36,7 +37,7 @@ export function UsersTab() {
             ))}
           </div>
         )}
-      </div>
+      </Panel>
     </div>
   )
 }

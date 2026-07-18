@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ShieldOff, Skull, Ban, Lock, Camera, Download } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
 import { SectionBriefing } from '@/components/ui/SectionBriefing'
+import { Panel } from '@/components/ui/Panel'
 import { ConfirmationModal } from '@/components/dialogs/ConfirmationModal'
 import type { SecActionResult, ActionPreview } from '@/types'
 
@@ -63,7 +64,7 @@ export function ResponseTab() {
       />
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <button
           onClick={() => requestAction('isolate')}
           className="bg-panel border border-danger/30 rounded-[var(--radius-lg)] p-8 shadow-xl text-left hover:bg-danger/5 transition-all group active:scale-95"
@@ -93,9 +94,9 @@ export function ResponseTab() {
       </div>
 
       {/* Targeted Actions */}
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl">
+      <Panel padding="lg" category="security">
         <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6">Targeted Actions</h3>
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Block IP */}
           <div className="bg-panel-2 border border-border rounded-xl p-6">
             <Ban size={24} className="text-danger mb-4" />
@@ -156,7 +157,7 @@ export function ResponseTab() {
             </button>
           </div>
         </div>
-      </div>
+      </Panel>
 
       {/* Result */}
       {lastResult && (

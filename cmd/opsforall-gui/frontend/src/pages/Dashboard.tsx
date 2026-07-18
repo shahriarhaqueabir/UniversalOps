@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, memo } from 'react'
+import { useState, useMemo, memo } from 'react'
 import { motion } from 'motion/react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { useQuery } from '@tanstack/react-query'
@@ -35,11 +35,11 @@ import {
   CartesianGrid,
 } from 'recharts'
 import { useBackend } from '@/hooks/useBackend'
-import { useEvents } from '@/hooks/useEvents'
 import { useSettingsStore, useMetricsStore } from '@/stores'
 import { cn } from '@/lib/utils'
 import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
-import type { DashboardData, TimeSeriesPoint } from '@/types'
+import { Panel } from '@/components/ui/Panel'
+import type { DashboardData } from '@/types'
 import type { Page } from '@/App'
 
 /* ── Dashboard Backend Types ── */
@@ -114,7 +114,7 @@ function formatBytes(bytes: number): string {
 
 function AnalystBriefing({ title, objective, redFlags }: { title: string, objective: string, redFlags: string[] }) {
   return (
-    <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-5 shadow-lg group hover:border-[var(--color-accent)]/30 transition-all flex flex-col h-full">
+    <Panel padding="md" className="group hover:border-[var(--color-accent)]/30 flex flex-col h-full">
       <div className="flex items-center gap-3 mb-6">
         <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent shadow-sm group-hover:scale-110 transition-transform">
           <Target size={20} />
@@ -143,7 +143,7 @@ function AnalystBriefing({ title, objective, redFlags }: { title: string, object
           </div>
         </div>
       </div>
-    </div>
+    </Panel>
   )
 }
 
@@ -436,7 +436,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
     <div className="space-y-12 animate-pulse p-8">
       <div className="h-10 w-64 bg-panel-2 rounded-xl" />
       <div className="h-48 bg-panel-2 rounded-[28px]" />
-      <div className="grid grid-cols-3 gap-8"><div className="h-48 bg-panel-2 rounded-[24px]" /><div className="h-48 bg-panel-2 rounded-[24px]" /><div className="h-48 bg-panel-2 rounded-[24px]" /></div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8"><div className="h-48 bg-panel-2 rounded-[24px]" /><div className="h-48 bg-panel-2 rounded-[24px]" /><div className="h-48 bg-panel-2 rounded-[24px]" /></div>
     </div>
   )
 
@@ -492,7 +492,8 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
         <motion.div variants={itemVariants} className="col-span-12 lg:col-span-5">
           <AnalystBriefing title="Compute Logic Analysis" objective="Monitor CPU vs RAM." redFlags={computeRedFlags(data, topProcs)} />
         </motion.div>
-        <motion.div variants={itemVariants} className="col-span-12 lg:col-span-7 bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-5 shadow-lg flex flex-col">
+        <motion.div variants={itemVariants} className="col-span-12 lg:col-span-7">
+          <Panel padding="md" className="flex flex-col h-full">
           <h3 className="text-base font-bold text-[var(--color-text)] uppercase tracking-wider mb-4 flex items-center gap-2"><Activity size={18} className="text-[var(--color-accent)]" /> Compute Timeline</h3>
           <div className="flex-1" style={{ minHeight: '280px' }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -505,10 +506,12 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
               </RechartsAreaChart>
             </ResponsiveContainer>
           </div>
+          </Panel>
         </motion.div>
       </div>
 
-      <motion.div variants={itemVariants} className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-5 shadow-lg">
+      <motion.div variants={itemVariants}>
+        <Panel padding="md">
         <h3 className="text-base font-bold text-[var(--color-text)] uppercase tracking-wider mb-4 flex items-center gap-2"><Clock size={18} className="text-[var(--color-accent)]" /> Recent Events</h3>
         <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
           {timelineEvents.map((evt) => (
@@ -521,6 +524,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
             </div>
           ))}
         </div>
+        </Panel>
       </motion.div>
 
       <Dialog.Root open={explanationOpen} onOpenChange={setExplanationOpen}><Dialog.Portal><Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" /><Dialog.Content className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[20px] p-6 w-full max-w-xl shadow-2xl"><div className="flex items-center justify-between mb-6"><Dialog.Title className="text-xl font-bold text-[var(--color-text)] flex items-center gap-3"><Brain size={20} className="text-accent" /> AI Event Analysis</Dialog.Title><Dialog.Close className="text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-colors rounded-lg p-1 hover:bg-[var(--color-sidebar-hover)]"><XCircle size={18} /></Dialog.Close></div><div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl p-6 shadow-inner min-h-[120px]">{!explanationText ? <div className="flex flex-col items-center justify-center py-8 gap-3"><Loader2 size={24} className="text-accent animate-spin" /><p className="text-xs font-bold text-text-faint uppercase tracking-widest">Heuristic Synthesis...</p></div> : <p className="text-sm text-[var(--color-text-dim)] leading-relaxed whitespace-pre-wrap">{explanationText}</p>}</div><div className="mt-6 flex justify-end"><Dialog.Close className="px-5 py-2 rounded-lg bg-[var(--color-panel-3)] text-xs font-bold uppercase tracking-wider text-text hover:bg-panel transition-all">Acknowledge</Dialog.Close></div></Dialog.Content></Dialog.Portal></Dialog.Root>

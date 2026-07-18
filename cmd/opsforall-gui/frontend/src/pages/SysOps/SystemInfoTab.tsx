@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { Panel } from '@/components/ui/Panel'
 import type { SystemInfo, CPUInfo, CPUExtendedInfo, LoggedInUserData } from '@/types'
 
 interface SystemInfoTabProps {
@@ -31,7 +32,7 @@ export function SystemInfoTab({ sysInfo, cpuInfo }: SystemInfoTabProps) {
   return (
     <div className="space-y-8">
       {/* OS Information */}
-      <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-8 shadow-2xl">
+      <Panel variant="elevated" padding="lg" category="system">
         <div className="flex items-center gap-3 mb-6">
           <Globe size={20} className="text-[var(--color-accent)]" />
           <h3 className="text-lg font-bold text-[var(--color-text)] uppercase tracking-widest">OS Information</h3>
@@ -44,10 +45,10 @@ export function SystemInfoTab({ sysInfo, cpuInfo }: SystemInfoTabProps) {
           <InfoRow label="Uptime" value={sysInfo.uptime} />
           <InfoRow label="Virtualization" value={sysInfo.virtualization || 'None'} />
         </div>
-      </div>
+      </Panel>
 
       {/* Hardware Summary */}
-      <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-8 shadow-2xl">
+      <Panel variant="elevated" padding="lg" category="system">
         <div className="flex items-center gap-3 mb-6">
           <Cpu size={20} className="text-[var(--color-accent)]" />
           <h3 className="text-lg font-bold text-[var(--color-text)] uppercase tracking-widest">Hardware Summary</h3>
@@ -60,10 +61,10 @@ export function SystemInfoTab({ sysInfo, cpuInfo }: SystemInfoTabProps) {
           <InfoRow label="Cache Size" value={cpuExtended ? `${cpuExtended.cache_size_kb} KB` : 'N/A'} isNumeric />
           <InfoRow label="Processes" value={sysInfo.process_count} isNumeric />
         </div>
-      </div>
+      </Panel>
 
       {/* Logged-in Users */}
-      <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-8 shadow-2xl">
+      <Panel variant="elevated" padding="lg" category="system">
         <div className="flex items-center gap-3 mb-6">
           <Users size={20} className="text-[var(--color-success)]" />
           <h3 className="text-lg font-bold text-[var(--color-text)] uppercase tracking-widest">Logged-in Users</h3>
@@ -80,7 +81,7 @@ export function SystemInfoTab({ sysInfo, cpuInfo }: SystemInfoTabProps) {
             ))}
           </div>
         )}
-      </div>
+      </Panel>
     </div>
   )
 }

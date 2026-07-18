@@ -11,6 +11,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { SectionBriefing } from '@/components/ui/SectionBriefing'
+import { SearchInput } from '@/components/ui/SearchInput'
 import type { DiscoveryResultData } from '@/types'
 
 // ── Main DiscoveryTab ──
@@ -52,18 +53,13 @@ export function DiscoveryTab() {
       {/* ── Subnet Input ── */}
       <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-xl">
         <div className="flex items-center gap-4">
-          <div className="flex-1 relative">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-faint" />
-            <input
-              type="text"
+          <div className="flex-1">
+            <SearchInput
+              size="lg"
               value={subnet}
               onChange={(e) => setSubnet(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && runDiscovery()}
               placeholder="Enter subnet prefix (e.g., 192.168.1)"
-              className={cn(
-                'w-full pl-11 pr-4 py-3 text-sm font-medium text-text bg-panel-2 border border-border rounded-xl',
-                'placeholder:text-text-faint focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30 transition-all',
-              )}
             />
           </div>
           <button
@@ -103,7 +99,7 @@ export function DiscoveryTab() {
       {result && !isLoading && (
         <>
           {/* ── Summary Bar ── */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
               { label: 'Devices Found', value: result.devices.length, icon: <Hash size={18} /> },
               { label: 'Subnet Scanned', value: result.subnet, icon: <Radio size={18} /> },

@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
+import { CategoryGroup } from '@/components/ui/CategoryGroup'
 
 // Tab imports (lazy-loaded to reduce initial bundle)
 const OverviewTab = lazy(() => import('./secops/OverviewTab').then(m => ({ default: m.OverviewTab })))
@@ -94,9 +95,9 @@ export function SecOps() {
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
         <div className="w-52 border-r border-[var(--color-border)] bg-[var(--color-panel-2)] overflow-y-auto p-2.5">
-          <CategoryGroup label="ASSESSMENT" categories={assessmentCategories} active={activeCategory} onSelect={setActiveCategory} />
-          <CategoryGroup label="DETECTION" categories={detectionCategories} active={activeCategory} onSelect={setActiveCategory} />
-          <CategoryGroup label="RESPONSE" categories={responseCategories} active={activeCategory} onSelect={setActiveCategory} />
+          <CategoryGroup label="ASSESSMENT" group="assessment" page="secops" categories={assessmentCategories} active={activeCategory} onSelect={setActiveCategory} />
+          <CategoryGroup label="DETECTION" group="detection" page="secops" categories={detectionCategories} active={activeCategory} onSelect={setActiveCategory} />
+          <CategoryGroup label="RESPONSE" group="response" page="secops" categories={responseCategories} active={activeCategory} onSelect={setActiveCategory} />
         </div>
 
         {/* Main Content */}
@@ -110,29 +111,4 @@ export function SecOps() {
   )
 }
 
-function CategoryGroup({ label, categories, active, onSelect }: { label: string; categories: CategoryDef[]; active: SecOpsCategory; onSelect: (id: SecOpsCategory) => void }) {
-  return (
-    <div className="mb-5">
-      <p className="text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-[0.2em] px-2.5 mb-2.5">{label}</p>
-      <div className="space-y-1">
-        {categories.map(cat => (
-          <button
-            key={cat.id}
-            onClick={() => onSelect(cat.id)}
-            className={cn(
-              'w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-sm font-bold transition-all active:scale-[0.97]',
-              active === cat.id
-                ? 'bg-danger text-white shadow-lg shadow-danger/20'
-                : 'text-text-dim hover:text-text hover:bg-[var(--color-sidebar-hover)]'
-            )}
-          >
-            <div className={cn("transition-colors", active === cat.id ? "text-white" : "text-danger")}>
-              {cat.icon}
-            </div>
-            {cat.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
+

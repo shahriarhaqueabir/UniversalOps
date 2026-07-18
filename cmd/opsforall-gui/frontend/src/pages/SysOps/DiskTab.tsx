@@ -2,6 +2,7 @@ import { Disc, HardDrive } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { Panel } from '@/components/ui/Panel'
 import type { DiskInfo, DiskIOData } from '@/types'
 
 export function DiskTab({ diskInfo }: { diskInfo: DiskInfo }) {
@@ -17,7 +18,7 @@ export function DiskTab({ diskInfo }: { diskInfo: DiskInfo }) {
   return (
     <div className="space-y-8">
       {/* Partition Usage */}
-      <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-8 shadow-2xl">
+      <Panel variant="elevated" padding="lg" category="system">
         <div className="flex items-center gap-3 mb-6">
           <Disc size={20} className="text-[var(--color-accent)]" />
           <h3 className="text-lg font-bold text-[var(--color-text)] uppercase tracking-widest">Disk Usage</h3>
@@ -39,11 +40,8 @@ export function DiskTab({ diskInfo }: { diskInfo: DiskInfo }) {
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Disk I/O */}
-      {diskIO && (
-        <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-8 shadow-2xl">
+      </Panel>
+        <Panel variant="elevated" padding="lg" category="system">
           <div className="flex items-center gap-3 mb-6">
             <HardDrive size={20} className="text-[var(--color-warning)]" />
             <h3 className="text-lg font-bold text-[var(--color-text)] uppercase tracking-widest">Disk I/O</h3>
@@ -69,7 +67,7 @@ export function DiskTab({ diskInfo }: { diskInfo: DiskInfo }) {
               </div>
             ))}
           </div>
-        </div>
+        </Panel>
       )}
     </div>
   )

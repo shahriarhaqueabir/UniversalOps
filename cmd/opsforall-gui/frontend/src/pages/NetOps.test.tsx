@@ -65,10 +65,10 @@ describe('NetOps Page', () => {
   it('renders all sidebar categories', () => {
     render(<NetOps />)
     const expectedCategories = [
-      'Overview', 'Connections', 'Interfaces', 'ARP Table', 'Routing', 'WiFi',
-      'Ping', 'Traceroute', 'Port Scan', 'Bandwidth',
+      'Overview', 'Connections', 'Interfaces', 'ARP Table',
+      'Ping', 'DNS', 'Traceroute', 'Port Scan', 'Bandwidth',
       'DNS Advanced', 'Multi-Ping', 'Health Check',
-      'Firewall', 'Discovery', 'Actions',
+      'VPN', 'Discovery', 'Actions',
     ]
     for (const cat of expectedCategories) {
       expect(screen.getByText(cat)).toBeTruthy()

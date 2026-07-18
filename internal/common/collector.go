@@ -14,6 +14,11 @@ const (
 	CollectorNet    CollectorID = "network"
 	CollectorTemp   CollectorID = "temperature"
 	CollectorProc   CollectorID = "processes"
+	CollectorUptime CollectorID = "uptime"
+	CollectorLoad   CollectorID = "load"
+	CollectorSwap   CollectorID = "swap"
+	CollectorDiskIO CollectorID = "diskio"
+	CollectorOpenFD CollectorID = "openfds"
 )
 
 type MetricSample struct {

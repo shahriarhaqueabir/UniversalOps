@@ -5,6 +5,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { SectionBriefing } from '@/components/ui/SectionBriefing'
 import { MiniStat } from '@/components/ui/MiniStat'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { Panel } from '@/components/ui/Panel'
 import type { UserInfo, PasswordPolicy, FailedLogin, LockedAccount } from '@/types'
 
 export function IdentityTab() {
@@ -56,7 +57,7 @@ export function IdentityTab() {
 
       {/* Password Policy */}
       {policy && (
-        <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl">
+        <Panel padding="lg" category="security">
           <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6">Password Policy</h3>
           <div className="grid grid-cols-5 gap-6">
             <div className="bg-panel-2 border border-border rounded-xl p-4">
@@ -80,11 +81,11 @@ export function IdentityTab() {
               <p className="text-xl font-bold text-text tabular-nums">{policy.lockout_duration} min</p>
             </div>
           </div>
-        </div>
+        </Panel>
       )}
 
       {/* User Accounts */}
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl">
+      <Panel padding="lg" category="security">
         <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6">User Accounts</h3>
         <div className="grid grid-cols-2 gap-6">
           {users.map(user => (
@@ -103,11 +104,11 @@ export function IdentityTab() {
             </div>
           ))}
         </div>
-      </div>
+      </Panel>
 
       {/* Failed Logins */}
       {failedLogins.length > 0 && (
-        <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl">
+        <Panel padding="lg" category="security">
           <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6 text-danger">Failed Login Attempts</h3>
           <div className="space-y-2">
             {failedLogins.map((fl, i) => (
@@ -118,12 +119,12 @@ export function IdentityTab() {
               </div>
             ))}
           </div>
-        </div>
+        </Panel>
       )}
 
       {/* Locked Accounts */}
       {lockouts.length > 0 && (
-        <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl">
+        <Panel padding="lg" category="security">
           <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6 text-warning">Locked Accounts</h3>
           <div className="space-y-2">
             {lockouts.map((l, i) => (
@@ -133,7 +134,7 @@ export function IdentityTab() {
               </div>
             ))}
           </div>
-        </div>
+        </Panel>
       )}
     </div>
   )
