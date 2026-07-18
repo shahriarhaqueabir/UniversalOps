@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -167,6 +168,25 @@ func (a *AIOps) GetOllamaStatus() OllamaStatus {
 		Version:         status.Version,
 		AvailableModels: status.AvailableModels,
 	}
+}
+
+// GetModelfile reads the local Modelfile and returns its content.
+func (a *AIOps) GetModelfile() (string, error) {
+	content, err := os.ReadFile("Modelfile")
+	if err != nil {
+		return "", fmt.Errorf("failed to read Modelfile: %w", err)
+	}
+	return string(content), nil
+}
+
+// SaveModelfile writes the given content to the local Modelfile.
+func (a *AIOps) SaveModelfile(content string) error {
+	common.LogInfo("AIOps: Saving updated Modelfile")
+	err := os.WriteFile("Modelfile", []byte(content), 0644)
+	if err != nil {
+		return fmt.Errorf("failed to save Modelfile: %w", err)
+	}
+	return nil
 }
 
 // SetOllamaModel updates the active Ollama model.
