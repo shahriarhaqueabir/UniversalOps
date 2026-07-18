@@ -47,6 +47,8 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       case 'dnsTimeout':
         if (value > 8000) return { level: 'med', message: 'High timeouts may slow down NetOps page responsiveness.' }
         return { level: 'low', message: 'Standard lookup timeout.' }
+      case 'modelfile':
+        return { level: 'med', message: 'Rebuilding the neural core may take 10-30 seconds depending on hardware.' }
       default:
         return { level: 'low', message: 'Safe configuration change.' }
     }

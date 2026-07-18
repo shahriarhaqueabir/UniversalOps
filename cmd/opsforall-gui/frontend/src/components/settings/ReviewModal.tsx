@@ -1,5 +1,5 @@
 import * as Dialog from '@radix-ui/react-dialog'
-import { X, CheckCircle2, RotateCcw, Zap, ShieldAlert, Sparkles, AlertTriangle } from 'lucide-react'
+import { X, CheckCircle2, RotateCcw, Zap, ShieldAlert, Sparkles, AlertTriangle, FileCode } from 'lucide-react'
 import { useConfigStore } from '@/stores/useConfigStore'
 import { useBackend } from '@/hooks/useBackend'
 import { toast } from 'sonner'
@@ -19,6 +19,9 @@ export function ReviewModal({ isOpen, onOpenChange }: ReviewModalProps) {
   const { call } = useBackend()
 
   const changes = Array.from(stagedChanges.entries())
+  const paramChanges = changes.filter(([key]) => key !== 'modelfile')
+  const modelfileChange = stagedChanges.get('modelfile')
+
   const highestRisk = changes.reduce((prev, [key, val]) => {
     const r = getRiskLevel(key, val).level
     if (r === 'high' || prev === 'high') return 'high'
@@ -28,22 +31,26 @@ export function ReviewModal({ isOpen, onOpenChange }: ReviewModalProps) {
 
   const handleDeploy = async () => {
     try {
-      for (const [key, value] of stagedChanges.entries()) {
-        if (key === 'refreshInterval' || key === 'pingCount' || key === 'dnsTimeout') {
-          const s = stagedChanges
-          await call('PipelineAPI.UpdateSettings',
-            s.get('refreshInterval') || getOriginalValue('refreshInterval'),
-            0,
-            s.get('pingCount') || getOriginalValue('pingCount'),
-            s.get('dnsTimeout') || getOriginalValue('dnsTimeout')
-          )
-        }
-        if (key === 'companionName') {
-           // This is local-only currently, handled by useSettingsStore auto-sync
-        }
+      const id = toast.loading('Initiating system deployment...')
+
+      // 1. Handle standard settings
+      if (stagedChanges.has('refreshInterval') || stagedChanges.has('pingCount') || stagedChanges.has('dnsTimeout')) {
+        await call('PipelineAPI.UpdateSettings',
+          stagedChanges.get('refreshInterval') || getOriginalValue('refreshInterval'),
+          0,
+          stagedChanges.get('pingCount') || getOriginalValue('pingCount'),
+          stagedChanges.get('dnsTimeout') || getOriginalValue('dnsTimeout')
+        )
       }
 
-      toast.success('System configuration deployed successfully')
+      // 2. Handle Modelfile rebuild
+      if (modelfileChange) {
+        toast.loading('Rebuilding Neural Core... (may take a moment)', { id })
+        await call('AIOps.SaveModelfile', modelfileChange)
+        await call('AIOps.CreateOpsPersona')
+      }
+
+      toast.success('System configuration deployed successfully', { id })
       discardAll()
       onOpenChange(false)
     } catch (err) {
@@ -105,7 +112,7 @@ export function ReviewModal({ isOpen, onOpenChange }: ReviewModalProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-border)]/30">
-                {changes.map(([key, value]) => {
+                {paramChanges.map(([key, value]) => {
                   const risk = getRiskLevel(key, value)
                   return (
                     <tr key={key} className="hover:bg-[var(--color-bg)]/20 transition-colors">
@@ -133,6 +140,25 @@ export function ReviewModal({ isOpen, onOpenChange }: ReviewModalProps) {
               </tbody>
             </table>
           </div>
+
+          {/* Neural Core Instruction Diff */}
+          {modelfileChange && (
+            <div className="mt-4 p-5 rounded-2xl bg-violet-400/5 border border-violet-400/20 shadow-inner">
+              <div className="flex items-center gap-2 mb-3">
+                <FileCode size={14} className="text-violet-400" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-violet-400">Neural Core Instructions Updated</p>
+              </div>
+              <div className="max-h-32 overflow-y-auto bg-black/20 rounded-xl p-3 border border-violet-400/10">
+                <pre className="text-[9px] font-mono text-violet-200/70 whitespace-pre-wrap leading-relaxed">
+                  {modelfileChange.split('\n').slice(0, 10).join('\n')}
+                  {modelfileChange.split('\n').length > 10 && '\n... [truncated]'}
+                </pre>
+              </div>
+              <p className="mt-2 text-[9px] text-[var(--color-text-dim)] italic">
+                * Deployment will trigger a rebuild of the 'opsforall' model in Ollama.
+              </p>
+            </div>
+          )}
 
           <div className="mt-8 flex items-center justify-between gap-4">
             <button
