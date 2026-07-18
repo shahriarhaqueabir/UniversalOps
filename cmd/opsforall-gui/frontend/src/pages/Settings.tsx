@@ -16,40 +16,29 @@ import {
   Pause,
   RefreshCw,
   BrainCircuit,
+  ShieldAlert,
+  ScrollText,
+  Cpu,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import * as Slider from '@radix-ui/react-slider'
 import * as Dialog from '@radix-ui/react-dialog'
 import { useBackend } from '@/hooks/useBackend'
-import { useThemeStore, useSettingsStore } from '@/stores/useSettingsStore'
+import { useThemeStore, useSettingsStore } from '@/stores'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import type { AlertRuleInfo, CollectorStatus } from '@/types'
-
-// ── Section Card (aligned with Squib design system) ──
-
-function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div className="bg-panel border border-border rounded-[2rem] p-6 shadow-xl animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <div className="flex items-center gap-4 mb-5 pb-3 border-b border-border/50">
-        <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
-          {icon}
-        </div>
-        <h2 className="text-sm font-black text-text uppercase tracking-[0.2em]">{title}</h2>
-      </div>
-      <div className="space-y-5">{children}</div>
-    </div>
-  )
-}
+import { Panel, PanelHeader } from '@/components/ui/Panel'
+import { SettingsSidebar, type SettingsTab } from '@/components/settings/SettingsSidebar'
 
 // ── Setting Row ──
 
 function SettingRow({ label, description, children }: { label: string; description?: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-4">
+    <div className="flex items-center justify-between gap-4 py-1">
       <div className="min-w-0">
-        <p className="text-sm font-medium text-[var(--color-text)]">{label}</p>
-        {description && <p className="text-xs text-[var(--color-text-faint)] mt-0.5">{description}</p>}
+        <p className="text-sm font-bold text-[var(--color-text)]">{label}</p>
+        {description && <p className="text-xs text-[var(--color-text-dim)] mt-0.5">{description}</p>}
       </div>
       <div className="shrink-0">{children}</div>
     </div>
@@ -197,12 +186,22 @@ const DEFAULT_APP_INFO: AppInfo = {
 export function Settings() {
   const { call } = useBackend()
   const queryClient = useQueryClient()
+  const [activeTab, setActiveTab] = useState<SettingsTab>('general')
 
   // Theme — from zustand store
   const { theme, toggle } = useThemeStore()
 
   // Settings — from zustand store (auto-persisted to localStorage)
-  const { refreshInterval, pingCount, dnsTimeout, setRefreshInterval, setPingCount, setDnsTimeout } = useSettingsStore()
+  const {
+    refreshInterval,
+    pingCount,
+    dnsTimeout,
+    companionName,
+    setRefreshInterval,
+    setPingCount,
+    setDnsTimeout,
+    setCompanionName,
+  } = useSettingsStore()
 
   // Rules — via react-query
   const { data: rules = [] } = useQuery<AlertRuleInfo[]>({
@@ -254,369 +253,390 @@ export function Settings() {
   const isDark = theme === 'dark'
 
   return (
-    <div className="h-full overflow-y-auto space-y-5 max-w-3xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-3">
-          <Monitor size={24} className="text-[var(--color-accent)]" /> Settings
-        </h1>
-        <p className="text-sm text-[var(--color-text-dim)] mt-1">
-          Configure theme, collection intervals, and network parameters.
-        </p>
-      </div>
+    <div className="h-full flex overflow-hidden bg-[var(--color-bg)]/50">
+      <SettingsSidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {/* ── Theme ── */}
-      <Section title="Theme" icon={<Monitor size={20} />}>
-        <SettingRow label="Appearance" description="Switch between dark and light theme">
-          <div className="flex items-center rounded-xl overflow-hidden border border-border">
-            <button
-              onClick={() => { if (!isDark) toggle() }}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-bold transition-all',
-                isDark
-                  ? 'bg-accent text-white shadow-lg'
-                  : 'bg-panel-2 text-text-dim hover:text-text',
-              )}
-            >
-              <Moon size={16} /> Dark
-            </button>
-            <button
-              onClick={() => { if (isDark) toggle() }}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-bold transition-all',
-                !isDark
-                  ? 'bg-accent text-white shadow-lg'
-                  : 'bg-panel-2 text-text-dim hover:text-text',
-              )}
-            >
-              <Sun size={16} /> Light
-            </button>
-          </div>
-        </SettingRow>
-      </Section>
+      <main className="flex-1 overflow-y-auto p-8 space-y-8 max-w-4xl">
+        <div className="mb-2">
+          <h1 className="text-2xl font-black text-[var(--color-text)] uppercase tracking-tight">
+            Settings
+          </h1>
+          <p className="text-sm text-[var(--color-text-dim)] mt-1">
+            Configure your local operations control center.
+          </p>
+        </div>
 
-      {/* ── AI Analyst ── */}
-      <Section title="AI Analyst" icon={<BrainCircuit size={20} />}>
-        <SettingRow
-          label="Neural Persona"
-          description="Select the specialized intelligence profile for the analyst"
-        >
-          <select
-            className="bg-panel-2 border border-border rounded-lg px-3 py-2 text-sm font-bold text-text focus:outline-none focus:border-accent transition-colors"
-            defaultValue="opsforall"
-          >
-            <option value="opsforall">OpsForAll Technical (Default)</option>
-            <option value="architect">System Architect</option>
-            <option value="security">Security Auditor</option>
-            <option value="concise">Concise Heuristics</option>
-          </select>
-        </SettingRow>
-
-        <SettingRow
-          label="Extended Context"
-          description="Allow analyst to access historical metric trends"
-        >
-          <div
-            className="w-12 h-6 rounded-full bg-accent p-1 cursor-pointer transition-all active:scale-95 flex justify-end shadow-inner"
-          >
-            <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
-          </div>
-        </SettingRow>
-      </Section>
-
-      {/* ── Collection Interval ── */}
-      <Section title="Collection" icon={<Activity size={20} />}>
-        <SettingRow
-          label="Refresh Interval"
-          description="How often the dashboard and metrics refresh"
-        >
-          <select
-            value={refreshInterval}
-            onChange={(e) => {
-              const val = Number(e.target.value)
-              setRefreshInterval(val)
-              call('PipelineAPI.UpdateSettings', val, 0, pingCount, dnsTimeout)
-              toast.success(`Refresh interval set to ${val / 1000}s`)
-            }}
-            className="bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
-          >
-            {intervalOptions.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </SettingRow>
-      </Section>
-
-
-      {/* ── Collectors ── */}
-      <Section title="Collectors" icon={<Activity size={20} />}>
-        <p className="text-sm text-[var(--color-text-faint)] mb-3">
-          Enable or disable individual data collectors, adjust intervals, or trigger a manual collection.
-        </p>
-        <CollectorList call={call} />
-      </Section>
-
-      {/* ── Alert Rules ── */}
-      <Section title="Alert Rules" icon={<Bell size={20} />}>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-text-faint">Configured system-wide alert thresholds.</p>
-            <Dialog.Root open={addOpen} onOpenChange={setAddOpen}>
-              <Dialog.Trigger asChild>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent text-white text-xs font-bold hover:opacity-90 transition-all shadow-md active:scale-95">
-                  <Plus size={14} /> Add Rule
-                </button>
-              </Dialog.Trigger>
-              <Dialog.Portal>
-                <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
-                <Dialog.Content className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[20px] p-6 w-full max-w-md shadow-2xl">
-                  <div className="flex items-center justify-between mb-5">
-                    <Dialog.Title className="text-xl font-bold text-text">New Alert Rule</Dialog.Title>
-                    <Dialog.Close className="text-text-faint hover:text-text transition-colors"><XCircle size={20} /></Dialog.Close>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-xs font-bold text-text-dim uppercase tracking-widest block mb-1.5">Metric</label>
-                      <select
-                        value={newRule.metric}
-                        onChange={(e) => setNewRule({ ...newRule, metric: e.target.value })}
-                        className="w-full bg-[var(--color-panel-2)] border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-accent"
-                      >
-                        <option value="cpu.percent">CPU Usage (%)</option>
-                        <option value="memory.percent">Memory Usage (%)</option>
-                        <option value="disk.percent">Disk Usage (%)</option>
-                        <option value="cpu.temperature">CPU Temp (°C)</option>
-                        <option value="network.rx.rate">Network RX (bps)</option>
-                        <option value="process.count">Process Count</option>
-                      </select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs font-bold text-text-dim uppercase tracking-widest block mb-1.5">Condition</label>
-                        <select
-                          value={newRule.condition}
-                          onChange={(e) => setNewRule({ ...newRule, condition: e.target.value })}
-                          className="w-full bg-[var(--color-panel-2)] border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-accent"
-                        >
-                          <option value="gt">Greater than</option>
-                          <option value="lt">Less than</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-bold text-text-dim uppercase tracking-widest block mb-1.5">Threshold</label>
-                        <input
-                          type="number"
-                          value={newRule.threshold}
-                          onChange={(e) => setNewRule({ ...newRule, threshold: Number(e.target.value) })}
-                          className="w-full bg-[var(--color-panel-2)] border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-accent"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-text-dim uppercase tracking-widest block mb-1.5">Severity</label>
-                      <select
-                        value={newRule.severity}
-                        onChange={(e) => setNewRule({ ...newRule, severity: e.target.value })}
-                        className="w-full bg-[var(--color-panel-2)] border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-accent"
-                      >
-                        <option value="info">Info</option>
-                        <option value="warning">Warning</option>
-                        <option value="critical">Critical</option>
-                      </select>
-                    </div>
+        {/* ── General ── */}
+        {activeTab === 'general' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <Panel category="none">
+              <PanelHeader
+                icon={<Monitor size={20} />}
+                title="Appearance"
+                subtitle="Configure the visual look and feel"
+              />
+              <div className="mt-6">
+                <SettingRow label="Theme" description="Switch between dark and light appearance">
+                  <div className="flex items-center rounded-xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-panel-2)] p-1">
                     <button
-                      onClick={handleAddRule}
-                      className="w-full py-3 bg-accent text-white rounded-xl font-bold hover:opacity-90 transition-all shadow-lg active:scale-95 mt-4"
+                      onClick={() => { if (!isDark) toggle() }}
+                      className={cn(
+                        'flex items-center gap-2 px-4 py-1.5 text-xs font-bold transition-all rounded-lg',
+                        isDark ? 'bg-[var(--color-accent)] text-white shadow-lg' : 'text-[var(--color-text-dim)] hover:text-[var(--color-text)]',
+                      )}
                     >
-                      Create Rule
+                      <Moon size={14} /> Dark
+                    </button>
+                    <button
+                      onClick={() => { if (isDark) toggle() }}
+                      className={cn(
+                        'flex items-center gap-2 px-4 py-1.5 text-xs font-bold transition-all rounded-lg',
+                        !isDark ? 'bg-[var(--color-accent)] text-white shadow-lg' : 'text-[var(--color-text-dim)] hover:text-[var(--color-text)]',
+                      )}
+                    >
+                      <Sun size={14} /> Light
                     </button>
                   </div>
-                </Dialog.Content>
-              </Dialog.Portal>
-            </Dialog.Root>
-          </div>
+                </SettingRow>
 
-          <div className="bg-panel-2 border border-border rounded-xl overflow-hidden shadow-inner">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-panel-3 border-b border-border">
-                <tr>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase text-text-faint">Metric</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase text-text-faint">Condition</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase text-text-faint">Severity</th>
-                  <th className="px-4 py-3 text-right"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {rules.map((rule, i) => (
-                  <tr key={i} className="border-b border-border/20 hover:bg-panel transition-colors group">
-                    <td className="px-4 py-3">
-                      <p className="text-xs font-bold text-text">{rule.metric.replace('.percent', '').replace('_', ' ').toUpperCase()}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-xs font-mono font-bold text-text-dim">{rule.condition} {rule.threshold}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={cn(
-                        'px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter border',
-                        rule.severity === 'CRITICAL' ? 'bg-danger/10 text-danger border-danger/30' :
-                          rule.severity === 'WARNING' ? 'bg-warning/10 text-warning border-warning/30' :
-                            'bg-accent/10 text-accent border-accent/30'
-                      )}>
-                        {rule.severity}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => handleRemoveRule(rule.metric, rule.threshold)}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-danger/10 hover:text-danger text-text-faint transition-all"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </Section>
+                <div className="h-px bg-[var(--color-border)]/50 my-4" />
 
-      {/* ── Network ── */}
-      <Section title="Network" icon={<Network size={20} />}>
-        <SettingRow
-          label="Default Ping Count"
-          description="Number of echo requests per ping (1–20)"
-        >
-          <div className="flex items-center gap-3 w-44">
-            <Slider.Root
-              value={[pingCount]}
-              onValueChange={([v]: number[]) => { setPingCount(v); call('PipelineAPI.UpdateSettings', 0, 0, v, dnsTimeout); toast.success(`Ping count set to ${v}`) }}
-              min={1}
-              max={20}
-              step={1}
-              className="relative flex items-center flex-1 h-5 cursor-pointer"
-            >
-              <Slider.Track className="relative h-1.5 flex-1 rounded-full bg-panel-2 border border-border">
-                <Slider.Range className="absolute h-full rounded-full bg-accent" />
-              </Slider.Track>
-              <Slider.Thumb className="block w-4 h-4 bg-text rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-accent" />
-            </Slider.Root>
-            <span className="text-xs font-semibold font-[Geist_Mono] text-[var(--color-text)] w-6 text-right tabular-nums">{pingCount}</span>
-          </div>
-        </SettingRow>
+                <SettingRow label="Companion Name" description="Set a custom name for your AI co-pilot">
+                  <input
+                    type="text"
+                    value={companionName}
+                    onChange={(e) => setCompanionName(e.target.value)}
+                    className="bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-sm font-bold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors w-32"
+                  />
+                </SettingRow>
+              </div>
+            </Panel>
 
-        <SettingRow
-          label="DNS Timeout"
-          description="Timeout in milliseconds for DNS lookups"
-        >
-          <div className="flex items-center gap-3 w-44">
-            <Slider.Root
-              value={[dnsTimeout]}
-              onValueChange={([v]: number[]) => { setDnsTimeout(v); call('PipelineAPI.UpdateSettings', 0, 0, pingCount, v); toast.success(`DNS timeout set to ${v}ms`) }}
-              min={500}
-              max={10000}
-              step={100}
-              className="relative flex items-center flex-1 h-5 cursor-pointer"
-            >
-              <Slider.Track className="relative h-1.5 flex-1 rounded-full bg-panel-2 border border-border">
-                <Slider.Range className="absolute h-full rounded-full bg-accent" />
-              </Slider.Track>
-              <Slider.Thumb className="block w-4 h-4 bg-text rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-accent" />
-            </Slider.Root>
-            <span className="text-xs font-semibold font-[Geist_Mono] text-[var(--color-text)] w-14 text-right tabular-nums">{dnsTimeout}ms</span>
+            <Panel category="none" variant="flat">
+              <PanelHeader icon={<Info size={20} />} title="About" />
+              <div className="mt-6 grid grid-cols-2 gap-6 text-sm">
+                <div>
+                  <p className="text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-widest mb-1">Application</p>
+                  <p className="text-[var(--color-text)] font-bold">{appInfo.name}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-widest mb-1">Version</p>
+                  <p className="text-[var(--color-text)] font-mono font-bold">{appInfo.version}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-widest mb-1">Go Engine</p>
+                  <p className="text-[var(--color-text)] font-mono font-bold">{appInfo.go_version}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-widest mb-1">Uptime</p>
+                  <p className="text-[var(--color-text)] font-mono font-bold">{appInfo.uptime}</p>
+                </div>
+              </div>
+              <div className="pt-6 border-t border-[var(--color-border)]/50 mt-6 flex gap-6">
+                <a href="https://github.com/shahriarhaqueabir/AllOpsFull" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-[var(--color-accent)] hover:opacity-80 transition-colors">
+                  <ExternalLink size={14} /> SOURCE CODE
+                </a>
+                <a href="https://github.com/shahriarhaqueabir/AllOpsFull#readme" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-[var(--color-accent)] hover:opacity-80 transition-colors">
+                  <ExternalLink size={14} /> DOCUMENTATION
+                </a>
+              </div>
+            </Panel>
           </div>
-        </SettingRow>
-      </Section>
+        )}
 
-      {/* ── Management ── */}
-      <Section title="Management" icon={<Monitor size={20} />}>
-        <div className="space-y-4">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between p-4 rounded-xl bg-panel-2 border border-border">
+        {/* ── Intelligence ── */}
+        {activeTab === 'intelligence' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <Panel category="ai">
+              <PanelHeader
+                icon={<BrainCircuit size={20} />}
+                title={`${companionName} Persona`}
+                subtitle="Configure specialized intelligence profiles"
+              />
+              <div className="mt-6 space-y-6">
+                <SettingRow label="Neural Persona" description="Select the specialized intelligence profile">
+                  <select
+                    className="bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm font-bold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+                    defaultValue="opsforall"
+                  >
+                    <option value="opsforall">Default Technical</option>
+                    <option value="architect">System Architect</option>
+                    <option value="security">Security Auditor</option>
+                    <option value="concise">Concise Heuristics</option>
+                  </select>
+                </SettingRow>
+
+                <SettingRow label="Extended Context" description="Allow access to historical metric trends">
+                  <button className="w-10 h-5 rounded-full bg-[var(--color-accent)] relative shadow-inner">
+                    <div className="absolute right-0.5 top-0.5 w-4 h-4 rounded-full bg-white shadow-sm" />
+                  </button>
+                </SettingRow>
+              </div>
+            </Panel>
+          </div>
+        )}
+
+        {/* ── Engine ── */}
+        {activeTab === 'engine' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <Panel category="system">
+              <PanelHeader
+                icon={<Activity size={20} />}
+                title="Data Pipeline"
+                subtitle="Configure collection and refresh frequencies"
+              />
+              <div className="mt-6 space-y-6">
+                <SettingRow label="Global Refresh" description="Frequency for dashboard and metric updates">
+                  <select
+                    value={refreshInterval}
+                    onChange={(e) => {
+                      const val = Number(e.target.value)
+                      setRefreshInterval(val)
+                      call('PipelineAPI.UpdateSettings', val, 0, pingCount, dnsTimeout)
+                      toast.success(`Refresh interval set to ${val / 1000}s`)
+                    }}
+                    className="bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm font-bold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+                  >
+                    {intervalOptions.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </SettingRow>
+
+                <div className="h-px bg-[var(--color-border)]/50 my-4" />
+
+                <p className="text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-widest mb-3">Active Collectors</p>
+                <CollectorList call={call} />
+              </div>
+            </Panel>
+
+            <Panel category="none">
+              <PanelHeader icon={<Network size={20} />} title="Network Diagnostics" />
+              <div className="mt-6 space-y-6">
+                <SettingRow label="Default Ping Count" description="Number of echo requests per ping (1–20)">
+                  <div className="flex items-center gap-4 w-48">
+                    <Slider.Root
+                      value={[pingCount]}
+                      onValueChange={([v]: number[]) => { setPingCount(v); call('PipelineAPI.UpdateSettings', 0, 0, v, dnsTimeout) }}
+                      min={1} max={20} step={1}
+                      className="relative flex items-center flex-1 h-5 cursor-pointer"
+                    >
+                      <Slider.Track className="relative h-1.5 flex-1 rounded-full bg-[var(--color-panel-2)] border border-[var(--color-border)]">
+                        <Slider.Range className="absolute h-full rounded-full bg-[var(--color-accent)]" />
+                      </Slider.Track>
+                      <Slider.Thumb className="block w-4 h-4 bg-[var(--color-text)] rounded-full shadow-lg" />
+                    </Slider.Root>
+                    <span className="text-xs font-bold font-mono text-[var(--color-text)] w-6 text-right">{pingCount}</span>
+                  </div>
+                </SettingRow>
+
+                <SettingRow label="DNS Timeout" description="Timeout in milliseconds for lookups">
+                  <div className="flex items-center gap-4 w-48">
+                    <Slider.Root
+                      value={[dnsTimeout]}
+                      onValueChange={([v]: number[]) => { setDnsTimeout(v); call('PipelineAPI.UpdateSettings', 0, 0, pingCount, v) }}
+                      min={500} max={10000} step={100}
+                      className="relative flex items-center flex-1 h-5 cursor-pointer"
+                    >
+                      <Slider.Track className="relative h-1.5 flex-1 rounded-full bg-[var(--color-panel-2)] border border-[var(--color-border)]">
+                        <Slider.Range className="absolute h-full rounded-full bg-[var(--color-accent)]" />
+                      </Slider.Track>
+                      <Slider.Thumb className="block w-4 h-4 bg-[var(--color-text)] rounded-full shadow-lg" />
+                    </Slider.Root>
+                    <span className="text-xs font-bold font-mono text-[var(--color-text)] w-14 text-right">{dnsTimeout}ms</span>
+                  </div>
+                </SettingRow>
+              </div>
+            </Panel>
+          </div>
+        )}
+
+        {/* ── Security ── */}
+        {activeTab === 'security' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <Panel category="security">
+              <PanelHeader
+                icon={<Bell size={20} />}
+                title="Alert Thresholds"
+                subtitle="Configured system-wide triggers"
+                action={
+                  <button onClick={() => setAddOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-accent)] text-white text-[10px] font-black uppercase hover:opacity-90 transition-all shadow-md active:scale-95">
+                    <Plus size={12} /> Add Rule
+                  </button>
+                }
+              />
+              <div className="mt-6">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-[var(--color-panel-3)]/50">
+                    <tr>
+                      <th className="px-4 py-3 text-[10px] font-black uppercase text-[var(--color-text-faint)] tracking-widest">Metric</th>
+                      <th className="px-4 py-3 text-[10px] font-black uppercase text-[var(--color-text-faint)] tracking-widest">Condition</th>
+                      <th className="px-4 py-3 text-[10px] font-black uppercase text-[var(--color-text-faint)] tracking-widest">Severity</th>
+                      <th className="px-4 py-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rules.map((rule, i) => (
+                      <tr key={i} className="border-b border-[var(--color-border)]/20 hover:bg-[var(--color-panel-2)] transition-colors group">
+                        <td className="px-4 py-3">
+                          <p className="text-xs font-bold text-[var(--color-text)] uppercase">{rule.metric.replace('.percent', '')}</p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs font-mono font-bold text-[var(--color-text-dim)]">{rule.condition} {rule.threshold}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={cn(
+                            'px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter border',
+                            rule.severity === 'CRITICAL' ? 'bg-danger/10 text-danger border-danger/30' :
+                              rule.severity === 'WARNING' ? 'bg-warning/10 text-warning border-warning/30' :
+                                'bg-accent/10 text-accent border-accent/30'
+                          )}>
+                            {rule.severity}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => handleRemoveRule(rule.metric, rule.threshold)}
+                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-danger/10 hover:text-danger text-[var(--color-text-faint)] transition-all"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Panel>
+          </div>
+        )}
+
+        {/* ── Journal ── */}
+        {activeTab === 'journal' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <Panel category="none">
+              <PanelHeader icon={<ScrollText size={20} />} title="System Log & Management" />
+              <div className="mt-6 space-y-6">
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between p-5 rounded-2xl bg-[var(--color-panel-2)] border border-[var(--color-border)] shadow-inner">
+                    <div>
+                      <p className="text-sm font-black text-[var(--color-text)] uppercase tracking-tight">Factory Reset</p>
+                      <p className="text-xs text-[var(--color-text-dim)] mt-1">Restore all settings to original defaults.</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (confirm('Reset all settings to defaults?')) {
+                          setRefreshInterval(DEFAULT_SETTINGS.refreshInterval)
+                          setPingCount(DEFAULT_SETTINGS.pingCount)
+                          setDnsTimeout(DEFAULT_SETTINGS.dnsTimeout)
+                          setCompanionName('Hawk')
+                          call('PipelineAPI.UpdateSettings', DEFAULT_SETTINGS.refreshInterval, 0, DEFAULT_SETTINGS.pingCount, DEFAULT_SETTINGS.dnsTimeout)
+                          toast.success('All settings reset')
+                        }
+                      }}
+                      className="px-4 py-2 bg-danger/10 hover:bg-danger/20 text-danger text-xs font-bold rounded-xl border border-danger/30 transition-all"
+                    >
+                      <RotateCcw size={14} className="inline mr-2" />
+                      RESET ALL
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between p-5 rounded-2xl bg-[var(--color-panel-2)] border border-[var(--color-border)] shadow-inner">
+                    <div>
+                      <p className="text-sm font-black text-[var(--color-text)] uppercase tracking-tight">Onboarding</p>
+                      <p className="text-xs text-[var(--color-text-dim)] mt-1">Re-run the initial setup wizard.</p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (confirm('Re-run onboarding? The app will reload.')) {
+                          try {
+                            await call('App.ClearOnboarded')
+                            window.location.reload()
+                          } catch { toast.error('Failed to reset onboarding') }
+                        }
+                      }}
+                      className="px-4 py-2 bg-[var(--color-accent)]/10 hover:bg-[var(--color-accent)]/20 text-[var(--color-accent)] text-xs font-bold rounded-xl border border-[var(--color-accent)]/30 transition-all"
+                    >
+                      <RefreshCw size={14} className="inline mr-2" />
+                      RE-RUN WIZARD
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </Panel>
+          </div>
+        )}
+      </main>
+
+      {/* Alert Rule Dialog (Legacy) */}
+      <Dialog.Root open={addOpen} onOpenChange={setAddOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[20px] p-6 w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <Dialog.Title className="text-xl font-bold text-text">New Alert Rule</Dialog.Title>
+              <Dialog.Close className="text-text-faint hover:text-text transition-colors"><XCircle size={20} /></Dialog.Close>
+            </div>
+            <div className="space-y-4">
               <div>
-                <p className="text-sm font-bold text-text">Factory Reset</p>
-                <p className="text-xs text-text-faint">Clear all settings and restore defaults.</p>
+                <label className="text-[10px] font-black text-text-dim uppercase tracking-widest block mb-1.5">Metric</label>
+                <select
+                  value={newRule.metric}
+                  onChange={(e) => setNewRule({ ...newRule, metric: e.target.value })}
+                  className="w-full bg-[var(--color-panel-2)] border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-accent"
+                >
+                  <option value="cpu.percent">CPU Usage (%)</option>
+                  <option value="memory.percent">Memory Usage (%)</option>
+                  <option value="disk.percent">Disk Usage (%)</option>
+                  <option value="cpu.temperature">CPU Temp (°C)</option>
+                  <option value="network.rx.rate">Network RX (bps)</option>
+                  <option value="process.count">Process Count</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-text-dim uppercase tracking-widest block mb-1.5">Condition</label>
+                  <select
+                    value={newRule.condition}
+                    onChange={(e) => setNewRule({ ...newRule, condition: e.target.value })}
+                    className="w-full bg-[var(--color-panel-2)] border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-accent"
+                  >
+                    <option value="gt">Greater than</option>
+                    <option value="lt">Less than</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-text-dim uppercase tracking-widest block mb-1.5">Threshold</label>
+                  <input
+                    type="number"
+                    value={newRule.threshold}
+                    onChange={(e) => setNewRule({ ...newRule, threshold: Number(e.target.value) })}
+                    className="w-full bg-[var(--color-panel-2)] border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-accent"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-text-dim uppercase tracking-widest block mb-1.5">Severity</label>
+                <select
+                  value={newRule.severity}
+                  onChange={(e) => setNewRule({ ...newRule, severity: e.target.value })}
+                  className="w-full bg-[var(--color-panel-2)] border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-accent"
+                >
+                  <option value="info">Info</option>
+                  <option value="warning">Warning</option>
+                  <option value="critical">Critical</option>
+                </select>
               </div>
               <button
-                onClick={() => {
-                  setRefreshInterval(DEFAULT_SETTINGS.refreshInterval)
-                  setPingCount(DEFAULT_SETTINGS.pingCount)
-                  setDnsTimeout(DEFAULT_SETTINGS.dnsTimeout)
-                  localStorage.setItem('opsforall_refreshInterval', JSON.stringify(DEFAULT_SETTINGS.refreshInterval))
-                  localStorage.setItem('opsforall_pingCount', JSON.stringify(DEFAULT_SETTINGS.pingCount))
-                  localStorage.setItem('opsforall_dnsTimeout', JSON.stringify(DEFAULT_SETTINGS.dnsTimeout))
-                  call('PipelineAPI.UpdateSettings', DEFAULT_SETTINGS.refreshInterval, 0, DEFAULT_SETTINGS.pingCount, DEFAULT_SETTINGS.dnsTimeout)
-                  toast.success('All settings reset to defaults')
-                }}
-                className="px-4 py-2 bg-danger/10 hover:bg-danger/20 text-danger text-xs font-bold rounded-lg border border-danger/30 transition-all"
+                onClick={handleAddRule}
+                className="w-full py-3 bg-accent text-white rounded-xl font-bold hover:opacity-90 transition-all shadow-lg active:scale-95 mt-4"
               >
-                <RotateCcw size={14} className="inline mr-2" />
-                Reset Defaults
+                Create Rule
               </button>
             </div>
-
-            <div className="flex items-center justify-between p-4 rounded-xl bg-panel-2 border border-border">
-              <div>
-                <p className="text-sm font-bold text-text">Onboarding Wizard</p>
-                <p className="text-xs text-text-faint">Re-run the first-time setup experience.</p>
-              </div>
-              <button
-                onClick={async () => {
-                  if (confirm('Are you sure you want to reset onboarding? The app will reload.')) {
-                    // We don't have a direct 'ClearOnboarded' binding yet, but we can add one
-                    // or just use a generic command if DevOps allowed it.
-                    // Better to use the App facade.
-                    try {
-                      // We'll assume the user has access to App.ClearOnboarded once we add it
-                      await call('App.ClearOnboarded')
-                      window.location.reload()
-                    } catch {
-                      toast.error('Failed to reset onboarding')
-                    }
-                  }
-                }}
-                className="px-4 py-2 bg-accent/10 hover:bg-accent/20 text-accent text-xs font-bold rounded-lg border border-accent/30 transition-all"
-              >
-                <RefreshCw size={14} className="inline mr-2" />
-                Reset Onboarding
-              </button>
-            </div>
-          </div>
-        </div>
-      </Section>
-
-      {/* ── About ── */}
-      <Section title="About" icon={<Info size={20} />}>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-wider mb-1">Application</p>
-            <p className="text-[var(--color-text)] font-medium">{appInfo.name}</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-wider mb-1">Version</p>
-            <p className="text-[var(--color-text)] font-medium font-[Geist_Mono]">{appInfo.version}</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-wider mb-1">Go Version</p>
-            <p className="text-[var(--color-text)] font-medium font-[Geist_Mono]">{appInfo.go_version}</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-wider mb-1">Uptime</p>
-            <p className="text-[var(--color-text)] font-medium font-[Geist_Mono]">{appInfo.uptime}</p>
-          </div>
-        </div>
-        <div className="pt-6 border-t border-border/50 mt-6">
-          <div className="flex items-center gap-6">
-            <a href="https://github.com/shahriarhaqueabir/AllOpsFull" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-bold text-accent hover:text-accent-2 transition-colors">
-              <ExternalLink size={16} /> GitHub
-            </a>
-            <a href="https://github.com/shahriarhaqueabir/AllOpsFull#readme" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-bold text-accent hover:text-accent-2 transition-colors">
-              <ExternalLink size={16} /> Documentation
-            </a>
-          </div>
-        </div>
-      </Section>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   )
 }
