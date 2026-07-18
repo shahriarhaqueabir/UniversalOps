@@ -30,16 +30,23 @@ func (p *PipelineAPI) GetMetricHistory(name string, n int) []float64 {
 }
 
 // GetMetricHistoryWithTimestamps returns the last n values with timestamps for a named metric.
-func (p *PipelineAPI) GetMetricHistoryWithTimestamps(name string, n int) []common.DataPoint {
+func (p *PipelineAPI) GetMetricHistoryWithTimestamps(name string, n int) []DataPoint {
 	ts := p.app.pipeline.GetTimeSeries(name)
 	if ts == nil {
-		return []common.DataPoint{}
+		return []DataPoint{}
 	}
 	points := ts.DataPoints()
 	if n > 0 && len(points) > n {
 		points = points[len(points)-n:]
 	}
-	return points
+	out := make([]DataPoint, len(points))
+	for i, pt := range points {
+		out[i] = DataPoint{
+			Time:  pt.Time.Format(time.RFC3339),
+			Value: pt.Value,
+		}
+	}
+	return out
 }
 
 // GetForecast returns predicted values for a named metric.
@@ -95,13 +102,6 @@ func (p *PipelineAPI) AllMetricNames() []MetricDef {
 		out = append(out, MetricDef{Name: m.Name, Unit: m.Unit, Label: m.Label})
 	}
 	return out
-}
-
-// MetricDef describes a tracked metric.
-type MetricDef struct {
-	Name  string `json:"name"`
-	Unit  string `json:"unit"`
-	Label string `json:"label"`
 }
 
 // ClearPipeline resets all stored data and forecasts.

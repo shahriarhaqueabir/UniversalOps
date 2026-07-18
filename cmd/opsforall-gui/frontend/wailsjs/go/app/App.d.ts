@@ -5,6 +5,8 @@ import {common} from '../models';
 
 export function ClearOnboarded():Promise<void>;
 
+export function ConfirmAction(arg1:string):Promise<app.SecActionResult>;
+
 export function GetAppInfo():Promise<app.AppInfo>;
 
 export function IsOnboarded():Promise<boolean>;

@@ -2,42 +2,49 @@ import { useState } from 'react'
 import { ShieldOff, Skull, Ban, Lock, Camera, Download } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
 import { SectionBriefing } from '@/components/ui/SectionBriefing'
-import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
-import type { SecActionResult } from '@/types'
+import { ConfirmationModal } from '@/components/dialogs/ConfirmationModal'
+import type { SecActionResult, ActionPreview } from '@/types'
 
 export function ResponseTab() {
   const { call } = useBackend()
   const [lastResult, setLastResult] = useState<SecActionResult | null>(null)
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const [pendingAction, setPendingAction] = useState<string>('')
+  const [preview, setPreview] = useState<ActionPreview | null>(null)
   const [blockIP, setBlockIP] = useState('')
   const [killPID, setKillPID] = useState('')
   const [disableUser, setDisableUser] = useState('')
 
-  const executeAction = async (action: string) => {
-    let result: SecActionResult
+  const requestAction = async (action: string) => {
+    let p: ActionPreview
     switch (action) {
       case 'isolate':
-        result = await call('SecOps.IsolateHost') as SecActionResult
+        p = await call('SecOps.IsolateHost', true, 3600) as ActionPreview
         break
       case 'capture':
-        result = await call('SecOps.CaptureEvidence') as SecActionResult
+        p = await call('SecOps.CaptureEvidence') as ActionPreview
         break
       case 'export':
-        result = await call('SecOps.ExportForensicBundle') as SecActionResult
+        p = await call('SecOps.ExportForensicBundle') as ActionPreview
         break
       case 'blockip':
-        result = await call('SecOps.BlockIP', blockIP) as SecActionResult
+        p = await call('SecOps.BlockIP', blockIP) as ActionPreview
         break
       case 'kill':
-        result = await call('SecOps.KillProcess', parseInt(killPID)) as SecActionResult
+        p = await call('SecOps.KillProcess', parseInt(killPID)) as ActionPreview
         break
       case 'disable':
-        result = await call('SecOps.DisableAccount', disableUser) as SecActionResult
+        p = await call('SecOps.DisableAccount', disableUser) as ActionPreview
         break
       default:
         return
     }
+    setPreview(p)
+  }
+
+  const handleConfirm = async () => {
+    if (!preview) return
+    const handshakeID = preview.handshake_id
+    setPreview(null)
+    const result = await call('App.ConfirmAction', handshakeID) as SecActionResult
     setLastResult(result)
   }
 
@@ -49,24 +56,17 @@ export function ResponseTab() {
         checklist={['Isolate host from network', 'Block malicious IP addresses', 'Kill suspicious processes', 'Disable compromised accounts', 'Capture forensic evidence']}
       />
 
-      <ConfirmDialog
-        open={confirmOpen}
-        title="Confirm Destructive Action"
-        description={`You are about to execute "${pendingAction}". This action may disrupt network connectivity or terminate processes. Proceed with caution.`}
-        type="warning"
-        confirmText="Execute"
-        onConfirm={() => {
-          setConfirmOpen(false)
-          executeAction(pendingAction)
-        }}
-        onClose={() => setConfirmOpen(false)}
+      <ConfirmationModal
+        preview={preview}
+        onConfirm={handleConfirm}
+        onCancel={() => setPreview(null)}
       />
 
       {/* Quick Actions */}
       <div className="grid grid-cols-3 gap-6">
         <button
-          onClick={() => { setPendingAction('isolate'); setConfirmOpen(true) }}
-          className="bg-panel border border-danger/30 rounded-[var(--radius-lg)] p-8 shadow-xl text-left hover:bg-danger/5 transition-all group"
+          onClick={() => requestAction('isolate')}
+          className="bg-panel border border-danger/30 rounded-[var(--radius-lg)] p-8 shadow-xl text-left hover:bg-danger/5 transition-all group active:scale-95"
         >
           <ShieldOff size={32} className="text-danger mb-4 group-hover:scale-110 transition-transform" />
           <h3 className="text-lg font-bold text-text mb-2">Isolate Host</h3>
@@ -74,8 +74,8 @@ export function ResponseTab() {
         </button>
 
         <button
-          onClick={() => { setPendingAction('capture'); setConfirmOpen(true) }}
-          className="bg-panel border border-accent/30 rounded-[var(--radius-lg)] p-8 shadow-xl text-left hover:bg-accent/5 transition-all group"
+          onClick={() => requestAction('capture')}
+          className="bg-panel border border-accent/30 rounded-[var(--radius-lg)] p-8 shadow-xl text-left hover:bg-accent/5 transition-all group active:scale-95"
         >
           <Camera size={32} className="text-accent mb-4 group-hover:scale-110 transition-transform" />
           <h3 className="text-lg font-bold text-text mb-2">Capture Evidence</h3>
@@ -83,8 +83,8 @@ export function ResponseTab() {
         </button>
 
         <button
-          onClick={() => { setPendingAction('export'); setConfirmOpen(true) }}
-          className="bg-panel border border-accent/30 rounded-[var(--radius-lg)] p-8 shadow-xl text-left hover:bg-accent/5 transition-all group"
+          onClick={() => requestAction('export')}
+          className="bg-panel border border-accent/30 rounded-[var(--radius-lg)] p-8 shadow-xl text-left hover:bg-accent/5 transition-all group active:scale-95"
         >
           <Download size={32} className="text-accent mb-4 group-hover:scale-110 transition-transform" />
           <h3 className="text-lg font-bold text-text mb-2">Export Bundle</h3>
@@ -105,12 +105,12 @@ export function ResponseTab() {
               placeholder="e.g. 192.168.1.100"
               value={blockIP}
               onChange={e => setBlockIP(e.target.value)}
-              className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-sm text-text placeholder-text-faint mb-3"
+              className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-sm text-text placeholder-text-faint mb-3 focus:outline-none focus:border-accent"
             />
             <button
-              onClick={() => { setPendingAction('blockip'); setConfirmOpen(true) }}
+              onClick={() => requestAction('blockip')}
               disabled={!blockIP}
-              className="w-full px-4 py-2 rounded-lg bg-danger text-white text-sm font-bold uppercase tracking-wider disabled:opacity-50"
+              className="w-full px-4 py-2 rounded-lg bg-danger text-white text-sm font-bold uppercase tracking-wider disabled:opacity-50 transition-all active:scale-95"
             >
               Block IP
             </button>
@@ -125,12 +125,12 @@ export function ResponseTab() {
               placeholder="PID"
               value={killPID}
               onChange={e => setKillPID(e.target.value)}
-              className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-sm text-text placeholder-text-faint mb-3"
+              className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-sm text-text placeholder-text-faint mb-3 focus:outline-none focus:border-accent"
             />
             <button
-              onClick={() => { setPendingAction('kill'); setConfirmOpen(true) }}
+              onClick={() => requestAction('kill')}
               disabled={!killPID}
-              className="w-full px-4 py-2 rounded-lg bg-warning text-black text-sm font-bold uppercase tracking-wider disabled:opacity-50"
+              className="w-full px-4 py-2 rounded-lg bg-warning text-black text-sm font-bold uppercase tracking-wider disabled:opacity-50 transition-all active:scale-95"
             >
               Kill Process
             </button>
@@ -145,12 +145,12 @@ export function ResponseTab() {
               placeholder="Username"
               value={disableUser}
               onChange={e => setDisableUser(e.target.value)}
-              className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-sm text-text placeholder-text-faint mb-3"
+              className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-sm text-text placeholder-text-faint mb-3 focus:outline-none focus:border-accent"
             />
             <button
-              onClick={() => { setPendingAction('disable'); setConfirmOpen(true) }}
+              onClick={() => requestAction('disable')}
               disabled={!disableUser}
-              className="w-full px-4 py-2 rounded-lg bg-danger text-white text-sm font-bold uppercase tracking-wider disabled:opacity-50"
+              className="w-full px-4 py-2 rounded-lg bg-danger text-white text-sm font-bold uppercase tracking-wider disabled:opacity-50 transition-all active:scale-95"
             >
               Disable Account
             </button>

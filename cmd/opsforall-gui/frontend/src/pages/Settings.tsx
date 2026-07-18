@@ -15,6 +15,7 @@ import {
   Play,
   Pause,
   RefreshCw,
+  BrainCircuit,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import * as Slider from '@radix-ui/react-slider'
@@ -29,14 +30,14 @@ import type { AlertRuleInfo, CollectorStatus } from '@/types'
 
 function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6 shadow-lg">
-      <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--color-border)]/50">
-        <div className="w-8 h-8 rounded-lg bg-[var(--color-accent-soft)] flex items-center justify-center text-[var(--color-accent)]">
+    <div className="bg-panel border border-border rounded-[2rem] p-6 shadow-xl animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <div className="flex items-center gap-4 mb-5 pb-3 border-b border-border/50">
+        <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
           {icon}
         </div>
-        <h2 className="text-xs font-semibold text-[var(--color-text)] uppercase tracking-wider">{title}</h2>
+        <h2 className="text-sm font-black text-text uppercase tracking-[0.2em]">{title}</h2>
       </div>
-      <div className="space-y-4">{children}</div>
+      <div className="space-y-5">{children}</div>
     </div>
   )
 }
@@ -293,6 +294,35 @@ export function Settings() {
         </SettingRow>
       </Section>
 
+      {/* ── AI Analyst ── */}
+      <Section title="AI Analyst" icon={<BrainCircuit size={20} />}>
+        <SettingRow
+          label="Neural Persona"
+          description="Select the specialized intelligence profile for the analyst"
+        >
+          <select
+            className="bg-panel-2 border border-border rounded-lg px-3 py-2 text-sm font-bold text-text focus:outline-none focus:border-accent transition-colors"
+            defaultValue="opsforall"
+          >
+            <option value="opsforall">OpsForAll Technical (Default)</option>
+            <option value="architect">System Architect</option>
+            <option value="security">Security Auditor</option>
+            <option value="concise">Concise Heuristics</option>
+          </select>
+        </SettingRow>
+
+        <SettingRow
+          label="Extended Context"
+          description="Allow analyst to access historical metric trends"
+        >
+          <div
+            className="w-12 h-6 rounded-full bg-accent p-1 cursor-pointer transition-all active:scale-95 flex justify-end shadow-inner"
+          >
+            <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+          </div>
+        </SettingRow>
+      </Section>
+
       {/* ── Collection Interval ── */}
       <Section title="Collection" icon={<Activity size={20} />}>
         <SettingRow
@@ -340,8 +370,8 @@ export function Settings() {
               </Dialog.Trigger>
               <Dialog.Portal>
                 <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
-                <Dialog.Content className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[20px] p-8 w-full max-w-md shadow-2xl">
-                  <div className="flex items-center justify-between mb-6">
+                <Dialog.Content className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[20px] p-6 w-full max-w-md shadow-2xl">
+                  <div className="flex items-center justify-between mb-5">
                     <Dialog.Title className="text-xl font-bold text-text">New Alert Rule</Dialog.Title>
                     <Dialog.Close className="text-text-faint hover:text-text transition-colors"><XCircle size={20} /></Dialog.Close>
                   </div>

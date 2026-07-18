@@ -4,8 +4,8 @@ import { Sidebar } from './components/layout/Sidebar'
 import { TopBar } from './components/layout/TopBar'
 import { MainContent } from './components/layout/MainContent'
 import { OnboardingModal } from './components/dialogs/OnboardingModal'
-import { useThemeStore, useAlertStore, useSettingsStore } from './stores'
-import type { AlertInfo } from './types'
+import { useThemeStore, useAlertStore, useSettingsStore, useMetricsStore } from './stores'
+import type { AlertInfo, DashboardData } from './types'
 
 export type Page = 'dashboard' | 'sysops' | 'netops' | 'secops' | 'devops' | 'aiops' | 'logs' | 'settings'
 
@@ -27,6 +27,7 @@ function App() {
   const pingCount = useSettingsStore((s) => s.pingCount)
   const dnsTimeout = useSettingsStore((s) => s.dnsTimeout)
   const addAlert = useAlertStore((s) => s.addAlert)
+  const setMetrics = useMetricsStore((s) => s.setMetrics)
 
   // Check onboarding status on mount
   useEffect(() => {
@@ -110,11 +111,19 @@ function App() {
     const runtime = getRuntime()
     if (runtime?.EventsOn) {
       runtime.EventsOn('alert', handleAlertEvent)
+
+      const handleMetrics = (payload: unknown) => {
+        const d = (payload as any)?.data ?? payload
+        if (d && d.cpu) setMetrics(d as DashboardData)
+      }
+      runtime.EventsOn('metrics', handleMetrics)
+
       return () => {
         runtime.EventsOff('alert', handleAlertEvent)
+        runtime.EventsOff('metrics', handleMetrics)
       }
     }
-  }, [handleAlertEvent])
+  }, [handleAlertEvent, setMetrics])
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[var(--color-bg)] noise-overlay">

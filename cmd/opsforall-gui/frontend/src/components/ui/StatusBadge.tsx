@@ -47,7 +47,7 @@ export function StatusBadge({ status, size = 'md', className }: StatusBadgeProps
   return (
     <span
       className={cn(
-        'inline-block font-bold uppercase tracking-widest rounded-full border shadow-sm',
+        'inline-block font-black uppercase tracking-[0.2em] rounded-full border shadow-sm transition-all duration-300',
         sizeClasses[size],
         colorMap[s] || 'bg-[var(--color-text-faint)]/20 text-[var(--color-text-faint)] border-[var(--color-border)]',
         className

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -33,8 +33,17 @@ func NewAIOps(app *App) *AIOps {
 	return &AIOps{app: app}
 }
 
+// ChatResponse contains the AI message and any proposed action.
+type ChatResponse struct {
+	Content string                `json:"content"`
+	Action  *common.ActionPreview `json:"action,omitempty"`
+}
+
 // Chat sends a message to the Ollama chat API and returns the response.
-func (a *AIOps) Chat(message string) string {
+func (a *AIOps) Chat(message string) ChatResponse {
+	// 1. Prepare Context
+	knowledge := a.app.Knowledge.GetSnapshot()
+
 	storage := common.GetStorage()
 	var historyContext string
 	if storage != nil {
@@ -45,16 +54,61 @@ func (a *AIOps) Chat(message string) string {
 		}
 	}
 
+	systemPrompt := fmt.Sprintf(`You are the OpsForAll Technical Auditor.
+Current System State:
+- CPU: %.1f%%
+- RAM: %.1f%%
+- Disk: %.1f%%
+- Active Connections: %d
+- Active Anomalies: %d
+- Security Grade: %s
+%s
+Use the tools <action_request name="ACTION" param="VALUE" /> when remediation is needed.`,
+		knowledge.CPUUsage, knowledge.MemoryUsage, knowledge.DiskUsage,
+		knowledge.ActiveConns, knowledge.Anomalies, knowledge.SecurityGrade, historyContext)
+
 	messages := []aiops.ChatMessage{
-		{Role: "system", Content: "You are the OpsForAll AI Assistant. Use current stats and historical context provided to answer accurately." + historyContext},
+		{Role: "system", Content: systemPrompt},
 		{Role: "user", Content: message},
 	}
-	response, err := aiops.Chat(messages)
+
+	// 2. Execute Chat
+	rawResponse, err := aiops.Chat(messages)
 	if err != nil {
 		common.LogWarn("AI Chat failed: %v", err)
-		return "Error: " + err.Error()
+		return ChatResponse{Content: "Error: " + err.Error()}
 	}
-	return response
+
+	// 3. Parse for Action Requests
+	// Regex for <action_request name="action" param1="val1" ... />
+	re := regexp.MustCompile(`<action_request\s+name="([^"]+)"\s*(.*?)\s*/>`)
+	match := re.FindStringSubmatch(rawResponse)
+
+	var preview *common.ActionPreview
+	if len(match) >= 3 {
+		actionName := match[1]
+		paramsRaw := match[2]
+
+		// Simple param parser
+		params := make(map[string]interface{})
+		paramRe := regexp.MustCompile(`([a-zA-Z0-9]+)="([^"]+)"`)
+		paramMatches := paramRe.FindAllStringSubmatch(paramsRaw, -1)
+		for _, pm := range paramMatches {
+			params[pm[1]] = pm[2]
+		}
+
+		// Create Handshake Preview
+		p := common.GetHandshakeRegistry().CreatePreview(actionName, params)
+		preview = &p
+
+		// Strip the tag from the visible content
+		rawResponse = strings.ReplaceAll(rawResponse, match[0], "")
+	}
+
+	return ChatResponse{
+		Content: strings.TrimSpace(rawResponse),
+		Action:  preview,
+	}
 }
 
 // sanitizePromptInput strips content that could facilitate prompt injection.
@@ -115,6 +169,12 @@ func (a *AIOps) GetOllamaStatus() OllamaStatus {
 	}
 }
 
+// SetOllamaModel updates the active Ollama model.
+func (a *AIOps) SetOllamaModel(modelName string) {
+	common.LogInfo("AIOps: Switching active model to %q", modelName)
+	aiops.SetModel(modelName)
+}
+
 // PullModel initiates a model pull and emits progress events to the frontend.
 func (a *AIOps) PullModel(modelName string) error {
 	common.LogInfo("AIOps: Pulling model %q", modelName)
@@ -145,32 +205,29 @@ func (a *AIOps) PullModel(modelName string) error {
 func (a *AIOps) CreateOpsPersona() error {
 	common.LogInfo("AIOps: Creating opsforall persona")
 
-	// In a real build, we'd find the Modelfile relative to the executable or in assets.
-	// For now, we assume it's in the current working directory as per project root.
 	modelfilePath := "Modelfile"
 
-	// If running via 'wails dev', it might be in the project root.
-	if _, err := os.Stat(modelfilePath); os.IsNotExist(err) {
-		// Try to find it in common locations or from embed if we had it there.
-		// For this implementation, we'll try to find it in the project root.
-		common.LogWarn("AIOps: Modelfile not found at %s", modelfilePath)
-		return fmt.Errorf("Modelfile not found. Please ensure it exists in the application directory.")
+	// 1. Parse Modelfile
+	config, err := aiops.ParseModelfile(modelfilePath)
+	if err != nil {
+		common.LogWarn("AIOps: Failed to parse Modelfile: %v. Using defaults.", err)
+		// Fallback defaults in case the file is missing or corrupted
+		config = &aiops.ModelfileConfig{
+			From:   "hf.co/empero-ai/Qwythos-9B-Claude-Mythos-5-1M-GGUF:Q6_K",
+			System: "You are the OpsForAll Technical Auditor, a professional system, network, and security intelligence agent.\nYour primary objective is to synthesize complex telemetry into high-density technical briefings.\nMuted industrial tone. Mechanics-first explanation. Zero fluff.\nAnchor all claims in metrics and specific protocol mechanisms.",
+			Parameters: map[string]any{
+				"temperature":    0.1,
+				"top_p":          0.95,
+				"repeat_penalty": 1.1,
+				"stop":           []string{"──"},
+			},
+		}
+	} else {
+		common.LogInfo("AIOps: Successfully parsed Modelfile from %s (Base: %s)", modelfilePath, config.From)
 	}
 
-	// Read the base model name from the Modelfile 'FROM' line if we wanted to be dynamic,
-	// but we'll use structured parameters for the SDK v0.31.2.
-
-	// Default values matching our Modelfile:
-	from := "hf.co/empero-ai/Qwythos-9B-Claude-Mythos-5-1M-GGUF:Q6_K"
-	system := "You are the OpsForAll Technical Auditor, a professional system, network, and security intelligence agent.\nYour primary objective is to synthesize complex telemetry into high-density technical briefings.\nMuted industrial tone. Mechanics-first explanation. Zero fluff.\nAnchor all claims in metrics and specific protocol mechanisms."
-	params := map[string]any{
-		"temperature":    0.1,
-		"top_p":          0.95,
-		"repeat_penalty": 1.1,
-		"stop":           []string{"──"},
-	}
-
-	err := aiops.CreateModel("opsforall", from, system, params)
+	// 2. Create Model via SDK
+	err = aiops.CreateModel("opsforall", config.From, config.System, config.Parameters)
 	if err != nil {
 		common.LogWarn("AIOps: CreateModel failed: %v", err)
 		return err
@@ -179,6 +236,7 @@ func (a *AIOps) CreateOpsPersona() error {
 	common.LogInfo("AIOps: Successfully created opsforall persona")
 	return nil
 }
+
 
 // DetectAnomalies performs anomaly detection on pipeline metrics.
 func (a *AIOps) DetectAnomalies() []AnomalyInfo {
@@ -517,7 +575,7 @@ func (a *AIOps) GetMessages(sessionID string) []ConversationMessage {
 			SessionID: m.SessionID,
 			Role:      m.Role,
 			Content:   m.Content,
-			Timestamp: m.Timestamp,
+			Timestamp: m.Timestamp.Format(time.RFC3339),
 		}
 	}
 	return result

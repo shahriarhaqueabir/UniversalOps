@@ -47,9 +47,9 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   return (
     <aside
       className={cn(
-        'flex flex-col transition-all duration-200 border-r',
+        'flex flex-col transition-all duration-200 border-r wails-drag',
         collapsed ? 'w-[80px]' : 'w-[280px]',
-        'border-[var(--color-border)] bg-[var(--color-sidebar)]'
+        'border-[var(--color-border)] bg-[var(--color-sidebar)]/80 backdrop-blur-md'
       )}
     >
       {/* Brand section */}
@@ -60,9 +60,9 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         )}
       >
         {/* Gradient icon with glow */}
-        <div className="relative flex-shrink-0">
+        <div className="relative flex-shrink-0 group wails-no-drag">
           <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform duration-700 group-hover:rotate-12"
             style={{
               background: 'linear-gradient(135deg, var(--color-accent), var(--color-accent-2))',
               boxShadow: '0 0 16px var(--color-accent-soft)',
@@ -73,7 +73,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         </div>
 
         {!collapsed && (
-          <div className="flex flex-col min-w-0 flex-1">
+          <div className="flex flex-col min-w-0 flex-1 wails-no-drag">
             <span className="font-bold text-lg tracking-wider text-[var(--color-text)] truncate">
               OPSFORALL
             </span>
@@ -85,7 +85,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6" role="navigation" aria-label="Main navigation">
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6 wails-no-drag" role="navigation" aria-label="Main navigation">
         {/* Operations section */}
         <ul className="space-y-1">
           {opsItems.map((item) => (
@@ -94,21 +94,24 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                 onClick={() => onNavigate(item.id)}
                 data-automation-id={`main-tab-${item.id}`}
                 className={cn(
-                  'group flex items-center w-full rounded-xl transition-all duration-150',
+                  'group flex items-center w-full rounded-xl transition-all duration-150 active:scale-[0.95]',
                   collapsed ? 'justify-center p-3' : 'gap-3 px-3 py-2.5 text-sm',
                   currentPage === item.id
-                    ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] font-semibold'
-                    : 'text-[var(--color-text-dim)] hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-text)] font-medium'
+                    ? 'bg-accent text-white shadow-lg shadow-accent/20 font-black'
+                    : 'text-text-dim hover:bg-[var(--color-sidebar-hover)] hover:text-text font-bold'
                 )}
                 title={collapsed ? item.label : undefined}
                 aria-current={currentPage === item.id ? 'page' : undefined}
               >
-                <span className="flex-shrink-0">{item.icon}</span>
+                <span className={cn("flex-shrink-0", currentPage === item.id ? "text-white" : "text-accent")}>{item.icon}</span>
                 {!collapsed && (
                   <span className="flex items-center justify-between flex-1 min-w-0">
                     <span className="truncate">{item.label}</span>
                     {item.shortcut && (
-                      <kbd className="text-[10px] font-[Geist_Mono] text-[var(--color-text-faint)] bg-[var(--color-panel-3)] border border-[var(--color-border)] rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      <kbd className={cn(
+                        "text-[9px] font-black font-[Geist_Mono] border rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0",
+                        currentPage === item.id ? "bg-white/20 border-white/30 text-white" : "bg-panel-3 border-border text-text-faint"
+                      )}>
                         {item.shortcut}
                       </kbd>
                     )}
@@ -136,21 +139,24 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                 onClick={() => onNavigate(item.id)}
                 data-automation-id={`main-tab-${item.id}`}
                 className={cn(
-                  'group flex items-center w-full rounded-xl transition-all duration-150',
+                  'group flex items-center w-full rounded-xl transition-all duration-150 active:scale-[0.95]',
                   collapsed ? 'justify-center p-3' : 'gap-3 px-3 py-2.5 text-sm',
                   currentPage === item.id
-                    ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] font-semibold'
-                    : 'text-[var(--color-text-dim)] hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-text)] font-medium'
+                    ? 'bg-accent text-white shadow-lg shadow-accent/20 font-black'
+                    : 'text-text-dim hover:bg-[var(--color-sidebar-hover)] hover:text-text font-bold'
                 )}
                 title={collapsed ? item.label : undefined}
                 aria-current={currentPage === item.id ? 'page' : undefined}
               >
-                <span className="flex-shrink-0">{item.icon}</span>
+                <span className={cn("flex-shrink-0", currentPage === item.id ? "text-white" : "text-accent")}>{item.icon}</span>
                 {!collapsed && (
                   <span className="flex items-center justify-between flex-1 min-w-0">
                     <span className="truncate">{item.label}</span>
                     {item.shortcut && (
-                      <kbd className="text-[10px] font-[Geist_Mono] text-[var(--color-text-faint)] bg-[var(--color-panel-3)] border border-[var(--color-border)] rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      <kbd className={cn(
+                        "text-[9px] font-black font-[Geist_Mono] border rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0",
+                        currentPage === item.id ? "bg-white/20 border-white/30 text-white" : "bg-panel-3 border-border text-text-faint"
+                      )}>
                         {item.shortcut}
                       </kbd>
                     )}
@@ -170,7 +176,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
       </nav>
 
       {/* Collapse toggle */}
-      <div className="px-3 py-3 border-t border-[var(--color-border)]">
+      <div className="px-3 py-3 border-t border-[var(--color-border)] wails-no-drag">
         <button
           onClick={() => setCollapsed(!collapsed)}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -182,7 +188,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
       </div>
 
       {/* Footer */}
-      <div className="px-3 pb-4 pt-1">
+      <div className="px-3 pb-4 pt-1 wails-no-drag">
         <p className="text-[11px] text-[var(--color-text-faint)]">OpsForAll v1.3.0</p>
       </div>
     </aside>

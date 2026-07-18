@@ -6,6 +6,10 @@ export function ClearOnboarded() {
   return window['go']['app']['App']['ClearOnboarded']();
 }
 
+export function ConfirmAction(arg1) {
+  return window['go']['app']['App']['ConfirmAction'](arg1);
+}
+
 export function GetAppInfo() {
   return window['go']['app']['App']['GetAppInfo']();
 }

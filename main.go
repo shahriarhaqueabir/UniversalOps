@@ -8,6 +8,9 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 
+	"github.com/wailsapp/wails/v2/pkg/options/mac"
+	"github.com/wailsapp/wails/v2/pkg/options/windows"
+
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/app"
 )
 
@@ -28,6 +31,31 @@ func main() {
 		},
 		OnStartup:  application.Startup,
 		OnShutdown: application.Shutdown,
+		Windows: &windows.Options{
+			WebviewIsTransparent:              true,
+			WindowIsTranslucent:               true,
+			BackdropType:                      windows.Mica,
+			DisableWindowIcon:                 false,
+
+			Theme:                             windows.Dark,
+			CustomTheme:                       &windows.ThemeSettings{},
+			IsZoomControlEnabled:              false,
+
+			DisableFramelessWindowDecorations: false,
+		},
+		Mac: &mac.Options{
+			TitleBar: &mac.TitleBar{
+				TitlebarAppearsTransparent: true,
+				HideTitle:                  false,
+				HideTitleBar:               false,
+				FullSizeContent:            true,
+				UseToolbar:                 false,
+				HideToolbarSeparator:       true,
+			},
+			Appearance:           mac.NSAppearanceNameDarkAqua,
+			WebviewIsTransparent: true,
+			WindowIsTranslucent:  true,
+		},
 		Bind: []interface{}{
 			application,
 			application.SysOps,
@@ -40,7 +68,6 @@ func main() {
 			application.AlertAPI,
 			application.Logs,
 			application.Timeline,
-			application.NetDesign,
 		},
 	})
 

@@ -73,21 +73,17 @@ export function TopBar({ currentPage }: TopBarProps) {
 
   return (
     <header
-      className="h-12 flex items-center justify-between px-4 flex-shrink-0 border-b border-[var(--color-border)] bg-[var(--color-bg)]"
-      style={{
-        backdropFilter: 'blur(14px)',
-        WebkitBackdropFilter: 'blur(14px)',
-      }}
+      className="h-12 flex items-center justify-between px-4 flex-shrink-0 border-b border-[var(--color-border)] bg-[var(--color-bg)]/80 backdrop-blur-md wails-drag"
     >
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm">
+      <div className="flex items-center gap-2 text-sm wails-no-drag">
         <span className="text-[var(--color-text-faint)]">OpsForAll</span>
         <span className="text-[var(--color-text-faint)] text-[10px]">/</span>
         <span className="text-[var(--color-text)] font-medium">{pageLabels[currentPage]}</span>
       </div>
 
       {/* Right section */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 wails-no-drag">
         {/* Live status dot */}
         <div className="flex items-center gap-2">
           <span

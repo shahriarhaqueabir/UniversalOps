@@ -55,11 +55,11 @@ func TestSecOps_GetSecurityEvents(t *testing.T) {
 	}
 }
 
-func TestSecOps_SetFirewallRuleState_EmptyName(t *testing.T) {
+func TestSecOps_SetFirewallRuleHandshake(t *testing.T) {
 	s := NewSecOps(NewApp())
-	result := s.SetFirewallRuleState("nonexistent-rule", true)
-	if result {
-		t.Log("SetFirewallRuleState returned true for nonexistent rule (may be expected)")
+	preview := s.SetFirewallRuleHandshake("nonexistent-rule", true)
+	if preview.HandshakeID == "" {
+		t.Error("SetFirewallRuleHandshake returned empty HandshakeID")
 	}
 }
 

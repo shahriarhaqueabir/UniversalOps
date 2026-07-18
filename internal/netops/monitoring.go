@@ -43,12 +43,14 @@ func StartMonitoring(intervalSec int) {
 	}
 	monitoringTicker = time.NewTicker(time.Duration(intervalSec) * time.Second)
 	monitoringDone = make(chan struct{})
+	ticker := monitoringTicker
+	done := monitoringDone
 	go func() {
 		var prevBytes net.IOCountersStat
 		first := true
 		for {
 			select {
-			case <-monitoringTicker.C:
+			case <-ticker.C:
 				counters, err := net.IOCounters(false)
 				if err != nil || len(counters) == 0 {
 					continue
@@ -69,7 +71,7 @@ func StartMonitoring(intervalSec int) {
 				}
 				prevBytes = total
 				first = false
-			case <-monitoringDone:
+			case <-done:
 				return
 			}
 		}

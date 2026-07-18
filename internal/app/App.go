@@ -38,7 +38,7 @@ type App struct {
 	AlertAPI    *AlertAPI
 	Logs        *Logs
 	Timeline    *Timeline
-	NetDesign   *NetworkDesignAPI
+	Knowledge   *KnowledgeAPI
 
 	// Collector architecture
 	collectorRegistry *common.CollectorRegistry
@@ -82,7 +82,7 @@ func NewApp() *App {
 	a.AlertAPI = NewAlertAPI(a)
 	a.Logs = NewLogs(a)
 	a.Timeline = NewTimeline(a)
-	a.NetDesign = NewNetworkDesignAPI(a)
+	a.Knowledge = NewKnowledgeAPI(a)
 
 	// Subscribe the event bus to persist events and emit to frontend
 	a.eventBus.Subscribe(func(evt common.TimelineEvent) {
@@ -116,6 +116,9 @@ func (a *App) Startup(ctx context.Context) {
 	}
 
 	common.LogInfo("OpsForAll starting up")
+
+	// Initialize System Knowledge Layer
+	common.InitKnowledge()
 
 	// Validate Ollama environment variables
 	validateOllamaEnv()
@@ -244,7 +247,7 @@ func (a *App) startAlertLoop() {
 	go func() {
 		defer common.RecoverPanic()
 		defer a.alertWg.Done()
-		ticker := time.NewTicker(5 * time.Second)
+		ticker := time.NewTicker(2 * time.Second)
 		defer ticker.Stop()
 
 		for {
@@ -393,6 +396,17 @@ func (a *App) evaluateAndEmit() {
 	// Emit metrics event
 	runtime.EventsEmit(a.ctx, EventMetrics, metricsEvent)
 
+	// Update System Knowledge Layer
+	common.GetKnowledge().Update(func(sk *common.SystemKnowledge) {
+		sk.CPUUsage = cpuMF.LastValue
+		sk.MemoryUsage = memMF.LastValue
+		sk.DiskUsage = diskMF.LastValue
+		sk.ActiveConns = metricsEvent.Connections
+		sk.Anomalies = a.alerts.AlertCount()
+		sk.Uptime = a.GetAppInfo().Uptime
+		sk.SecurityGrade = a.SecOps.GetSecurityScore().Grade
+	})
+
 	// Emit alert events for newly fired alerts
 	for _, alert := range newAlerts {
 		runtime.EventsEmit(a.ctx, EventAlert, AlertEvent{
@@ -470,6 +484,49 @@ func (a *App) TriggerCollector(id string) error {
 	a.evaluateAndEmit()
 
 	return nil
+}
+
+// ConfirmAction executes a previously registered pending action via safety handshake.
+func (a *App) ConfirmAction(handshakeID string) SecActionResult {
+	pending, err := common.GetHandshakeRegistry().Consume(handshakeID)
+	if err != nil {
+		return SecActionResult{Success: false, Error: err.Error()}
+	}
+
+	switch pending.Action {
+	case "kill_process", "KillProcess":
+		pidRaw := pending.Params["pid"]
+		var pid int
+		switch v := pidRaw.(type) {
+		case int:
+			pid = v
+		case string:
+			fmt.Sscanf(v, "%d", &pid)
+		}
+		if pid == 0 {
+			return SecActionResult{Success: false, Error: "Invalid PID"}
+		}
+		return a.SecOps.executeKillProcess(pid)
+
+	case "block_ip", "BlockIP":
+		ip := pending.Params["ip"].(string)
+		return a.SecOps.executeBlockIP(ip)
+
+	case "isolate_host", "IsolateHost":
+		// Handle both bool and string from AI
+		confirm := true
+		if v, ok := pending.Params["confirm"].(bool); ok {
+			confirm = v
+		}
+		return a.SecOps.executeIsolateHost(confirm, 3600) // Default 1hr isolation
+
+	case "restart_service", "RestartService":
+		name := pending.Params["name"].(string)
+		return a.SysOps.executeRestartService(name)
+
+	default:
+		return SecActionResult{Success: false, Error: "Unknown or unimplemented action type: " + pending.Action}
+	}
 }
 
 // ── Utility functions ────────────────────────────────────────────────────────

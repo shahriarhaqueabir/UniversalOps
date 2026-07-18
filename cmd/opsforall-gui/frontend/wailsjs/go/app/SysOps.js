@@ -26,10 +26,6 @@ export function GetGPUInfo() {
   return window['go']['app']['SysOps']['GetGPUInfo']();
 }
 
-export function GetInstalledPackages() {
-  return window['go']['app']['SysOps']['GetInstalledPackages']();
-}
-
 export function GetLoggedInUsers() {
   return window['go']['app']['SysOps']['GetLoggedInUsers']();
 }

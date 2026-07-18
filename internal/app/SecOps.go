@@ -151,8 +151,29 @@ func (s *SecOps) GetSecurityEvents() []SecurityEvent {
 	return out
 }
 
-// SetFirewallRuleState enables or disables a firewall rule.
-func (s *SecOps) SetFirewallRuleState(name string, enable bool) bool {
+// SetFirewallRuleHandshake requests a safety handshake for a firewall rule change.
+func (s *SecOps) SetFirewallRuleHandshake(name string, enable bool) common.ActionPreview {
+	actionName := "Disable Firewall Rule"
+	if enable {
+		actionName = "Enable Firewall Rule"
+	}
+
+	id := common.GetHandshakeRegistry().Register("SetFirewallRule", map[string]interface{}{
+		"name":   name,
+		"enable": enable,
+	})
+
+	return common.ActionPreview{
+		HandshakeID: id,
+		Action:      actionName,
+		Description: fmt.Sprintf("%s: '%s'", actionName, name),
+		Risks:       []string{"May disrupt active network connections", "Potential security surface change"},
+		Rollback:    "Can be toggled back manually via the same interface.",
+	}
+}
+
+// executeSetFirewallRuleState enables or disables a firewall rule.
+func (s *SecOps) executeSetFirewallRuleState(name string, enable bool) bool {
 	common.LogInfo("Setting firewall rule %s enabled=%v", name, enable)
 	err := secops.SetFirewallRuleState(name, enable)
 	if err != nil {
@@ -925,10 +946,24 @@ func (s *SecOps) RunSecurityAuditChecklist() SecurityAuditResult {
 	}
 }
 
-// IsolateHost isolates the host from the network.
-// confirm: requires explicit confirmation (default true for backward compat in binding)
-// autoExpireSeconds: auto-remove isolation rule after N seconds (0 = no auto-expiry)
-func (s *SecOps) IsolateHost(confirm bool, autoExpireSeconds int) SecActionResult {
+// IsolateHost requests a safety handshake for isolating the host.
+func (s *SecOps) IsolateHost(confirm bool, autoExpireSeconds int) common.ActionPreview {
+	id := common.GetHandshakeRegistry().Register("IsolateHost", map[string]interface{}{
+		"confirm":           confirm,
+		"autoExpireSeconds": autoExpireSeconds,
+	})
+
+	return common.ActionPreview{
+		HandshakeID: id,
+		Action:      "Isolate Host",
+		Description: "Sever all inbound and outbound network connectivity except for essential management traffic.",
+		Risks:       []string{"Loss of network connectivity", "May disrupt active SSH or remote management sessions", "Potential for local lockout if not carefully configured"},
+		Rollback:    fmt.Sprintf("Isolation rule will automatically expire in %d seconds if configured.", autoExpireSeconds),
+	}
+}
+
+// executeIsolateHost isolates the host from the network.
+func (s *SecOps) executeIsolateHost(confirm bool, autoExpireSeconds int) SecActionResult {
 	result, err := secops.IsolateHost(confirm, autoExpireSeconds)
 	if err != nil {
 		common.LogWarn("IsolateHost failed: %v", err)
@@ -937,8 +972,21 @@ func (s *SecOps) IsolateHost(confirm bool, autoExpireSeconds int) SecActionResul
 	return SecActionResult{Success: result.Success, Message: result.Message, Error: result.Error}
 }
 
-// KillProcess force-kills a process by PID.
-func (s *SecOps) KillProcess(pid int) SecActionResult {
+// KillProcess requests a safety handshake for terminating a process.
+func (s *SecOps) KillProcess(pid int) common.ActionPreview {
+	id := common.GetHandshakeRegistry().Register("KillProcess", map[string]interface{}{"pid": pid})
+
+	return common.ActionPreview{
+		HandshakeID: id,
+		Action:      "Kill Process",
+		Description: fmt.Sprintf("Forcefully terminate process with PID %d", pid),
+		Risks:       []string{"Unsaved data in the application may be lost", "System instability if a critical service is terminated"},
+		Rollback:    "Cannot be undone. Application must be restarted manually.",
+	}
+}
+
+// executeKillProcess force-kills a process by PID.
+func (s *SecOps) executeKillProcess(pid int) SecActionResult {
 	result, err := secops.KillProcess(pid)
 	if err != nil {
 		common.LogWarn("KillProcess failed: %v", err)
@@ -947,8 +995,21 @@ func (s *SecOps) KillProcess(pid int) SecActionResult {
 	return SecActionResult{Success: result.Success, Message: result.Message, Error: result.Error}
 }
 
-// BlockIP blocks an IP address via firewall.
-func (s *SecOps) BlockIP(ip string) SecActionResult {
+// BlockIP requests a safety handshake for blocking an IP address.
+func (s *SecOps) BlockIP(ip string) common.ActionPreview {
+	id := common.GetHandshakeRegistry().Register("BlockIP", map[string]interface{}{"ip": ip})
+
+	return common.ActionPreview{
+		HandshakeID: id,
+		Action:      "Block IP Address",
+		Description: fmt.Sprintf("Add a host-level firewall rule to block all traffic from: %s", ip),
+		Risks:       []string{"May block legitimate traffic if IP is spoofed or shared", "Increases firewall rule complexity"},
+		Rollback:    "Can be removed manually via the Firewall management tab.",
+	}
+}
+
+// executeBlockIP blocks an IP address via firewall.
+func (s *SecOps) executeBlockIP(ip string) SecActionResult {
 	result, err := secops.BlockIP(ip)
 	if err != nil {
 		common.LogWarn("BlockIP failed: %v", err)
@@ -957,8 +1018,21 @@ func (s *SecOps) BlockIP(ip string) SecActionResult {
 	return SecActionResult{Success: result.Success, Message: result.Message, Error: result.Error}
 }
 
-// DisableAccount disables a local user account.
-func (s *SecOps) DisableAccount(username string) SecActionResult {
+// DisableAccount requests a safety handshake for disabling a local user account.
+func (s *SecOps) DisableAccount(username string) common.ActionPreview {
+	id := common.GetHandshakeRegistry().Register("DisableAccount", map[string]interface{}{"username": username})
+
+	return common.ActionPreview{
+		HandshakeID: id,
+		Action:      "Disable Account",
+		Description: fmt.Sprintf("Instantly disable the local user account: '%s'", username),
+		Risks:       []string{"User will be unable to log in", "May disrupt active sessions or scheduled tasks running under this account"},
+		Rollback:    "Can be re-enabled via the Identity & Access tab or Computer Management.",
+	}
+}
+
+// executeDisableAccount disables a local user account.
+func (s *SecOps) executeDisableAccount(username string) SecActionResult {
 	result, err := secops.DisableAccount(username)
 	if err != nil {
 		common.LogWarn("DisableAccount failed: %v", err)
@@ -967,8 +1041,21 @@ func (s *SecOps) DisableAccount(username string) SecActionResult {
 	return SecActionResult{Success: result.Success, Message: result.Message, Error: result.Error}
 }
 
-// CaptureEvidence collects forensic evidence into a summary.
-func (s *SecOps) CaptureEvidence() SecActionResult {
+// CaptureEvidence requests a safety handshake for collecting forensic evidence.
+func (s *SecOps) CaptureEvidence() common.ActionPreview {
+	id := common.GetHandshakeRegistry().Register("CaptureEvidence", nil)
+
+	return common.ActionPreview{
+		HandshakeID: id,
+		Action:      "Capture Evidence",
+		Description: "Perform a high-density snapshot of volatile system state (processes, connections, memory strings).",
+		Risks:       []string{"Temporary CPU spike during collection", "Privacy risk: will collect metadata from all running processes"},
+		Rollback:    "Non-destructive. Collected evidence can be deleted manually.",
+	}
+}
+
+// executeCaptureEvidence collects forensic evidence into a summary.
+func (s *SecOps) executeCaptureEvidence() SecActionResult {
 	result, err := secops.CaptureEvidence()
 	if err != nil {
 		common.LogWarn("CaptureEvidence failed: %v", err)
@@ -977,8 +1064,21 @@ func (s *SecOps) CaptureEvidence() SecActionResult {
 	return SecActionResult{Success: result.Success, Message: result.Message, Error: result.Error}
 }
 
-// ExportForensicBundle exports evidence to a file.
-func (s *SecOps) ExportForensicBundle() SecActionResult {
+// ExportForensicBundle requests a safety handshake for exporting evidence.
+func (s *SecOps) ExportForensicBundle() common.ActionPreview {
+	id := common.GetHandshakeRegistry().Register("ExportForensicBundle", nil)
+
+	return common.ActionPreview{
+		HandshakeID: id,
+		Action:      "Export Forensic Bundle",
+		Description: "Package and compress all captured evidence into a portable .zip archive.",
+		Risks:       []string{"Disk space consumption", "Exposure risk if bundle is stored in an unencrypted location"},
+		Rollback:    "Non-destructive. Delete the resulting bundle manually.",
+	}
+}
+
+// executeExportForensicBundle exports evidence to a file.
+func (s *SecOps) executeExportForensicBundle() SecActionResult {
 	result, err := secops.ExportForensicBundle()
 	if err != nil {
 		common.LogWarn("ExportForensicBundle failed: %v", err)

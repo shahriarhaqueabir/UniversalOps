@@ -90,12 +90,12 @@ export function TracerouteTab() {
                     <td className="px-8 py-5">
                       <div className="flex flex-col">
                         <span className="text-sm font-medium text-[var(--color-text)]">{hop.host || 'Unknown'}</span>
-                        <span className="text-sm font-bold text-text-faint uppercase">{hop.ip || '—'}</span>
+                        <span className="text-sm font-bold text-text-faint uppercase">{hop.ip || 'N/A'}</span>
                       </div>
                     </td>
                     <td className="px-8 py-5 text-right">
                       <span className="text-sm font-medium text-[var(--color-text)] tabular-nums">
-                        {hop.rtts_ms.length > 0 ? hop.rtts_ms.join(', ') : '—'}
+                        {hop.rtts_ms.length > 0 ? hop.rtts_ms.join(', ') : 'N/A'}
                       </span>
                     </td>
                     <td className="px-8 py-5 text-right">

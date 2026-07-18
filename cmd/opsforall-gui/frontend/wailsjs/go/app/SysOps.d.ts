@@ -14,8 +14,6 @@ export function GetDiskInfo():Promise<app.DiskInfo>;
 
 export function GetGPUInfo():Promise<app.GPUInfo>;
 
-export function GetInstalledPackages():Promise<Array<app.PackageManagerData>>;
-
 export function GetLoggedInUsers():Promise<Array<app.LoggedInUserData>>;
 
 export function GetMemoryInfo():Promise<app.MemoryInfo>;

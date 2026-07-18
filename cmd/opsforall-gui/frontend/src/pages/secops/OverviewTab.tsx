@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Shield, ShieldCheck, ShieldAlert, Users, Radio, AlertTriangle, Zap } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { SectionBriefing } from '@/components/ui/SectionBriefing'
@@ -61,16 +62,32 @@ export function OverviewTab() {
 
       {/* Score */}
       {score && (
-        <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl flex items-center gap-8">
-          <div className="text-center">
-            <p className="text-6xl font-black tabular-nums text-text">{score.score}</p>
-            <p className={`text-2xl font-bold ${gradeColor[score.grade] || 'text-danger'}`}>Grade {score.grade}</p>
+        <div className="bg-panel border border-border rounded-[2.5rem] p-10 shadow-2xl flex items-center gap-12 group overflow-hidden relative">
+          <div className={cn(
+            "absolute top-0 right-0 w-64 h-64 opacity-5 rounded-bl-full pointer-events-none transition-opacity group-hover:opacity-10",
+            gradeColor[score.grade]?.replace('text-', 'bg-') || 'bg-danger'
+          )} />
+
+          <div className="text-center relative z-10">
+            <p className="text-8xl font-black tabular-nums text-text tracking-tighter drop-shadow-md">{score.score}</p>
+            <p className={cn("text-2xl font-black uppercase tracking-[0.2em] mt-2", gradeColor[score.grade] || 'text-danger')}>
+              Grade {score.grade}
+            </p>
           </div>
-          <div className="flex-1 grid grid-cols-3 gap-4">
+          <div className="flex-1 grid grid-cols-3 gap-6 relative z-10">
             {Object.entries(score.breakdown).map(([cat, val]) => (
-              <div key={cat} className="bg-panel-2 border border-border rounded-xl p-4">
-                <p className="text-xs font-bold text-text-faint uppercase tracking-wider mb-1">{cat}</p>
-                <p className="text-xl font-bold text-text tabular-nums">{val}</p>
+              <div key={cat} className="bg-panel-2 border border-border rounded-2xl p-5 hover:border-accent/40 transition-colors group/card">
+                <p className="text-[10px] font-black text-text-faint uppercase tracking-[0.2em] mb-2">{cat}</p>
+                <div className="flex items-baseline gap-1">
+                  <p className="text-2xl font-black text-text tabular-nums">{val}</p>
+                  <span className="text-[10px] font-bold text-text-faint">/ 100</span>
+                </div>
+                <div className="h-1 w-full bg-panel-3 rounded-full mt-3 overflow-hidden border border-border/50">
+                  <div
+                    className={cn("h-full transition-all duration-1000", (val >= 80 ? 'bg-success' : val >= 60 ? 'bg-warning' : 'bg-danger'))}
+                    style={{ width: `${val}%` }}
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -79,7 +96,7 @@ export function OverviewTab() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-4 gap-4">
-        <MiniStat label="Security Score" value={score?.score ?? '—'} icon={<Shield size={24} />} variant={score && score.score >= 75 ? 'success' : score && score.score >= 50 ? 'warning' : 'danger'} />
+        <MiniStat label="Security Score" value={score?.score ?? 'N/A'} icon={<Shield size={24} />} variant={score && score.score >= 75 ? 'success' : score && score.score >= 50 ? 'warning' : 'danger'} />
         <MiniStat label="Active Admins" value={users.filter(u => u.is_admin && u.is_enabled).length} icon={<Users size={24} />} variant={users.filter(u => u.is_admin && u.is_enabled).length <= 2 ? 'success' : 'warning'} />
         <MiniStat label="External Ports" value={ports.filter(p => p.is_external).length} icon={<Radio size={24} />} variant={ports.filter(p => p.is_external).length === 0 ? 'success' : 'warning'} />
         <MiniStat label="Security Events" value={events.length} icon={<AlertTriangle size={24} />} variant={events.filter(e => e.level === 'Error').length === 0 ? 'success' : 'danger'} />
@@ -88,19 +105,22 @@ export function OverviewTab() {
       {/* Defender & Firewall Status */}
       <div className="grid grid-cols-2 gap-8">
         {defender && (
-          <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl">
-            <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6 flex items-center gap-3">
-              <ShieldCheck size={22} className="text-accent" /> Endpoint Protection
+          <div className="bg-panel border border-border rounded-[2rem] p-10 shadow-xl group">
+            <h3 className="text-lg font-black text-text uppercase tracking-[0.2em] mb-8 flex items-center gap-4">
+              <div className="p-2 rounded-xl bg-accent/10 border border-accent/20">
+                <ShieldCheck size={24} className="text-accent" />
+              </div>
+              Endpoint Protection
             </h3>
-            <div className="space-y-4">
+            <div className="space-y-5">
               {[
-                { label: 'Defender', active: defender.enabled },
-                { label: 'Real-time Protection', active: defender.real_time_protection },
-                { label: 'Cloud Protection', active: defender.cloud_protection },
-                { label: 'Signatures Up-to-date', active: defender.up_to_date },
+                { label: 'DEFENDER SERVICE', active: defender.enabled },
+                { label: 'REAL-TIME ANALYSIS', active: defender.real_time_protection },
+                { label: 'NEURAL CLOUD SYNC', active: defender.cloud_protection },
+                { label: 'THREAT SIGNATURES', active: defender.up_to_date },
               ].map(m => (
-                <div key={m.label} className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-text-dim">{m.label}</span>
+                <div key={m.label} className="flex items-center justify-between group/row">
+                  <span className="text-[11px] font-black text-text-dim uppercase tracking-wider group-hover/row:text-text transition-colors">{m.label}</span>
                   <StatusBadge status={m.active ? 'enabled' : 'disabled'} />
                 </div>
               ))}
@@ -109,18 +129,21 @@ export function OverviewTab() {
         )}
 
         {fwStatus && (
-          <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl">
-            <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6 flex items-center gap-3">
-              <ShieldAlert size={22} className="text-warning" /> Perimeter Defense
+          <div className="bg-panel border border-border rounded-[2rem] p-10 shadow-xl group">
+            <h3 className="text-lg font-black text-text uppercase tracking-[0.2em] mb-8 flex items-center gap-4">
+              <div className="p-2 rounded-xl bg-warning/10 border border-warning/20">
+                <ShieldAlert size={24} className="text-warning" />
+              </div>
+              Perimeter Defense
             </h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-text-dim">Global Firewall</span>
+            <div className="space-y-5">
+              <div className="flex items-center justify-between group/row">
+                <span className="text-[11px] font-black text-text-dim uppercase tracking-wider group-hover/row:text-text transition-colors">GLOBAL FIREWALL</span>
                 <StatusBadge status={fwStatus.enabled ? 'enabled' : 'disabled'} />
               </div>
               {fwStatus.profiles.map(p => (
-                <div key={p.name} className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-text-dim">{p.name}</span>
+                <div key={p.name} className="flex items-center justify-between group/row">
+                  <span className="text-[11px] font-black text-text-dim uppercase tracking-wider group-hover/row:text-text transition-colors">{p.name.toUpperCase()} PROFILE</span>
                   <StatusBadge status={p.enabled ? 'enabled' : 'disabled'} />
                 </div>
               ))}
@@ -131,15 +154,18 @@ export function OverviewTab() {
 
       {/* Recommendations */}
       {score && score.recommendations.length > 0 && (
-        <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl">
-          <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6 flex items-center gap-3">
-            <Zap size={22} className="text-warning" /> Recommendations
+        <div className="bg-panel border border-border rounded-[2rem] p-10 shadow-xl">
+          <h3 className="text-lg font-black text-text uppercase tracking-[0.2em] mb-8 flex items-center gap-4">
+            <div className="p-2 rounded-xl bg-warning/10 border border-warning/20">
+              <Zap size={24} className="text-warning" />
+            </div>
+            Tactical Recommendations
           </h3>
-          <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-4">
             {score.recommendations.map((rec, i) => (
-              <div key={i} className="flex items-start gap-3 bg-panel-2 border border-border rounded-xl px-4 py-3">
-                <AlertTriangle size={14} className="text-warning mt-0.5 shrink-0" />
-                <span className="text-sm text-text-dim leading-snug">{rec}</span>
+              <div key={i} className="flex items-start gap-4 bg-panel-2 border border-border rounded-2xl px-6 py-5 hover:border-warning/40 transition-all group">
+                <AlertTriangle size={18} className="text-warning mt-0.5 shrink-0 transition-transform group-hover:scale-110" />
+                <span className="text-sm font-bold text-text-dim leading-relaxed group-hover:text-text transition-colors">{rec}</span>
               </div>
             ))}
           </div>

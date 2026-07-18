@@ -76,6 +76,7 @@ type activeJob struct {
 var (
 	jobTrackers   map[*exec.Cmd]*activeJob
 	jobTrackersMu sync.Mutex
+	sandboxWarnOnce sync.Once
 )
 
 func init() {
@@ -421,7 +422,9 @@ func applyPlatformSandbox(cmd *exec.Cmd, cfg SandboxConfig) *SandboxedCmd {
 		}
 
 		if cfg.DenyNetworkAccess {
-			LogInfo("sandbox: DenyNetworkAccess requested — true network isolation requires Windows AppContainer (not yet implemented), job-level throttle applied as best-effort")
+			sandboxWarnOnce.Do(func() {
+				LogInfo("sandbox: DenyNetworkAccess requested — true network isolation requires Windows AppContainer (not yet implemented), job-level throttle applied as best-effort")
+			})
 		}
 
 		jobTrackersMu.Lock()

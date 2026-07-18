@@ -18,6 +18,7 @@ const (
 	ActionClearTemp     SystemAction = "clear_temp"
 	ActionCleanPkgCache SystemAction = "clean_pkg_cache"
 	ActionSystemUpdate  SystemAction = "system_update"
+	ActionRestartService SystemAction = "restart_service"
 )
 
 // ActionResult holds the result of a system action.
@@ -97,5 +98,29 @@ func RunSystemAction(action SystemAction) (*ActionResult, error) {
 
 	result.Success = true
 	result.Message = fmt.Sprintf("Action '%s' completed successfully", action)
+	return result, nil
+}
+
+// RestartService restarts a system service by name.
+func RestartService(name string) (*ActionResult, error) {
+	result := &ActionResult{Action: "restart_service"}
+	var cmd *exec.Cmd
+
+	if runtime.GOOS == "windows" {
+		cmd = exec.Command("powershell", "-Command", fmt.Sprintf("Restart-Service -Name '%s' -Force", name))
+	} else {
+		cmd = exec.Command("sudo", "systemctl", "restart", name)
+	}
+
+	output, err := cmd.CombinedOutput()
+	result.Output = string(output)
+	if err != nil {
+		result.Success = false
+		result.Message = fmt.Sprintf("Restart failed: %v", err)
+		return result, err
+	}
+
+	result.Success = true
+	result.Message = fmt.Sprintf("Service %q restarted successfully", name)
 	return result, nil
 }

@@ -12,7 +12,7 @@ import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 // Tab imports (lazy-loaded to reduce initial bundle)
 const OverviewTab = lazy(() => import('./secops/OverviewTab').then(m => ({ default: m.OverviewTab })))
 const IdentityTab = lazy(() => import('./secops/IdentityTab').then(m => ({ default: m.IdentityTab })))
-const NetworkSecurityTab = lazy(() => import('./secops/NetworkSecurityTab').then(m => ({ default: m.NetworkSecurityTab })))
+const PerimeterTab = lazy(() => import('./secops/PerimeterTab').then(m => ({ default: m.PerimeterTab })))
 const EndpointTab = lazy(() => import('./secops/EndpointTab').then(m => ({ default: m.EndpointTab })))
 const EventsTab = lazy(() => import('./secops/EventsTab').then(m => ({ default: m.EventsTab })))
 const HardeningTab = lazy(() => import('./secops/HardeningTab').then(m => ({ default: m.HardeningTab })))
@@ -20,7 +20,7 @@ const AuditTab = lazy(() => import('./secops/AuditTab').then(m => ({ default: m.
 const ResponseTab = lazy(() => import('./secops/ResponseTab').then(m => ({ default: m.ResponseTab })))
 
 type SecOpsCategory =
-  | 'overview' | 'identity' | 'network' | 'endpoint'
+  | 'overview' | 'identity' | 'perimeter' | 'endpoint'
   | 'events' | 'hardening'
   | 'audit' | 'response'
 
@@ -34,7 +34,7 @@ interface CategoryDef {
 const categories: CategoryDef[] = [
   { id: 'overview', label: 'Overview', icon: <LayoutDashboard size={18} />, group: 'assessment' },
   { id: 'identity', label: 'Identity & Access', icon: <Users size={18} />, group: 'assessment' },
-  { id: 'network', label: 'Network Security', icon: <Wifi size={18} />, group: 'assessment' },
+  { id: 'perimeter', label: 'Perimeter Security', icon: <Wifi size={18} />, group: 'assessment' },
   { id: 'endpoint', label: 'Endpoint Security', icon: <Monitor size={18} />, group: 'assessment' },
   { id: 'events', label: 'Log & Events', icon: <AlertTriangle size={18} />, group: 'detection' },
   { id: 'hardening', label: 'Security Hardening', icon: <HardHat size={18} />, group: 'detection' },
@@ -61,7 +61,7 @@ export function SecOps() {
     switch (activeCategory) {
       case 'overview': return <OverviewTab />
       case 'identity': return <IdentityTab />
-      case 'network': return <NetworkSecurityTab />
+      case 'perimeter': return <PerimeterTab />
       case 'endpoint': return <EndpointTab />
       case 'events': return <EventsTab />
       case 'hardening': return <HardeningTab />
@@ -78,7 +78,7 @@ export function SecOps() {
   return (
     <div className="flex flex-col h-full bg-[var(--color-bg)]">
       {/* Header */}
-      <div className="border-b border-[var(--color-border)] bg-[var(--color-panel-2)] py-4 px-6">
+      <div className="border-b border-[var(--color-border)] bg-[var(--color-panel-2)] py-3 px-5">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-4">
@@ -93,14 +93,14 @@ export function SecOps() {
       {/* Content: Sidebar + Main */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
-        <div className="w-56 border-r border-[var(--color-border)] bg-[var(--color-panel-2)] overflow-y-auto p-3">
+        <div className="w-52 border-r border-[var(--color-border)] bg-[var(--color-panel-2)] overflow-y-auto p-2.5">
           <CategoryGroup label="ASSESSMENT" categories={assessmentCategories} active={activeCategory} onSelect={setActiveCategory} />
           <CategoryGroup label="DETECTION" categories={detectionCategories} active={activeCategory} onSelect={setActiveCategory} />
           <CategoryGroup label="RESPONSE" categories={responseCategories} active={activeCategory} onSelect={setActiveCategory} />
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 overflow-y-auto p-6">
           <Suspense fallback={<div className="flex items-center justify-center h-32 text-[var(--color-text-faint)] text-sm">Loading...</div>}>
             {renderContent()}
           </Suspense>
@@ -112,21 +112,27 @@ export function SecOps() {
 
 function CategoryGroup({ label, categories, active, onSelect }: { label: string; categories: CategoryDef[]; active: SecOpsCategory; onSelect: (id: SecOpsCategory) => void }) {
   return (
-    <div className="mb-4">
-      <p className="text-[10px] font-bold text-[var(--color-text-faint)] uppercase tracking-widest px-3 mb-2">{label}</p>
-      {categories.map(cat => (
-        <button
-          key={cat.id}
-          onClick={() => onSelect(cat.id)}
-          className={cn(
-            'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-all mb-0.5',
-            active === cat.id ? 'bg-[var(--color-danger)] text-white' : 'text-[var(--color-text-dim)] hover:text-[var(--color-text)] hover:bg-[var(--color-sidebar-hover)]'
-          )}
-        >
-          {cat.icon}
-          {cat.label}
-        </button>
-      ))}
+    <div className="mb-5">
+      <p className="text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-[0.2em] px-2.5 mb-2.5">{label}</p>
+      <div className="space-y-1">
+        {categories.map(cat => (
+          <button
+            key={cat.id}
+            onClick={() => onSelect(cat.id)}
+            className={cn(
+              'w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-sm font-bold transition-all active:scale-[0.97]',
+              active === cat.id
+                ? 'bg-danger text-white shadow-lg shadow-danger/20'
+                : 'text-text-dim hover:text-text hover:bg-[var(--color-sidebar-hover)]'
+            )}
+          >
+            <div className={cn("transition-colors", active === cat.id ? "text-white" : "text-danger")}>
+              {cat.icon}
+            </div>
+            {cat.label}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

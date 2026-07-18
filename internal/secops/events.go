@@ -4,8 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+)
+
+var (
+	securityLogWarnOnce sync.Once
 )
 
 // SecurityEvent represents a security event log entry.
@@ -27,7 +32,9 @@ func GetSecurityEvents() ([]SecurityEvent, error) {
 		output, err := cmd.Output()
 		if err != nil {
 			// Fallback: Try System log (usually accessible by non-admins)
-			common.LogInfo("Security log inaccessible, falling back to System log: %v", err)
+			securityLogWarnOnce.Do(func() {
+				common.LogInfo("Security log inaccessible, falling back to System log: %v", err)
+			})
 			cmd = common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-Command",
 				"Get-WinEvent -LogName System -MaxEvents 25 -ErrorAction SilentlyContinue | Select-Object Id,LevelDisplayName,ProviderName,TimeCreated,Message | ConvertTo-Json -As Array -Depth 2")
 			output, err = cmd.Output()

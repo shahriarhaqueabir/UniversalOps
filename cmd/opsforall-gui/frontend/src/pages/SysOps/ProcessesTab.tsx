@@ -3,8 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Search, Trash2, TreePine, List } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
-import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
-import type { ProcessInfo } from '@/types'
+import { ConfirmationModal } from '@/components/dialogs/ConfirmationModal'
+import type { ProcessInfo, ActionPreview } from '@/types'
 import { cn } from '@/lib/utils'
 import { useVirtualizer } from '@tanstack/react-virtual'
 
@@ -14,7 +14,7 @@ export function ProcessesTab() {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [view, setView] = useState<'list' | 'tree'>('list')
-  const [killTarget, setKillTarget] = useState<{ pid: number; name: string } | null>(null)
+  const [preview, setPreview] = useState<ActionPreview | null>(null)
 
   const { data: processes = [] } = useQuery<ProcessInfo[]>({
     queryKey: ['sysops-processes'],
@@ -22,10 +22,17 @@ export function ProcessesTab() {
     refetchInterval: refreshInterval,
   })
 
-  const killProcess = async (pid: number) => {
-    await call('DevOps.KillProcess', pid)
+  const requestKill = async (pid: number) => {
+    const p = await call('SecOps.KillProcess', pid) as ActionPreview
+    setPreview(p)
+  }
+
+  const handleConfirm = async () => {
+    if (!preview) return
+    const handshakeID = preview.handshake_id
+    setPreview(null)
+    await call('App.ConfirmAction', handshakeID)
     queryClient.invalidateQueries({ queryKey: ['sysops-processes'] })
-    setKillTarget(null)
   }
 
   const filtered = processes.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
@@ -41,14 +48,10 @@ export function ProcessesTab() {
 
   return (
     <div className="space-y-6">
-      <ConfirmDialog
-        open={killTarget !== null}
-        title="Kill Process"
-        description={`Terminate "${killTarget?.name}" (PID: ${killTarget?.pid})?`}
-        type="danger"
-        confirmText="Kill"
-        onConfirm={() => killProcess(killTarget!.pid)}
-        onClose={() => setKillTarget(null)}
+      <ConfirmationModal
+        preview={preview}
+        onConfirm={handleConfirm}
+        onCancel={() => setPreview(null)}
       />
 
       <div className="flex items-center gap-4">
@@ -122,7 +125,7 @@ export function ProcessesTab() {
                       <td className="px-4 py-3 text-right text-sm text-[var(--color-text-dim)] tabular-nums">{p.memory.toFixed(0)}</td>
                       <td className="px-4 py-3 text-right text-sm text-[var(--color-text-faint)] tabular-nums">{p.num_fds}</td>
                       <td className="px-4 py-3">
-                        <button onClick={() => setKillTarget({ pid: p.pid, name: p.name })} className="opacity-0 group-hover:opacity-100 p-1.5 text-[var(--color-text-faint)] hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 rounded-lg transition-all">
+                        <button onClick={() => requestKill(p.pid)} className="opacity-0 group-hover:opacity-100 p-1.5 text-[var(--color-text-faint)] hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 rounded-lg transition-all active:scale-95">
                           <Trash2 size={14} />
                         </button>
                       </td>

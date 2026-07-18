@@ -2,13 +2,9 @@ package app
 
 import (
 	"fmt"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
-
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/devops"
 )
 
 // Logs exposes log management bindings to the frontend.
@@ -49,51 +45,6 @@ func (l *Logs) GetLogs(level string, since string, n int) []LogEntry {
 		})
 	}
 	return out
-}
-
-// ExportLogs returns the log contents as a single formatted string.
-// format can be "text", "json", or "csv".
-func (l *Logs) ExportLogs(format string) string {
-	lines, err := devops.TailLog("opsforall.log", 2000)
-	if err != nil {
-		lines, err = devops.TailLog("opsforall-legacy.log", 2000)
-		if err != nil {
-			return ""
-		}
-	}
-
-	switch strings.ToLower(format) {
-	case "json":
-		// Simple JSON array of lines
-		var b strings.Builder
-		b.WriteString("[")
-		for i, line := range lines {
-			if i > 0 {
-				b.WriteString(",")
-			}
-			b.WriteString("\"" + strings.ReplaceAll(line, "\"", "\\\"") + "\"")
-		}
-		b.WriteString("]")
-		return b.String()
-	case "csv":
-		// Simple CSV: line per row
-		return strings.Join(lines, "\n")
-	default:
-		return strings.Join(lines, "\n")
-	}
-}
-
-// SaveLogsToFile exports logs to a file on disk.
-func (l *Logs) SaveLogsToFile(path string, format string) string {
-	content := l.ExportLogs(format)
-	if content == "" {
-		return "No log content to export"
-	}
-
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-		return "Failed to save logs: " + err.Error()
-	}
-	return "Logs saved to " + path
 }
 
 // GetLogStats returns aggregated log statistics for the Overview tab.

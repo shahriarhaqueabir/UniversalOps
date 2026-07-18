@@ -1,7 +1,5 @@
 package app
 
-import "time"
-
 // ── AppInfo ──────────────────────────────────────────────────────────────────
 
 // AppInfo holds metadata about the application.
@@ -58,6 +56,19 @@ type NetworkMetric struct {
 	RXRate float64 `json:"rx_rate"`
 	TXRate float64 `json:"tx_rate"`
 	Unit   string  `json:"unit"`
+}
+
+// DataPoint represents a timestamped value for the frontend.
+type DataPoint struct {
+	Time  string  `json:"time"`
+	Value float64 `json:"value"`
+}
+
+// MetricDef describes a tracked metric.
+type MetricDef struct {
+	Name  string `json:"name"`
+	Unit  string `json:"unit"`
+	Label string `json:"label"`
 }
 
 // ── SysOps Types ─────────────────────────────────────────────────────────────
@@ -215,19 +226,6 @@ type SystemLogsResultData struct {
 	Entries []SystemLogEntry `json:"entries"`
 	Source  string           `json:"source"`
 	Total   int              `json:"total"`
-}
-
-// PackageData holds a single package for frontend.
-type PackageData struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-}
-
-// PackageManagerData holds a package manager and its packages for frontend.
-type PackageManagerData struct {
-	Name     string        `json:"name"`
-	Found    bool          `json:"found"`
-	Packages []PackageData `json:"packages"`
 }
 
 // ScheduledTaskData holds a scheduled task for frontend.
@@ -1109,97 +1107,6 @@ type K8sExtendedData struct {
 	Nodes       []K8sResourceItem  `json:"nodes"`
 }
 
-// BuildSystemInfo holds build system detection info for the frontend.
-type BuildSystemInfo struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-	Found   bool   `json:"found"`
-	Path    string `json:"path"`
-}
-
-// BuildTargetInfo holds a detected build target for the frontend.
-type BuildTargetInfo struct {
-	Name       string `json:"name"`
-	Type       string `json:"type"`
-	Path       string `json:"path"`
-	HasBuild   bool   `json:"has_build"`
-	HasTest    bool   `json:"has_test"`
-	HasLint    bool   `json:"has_lint"`
-	HasPackage bool   `json:"has_package"`
-	DepCount   int    `json:"dep_count"`
-}
-
-// CICDConfig holds a detected CI/CD config for the frontend.
-type CICDConfig struct {
-	Platform    string   `json:"platform"`
-	ConfigFiles []string `json:"config_files"`
-	Detected    bool     `json:"detected"`
-}
-
-// CICDPipelineInfo holds pipeline info for the frontend.
-type CICDPipelineInfo struct {
-	Name      string `json:"name"`
-	Status    string `json:"status"`
-	Branch    string `json:"branch"`
-	Commit    string `json:"commit"`
-	Duration  string `json:"duration"`
-	UpdatedAt string `json:"updated_at"`
-	URL       string `json:"url"`
-}
-
-// CICDStatus holds CI/CD status for the frontend.
-type CICDStatus struct {
-	Platform    string             `json:"platform"`
-	Enabled     bool               `json:"enabled"`
-	ConfigFound bool               `json:"config_found"`
-	Pipelines   []CICDPipelineInfo `json:"pipelines"`
-	Configs     []CICDConfig       `json:"configs"`
-}
-
-// ReleaseInfo holds release details for the frontend.
-type ReleaseInfo struct {
-	Version string `json:"version"`
-	Date    string `json:"date"`
-	Branch  string `json:"branch"`
-	Tag     string `json:"tag"`
-	Commit  string `json:"commit"`
-	Status  string `json:"status"`
-	Notes   string `json:"notes"`
-}
-
-// ReleaseHistory holds release history for the frontend.
-type ReleaseHistory struct {
-	Releases    []ReleaseInfo `json:"releases"`
-	TotalCount  int           `json:"total_count"`
-	LastRelease string        `json:"last_release"`
-}
-
-// DeploymentRecord holds a deployment record for the frontend.
-type DeploymentRecord struct {
-	ID          string `json:"id"`
-	Version     string `json:"version"`
-	Environment string `json:"environment"`
-	Status      string `json:"status"`
-	Timestamp   string `json:"timestamp"`
-	Duration    string `json:"duration"`
-	Commit      string `json:"commit"`
-	Trigger     string `json:"trigger"`
-}
-
-// DORAMetrics holds DORA metrics for the frontend.
-type DORAMetrics struct {
-	DeploymentFrequency string  `json:"deployment_frequency"`
-	LeadTimeForChanges  string  `json:"lead_time_for_changes"`
-	ChangeFailureRate   string  `json:"change_failure_rate"`
-	MTTR                string  `json:"mttr"`
-	Period              string  `json:"period"`
-	DeployCount         int     `json:"deploy_count"`
-	IncidentCount       int     `json:"incident_count"`
-	LeadTimeAvgHours    float64 `json:"lead_time_avg_hours"`
-	MTTRAvgMinutes      float64 `json:"mttr_avg_minutes"`
-	FailurePct          float64 `json:"failure_pct"`
-}
-
 // DevOpsDiagCheck holds a single DevOps diagnostic check result for the frontend.
 type DevOpsDiagCheck struct {
 	Name    string `json:"name"`
@@ -1251,11 +1158,11 @@ type AIConfidence struct {
 
 // ConversationMessage represents a single chat message.
 type ConversationMessage struct {
-	ID        int64     `json:"id"`
-	SessionID string    `json:"session_id"`
-	Role      string    `json:"role"`
-	Content   string    `json:"content"`
-	Timestamp time.Time `json:"timestamp"`
+	ID        int64  `json:"id"`
+	SessionID string `json:"session_id"`
+	Role      string `json:"role"`
+	Content   string `json:"content"`
+	Timestamp string `json:"timestamp"`
 }
 
 // NetworkSummary provides a deterministic overview of network state.
@@ -1273,43 +1180,6 @@ type GatewayInfo struct {
 }
 
 // ── NetOps Extended Types ─────────────────────────────────────────────────────
-
-// ARPEntryData holds a single ARP cache entry.
-type ARPEntryData struct {
-	IP        string `json:"ip"`
-	MAC       string `json:"mac"`
-	Vendor    string `json:"vendor"`
-	Interface string `json:"interface"`
-}
-
-// RouteEntryData holds a single routing table entry.
-type RouteEntryData struct {
-	Destination string `json:"destination"`
-	Mask        string `json:"mask"`
-	Gateway     string `json:"gateway"`
-	Interface   string `json:"interface"`
-	Metric      int    `json:"metric"`
-	IsDefault   bool   `json:"is_default"`
-}
-
-// WiFiNetworkData holds a detected WiFi network.
-type WiFiNetworkData struct {
-	SSID      string `json:"ssid"`
-	Signal    int    `json:"signal"`
-	Channel   int    `json:"channel"`
-	Security  string `json:"security"`
-	BSSID     string `json:"bssid"`
-	Frequency string `json:"frequency"`
-}
-
-// WiFiInfoData holds current WiFi connection info.
-type WiFiInfoData struct {
-	Interface string `json:"interface"`
-	SSID      string `json:"ssid"`
-	Signal    int    `json:"signal"`
-	Speed     string `json:"speed"`
-	Channel   int    `json:"channel"`
-}
 
 // DoHResultData holds the result of a DNS-over-HTTPS test.
 type DoHResultData struct {
@@ -1341,22 +1211,6 @@ type PingStatsData struct {
 	WorstTarget string  `json:"worst_target"`
 }
 
-// HealthCheckData holds a single health check result.
-type HealthCheckData struct {
-	Name   string `json:"name"`
-	Status string `json:"status"`
-	Detail string `json:"detail"`
-	Score  int    `json:"score"`
-}
-
-// HealthReportData holds the full network health check report.
-type HealthReportData struct {
-	Score    int               `json:"score"`
-	Checks   []HealthCheckData `json:"checks"`
-	Summary  string            `json:"summary"`
-	Duration string            `json:"duration"`
-}
-
 // VPNStatusData holds the current VPN connection status.
 type VPNStatusData struct {
 	Active    bool   `json:"active"`
@@ -1365,35 +1219,6 @@ type VPNStatusData struct {
 	RemoteIP  string `json:"remote_ip"`
 	LocalIP   string `json:"local_ip"`
 	Protocol  string `json:"protocol"`
-}
-
-// FirewallRuleData holds a single firewall rule.
-type FirewallRuleData struct {
-	Name        string `json:"name"`
-	Direction   string `json:"direction"`
-	Action      string `json:"action"`
-	Protocol    string `json:"protocol"`
-	Ports       string `json:"ports"`
-	Enabled     bool   `json:"enabled"`
-	Source      string `json:"source"`
-	Destination string `json:"destination"`
-}
-
-// DiscoveredDeviceData holds info about a discovered network device.
-type DiscoveredDeviceData struct {
-	IP             string `json:"ip"`
-	MAC            string `json:"mac"`
-	Vendor         string `json:"vendor"`
-	Hostname       string `json:"hostname"`
-	OpenPorts      []int  `json:"open_ports"`
-	ResponseTimeMs int64  `json:"response_time_ms"`
-}
-
-// DiscoveryResultData holds the results of a network discovery scan.
-type DiscoveryResultData struct {
-	Devices    []DiscoveredDeviceData `json:"devices"`
-	Subnet     string                 `json:"subnet"`
-	ScanTimeMs int64                  `json:"scan_time_ms"`
 }
 
 // BandwidthSampleData holds a single bandwidth measurement.

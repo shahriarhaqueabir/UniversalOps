@@ -6,184 +6,32 @@ export function ControlService(arg1, arg2) {
   return window['go']['app']['DevOps']['ControlService'](arg1, arg2);
 }
 
-export function DockerComposeDown(arg1) {
-  return window['go']['app']['DevOps']['DockerComposeDown'](arg1);
-}
-
-export function DockerComposeList() {
-  return window['go']['app']['DevOps']['DockerComposeList']();
-}
-
-export function DockerComposeLogs(arg1, arg2, arg3) {
-  return window['go']['app']['DevOps']['DockerComposeLogs'](arg1, arg2, arg3);
-}
-
-export function DockerComposeUp(arg1, arg2) {
-  return window['go']['app']['DevOps']['DockerComposeUp'](arg1, arg2);
-}
-
-export function DockerExec(arg1, arg2) {
-  return window['go']['app']['DevOps']['DockerExec'](arg1, arg2);
-}
-
-export function DockerImageList() {
-  return window['go']['app']['DevOps']['DockerImageList']();
-}
-
-export function DockerKill(arg1) {
-  return window['go']['app']['DevOps']['DockerKill'](arg1);
-}
-
-export function DockerPause(arg1) {
-  return window['go']['app']['DevOps']['DockerPause'](arg1);
-}
-
-export function DockerPrune() {
-  return window['go']['app']['DevOps']['DockerPrune']();
-}
-
-export function DockerPull(arg1) {
-  return window['go']['app']['DevOps']['DockerPull'](arg1);
-}
-
-export function DockerUnpause(arg1) {
-  return window['go']['app']['DevOps']['DockerUnpause'](arg1);
-}
-
-export function FindBuildTargets(arg1) {
-  return window['go']['app']['DevOps']['FindBuildTargets'](arg1);
-}
-
 export function GetAISuggestions() {
   return window['go']['app']['DevOps']['GetAISuggestions']();
-}
-
-export function GetBuildSystems() {
-  return window['go']['app']['DevOps']['GetBuildSystems']();
-}
-
-export function GetCICDStatus(arg1) {
-  return window['go']['app']['DevOps']['GetCICDStatus'](arg1);
 }
 
 export function GetContainers() {
   return window['go']['app']['DevOps']['GetContainers']();
 }
 
-export function GetDORAMetrics(arg1) {
-  return window['go']['app']['DevOps']['GetDORAMetrics'](arg1);
-}
-
 export function GetDefaultPath() {
   return window['go']['app']['DevOps']['GetDefaultPath']();
-}
-
-export function GetDeploymentHistory(arg1) {
-  return window['go']['app']['DevOps']['GetDeploymentHistory'](arg1);
 }
 
 export function GetDevProcesses() {
   return window['go']['app']['DevOps']['GetDevProcesses']();
 }
 
-export function GetDockerLogs(arg1, arg2) {
-  return window['go']['app']['DevOps']['GetDockerLogs'](arg1, arg2);
-}
-
-export function GetDockerNetworks() {
-  return window['go']['app']['DevOps']['GetDockerNetworks']();
-}
-
-export function GetDockerStats() {
-  return window['go']['app']['DevOps']['GetDockerStats']();
-}
-
 export function GetDockerStatus() {
   return window['go']['app']['DevOps']['GetDockerStatus']();
-}
-
-export function GetDockerVolumes() {
-  return window['go']['app']['DevOps']['GetDockerVolumes']();
 }
 
 export function GetEnvironment() {
   return window['go']['app']['DevOps']['GetEnvironment']();
 }
 
-export function GetGitBranches(arg1) {
-  return window['go']['app']['DevOps']['GetGitBranches'](arg1);
-}
-
-export function GetGitDiff(arg1) {
-  return window['go']['app']['DevOps']['GetGitDiff'](arg1);
-}
-
-export function GetGitLog(arg1, arg2) {
-  return window['go']['app']['DevOps']['GetGitLog'](arg1, arg2);
-}
-
-export function GetGitRemotes(arg1) {
-  return window['go']['app']['DevOps']['GetGitRemotes'](arg1);
-}
-
-export function GetGitStash(arg1) {
-  return window['go']['app']['DevOps']['GetGitStash'](arg1);
-}
-
-export function GetGitSummary() {
-  return window['go']['app']['DevOps']['GetGitSummary']();
-}
-
-export function GetGitTags(arg1) {
-  return window['go']['app']['DevOps']['GetGitTags'](arg1);
-}
-
 export function GetInstalledTools() {
   return window['go']['app']['DevOps']['GetInstalledTools']();
-}
-
-export function GetK8sConfigMaps(arg1) {
-  return window['go']['app']['DevOps']['GetK8sConfigMaps'](arg1);
-}
-
-export function GetK8sDeployments(arg1) {
-  return window['go']['app']['DevOps']['GetK8sDeployments'](arg1);
-}
-
-export function GetK8sEvents(arg1, arg2) {
-  return window['go']['app']['DevOps']['GetK8sEvents'](arg1, arg2);
-}
-
-export function GetK8sIngresses(arg1) {
-  return window['go']['app']['DevOps']['GetK8sIngresses'](arg1);
-}
-
-export function GetK8sJobs(arg1) {
-  return window['go']['app']['DevOps']['GetK8sJobs'](arg1);
-}
-
-export function GetK8sNamespaces() {
-  return window['go']['app']['DevOps']['GetK8sNamespaces']();
-}
-
-export function GetK8sNodes() {
-  return window['go']['app']['DevOps']['GetK8sNodes']();
-}
-
-export function GetK8sPods(arg1) {
-  return window['go']['app']['DevOps']['GetK8sPods'](arg1);
-}
-
-export function GetK8sRollouts(arg1) {
-  return window['go']['app']['DevOps']['GetK8sRollouts'](arg1);
-}
-
-export function GetK8sSecrets(arg1) {
-  return window['go']['app']['DevOps']['GetK8sSecrets'](arg1);
-}
-
-export function GetK8sServices(arg1) {
-  return window['go']['app']['DevOps']['GetK8sServices'](arg1);
 }
 
 export function GetKubernetesStatus() {
@@ -198,10 +46,6 @@ export function GetPowerShellWorkflows() {
   return window['go']['app']['DevOps']['GetPowerShellWorkflows']();
 }
 
-export function GetReleases(arg1) {
-  return window['go']['app']['DevOps']['GetReleases'](arg1);
-}
-
 export function GetServiceCategories() {
   return window['go']['app']['DevOps']['GetServiceCategories']();
 }
@@ -214,108 +58,8 @@ export function GetServices() {
   return window['go']['app']['DevOps']['GetServices']();
 }
 
-export function GitAdd(arg1, arg2) {
-  return window['go']['app']['DevOps']['GitAdd'](arg1, arg2);
-}
-
-export function GitCheckout(arg1, arg2) {
-  return window['go']['app']['DevOps']['GitCheckout'](arg1, arg2);
-}
-
-export function GitCommit(arg1, arg2) {
-  return window['go']['app']['DevOps']['GitCommit'](arg1, arg2);
-}
-
-export function GitCreateBranch(arg1, arg2) {
-  return window['go']['app']['DevOps']['GitCreateBranch'](arg1, arg2);
-}
-
-export function GitDeleteBranch(arg1, arg2) {
-  return window['go']['app']['DevOps']['GitDeleteBranch'](arg1, arg2);
-}
-
-export function GitFetch(arg1, arg2) {
-  return window['go']['app']['DevOps']['GitFetch'](arg1, arg2);
-}
-
-export function GitLogExtended(arg1, arg2, arg3) {
-  return window['go']['app']['DevOps']['GitLogExtended'](arg1, arg2, arg3);
-}
-
-export function GitMerge(arg1, arg2) {
-  return window['go']['app']['DevOps']['GitMerge'](arg1, arg2);
-}
-
-export function GitPull(arg1, arg2, arg3) {
-  return window['go']['app']['DevOps']['GitPull'](arg1, arg2, arg3);
-}
-
-export function GitPush(arg1, arg2, arg3) {
-  return window['go']['app']['DevOps']['GitPush'](arg1, arg2, arg3);
-}
-
-export function GitRebase(arg1, arg2) {
-  return window['go']['app']['DevOps']['GitRebase'](arg1, arg2);
-}
-
-export function GitStashDrop(arg1, arg2) {
-  return window['go']['app']['DevOps']['GitStashDrop'](arg1, arg2);
-}
-
-export function GitStashPop(arg1) {
-  return window['go']['app']['DevOps']['GitStashPop'](arg1);
-}
-
-export function GitStashPush(arg1, arg2) {
-  return window['go']['app']['DevOps']['GitStashPush'](arg1, arg2);
-}
-
-export function GitStatus(arg1) {
-  return window['go']['app']['DevOps']['GitStatus'](arg1);
-}
-
-export function GitTagCreate(arg1, arg2, arg3) {
-  return window['go']['app']['DevOps']['GitTagCreate'](arg1, arg2, arg3);
-}
-
-export function GitTagDelete(arg1, arg2) {
-  return window['go']['app']['DevOps']['GitTagDelete'](arg1, arg2);
-}
-
-export function K8sDescribeResource(arg1, arg2, arg3) {
-  return window['go']['app']['DevOps']['K8sDescribeResource'](arg1, arg2, arg3);
-}
-
-export function K8sGetLogs(arg1, arg2, arg3, arg4) {
-  return window['go']['app']['DevOps']['K8sGetLogs'](arg1, arg2, arg3, arg4);
-}
-
-export function K8sRestartDeployment(arg1, arg2) {
-  return window['go']['app']['DevOps']['K8sRestartDeployment'](arg1, arg2);
-}
-
-export function K8sRollbackDeployment(arg1, arg2, arg3) {
-  return window['go']['app']['DevOps']['K8sRollbackDeployment'](arg1, arg2, arg3);
-}
-
-export function K8sScaleDeployment(arg1, arg2, arg3) {
-  return window['go']['app']['DevOps']['K8sScaleDeployment'](arg1, arg2, arg3);
-}
-
 export function KillProcess(arg1) {
   return window['go']['app']['DevOps']['KillProcess'](arg1);
-}
-
-export function ListDirectory(arg1) {
-  return window['go']['app']['DevOps']['ListDirectory'](arg1);
-}
-
-export function ReadFile(arg1) {
-  return window['go']['app']['DevOps']['ReadFile'](arg1);
-}
-
-export function RunBuildCommand(arg1, arg2, arg3) {
-  return window['go']['app']['DevOps']['RunBuildCommand'](arg1, arg2, arg3);
 }
 
 export function RunCommand(arg1) {
@@ -332,16 +76,4 @@ export function RunDevOpsDiagnostics() {
 
 export function RunPowerShell(arg1) {
   return window['go']['app']['DevOps']['RunPowerShell'](arg1);
-}
-
-export function SearchLog(arg1, arg2) {
-  return window['go']['app']['DevOps']['SearchLog'](arg1, arg2);
-}
-
-export function TailLog(arg1, arg2) {
-  return window['go']['app']['DevOps']['TailLog'](arg1, arg2);
-}
-
-export function WriteFile(arg1, arg2) {
-  return window['go']['app']['DevOps']['WriteFile'](arg1, arg2);
 }

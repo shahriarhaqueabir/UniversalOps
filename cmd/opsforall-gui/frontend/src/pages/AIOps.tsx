@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { motion } from 'motion/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Send,
@@ -10,13 +11,20 @@ import {
   Activity,
   Sparkles,
   ChevronRight,
+  ChevronDown,
   BrainCircuit,
   MessageSquare,
   ShieldCheck,
+  ShieldAlert,
+  LockOpen,
+  XCircle,
   Zap,
   Copy,
   Check,
   Lightbulb,
+  Cpu,
+  MemoryStick,
+  HardDrive,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
@@ -26,15 +34,22 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { EmptyState } from '@/components/ui/EmptyState'
 import * as Tabs from '@radix-ui/react-tabs'
 import { useOllamaStore } from '@/stores/useOllamaStore'
-import type { ChatMessage, AnomalyInfo, OllamaStatus, AIInsight, ChatSession } from '@/types'
+import type { ChatMessage, AnomalyInfo, OllamaStatus, AIInsight, ChatSession, DashboardData, ActionPreview } from '@/types'
 
 type TabId = 'ai-chat' | 'anomalies' | 'insights'
 
+interface ChatResponse {
+  content: string
+  action?: ActionPreview
+}
+
 // ── Inline helpers ──
 
-function ChatBubble({ role, content }: { role: string; content: string }) {
+function ChatBubble({ role, content, action }: ChatMessage) {
+  const { call } = useBackend()
   const isAssistant = role === 'assistant' || role === 'system'
   const [copied, setCopied] = useState(false)
+  const [status, setStatus] = useState<'pending' | 'authorized' | 'aborted'>('pending')
 
   const handleCopy = async () => {
     try {
@@ -42,6 +57,17 @@ function ChatBubble({ role, content }: { role: string; content: string }) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch { /* ignore */ }
+  }
+
+  const handleAuthorize = async () => {
+    if (!action) return
+    try {
+      await call('SecOps.AuthorizeAction', action.handshake_id)
+      setStatus('authorized')
+    } catch (err) {
+      console.error(err)
+      toast.error('Neural Authorization Failed')
+    }
   }
 
   return (
@@ -58,16 +84,16 @@ function ChatBubble({ role, content }: { role: string; content: string }) {
           <Bot size={24} className="text-[var(--color-accent)]" />
         )}
       </div>
-      <div className="flex flex-col space-y-2">
+      <div className="flex flex-col space-y-4 flex-1 min-w-0">
         <div
           className={cn(
-            'rounded-2xl px-6 py-4 text-lg shadow-xl relative group',
+            'rounded-2xl px-6 py-4 text-base shadow-xl relative group',
             !isAssistant
-              ? 'bg-[var(--color-accent)] text-white rounded-tr-none'
+              ? 'bg-[var(--color-accent)] text-white rounded-tr-none ml-auto'
               : 'bg-[var(--color-panel-2)] border border-[var(--color-border)] text-[var(--color-text)] rounded-tl-none',
           )}
         >
-          <div className="whitespace-pre-wrap leading-relaxed tabular-nums">{content}</div>
+          <div className="whitespace-pre-wrap leading-relaxed tabular-nums font-medium">{content}</div>
           {isAssistant && (
             <button
               onClick={handleCopy}
@@ -78,7 +104,66 @@ function ChatBubble({ role, content }: { role: string; content: string }) {
             </button>
           )}
         </div>
-        <span className={cn("text-xs font-semibold text-[var(--color-text-faint)] px-1", !isAssistant ? "text-right" : "text-left")}>
+
+        {action && status === 'pending' && (
+          <div className="bg-panel border-2 border-warning/30 rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="bg-warning/10 px-6 py-3 border-b border-warning/20 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <ShieldAlert size={18} className="text-warning" />
+                <span className="text-xs font-black uppercase tracking-widest text-warning">Neural Authorization Required</span>
+              </div>
+              <span className="text-[10px] font-mono text-warning/60">{action.handshake_id.slice(0, 8)}</span>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <p className="text-xs font-bold text-text-faint uppercase tracking-tighter mb-1">Proposed Action</p>
+                <p className="text-base font-bold text-text">{action.description}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-text-faint uppercase tracking-tighter mb-2">Technical Risks</p>
+                <ul className="space-y-1">
+                  {action.risks.map((risk, i) => (
+                    <li key={i} className="text-xs text-danger/80 flex items-start gap-2">
+                      <span className="mt-1.5 w-1 h-1 rounded-full bg-danger shrink-0" />
+                      {risk}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="pt-2 flex gap-3">
+                <button
+                  onClick={handleAuthorize}
+                  className="flex-1 bg-accent text-white py-2.5 rounded-xl font-bold text-sm hover:bg-accent/90 transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                >
+                  <LockOpen size={16} />
+                  Authorize Execution
+                </button>
+                <button
+                  onClick={() => setStatus('aborted')}
+                  className="px-6 border border-border bg-panel-2 py-2.5 rounded-xl font-bold text-sm text-text-dim hover:bg-panel-3 transition-all active:scale-95"
+                >
+                  Abort
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {status === 'authorized' && (
+          <div className="bg-success/10 border border-success/30 rounded-xl px-4 py-2 flex items-center gap-3 animate-in fade-in duration-500 max-w-fit">
+            <ShieldCheck size={16} className="text-success" />
+            <span className="text-[10px] font-black text-success uppercase tracking-widest">Handshake Complete: Action Executed</span>
+          </div>
+        )}
+
+        {status === 'aborted' && (
+          <div className="bg-panel-3 border border-border rounded-xl px-4 py-2 flex items-center gap-3 opacity-60 max-w-fit">
+            <XCircle size={16} className="text-text-faint" />
+            <span className="text-[10px] font-black text-text-faint uppercase tracking-widest">Neural Handshake Aborted</span>
+          </div>
+        )}
+
+        <span className={cn("text-[10px] font-bold text-[var(--color-text-faint)] px-1 uppercase tracking-tighter", !isAssistant ? "text-right" : "text-left")}>
           {role} \u2022 {format(new Date(), 'HH:mm')}
         </span>
       </div>
@@ -115,6 +200,8 @@ export function AIOps() {
   const setOllamaStatus = useOllamaStore((s) => s.setStatus)
   const queryClient = useQueryClient()
   const [initializing, setInitializing] = useState(false)
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Ollama status via react-query
   const { data: ollamaStatusData } = useQuery<OllamaStatus>({
@@ -132,6 +219,17 @@ export function AIOps() {
       setOllamaStatus(ollamaStatusData)
     }
   }, [ollamaStatusData, setOllamaStatus])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsModelDropdownOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   const ollamaStatus: OllamaStatus = ollamaStatusData ?? { available: false, binary_exists: false, model: '', version: '' }
   const isPersonaMissing = ollamaStatus.available && !ollamaStatus.model.startsWith('opsforall')
@@ -151,62 +249,127 @@ export function AIOps() {
     }
   }
 
+  const handleSetModel = async (model: string) => {
+    try {
+      await call('AIOps.SetOllamaModel', model)
+      setIsModelDropdownOpen(false)
+      toast.success(`Switched to model: ${model}`)
+      queryClient.invalidateQueries({ queryKey: ['ollama-status'] })
+    } catch (err: any) {
+      toast.error(`Failed to switch model: ${err.message}`)
+    }
+  }
+
   return (
-    <div className="flex flex-col h-full bg-[var(--color-bg)]">
-      <div className="py-4 border-b border-border bg-panel-2 flex items-center justify-between px-6">
+    <div className="flex flex-col h-full bg-[var(--color-bg)] animate-in fade-in duration-500">
+      <div className="py-8 border-b border-[var(--color-border)] bg-[var(--color-panel-2)]/50 flex items-center justify-between px-10">
         <div>
-          <h1 className="text-2xl font-bold text-text flex items-center gap-3">
-            <BrainCircuit size={32} className="text-accent" />
-            AI Operations Analyst
-          </h1>
-          <p className="text-text-dim text-sm mt-1">
-            Local intelligence for system diagnostics, trend analysis, and anomaly detection.
-          </p>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
+               <BrainCircuit size={18} />
+            </div>
+            <h1 className="text-sm font-black text-[var(--color-text)] uppercase tracking-[0.25em]">Neural Processing</h1>
+          </div>
+          <p className="text-3xl font-bold text-[var(--color-text)] tracking-tight">AI Operations Analyst</p>
+          <p className="text-[var(--color-text-dim)] text-xs font-semibold uppercase tracking-widest mt-2">Local intelligence for system diagnostics and trend analysis</p>
         </div>
         <div className="flex items-center gap-4">
           {isPersonaMissing && (
             <button
               onClick={handleInitializePersona}
               disabled={initializing}
-              className="flex items-center gap-2 px-4 py-2 bg-warning/10 border border-warning/30 text-warning rounded-xl text-xs font-bold hover:bg-warning/20 transition-all disabled:opacity-50"
+              className="flex items-center gap-2.5 px-6 py-3 bg-warning/10 border border-warning/30 text-warning rounded-xl text-sm font-bold hover:bg-warning/20 transition-all disabled:opacity-50 active:scale-95"
             >
               {initializing ? <RefreshCw size={14} className="animate-spin" /> : <Bot size={14} />}
               Initialize Persona
             </button>
           )}
-          <div className="flex items-center gap-4 bg-panel border border-border px-6 py-3 rounded-2xl shadow-inner">
-            <div className="flex items-center gap-2">
-              <div className={cn("w-2 h-2 rounded-full", ollamaStatus.available ? "bg-success animate-pulse shadow-[0_0_8px_var(--color-success)]" : "bg-danger")} />
-              <span className="text-sm font-bold text-text-dim uppercase tracking-widest">
-                {ollamaStatus.available ? 'Ollama Online' : 'Ollama Offline'}
-              </span>
-            </div>
-            <div className="w-px h-4 bg-border" />
-            <span className="text-sm font-bold text-accent">
-              {ollamaStatus.available ? ollamaStatus.model : (ollamaStatus.error || '—')}
-            </span>
+
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+              className="flex items-center gap-5 bg-[var(--color-panel)] border border-[var(--color-border)] px-6 py-3.5 rounded-2xl shadow-xl hover:border-accent/30 transition-all outline-none focus:border-accent group"
+            >
+              <div className="flex items-center gap-3">
+                <div className={cn("w-2.5 h-2.5 rounded-full", ollamaStatus.available ? "bg-success shadow-[0_0_8px_var(--color-success)]" : "bg-danger")} />
+                <span className="text-[10px] font-black text-text-faint uppercase tracking-[0.15em] group-hover:text-text-dim transition-colors">
+                  {ollamaStatus.available ? 'Ollama Online' : 'Ollama Offline'}
+                </span>
+              </div>
+              <div className="w-px h-4 bg-border" />
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-black text-accent tracking-tight">
+                  {ollamaStatus.available ? ollamaStatus.model : (ollamaStatus.error || 'N/A')}
+                </span>
+                <ChevronDown size={14} className={cn("text-text-faint transition-transform", isModelDropdownOpen && "rotate-180")} />
+              </div>
+            </button>
+
+            {isModelDropdownOpen && (
+              <div className="absolute top-full right-0 mt-2 z-[300] min-w-[220px] bg-panel-2 border border-border rounded-xl p-2 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                <p className="px-3 py-2 text-[10px] font-bold text-text-faint uppercase tracking-[0.2em]">Available Models</p>
+                <div className="max-h-64 overflow-y-auto space-y-1">
+                  {ollamaStatus.available_models?.map(m => (
+                    <button
+                      key={m}
+                      onClick={() => handleSetModel(m)}
+                      className={cn(
+                        "w-full px-3 py-2.5 rounded-lg text-sm font-bold flex items-center justify-between transition-all",
+                        m === ollamaStatus.model ? "bg-accent text-white" : "text-text-dim hover:bg-accent-soft hover:text-text"
+                      )}
+                    >
+                      {m}
+                      {m === ollamaStatus.model && <Check size={16} />}
+                    </button>
+                  ))}
+                  {!ollamaStatus.available_models?.length && (
+                    <div className="px-3 py-4 text-center">
+                      <p className="text-xs text-text-faint italic">No models found</p>
+                    </div>
+                  )}
+                </div>
+                <div className="h-px bg-border my-2" />
+                <button
+                  onClick={() => {
+                    queryClient.invalidateQueries({ queryKey: ['ollama-status'] })
+                    setIsModelDropdownOpen(false)
+                  }}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm font-bold text-accent hover:bg-accent-soft flex items-center gap-2 transition-all"
+                >
+                  <RefreshCw size={14} />
+                  Refresh Status
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       <Tabs.Root defaultValue="ai-chat" onValueChange={(v) => setActiveTab(v as TabId)} className="flex-1 flex flex-col min-w-0">
-        <Tabs.List className="flex border-b border-border bg-panel px-4">
+        <Tabs.List className="flex border-b border-[var(--color-border)] bg-[var(--color-panel)] px-6">
           {[
-            { id: 'ai-chat', label: 'Analyst Chat', icon: <MessageSquare size={20} /> },
-            { id: 'anomalies', label: 'Anomaly Detection', icon: <Activity size={20} /> },
-            { id: 'insights', label: 'AI Insights', icon: <Lightbulb size={20} /> },
+            { id: 'ai-chat', label: 'Analyst Chat', icon: <MessageSquare size={18} /> },
+            { id: 'anomalies', label: 'Anomaly Detection', icon: <Activity size={18} /> },
+            { id: 'insights', label: 'AI Insights', icon: <Lightbulb size={18} /> },
           ].map((tab) => (
             <Tabs.Trigger
               key={tab.id}
               value={tab.id}
               data-automation-id={`aiops-tab-${tab.id}`}
               className={cn(
-                'flex items-center gap-3 px-8 py-5 text-base font-bold transition-all border-b-2 border-transparent',
-                activeTab === tab.id ? 'border-accent text-text bg-accent-soft' : 'text-text-faint hover:text-text hover:bg-[var(--color-sidebar-hover)]',
+                'flex items-center gap-3 px-10 py-5 text-sm font-bold transition-all border-b-2 border-transparent relative',
+                activeTab === tab.id ? 'text-accent' : 'text-text-faint hover:text-text hover:bg-[var(--color-sidebar-hover)]',
               )}
             >
               {tab.icon}
-              {tab.label}
+              <span className="uppercase tracking-widest text-[10px] font-black">{tab.label}</span>
+              {activeTab === tab.id && (
+                <motion.div
+                  layoutId="aiops-tab-indicator"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent"
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                />
+              )}
             </Tabs.Trigger>
           ))}
         </Tabs.List>
@@ -287,12 +450,16 @@ function ChatTab() {
     } catch { /* ignore */ }
 
     try {
-      const response = await call('AIOps.Chat', input) as string
-      const assistantMsg: ChatMessage = { role: 'assistant', content: response }
+      const response = await call('AIOps.Chat', input) as ChatResponse
+      const assistantMsg: ChatMessage = {
+        role: 'assistant',
+        content: response.content,
+        action: response.action
+      }
       setMessages(prev => [...prev, assistantMsg])
       // Persist assistant message
       try {
-        await call('AIOps.SaveMessage', activeSession, 'assistant', response)
+        await call('AIOps.SaveMessage', activeSession, 'assistant', response.content)
         refetchSessions()
       } catch { /* ignore */ }
     } catch {
@@ -336,21 +503,24 @@ function ChatTab() {
   return (
     <div className="flex h-full bg-[var(--color-bg)] overflow-hidden">
       {/* Sessions Sidebar */}
-      <div className="w-80 border-r border-border bg-panel flex flex-col shrink-0">
-        <div className="p-6 border-b border-border">
+      <div className="w-80 border-r border-[var(--color-border)] bg-[var(--color-panel)] flex flex-col shrink-0">
+        <div className="p-8 border-b border-[var(--color-border)]">
           <button
             onClick={handleNewSession}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-accent text-white rounded-xl font-bold hover:bg-accent/90 transition-all shadow-lg active:scale-95"
+            className="w-full flex items-center justify-center gap-2.5 py-4 px-4 bg-accent text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-accent/90 transition-all shadow-lg active:scale-95 group"
           >
-            <Sparkles size={18} />
+            <Sparkles size={16} className="group-hover:rotate-12 transition-transform" />
             New Intelligence Session
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {sessions.length === 0 ? (
-            <div className="py-10 px-4 text-center">
-              <p className="text-sm font-bold text-text-faint uppercase tracking-widest mb-2">No History</p>
-              <p className="text-xs text-text-dim">Persistent sessions will appear here.</p>
+            <div className="py-16 px-4 text-center">
+              <div className="w-12 h-12 rounded-full bg-panel-3 border border-border flex items-center justify-center mx-auto mb-4 opacity-50">
+                <MessageSquare size={20} className="text-text-faint" />
+              </div>
+              <p className="text-[10px] font-black text-text-faint uppercase tracking-[0.2em] mb-2">No History</p>
+              <p className="text-xs text-text-dim font-medium leading-relaxed">Persistent sessions will appear here.</p>
             </div>
           ) : (
             sessions.map((s) => (
@@ -358,26 +528,26 @@ function ChatTab() {
                 key={s.session_id}
                 onClick={() => setActiveSession(s.session_id)}
                 className={cn(
-                  "group relative p-4 rounded-xl border transition-all cursor-pointer",
+                  "group relative p-5 rounded-xl border transition-all cursor-pointer",
                   activeSession === s.session_id
-                    ? "bg-accent-soft border-accent/40 shadow-md"
+                    ? "bg-accent-soft border-accent/30 shadow-sm"
                     : "border-transparent hover:bg-[var(--color-sidebar-hover)]"
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className={cn("text-sm font-bold truncate", activeSession === s.session_id ? "text-text" : "text-text-dim group-hover:text-text")}>
+                    <p className={cn("text-sm font-bold truncate tracking-tight", activeSession === s.session_id ? "text-text" : "text-text-dim group-hover:text-text")}>
                       {s.session_id}
                     </p>
-                    <div className="flex items-center gap-3 mt-1.5 text-[10px] font-bold text-text-faint uppercase tracking-tighter">
-                      <span className="flex items-center gap-1"><MessageSquare size={10} /> {s.msg_count}</span>
-                      <span>\u2022</span>
+                    <div className="flex items-center gap-3 mt-2 text-[10px] font-black text-text-faint uppercase tracking-tighter">
+                      <span className="flex items-center gap-1.5"><MessageSquare size={10} className="text-accent/60" /> {s.msg_count}</span>
+                      <span className="opacity-30">|</span>
                       <span>{format(new Date(s.last_active), 'MMM d, HH:mm')}</span>
                     </div>
                   </div>
                   <button
                     onClick={(e) => handleDeleteSession(s.session_id, e)}
-                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-danger/10 hover:text-danger text-text-faint transition-all"
+                    className="opacity-0 group-hover:opacity-100 p-2 rounded-lg hover:bg-danger/10 hover:text-danger text-text-faint transition-all"
                     title="Delete Session"
                   >
                     <Trash2 size={14} />
@@ -390,91 +560,185 @@ function ChatTab() {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col relative min-w-0">
-        {!loaded ? (
-          <div className="flex items-center justify-center h-full bg-[var(--color-bg)]">
-            <div className="flex items-center gap-3 text-text-dim">
-              <RefreshCw size={20} className="animate-spin" />
-              <span className="text-sm font-bold uppercase tracking-widest">Retrieving logs...</span>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* Background Decor */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-              <div className="absolute -top-24 -left-24 w-96 h-96 bg-accent rounded-full blur-[120px]" />
-              <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-accent rounded-full blur-[150px] opacity-30" />
-            </div>
-
-            {/* Messages */}
-            <div ref={chatRef} className="flex-1 overflow-y-auto p-10 space-y-8 relative z-10 scroll-smooth">
-              {messages.map((msg, i) => (
-                <ChatBubble key={i} role={msg.role} content={msg.content} />
-              ))}
-              {isTyping && (
-                <div className="flex gap-6 max-w-[80%] animate-pulse">
-                  <div className="w-12 h-12 rounded-xl bg-panel-3 border border-accent/20 flex items-center justify-center shrink-0">
-                    <Bot size={24} className="text-accent" />
-                  </div>
-                  <div className="bg-panel-2 border border-border rounded-2xl rounded-tl-none px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                      <span className="ml-2 text-sm font-bold text-text-faint uppercase tracking-widest">Analyzing System Context...</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Input Area */}
-            <div className="p-8 bg-panel-2 border-t border-border relative z-20">
-              <div className="max-w-5xl mx-auto space-y-6">
-                {/* Suggested Prompts */}
-                {messages.length < 3 && (
-                  <div className="flex flex-wrap gap-3">
-                    {["Analyze recent system health", "Check for security anomalies", "Review network connection density", "Summarize resource usage trends"].map(prompt => (
-                      <button
-                        key={prompt}
-                        onClick={() => { setInput(prompt) }}
-                        className="px-4 py-2 bg-panel border border-border rounded-full text-sm font-bold text-text-dim hover:text-accent hover:border-accent/40 transition-all"
-                      >
-                        {prompt}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex items-end gap-4">
-                  <div className="relative flex-1 group">
-                    <textarea
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Ask about system health, anomalies, or network state..."
-                      rows={1}
-                      className="w-full bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-2xl px-6 py-5 text-xl text-text placeholder-text-faint focus:outline-none focus:border-accent transition-all shadow-inner resize-none min-h-[64px] max-h-40"
-                      style={{ height: 'auto' }}
-                    />
-                    <div className="absolute right-4 bottom-4 flex items-center gap-3 text-text-faint">
-                      <span className="text-xs font-bold uppercase tracking-tighter group-focus-within:text-accent transition-colors">Shift+Enter for newline</span>
-                      <div className="w-px h-3 bg-border" />
-                      <Zap size={14} className="group-focus-within:text-warning transition-colors" />
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleSend}
-                    disabled={!input.trim() || isTyping}
-                    className="h-16 w-16 flex items-center justify-center bg-accent text-white rounded-2xl hover:bg-accent/90 disabled:opacity-30 disabled:scale-95 transition-all shadow-lg active:scale-90"
-                  >
-                    <Send size={28} />
-                  </button>
-                </div>
+      <div className="flex-1 flex flex-row relative min-w-0">
+        <div className="flex-1 flex flex-col relative min-w-0">
+          {!loaded ? (
+            <div className="flex items-center justify-center h-full bg-[var(--color-bg)]">
+              <div className="flex items-center gap-3 text-text-dim">
+                <RefreshCw size={20} className="animate-spin" />
+                <span className="text-sm font-bold uppercase tracking-widest">Retrieving logs...</span>
               </div>
             </div>
-          </>
-        )}
+          ) : (
+            <>
+              {/* Background Decor */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+                <div className="absolute -top-24 -left-24 w-96 h-96 bg-accent rounded-full blur-[120px]" />
+                <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-accent rounded-full blur-[150px] opacity-30" />
+              </div>
+
+              {/* Messages */}
+              <div ref={chatRef} className="flex-1 overflow-y-auto p-10 space-y-8 relative z-10 scroll-smooth">
+                {messages.map((msg, i) => (
+                  <ChatBubble key={i} role={msg.role} content={msg.content} />
+                ))}
+                {isTyping && (
+                  <div className="flex gap-6 max-w-[80%] animate-pulse">
+                    <div className="w-12 h-12 rounded-xl bg-panel-3 border border-accent/20 flex items-center justify-center shrink-0">
+                      <Bot size={24} className="text-accent" />
+                    </div>
+                    <div className="bg-panel-2 border border-border rounded-2xl rounded-tl-none px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        <span className="ml-2 text-sm font-bold text-text-faint uppercase tracking-widest">Analyzing System Context...</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Input Area */}
+              <div className="p-8 bg-panel-2 border-t border-border relative z-20">
+                <div className="max-w-5xl mx-auto space-y-6">
+                  {/* Suggested Prompts */}
+                  {messages.length < 3 && (
+                    <div className="flex flex-wrap gap-3">
+                      {["Analyze recent system health", "Check for security anomalies", "Review network connection density", "Summarize resource usage trends"].map(prompt => (
+                        <button
+                          key={prompt}
+                          onClick={() => { setInput(prompt) }}
+                          className="px-4 py-2 bg-panel border border-border rounded-full text-sm font-bold text-text-dim hover:text-accent hover:border-accent/40 transition-all active:scale-95"
+                        >
+                          {prompt}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex items-end gap-4">
+                    <div className="relative flex-1 group">
+                      <textarea
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Ask about system health, anomalies, or network state..."
+                        rows={1}
+                        className="w-full bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-2xl px-6 py-5 text-xl text-text placeholder-text-faint focus:outline-none focus:border-accent transition-all shadow-inner resize-none min-h-[64px] max-h-40"
+                        style={{ height: 'auto' }}
+                      />
+                      <div className="absolute right-4 bottom-4 flex items-center gap-3 text-text-faint">
+                        <span className="text-xs font-bold uppercase tracking-tighter group-focus-within:text-accent transition-colors">Shift+Enter for newline</span>
+                        <div className="w-px h-3 bg-border" />
+                        <Zap size={14} className="group-focus-within:text-warning transition-colors" />
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleSend}
+                      disabled={!input.trim() || isTyping}
+                      className="h-16 w-16 flex items-center justify-center bg-accent text-white rounded-2xl hover:bg-accent/90 disabled:opacity-30 disabled:scale-95 transition-all shadow-lg active:scale-90"
+                    >
+                      <Send size={28} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+        <ContextSidebar />
+      </div>
+    </div>
+  )
+}
+
+function ContextSidebar() {
+  const { call } = useBackend()
+  const { refreshInterval } = useSettingsStore()
+
+  const { data: dashboard } = useQuery<DashboardData>({
+    queryKey: ['dashboard-mini'],
+    queryFn: async () => await call('Dashboard.GetDashboardData') as DashboardData,
+    refetchInterval: refreshInterval,
+  })
+
+  if (!dashboard) return null
+
+  return (
+    <div className="w-72 border-l border-border bg-panel flex flex-col shrink-0 animate-in slide-in-from-right-4 duration-500">
+      <div className="p-6 border-b border-border bg-panel-2/50">
+        <h3 className="text-xs font-black text-text-faint uppercase tracking-[0.2em] flex items-center gap-2">
+          <Activity size={14} className="text-accent" />
+          Live Context
+        </h3>
+      </div>
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="space-y-4">
+          <ContextItem
+            icon={<Cpu size={18} />}
+            label="Processor"
+            value={dashboard.cpu.value}
+            unit="%"
+            color={dashboard.cpu.value > 80 ? 'text-danger' : 'text-success'}
+          />
+          <ContextItem
+            icon={<MemoryStick size={18} />}
+            label="Memory"
+            value={dashboard.memory.value}
+            unit="%"
+            color={dashboard.memory.value > 85 ? 'text-warning' : 'text-success'}
+          />
+          <ContextItem
+            icon={<HardDrive size={18} />}
+            label="Storage"
+            value={dashboard.disk.value}
+            unit="%"
+            color={dashboard.disk.value > 90 ? 'text-danger' : 'text-success'}
+          />
+        </div>
+
+        <div className="pt-6 border-t border-border">
+          <h4 className="text-[10px] font-bold text-text-faint uppercase tracking-widest mb-4">Neural Awareness</h4>
+          <div className="p-4 rounded-xl bg-accent-soft border border-accent/20 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-text-dim">ANOMALIES</span>
+              <span className="text-[10px] font-black text-accent tabular-nums">{dashboard.alerts > 0 ? dashboard.alerts : 'NONE'}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-text-dim">UPTIME</span>
+              <span className="text-[10px] font-black text-text tabular-nums">{dashboard.uptime}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-4">
+          <p className="text-[10px] text-text-faint leading-relaxed italic">
+            "Analyst is continuously monitoring these heuristics to ground its responses in physical reality."
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ContextItem({ icon, label, value, unit, color }: { icon: React.ReactNode, label: string, value: number, unit: string, color: string }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-text-dim">
+          {icon}
+          <span className="text-[10px] font-black uppercase tracking-wider">{label}</span>
+        </div>
+        <span className={cn("text-sm font-black tabular-nums", color)}>
+          {Math.round(value)}{unit}
+        </span>
+      </div>
+      <div className="h-1 bg-panel-3 rounded-full overflow-hidden border border-border/50">
+        <div
+          className={cn("h-full transition-all duration-500", color.replace('text-', 'bg-'))}
+          style={{ width: `${value}%` }}
+        />
       </div>
     </div>
   )
@@ -500,71 +764,70 @@ function AnomaliesTab() {
   })
 
   return (
-    <div className="flex flex-col h-full space-y-8">
-      <div className="flex items-center justify-between bg-panel border border-border px-6 py-4 rounded-xl shadow-lg">
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-4">
-            <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center border", anomalies.length > 0 ? "bg-danger/10 border-danger/30 text-danger" : "bg-success/10 border-success/30 text-success")}>
-              {anomalies.length > 0 ? <AlertTriangle size={32} /> : <ShieldCheck size={32} />}
+    <div className="flex flex-col h-full space-y-6 p-10">
+      <div className="flex items-center justify-between bg-[var(--color-panel)] border border-[var(--color-border)] px-8 py-6 rounded-2xl shadow-xl">
+        <div className="flex items-center gap-10">
+          <div className="flex items-center gap-5">
+            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center border-2 shadow-lg transition-transform hover:scale-105", anomalies.length > 0 ? "bg-danger/10 border-danger/20 text-danger" : "bg-success/10 border-success/20 text-success")}>
+              {anomalies.length > 0 ? <AlertTriangle size={24} /> : <ShieldCheck size={24} />}
             </div>
             <div>
-              <p className="text-2xl font-bold text-[var(--color-text)] tabular-nums">{anomalies.length}</p>
-              <p className="text-sm font-bold text-text-dim uppercase tracking-widest">Detected Anomalies</p>
+              <p className="text-3xl font-black text-[var(--color-text)] tabular-nums tracking-tighter">{anomalies.length}</p>
+              <p className="text-[10px] font-black text-text-faint uppercase tracking-[0.2em]">Detected Anomalies</p>
             </div>
           </div>
-          <div className="w-px h-12 bg-border" />
-          <div className="text-text-dim text-sm leading-relaxed max-w-md italic">
+          <div className="w-px h-10 bg-border/50" />
+          <div className="text-text-dim text-xs leading-relaxed max-w-sm font-medium">
             Statistical deviation tracking compares current live metrics against a 12-minute rolling window of history.
           </div>
         </div>
         <button
           onClick={() => refetch()}
-          className="flex items-center gap-3 px-5 py-2.5 bg-[var(--color-panel-3)] border border-[var(--color-border)] rounded-lg hover:bg-panel hover:border-accent/40 text-text font-bold transition-all shadow-lg active:scale-95"
+          className="flex items-center gap-3 px-6 py-3 bg-accent text-white rounded-xl hover:opacity-90 font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95"
         >
-          <RefreshCw size={20} className={cn(isLoading && "animate-spin")} />
+          <RefreshCw size={18} className={cn(isLoading && "animate-spin")} />
           Deep Scan Now
         </button>
       </div>
 
-      <div className="flex-1 bg-[var(--color-bg)] border border-border rounded-2xl overflow-hidden shadow-inner">
-        <div className="overflow-y-auto h-full">
-          <table className="w-full text-left border-collapse">
-            <thead className="sticky top-0 z-10 bg-panel-2 border-b border-border">
-              <tr>
-                <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Heuristic Signal</th>
-                <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Observed</th>
-                <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Expected (Mean)</th>
-                <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Deviation</th>
-                <th className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Severity</th>
-              </tr>
-            </thead>
-            <tbody>
-              {anomalies.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center">
-                    <EmptyState
-                      icon={<ShieldCheck size={28} />}
-                      title="No Anomalies Detected"
-                      description="System operating within established statistical baseline. All metrics are within normal operating parameters."
-                    />
-                  </td>
-                </tr>
-              ) : (
-                anomalies.map((a, i) => (
-                  <tr key={i} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-colors group">
-                    <td className="px-6 py-4 font-semibold text-sm text-[var(--color-text)] group-hover:text-[var(--color-accent)] transition-colors flex items-center gap-4">
-                      <Zap size={20} className="text-warning" />
-                      {a.metric.replace('.percent', '').toUpperCase()}
-                    </td>
-                    <td className="px-10 py-6 text-sm font-semibold text-[var(--color-text)] tabular-nums">{a.value.toFixed(2)}%</td>
-                    <td className="px-6 py-4 text-sm text-[var(--color-text-faint)] tabular-nums">{a.expected.toFixed(2)}%</td>
-                    <td className="px-6 py-4 text-sm font-semibold text-[var(--color-danger)] tabular-nums">+{a.deviation.toFixed(1)}σ</td>
-                    <td className="px-6 py-4"><StatusBadge status={a.severity} /></td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      <div className="flex-1 bg-[var(--color-panel)] border border-[var(--color-border)] rounded-2xl overflow-hidden shadow-2xl relative">
+        <div className="overflow-y-auto h-full p-4">
+          {anomalies.length === 0 ? (
+            <div className="flex items-center justify-center h-full py-20">
+              <EmptyState
+                icon={<ShieldCheck size={32} className="text-success" />}
+                title="System Equilibrium Established"
+                description="System operating within established statistical baseline. All metrics are within normal operating parameters."
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3">
+              {anomalies.map((a, i) => (
+                <div key={i} className="flex items-center justify-between p-5 bg-panel-2 border border-border/50 rounded-xl hover:border-accent/30 transition-all group">
+                  <div className="flex items-center gap-6">
+                    <div className="w-10 h-10 rounded-lg bg-panel-3 border border-border flex items-center justify-center text-warning group-hover:scale-110 transition-transform">
+                       <Zap size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-text uppercase tracking-widest mb-1">{a.metric.replace('.percent', '').toUpperCase()}</h4>
+                      <div className="flex items-center gap-3 text-[10px] font-bold text-text-faint uppercase tracking-tighter">
+                        <span>OBSERVED: <span className="text-text tabular-nums">{a.value.toFixed(2)}%</span></span>
+                        <span className="opacity-30">|</span>
+                        <span>EXPECTED: <span className="text-text-dim tabular-nums">{a.expected.toFixed(2)}%</span></span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-8">
+                    <div className="text-right">
+                      <p className="text-lg font-black text-danger tabular-nums">+{a.deviation.toFixed(1)}σ</p>
+                      <p className="text-[10px] font-black text-text-faint uppercase tracking-widest">Deviation</p>
+                    </div>
+                    <StatusBadge status={a.severity} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -603,38 +866,38 @@ function InsightsTab() {
   }
 
   return (
-    <div className="flex flex-col h-full space-y-8">
-      <div className="flex items-center justify-between bg-panel border border-border px-6 py-4 rounded-xl shadow-lg">
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-4">
-            <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center border", insights.length > 0 ? "bg-warning/10 border-warning/30 text-warning" : "bg-success/10 border-success/30 text-success")}>
-              <Lightbulb size={32} />
+    <div className="flex flex-col h-full space-y-6 p-10">
+      <div className="flex items-center justify-between bg-[var(--color-panel)] border border-[var(--color-border)] px-8 py-6 rounded-2xl shadow-xl">
+        <div className="flex items-center gap-10">
+          <div className="flex items-center gap-5">
+            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center border-2 shadow-lg bg-accent/10 border-accent/20 text-accent transition-transform hover:rotate-12")}>
+              <Lightbulb size={24} />
             </div>
             <div>
-              <p className="text-2xl font-bold text-[var(--color-text)] tabular-nums">{insights.length}</p>
-              <p className="text-sm font-bold text-text-dim uppercase tracking-widest">Active Insights</p>
+              <p className="text-3xl font-black text-[var(--color-text)] tabular-nums tracking-tighter">{insights.length}</p>
+              <p className="text-[10px] font-black text-text-faint uppercase tracking-[0.2em]">Active Insights</p>
             </div>
           </div>
-          <div className="w-px h-12 bg-border" />
-          <div className="text-text-dim text-sm leading-relaxed max-w-md italic">
+          <div className="w-px h-10 bg-border/50" />
+          <div className="text-text-dim text-xs leading-relaxed max-w-sm font-medium">
             Synthesized from anomaly detection, metric trends, and active alert analysis.
           </div>
         </div>
         <button
           onClick={() => refetch()}
-          className="flex items-center gap-3 px-5 py-2.5 bg-[var(--color-panel-3)] border border-[var(--color-border)] rounded-lg hover:bg-panel hover:border-accent/40 text-text font-bold transition-all shadow-lg active:scale-95"
+          className="flex items-center gap-3 px-6 py-3 bg-[var(--color-panel-3)] border border-[var(--color-border)] rounded-xl hover:bg-panel hover:border-accent/40 text-[var(--color-text)] font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95"
         >
-          <RefreshCw size={20} className={cn(isLoading && "animate-spin")} />
-          Refresh
+          <RefreshCw size={18} className={cn(isLoading && "animate-spin")} />
+          Refresh Logic
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-4">
+      <div className="flex-1 overflow-y-auto space-y-4 pr-2">
         {insights.length === 0 ? (
-          <div className="flex items-center justify-center h-64">
+          <div className="flex items-center justify-center h-full py-20">
             <EmptyState
-              icon={<Lightbulb size={28} />}
-              title="No Insights Available"
+              icon={<Lightbulb size={32} className="text-accent" />}
+              title="Equilibrium Confirmed"
               description="System is operating within normal parameters. Insights will appear when anomalies, trends, or alerts require attention."
             />
           </div>
@@ -646,28 +909,29 @@ function InsightsTab() {
               <div
                 key={i}
                 className={cn(
-                  'bg-panel border rounded-xl p-6 transition-all hover:shadow-lg group',
+                  'bg-[var(--color-panel)] border rounded-2xl p-6 transition-all hover:border-accent/30 hover:shadow-2xl group relative overflow-hidden',
                   cfg.border,
                 )}
               >
-                <div className="flex items-start gap-4">
-                  <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center border shrink-0', cfg.bg, cfg.border)}>
-                    <SevIcon size={22} className={cfg.color} />
+                <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 rounded-bl-full pointer-events-none group-hover:bg-accent/10 transition-colors" />
+                <div className="flex items-start gap-6 relative z-10">
+                  <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center border-2 shrink-0 transition-transform group-hover:scale-110', cfg.bg, cfg.border)}>
+                    <SevIcon size={24} className={cfg.color} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-base font-bold text-[var(--color-text)] group-hover:text-[var(--color-accent)] transition-colors">
+                    <div className="flex items-center gap-3 mb-3">
+                      <h3 className="text-lg font-bold text-[var(--color-text)] group-hover:text-accent transition-colors tracking-tight">
                         {insight.title}
                       </h3>
-                      <span className={cn('px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tighter border', categoryColors[insight.category] || categoryColors.general)}>
+                      <span className={cn('px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border', categoryColors[insight.category] || categoryColors.general)}>
                         {insight.category}
                       </span>
                       <StatusBadge status={insight.severity} />
                     </div>
-                    <p className="text-sm text-[var(--color-text-dim)] leading-relaxed mb-3">{insight.message}</p>
-                    <div className="flex items-center gap-2 text-xs text-[var(--color-accent)] font-semibold">
-                      <ChevronRight size={14} />
+                    <p className="text-sm text-[var(--color-text-dim)] leading-relaxed mb-4 font-medium max-w-3xl">{insight.message}</p>
+                    <div className="flex items-center gap-2 text-xs text-accent font-black uppercase tracking-widest group-hover:translate-x-1 transition-transform cursor-pointer">
                       {insight.action}
+                      <ChevronRight size={14} />
                     </div>
                   </div>
                 </div>
