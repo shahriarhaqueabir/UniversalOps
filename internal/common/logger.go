@@ -117,3 +117,19 @@ func LogDebug(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
 	zlog.Debug().Msg(msg)
 }
+
+// SetLogLevel updates the dynamic log level of the zerolog instance.
+func SetLogLevel(level string) {
+	switch level {
+	case "trace":
+		zerolog.SetGlobalLevel(zerolog.TraceLevel)
+	case "debug":
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	case "warn":
+		zerolog.SetGlobalLevel(zerolog.WarnLevel)
+	case "error":
+		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	default:
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	}
+}

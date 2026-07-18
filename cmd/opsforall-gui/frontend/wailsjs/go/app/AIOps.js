@@ -14,6 +14,10 @@ export function CreateOpsPersona() {
   return window['go']['app']['AIOps']['CreateOpsPersona']();
 }
 
+export function DeleteModel(arg1) {
+  return window['go']['app']['AIOps']['DeleteModel'](arg1);
+}
+
 export function DeleteSession(arg1) {
   return window['go']['app']['AIOps']['DeleteSession'](arg1);
 }
@@ -42,6 +46,10 @@ export function GetMessages(arg1) {
   return window['go']['app']['AIOps']['GetMessages'](arg1);
 }
 
+export function GetModelfile() {
+  return window['go']['app']['AIOps']['GetModelfile']();
+}
+
 export function GetOllamaStatus() {
   return window['go']['app']['AIOps']['GetOllamaStatus']();
 }
@@ -58,8 +66,16 @@ export function QuerySystemState(arg1) {
   return window['go']['app']['AIOps']['QuerySystemState'](arg1);
 }
 
+export function RequestOptimization() {
+  return window['go']['app']['AIOps']['RequestOptimization']();
+}
+
 export function SaveMessage(arg1, arg2, arg3) {
   return window['go']['app']['AIOps']['SaveMessage'](arg1, arg2, arg3);
+}
+
+export function SaveModelfile(arg1) {
+  return window['go']['app']['AIOps']['SaveModelfile'](arg1);
 }
 
 export function SetOllamaModel(arg1) {

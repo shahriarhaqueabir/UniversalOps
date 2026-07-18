@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"sync"
@@ -199,12 +200,56 @@ func (a *App) ClearOnboarded() {
 	}
 }
 
+// ApplyOperationalProfile adjusts engine parameters based on a selected profile (eco, standard, burst).
+func (a *App) ApplyOperationalProfile(profile string) {
+	interval := 3000
+	level := "info"
+
+	switch profile {
+	case "eco":
+		interval = 10000
+	case "burst":
+		interval = 1000
+		level = "debug"
+	}
+
+	common.LogInfo("App: Applying operational profile %q (interval: %vms, log: %s)", profile, interval, level)
+	a.PipelineAPI.UpdateSettings(interval, 0, 4, 2000)
+	a.SetLogLevel(level)
+}
+
+// SetLogLevel updates the backend system log verbosity.
+func (a *App) SetLogLevel(level string) {
+	common.SetLogLevel(level)
+}
+
+// UpdateStorageConfig moves the internal database and log files to a new location.
+func (a *App) UpdateStorageConfig(dbDir string) error {
+	common.LogInfo("App: Re-locating storage to %s", dbDir)
+
+	// Shutdown current storage
+	if s := common.GetStorage(); s != nil {
+		s.Close()
+	}
+
+	dbPath := filepath.Join(dbDir, "opsforall.db")
+	return common.InitStorage(dbPath)
+}
+
 // GetSystemCapabilities returns a list of detected tools and binaries on the host.
 func (a *App) GetSystemCapabilities() []common.CapabilityInfo {
 	if a.capabilities == nil {
 		return nil
 	}
 	return a.capabilities.List()
+}
+
+// SetCapabilityOverride allows the frontend to manually set a path for a tool.
+func (a *App) SetCapabilityOverride(id string, path string) {
+	if a.capabilities != nil {
+		a.capabilities.SetOverride(common.CapabilityID(id), path)
+		common.LogInfo("App: Capability override set for %s -> %s", id, path)
+	}
 }
 
 // ── Dialogs ─────────────────────────────────────────────────────────────────

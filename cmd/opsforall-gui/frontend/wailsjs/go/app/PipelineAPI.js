@@ -10,6 +10,10 @@ export function ClearPipeline() {
   return window['go']['app']['PipelineAPI']['ClearPipeline']();
 }
 
+export function GetCurrentSettings() {
+  return window['go']['app']['PipelineAPI']['GetCurrentSettings']();
+}
+
 export function GetForecast(arg1, arg2) {
   return window['go']['app']['PipelineAPI']['GetForecast'](arg1, arg2);
 }

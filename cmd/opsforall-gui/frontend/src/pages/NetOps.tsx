@@ -5,7 +5,6 @@ import {
   Signal, Radio, Radar, Stethoscope, ShieldCheck,
   Compass, Zap, Globe2,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'

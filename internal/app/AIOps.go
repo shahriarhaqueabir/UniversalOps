@@ -154,7 +154,12 @@ func (a *AIOps) GenerateReport(sections []string) string {
 // GetOllamaStatus returns the current Ollama service status.
 func (a *AIOps) GetOllamaStatus() OllamaStatus {
 	status, err := aiops.CheckOllama()
-	binaryExists := aiops.CheckOllamaBinary()
+
+	// Use the centralized CapabilityRegistry for binary detection
+	binaryExists := false
+	if a.app.capabilities != nil {
+		binaryExists = a.app.capabilities.IsAvailable(common.CapOllama)
+	}
 
 	if err != nil {
 		return OllamaStatus{
@@ -221,6 +226,12 @@ func (a *AIOps) PullModel(modelName string) error {
 		return err
 	}
 	return nil
+}
+
+// DeleteModel removes a local model from Ollama.
+func (a *AIOps) DeleteModel(modelName string) error {
+	common.LogInfo("AIOps: Deleting model %q", modelName)
+	return aiops.DeleteModel(modelName)
 }
 
 // CreateOpsPersona creates the specialized 'opsforall' model from the local Modelfile.

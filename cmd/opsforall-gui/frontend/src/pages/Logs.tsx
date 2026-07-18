@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { format } from 'date-fns'
 import {
-  Search,
   ArrowDownToDot,
   RefreshCw,
   Info,

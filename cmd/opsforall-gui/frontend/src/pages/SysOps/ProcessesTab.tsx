@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Search, Trash2, TreePine, List } from 'lucide-react'
+import { Trash2, TreePine, List } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { ConfirmationModal } from '@/components/dialogs/ConfirmationModal'

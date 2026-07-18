@@ -1242,3 +1242,11 @@ export interface NetworkActionResult {
   message: string
   success: boolean
 }
+
+// ── Control Plane Types ──
+
+export interface CapabilityInfo {
+  id: string
+  available: boolean
+  path: string
+}

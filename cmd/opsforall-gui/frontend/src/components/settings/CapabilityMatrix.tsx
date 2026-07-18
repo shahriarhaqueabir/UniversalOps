@@ -1,14 +1,15 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useBackend } from '@/hooks/useBackend'
-import { Box, Network, BrainCircuit, Github, Terminal, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Box, Network, BrainCircuit, GitBranch, Terminal, CheckCircle2, AlertCircle, FolderSearch } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import type { CapabilityInfo } from '@/types'
 
 const capIcons: Record<string, any> = {
   nmap: Network,
   docker: Box,
   ollama: BrainCircuit,
-  git: Github,
+  git: GitBranch,
   pwsh: Terminal,
 }
 
@@ -22,10 +23,11 @@ const capLabels: Record<string, string> = {
 
 /**
  * CapabilityMatrix — A high-density grid showing discovered tools and binaries.
- * Implements the "Capability Gateway" UI by visualizing unlocked workstation powers.
+ * Implements the "Capability Gateway" UI with support for manual path overrides.
  */
 export function CapabilityMatrix() {
   const { call } = useBackend()
+  const queryClient = useQueryClient()
 
   const { data: caps = [], isLoading } = useQuery<CapabilityInfo[]>({
     queryKey: ['system-capabilities'],
@@ -34,6 +36,19 @@ export function CapabilityMatrix() {
       return (res as CapabilityInfo[]) || []
     },
   })
+
+  const handleBrowse = async (id: string) => {
+    try {
+      const path = await call('App.OpenFileDialog', `Select ${id} executable`, ['Executables|*.exe;*.sh;*'])
+      if (path) {
+        await call('App.SetCapabilityOverride', id, path)
+        queryClient.invalidateQueries({ queryKey: ['system-capabilities'] })
+        toast.success(`Updated path for ${id}`)
+      }
+    } catch (err) {
+      toast.error('Failed to select file')
+    }
+  }
 
   if (isLoading) {
     return <div className="p-8 text-center text-xs text-[var(--color-text-faint)] animate-pulse">Scanning system PATH...</div>
@@ -47,7 +62,7 @@ export function CapabilityMatrix() {
           <div
             key={cap.id}
             className={cn(
-              'flex items-center gap-3 p-3 rounded-xl border transition-all duration-300',
+              'flex items-center gap-3 p-3 rounded-xl border transition-all duration-300 group',
               cap.available
                 ? 'bg-[var(--color-accent)]/5 border-[var(--color-accent)]/20 shadow-sm'
                 : 'bg-[var(--color-panel-3)]/30 border-[var(--color-border)]/50 grayscale opacity-60'
@@ -64,7 +79,7 @@ export function CapabilityMatrix() {
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <p className="text-xs font-black uppercase tracking-tight text-[var(--color-text)] truncate">
+                <p className="text-xs font-bold uppercase tracking-tight text-[var(--color-text)] truncate">
                   {capLabels[cap.id] || cap.id}
                 </p>
                 {cap.available ? (
@@ -74,9 +89,17 @@ export function CapabilityMatrix() {
                 )}
               </div>
               <p className="text-[10px] text-[var(--color-text-dim)] font-mono truncate mt-0.5">
-                {cap.available ? cap.path : 'Executable not found in %PATH%'}
+                {cap.available ? cap.path : 'Executable not found'}
               </p>
             </div>
+
+            <button
+              onClick={() => handleBrowse(cap.id)}
+              className="p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] opacity-0 group-hover:opacity-100 transition-opacity hover:border-[var(--color-accent)] text-[var(--color-text-faint)] hover:text-[var(--color-accent)]"
+              title="Manually set path"
+            >
+              <FolderSearch size={14} />
+            </button>
           </div>
         )
       })}
