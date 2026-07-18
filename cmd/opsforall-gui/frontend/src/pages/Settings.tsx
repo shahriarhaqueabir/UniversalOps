@@ -30,6 +30,8 @@ import { useState } from 'react'
 import type { AlertRuleInfo, CollectorStatus } from '@/types'
 import { Panel, PanelHeader } from '@/components/ui/Panel'
 import { SettingsSidebar, type SettingsTab } from '@/components/settings/SettingsSidebar'
+import { useConfigStore } from '@/stores/useConfigStore'
+import { DeploymentBar } from '@/components/settings/DeploymentBar'
 
 // ── Setting Row ──
 
@@ -203,6 +205,13 @@ export function Settings() {
     setCompanionName,
   } = useSettingsStore()
 
+  const { stagedChanges, stageChange } = useConfigStore()
+
+  // Helper to determine active value (staged or original)
+  const getVal = (key: string, original: any) => {
+    return stagedChanges.has(key) ? stagedChanges.get(key) : original
+  }
+
   // Rules — via react-query
   const { data: rules = [] } = useQuery<AlertRuleInfo[]>({
     queryKey: ['alert-rules'],
@@ -253,13 +262,13 @@ export function Settings() {
   const isDark = theme === 'dark'
 
   return (
-    <div className="h-full flex overflow-hidden bg-[var(--color-bg)]/50">
+    <div className="h-full flex overflow-hidden bg-[var(--color-bg)]/50 relative">
       <SettingsSidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <main className="flex-1 overflow-y-auto p-8 space-y-8 max-w-4xl">
+      <main className="flex-1 overflow-y-auto p-8 pb-32 space-y-8 max-w-4xl">
         <div className="mb-2">
           <h1 className="text-2xl font-black text-[var(--color-text)] uppercase tracking-tight">
-            Settings
+            Control Plane
           </h1>
           <p className="text-sm text-[var(--color-text-dim)] mt-1">
             Configure your local operations control center.
@@ -304,9 +313,12 @@ export function Settings() {
                 <SettingRow label="Companion Name" description="Set a custom name for your AI co-pilot">
                   <input
                     type="text"
-                    value={companionName}
-                    onChange={(e) => setCompanionName(e.target.value)}
-                    className="bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-sm font-bold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors w-32"
+                    value={getVal('companionName', companionName)}
+                    onChange={(e) => stageChange('companionName', e.target.value)}
+                    className={cn(
+                      'bg-[var(--color-panel-2)] border rounded-lg px-3 py-1.5 text-sm font-bold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors w-32',
+                      stagedChanges.has('companionName') ? 'border-[var(--color-accent)]' : 'border-[var(--color-border)]'
+                    )}
                   />
                 </SettingRow>
               </div>
@@ -388,14 +400,12 @@ export function Settings() {
               <div className="mt-6 space-y-6">
                 <SettingRow label="Global Refresh" description="Frequency for dashboard and metric updates">
                   <select
-                    value={refreshInterval}
-                    onChange={(e) => {
-                      const val = Number(e.target.value)
-                      setRefreshInterval(val)
-                      call('PipelineAPI.UpdateSettings', val, 0, pingCount, dnsTimeout)
-                      toast.success(`Refresh interval set to ${val / 1000}s`)
-                    }}
-                    className="bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm font-bold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+                    value={getVal('refreshInterval', refreshInterval)}
+                    onChange={(e) => stageChange('refreshInterval', Number(e.target.value))}
+                    className={cn(
+                      "bg-[var(--color-panel-2)] border rounded-lg px-3 py-2 text-sm font-bold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors",
+                      stagedChanges.has('refreshInterval') ? 'border-[var(--color-accent)]' : 'border-[var(--color-border)]'
+                    )}
                   >
                     {intervalOptions.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
@@ -416,8 +426,8 @@ export function Settings() {
                 <SettingRow label="Default Ping Count" description="Number of echo requests per ping (1–20)">
                   <div className="flex items-center gap-4 w-48">
                     <Slider.Root
-                      value={[pingCount]}
-                      onValueChange={([v]: number[]) => { setPingCount(v); call('PipelineAPI.UpdateSettings', 0, 0, v, dnsTimeout) }}
+                      value={[getVal('pingCount', pingCount)]}
+                      onValueChange={([v]: number[]) => stageChange('pingCount', v)}
                       min={1} max={20} step={1}
                       className="relative flex items-center flex-1 h-5 cursor-pointer"
                     >
@@ -426,15 +436,15 @@ export function Settings() {
                       </Slider.Track>
                       <Slider.Thumb className="block w-4 h-4 bg-[var(--color-text)] rounded-full shadow-lg" />
                     </Slider.Root>
-                    <span className="text-xs font-bold font-mono text-[var(--color-text)] w-6 text-right">{pingCount}</span>
+                    <span className="text-xs font-bold font-mono text-[var(--color-text)] w-6 text-right">{getVal('pingCount', pingCount)}</span>
                   </div>
                 </SettingRow>
 
                 <SettingRow label="DNS Timeout" description="Timeout in milliseconds for lookups">
                   <div className="flex items-center gap-4 w-48">
                     <Slider.Root
-                      value={[dnsTimeout]}
-                      onValueChange={([v]: number[]) => { setDnsTimeout(v); call('PipelineAPI.UpdateSettings', 0, 0, pingCount, v) }}
+                      value={[getVal('dnsTimeout', dnsTimeout)]}
+                      onValueChange={([v]: number[]) => stageChange('dnsTimeout', v)}
                       min={500} max={10000} step={100}
                       className="relative flex items-center flex-1 h-5 cursor-pointer"
                     >
@@ -443,7 +453,7 @@ export function Settings() {
                       </Slider.Track>
                       <Slider.Thumb className="block w-4 h-4 bg-[var(--color-text)] rounded-full shadow-lg" />
                     </Slider.Root>
-                    <span className="text-xs font-bold font-mono text-[var(--color-text)] w-14 text-right">{dnsTimeout}ms</span>
+                    <span className="text-xs font-bold font-mono text-[var(--color-text)] w-14 text-right">{getVal('dnsTimeout', dnsTimeout)}ms</span>
                   </div>
                 </SettingRow>
               </div>
@@ -567,6 +577,8 @@ export function Settings() {
           </div>
         )}
       </main>
+
+      <DeploymentBar />
 
       {/* Alert Rule Dialog (Legacy) */}
       <Dialog.Root open={addOpen} onOpenChange={setAddOpen}>
