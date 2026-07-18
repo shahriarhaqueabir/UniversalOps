@@ -1,6 +1,16 @@
-import { X, Send, Sparkles } from 'lucide-react'
+import { X, Send, Sparkles, Zap, Loader2, Monitor } from 'lucide-react'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { cn } from '@/lib/utils'
+import { useBackend } from '@/hooks/useBackend'
+import { useState } from 'react'
+import { ProposalCard } from './ProposalCard'
+
+interface Message {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  proposal?: any
+}
 
 interface HawkSidebarProps {
   isOpen: boolean
@@ -13,6 +23,38 @@ interface HawkSidebarProps {
  */
 export function HawkSidebar({ isOpen, onClose }: HawkSidebarProps) {
   const { companionName } = useSettingsStore()
+  const { call } = useBackend()
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: 'welcome',
+      role: 'assistant',
+      content: `Hello! I am ${companionName}, your operations co-pilot. I can help you analyze system health, optimize collection intervals, or explain security events.`,
+    },
+  ])
+  const [loading, setLoading] = useState(false)
+
+  const handleOptimize = async () => {
+    setLoading(true)
+    try {
+      const res = await call('AIOps.RequestOptimization') as { content: string; payload: any }
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: res.content,
+          proposal: res.payload,
+        },
+      ])
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now().toString(), role: 'assistant', content: 'Optimization analysis failed: ' + err },
+      ])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <aside
@@ -31,27 +73,49 @@ export function HawkSidebar({ isOpen, onClose }: HawkSidebarProps) {
             {companionName}
           </h2>
         </div>
-        <button
-          onClick={onClose}
-          className="p-1.5 rounded-lg hover:bg-[var(--color-sidebar-hover)] text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-all"
-        >
-          <X size={18} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleOptimize}
+            disabled={loading}
+            className="p-1.5 rounded-lg hover:bg-[var(--color-accent)]/10 text-[var(--color-accent)] transition-all title='Optimize Engine'"
+          >
+            {loading ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+          </button>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-[var(--color-sidebar-hover)] text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-all"
+          >
+            <X size={18} />
+          </button>
+        </div>
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        <div className="flex gap-3">
-          <div className="w-8 h-8 rounded-full bg-[var(--color-accent)]/20 border border-[var(--color-accent)]/30 flex items-center justify-center shrink-0">
-            <Sparkles size={14} className="text-[var(--color-accent)]" />
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        {messages.map((m) => (
+          <div key={m.id} className="space-y-4">
+            <div className="flex gap-3">
+              <div className={cn(
+                "w-8 h-8 rounded-full border flex items-center justify-center shrink-0",
+                m.role === 'assistant'
+                  ? "bg-[var(--color-accent)]/20 border-[var(--color-accent)]/30"
+                  : "bg-[var(--color-panel-3)] border-[var(--color-border)]"
+              )}>
+                {m.role === 'assistant' ? <Sparkles size={14} className="text-[var(--color-accent)]" /> : <Monitor size={14} className="text-[var(--color-text-faint)]" />}
+              </div>
+              <div className="bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-2xl p-3 shadow-sm max-w-[85%]">
+                <p className="text-xs leading-relaxed text-[var(--color-text)] whitespace-pre-wrap">
+                  {m.content}
+                </p>
+              </div>
+            </div>
+            {m.proposal && (
+              <div className="ml-11">
+                <ProposalCard reasoning={m.content} payload={m.proposal} />
+              </div>
+            )}
           </div>
-          <div className="bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-2xl p-3 shadow-sm">
-            <p className="text-xs leading-relaxed text-[var(--color-text)]">
-              Hello! I am <span className="font-bold text-[var(--color-accent)]">{companionName}</span>, your operations co-pilot.
-              I can help you analyze system health, optimize collection intervals, or explain security events.
-            </p>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Footer / Input */}
