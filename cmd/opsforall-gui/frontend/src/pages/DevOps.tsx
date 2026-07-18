@@ -16,6 +16,8 @@ import { useEvents } from '@/hooks/useEvents'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { SearchInput } from '@/components/ui/SearchInput'
+import { Panel } from '@/components/ui/Panel'
 import { nanoid } from 'nanoid'
 import type {
   CommandResult, ServiceEntry, ToolInfo, ContainerSummary,
@@ -26,6 +28,7 @@ import type {
 } from '@/types'
 
 function stripAnsi(text: string): string {
+  // eslint-disable-next-line no-control-regex
   return text.replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, '')
 }
 
@@ -164,7 +167,7 @@ function OverviewTab() {
   return (
     <div className="flex flex-col h-full space-y-6 overflow-y-auto p-10">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-8 shadow-2xl group hover:border-accent/30 transition-all">
+        <Panel variant="elevated" padding="lg" category="devops" className="group hover:border-accent/30 transition-all">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
@@ -193,9 +196,9 @@ function OverviewTab() {
               ))}
             </div>
           ) : <p className="text-text-faint text-xs font-medium italic">Docker subsystem not detected on this node.</p>}
-        </div>
+        </Panel>
 
-        <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-8 shadow-2xl group hover:border-accent/30 transition-all">
+        <Panel variant="elevated" padding="lg" category="devops" className="group hover:border-accent/30 transition-all">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
@@ -223,7 +226,7 @@ function OverviewTab() {
               </div>
             </div>
           ) : <p className="text-text-faint text-xs font-medium italic">kubectl orchestrator not detected on this node.</p>}
-        </div>
+        </Panel>
       </div>
 
       <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6 shadow-2xl">
@@ -361,7 +364,7 @@ function PowerShellProTab() {
     finally { setIsRunning(false) }
   }
   return (
-    <div className="grid grid-cols-3 h-full gap-6 overflow-hidden p-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 h-full gap-6 overflow-hidden p-6">
       <ConfirmDialog open={confirmOpen} title="Execute PowerShell Workflow" description={`Run "${selectedWorkflow}"?`}
         onConfirm={() => runWorkflow(selectedWorkflow)} onClose={() => setConfirmOpen(false)} />
       <div className="col-span-1 space-y-3 overflow-y-auto pr-2">
@@ -441,12 +444,12 @@ function GitTabExpanded() {
     } catch (err) { console.error(err) }
   }
 
-  const fetchLog = async (branch = '') => {
+  const fetchLog = useCallback(async (branch = '') => {
     const log = await call('DevOps.GitLogExtended', activeRepo, 15, branch) as string
     setLogOutput(log || 'No commits')
-  }
+  }, [call, activeRepo])
 
-  useEffect(() => { if (activeRepo) fetchLog() }, [activeRepo])
+  useEffect(() => { if (activeRepo) fetchLog() }, [activeRepo, fetchLog])
 
   return (
     <div className="flex flex-col h-full p-6 space-y-4 overflow-y-auto">
@@ -867,10 +870,8 @@ function ServicesTab() {
           <span className="text-sm font-bold text-success">{services.filter(s => s.status === 'Running').length} Running</span>
           <span className="text-sm font-bold text-danger">{services.filter(s => s.status === 'Stopped').length} Stopped</span>
         </div>
-        <div className="relative flex-1 max-w-xs ml-auto">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-faint" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search services..."
-            className="w-full bg-panel border border-border rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-accent" />
+        <div className="flex-1 max-w-xs ml-auto">
+          <SearchInput size="sm" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search services..." />
         </div>
       </div>
       <div className="flex-1 bg-[var(--color-bg)] border border-border rounded-2xl overflow-hidden shadow-inner">
@@ -911,7 +912,7 @@ function ToolboxTab() {
     queryFn: async () => (await call('DevOps.GetInstalledTools') as ToolInfo[]) || []
   })
   return (
-    <div className="grid grid-cols-3 gap-3 overflow-y-auto h-full p-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto h-full p-6">
       {tools.map(t => (
         <div key={t.name} className="p-4 rounded-xl border border-border bg-panel flex justify-between items-center">
           <div><p className="font-bold">{t.name}</p><p className="text-xs font-mono text-text-faint">{t.version || 'not found'}</p></div>

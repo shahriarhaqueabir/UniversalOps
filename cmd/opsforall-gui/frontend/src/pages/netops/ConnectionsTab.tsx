@@ -50,7 +50,7 @@ export function ConnectionsTab() {
         />
       </div>
       <div className="col-span-3 space-y-4">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <MiniStat label="Established" value={connections.filter(c => c.state === 'ESTABLISHED').length} icon={<Cable size={24} />} />
           <MiniStat label="Listening" value={connections.filter(c => c.state === 'LISTEN').length} icon={<Server size={24} />} />
           <MiniStat label="Time Wait" value={connections.filter(c => c.state === 'TIME_WAIT').length} icon={<Timer size={24} />} />

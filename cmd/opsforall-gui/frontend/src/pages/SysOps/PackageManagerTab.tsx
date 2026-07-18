@@ -4,6 +4,8 @@ import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import type { PackageManagerData } from '@/types'
 import { useState, useRef } from 'react'
+import { SearchInput } from '@/components/ui/SearchInput'
+import { Panel } from '@/components/ui/Panel'
 import { useVirtualizer } from '@tanstack/react-virtual'
 
 export function PackageManagerTab() {
@@ -44,17 +46,8 @@ export function PackageManagerTab() {
 
       {activeManager?.found && (
         <>
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
-            <input
-              type="text"
-              placeholder="Search packages..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-[var(--color-panel)] border border-[var(--color-border)] rounded-xl pl-10 pr-4 py-2 text-sm text-[var(--color-text)] placeholder-[var(--color-text-faint)] focus:outline-none focus:border-[var(--color-accent)]"
-            />
-          </div>
-          <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-xl overflow-hidden">
+          <SearchInput size="md" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search packages..." />
+          <Panel variant="default" padding="none" category="system">
             {/* Sticky header */}
             <table className="w-full text-left">
               <thead className="bg-[var(--color-panel-2)] border-b border-[var(--color-border)]">
@@ -100,7 +93,7 @@ export function PackageManagerTab() {
                 </table>
               </div>
             </div>
-          </div>
+          </Panel>
         </>
       )}
 

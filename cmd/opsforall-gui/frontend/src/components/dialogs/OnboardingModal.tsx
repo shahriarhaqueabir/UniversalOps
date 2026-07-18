@@ -38,7 +38,7 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
     try {
       const status = await call('AIOps.GetOllamaStatus') as OllamaStatus
       setOllamaStatus(status)
-    } catch (err) {
+    } catch {
       setError('Failed to check system dependencies. Please ensure the backend is reachable.')
     } finally {
       setChecking(false)

@@ -5,6 +5,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { SectionBriefing } from '@/components/ui/SectionBriefing'
 import { MiniStat } from '@/components/ui/MiniStat'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { Panel } from '@/components/ui/Panel'
 import type { DiskEncryption, SecureBoot, SystemService } from '@/types'
 
 export function EndpointTab() {
@@ -48,7 +49,7 @@ export function EndpointTab() {
       </div>
 
       {/* Disk Encryption */}
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl">
+      <Panel padding="lg" category="security">
         <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6 flex items-center gap-3">
           <HardDrive size={22} className="text-accent" /> Disk Encryption
         </h3>
@@ -62,11 +63,11 @@ export function EndpointTab() {
             </div>
           ))}
         </div>
-      </div>
+      </Panel>
 
       {/* Secure Boot */}
       {secureBoot && (
-        <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl">
+        <Panel padding="lg" category="security">
           <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6 flex items-center gap-3">
             <ShieldCheck size={22} className="text-success" /> Secure Boot
           </h3>
@@ -74,11 +75,11 @@ export function EndpointTab() {
             <StatusBadge status={secureBoot.enabled ? 'enabled' : 'disabled'} />
             <span className="text-sm text-text-dim">{secureBoot.state}</span>
           </div>
-        </div>
+        </Panel>
       )}
 
       {/* Running Services */}
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl">
+      <Panel padding="lg" category="security">
         <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6 flex items-center gap-3">
           <Server size={22} className="text-accent" /> Running Services
         </h3>
@@ -104,7 +105,7 @@ export function EndpointTab() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Panel>
     </div>
   )
 }

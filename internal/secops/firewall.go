@@ -36,7 +36,8 @@ func GetFirewallProfiles() ([]FirewallProfile, error) {
 			"Get-NetFirewallProfile -ErrorAction SilentlyContinue | Select-Object Name,Enabled | ConvertTo-Json -As Array -Depth 1")
 		output, err := cmd.Output()
 		if err != nil {
-			return nil, fmt.Errorf("Get-NetFirewallProfile failed: %w", err)
+			// Fallback: use netsh to check firewall state
+			return getFirewallStatusFallback()
 		}
 
 		cleaned := common.CleanJSON(string(output))
@@ -76,6 +77,29 @@ func GetFirewallProfiles() ([]FirewallProfile, error) {
 	}
 
 	return nil, fmt.Errorf("firewall profile query not supported on this platform")
+}
+
+// getFirewallStatusFallback uses netsh as a fallback when Get-NetFirewallProfile fails.
+func getFirewallStatusFallback() ([]FirewallProfile, error) {
+	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "netsh", "advfirewall", "show", "allprofiles", "state")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("netsh firewall fallback failed: %w", err)
+	}
+
+	outputStr := string(output)
+	profiles := []FirewallProfile{}
+	for _, name := range []string{"Domain", "Private", "Public"} {
+		if strings.Contains(outputStr, name+" Profile") {
+			enabled := strings.Contains(outputStr, name+" Profile\nState") &&
+				strings.Contains(strings.ToLower(outputStr), strings.ToLower(name)+" profile\nstate                  ON")
+			profiles = append(profiles, FirewallProfile{Name: name, Enabled: enabled})
+		}
+	}
+	if len(profiles) == 0 {
+		return nil, fmt.Errorf("could not parse netsh firewall output")
+	}
+	return profiles, nil
 }
 
 // GetFirewallRules retrieves firewall rules from the current platform.

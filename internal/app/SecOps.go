@@ -375,7 +375,9 @@ func (s *SecOps) GetFirewallStatus() FirewallStatus {
 	profiles, err := secops.GetFirewallProfiles()
 	if err != nil {
 		common.LogWarn("GetFirewallStatus failed: %v", err)
-		return FirewallStatus{}
+		return FirewallStatus{
+			Profiles: []FirewallProfile{},
+		}
 	}
 	out := make([]FirewallProfile, 0, len(profiles))
 	enabled := false

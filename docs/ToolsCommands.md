@@ -60,9 +60,27 @@ Metrics: IO, Queue Length, Read Rate, Write Rate, Filesystem, SMART
 
 ```go
 process.Processes()
+process.NumFDs()
 ```
 
 Per Process: PID, Parent PID, Name, CPU, Memory, Threads, Handles, Open Files, User, Executable, Start Time
+Open File Descriptors: `process.NumFDs()` (used by `openfds` collector)
+
+## Load Average
+
+```go
+load.Avg()
+```
+
+Metrics: 1-minute, 5-minute, 15-minute load averages (used by `load` collector)
+
+## Uptime
+
+```go
+host.Uptime()
+```
+
+Metrics: System uptime in seconds (used by `uptime` collector)
 
 ## Network
 

@@ -4,6 +4,8 @@ import { Search, Trash2, TreePine, List } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { ConfirmationModal } from '@/components/dialogs/ConfirmationModal'
+import { SearchInput } from '@/components/ui/SearchInput'
+import { Panel } from '@/components/ui/Panel'
 import type { ProcessInfo, ActionPreview } from '@/types'
 import { cn } from '@/lib/utils'
 import { useVirtualizer } from '@tanstack/react-virtual'
@@ -55,16 +57,7 @@ export function ProcessesTab() {
       />
 
       <div className="flex items-center gap-4">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
-          <input
-            type="text"
-            placeholder="Filter processes..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-[var(--color-panel)] border border-[var(--color-border)] rounded-xl pl-10 pr-4 py-2 text-sm text-[var(--color-text)] placeholder-[var(--color-text-faint)] focus:outline-none focus:border-[var(--color-accent)]"
-          />
-        </div>
+        <SearchInput size="md" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Filter processes..." className="flex-1" />
         <div className="flex gap-1 bg-[var(--color-panel)] border border-[var(--color-border)] rounded-lg p-1">
           <button onClick={() => setView('list')} className={cn("px-3 py-1.5 rounded text-xs font-bold", view === 'list' ? "bg-[var(--color-accent)] text-white" : "text-[var(--color-text-faint)]")}>
             <List size={14} />
@@ -76,7 +69,7 @@ export function ProcessesTab() {
         <span className="text-sm text-[var(--color-text-faint)]">{filtered.length} active</span>
       </div>
 
-      <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-xl overflow-hidden">
+      <Panel variant="default" padding="none" category="system">
         {/* Sticky header */}
         <table className="w-full text-left">
           <thead className="bg-[var(--color-panel-2)] border-b border-[var(--color-border)]">
@@ -136,7 +129,7 @@ export function ProcessesTab() {
             </table>
           </div>
         </div>
-      </div>
+      </Panel>
     </div>
   )
 }

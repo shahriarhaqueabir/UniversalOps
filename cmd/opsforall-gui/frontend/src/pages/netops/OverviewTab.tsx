@@ -28,6 +28,7 @@ import {
   Radio,
 } from 'lucide-react'
 import { SectionHeader } from '@/components/ui/SectionHeader'
+import { Panel } from '@/components/ui/Panel'
 import type {
   ConnectionInfo,
   InterfaceInfo,
@@ -264,19 +265,19 @@ export function OverviewTab() {
     <div className="space-y-6 animate-in fade-in duration-500">
 
       {/* ── Section 1: Connectivity Status ── */}
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-xl">
+      <Panel padding="md" category="network">
         <SectionHeader icon={<Signal size={18} className="text-accent" />} title="Connectivity Status" />
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {connectivityCards.map(card => (
             <ConnectivityCard key={card.label} {...card} />
           ))}
         </div>
-      </div>
+      </Panel>
 
       {/* ── Section 2: Active Connections ── */}
-      <div className="bg-panel border border-border rounded-[2rem] p-8 shadow-xl">
+      <Panel padding="lg" category="network">
         <SectionHeader icon={<Activity size={20} className="text-accent" />} title="Active Connections" count={connections.length} />
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
             { label: 'Established', value: establishedCount, color: 'var(--color-success)', icon: <ArrowUpRight size={20} /> },
             { label: 'Listening', value: listeningCount, color: 'var(--color-accent)', icon: <Radio size={20} /> },
@@ -299,10 +300,10 @@ export function OverviewTab() {
             </div>
           ))}
         </div>
-      </div>
+      </Panel>
 
       {/* ── Section 3: Interface Health ── */}
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-xl">
+      <Panel padding="md" category="network">
         <SectionHeader icon={<Wifi size={18} className="text-accent" />} title="Interface Health" count={connInterfaces.length} />
         {ifacesLoading ? (
           <div className="flex items-center justify-center py-10">
@@ -357,10 +358,10 @@ export function OverviewTab() {
             ))}
           </div>
         )}
-      </div>
+      </Panel>
 
       {/* ── Section 4: Network Quality ── */}
-      <div className="bg-panel border border-border rounded-[2rem] p-8 shadow-xl">
+      <Panel padding="lg" category="network">
         <SectionHeader icon={<Zap size={20} className="text-accent" />} title="Network Quality" />
         <div className="flex items-center gap-8">
           <button
@@ -382,7 +383,7 @@ export function OverviewTab() {
         </div>
 
         {pingResult && !pingResult.error && (
-          <div className="grid grid-cols-3 gap-4 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
             {(() => {
               // The backend never sends lost_pct (H12) — derive the
               // percentage from sent/lost instead of a phantom field.
@@ -407,10 +408,10 @@ export function OverviewTab() {
             <p className="text-sm font-medium text-danger">{pingResult.error}</p>
           </div>
         )}
-      </div>
+      </Panel>
 
       {/* ── Section 5: DNS Summary ── */}
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-xl">
+      <Panel padding="md" category="network">
         <SectionHeader icon={<Globe size={18} className="text-accent" />} title="DNS Summary" />
         {dnsSummaryResult ? (
           <div className="grid grid-cols-2 gap-4">
@@ -428,10 +429,10 @@ export function OverviewTab() {
         ) : (
           <p className="text-sm font-medium text-text-faint text-center py-4">Loading DNS information...</p>
         )}
-      </div>
+      </Panel>
 
       {/* ── Section 6: Recent Changes ── */}
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-xl">
+      <Panel padding="md" category="network">
         <SectionHeader icon={<Network size={18} className="text-accent" />} title="Recent Changes" count={recentChanges.length} />
         {recentChanges.length === 0 ? (
           <p className="text-sm font-medium text-text-faint text-center py-6">No interface changes detected yet.</p>
@@ -478,10 +479,10 @@ export function OverviewTab() {
             })}
           </div>
         )}
-      </div>
+      </Panel>
 
       {/* ── Section 7: AI Summary ── */}
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-xl">
+      <Panel padding="md" category="network">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-panel-3 border border-border" style={{ color: 'var(--color-accent)' }}>
             <Zap size={18} />
@@ -515,7 +516,7 @@ export function OverviewTab() {
             )}
           </div>
         )}
-      </div>
+      </Panel>
 
     </div>
   )

@@ -1,5 +1,6 @@
 import { MemoryStick } from 'lucide-react'
 import { StatCard } from '@/components/ui/StatCard'
+import { Panel } from '@/components/ui/Panel'
 import type { MemoryInfo } from '@/types'
 
 interface MemoryTabProps {
@@ -31,10 +32,10 @@ export function MemoryTab({ memInfo }: MemoryTabProps) {
           <StatCard label="Available" value={`${availableGB.toFixed(1)} GB`} />
           <StatCard label="Cached" value={`${cachedGB.toFixed(1)} GB`} />
         </div>
-      </div>
+      </Panel>
 
       {memInfo.swap_total > 0 && (
-        <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-8 shadow-2xl">
+        <Panel variant="elevated" padding="lg" category="system">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-[var(--color-text)] uppercase tracking-widest">Swap Usage</h3>
             <span className="text-2xl font-bold text-[var(--color-warning)] tabular-nums">{memInfo.swap_percent.toFixed(1)}%</span>
@@ -46,7 +47,7 @@ export function MemoryTab({ memInfo }: MemoryTabProps) {
             <span className="text-[var(--color-text-dim)]">{swapUsedGB.toFixed(1)} GB used</span>
             <span className="text-[var(--color-text-faint)]">{swapTotalGB.toFixed(1)} GB total</span>
           </div>
-        </div>
+        </Panel>
       )}
     </div>
   )

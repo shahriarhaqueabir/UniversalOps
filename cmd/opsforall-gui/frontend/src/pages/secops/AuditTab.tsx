@@ -3,6 +3,7 @@ import { ClipboardCheck, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-r
 import { useBackend } from '@/hooks/useBackend'
 import { SectionBriefing } from '@/components/ui/SectionBriefing'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { Panel } from '@/components/ui/Panel'
 import type { SecurityAuditResult } from '@/types'
 
 export function AuditTab() {
@@ -42,7 +43,7 @@ export function AuditTab() {
       {auditResult && (
         <>
           {/* Score */}
-          <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl flex items-center gap-8">
+          <Panel padding="lg" category="security" className="flex items-center gap-8">
             <div className="text-center">
               <p className="text-6xl font-black tabular-nums text-text">{auditResult.score}%</p>
               <p className="text-sm font-bold text-text-faint uppercase tracking-wider mt-2">
@@ -61,10 +62,10 @@ export function AuditTab() {
               </div>
               <p className="text-xs text-text-faint mt-2">Last run: {new Date(auditResult.timestamp).toLocaleString()}</p>
             </div>
-          </div>
+          </Panel>
 
           {/* Checklist Items */}
-          <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl">
+          <Panel padding="lg" category="security">
             <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6">Audit Results</h3>
             <div className="space-y-3">
               {auditResult.items.map((item, i) => (
@@ -89,15 +90,15 @@ export function AuditTab() {
                 </div>
               ))}
             </div>
-          </div>
+          </Panel>
         </>
       )}
 
       {!auditResult && !isRunning && (
-        <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-12 shadow-xl text-center">
+        <Panel padding="lg" category="security" className="text-center">
           <ClipboardCheck size={48} className="text-text-faint mx-auto mb-4" />
           <p className="text-text-dim text-sm">Click "Run Security Audit" to analyze your system's security posture.</p>
-        </div>
+        </Panel>
       )}
     </div>
   )

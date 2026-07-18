@@ -547,8 +547,14 @@ func (s *Storage) QueryLogTimeline(hours int) ([]LogTimelineBucket, error) {
 	var results []LogTimelineBucket
 	for rows.Next() {
 		var b LogTimelineBucket
-		if err := rows.Scan(&b.Bucket, &b.Total, &b.Errors, &b.Warnings, &b.Info); err != nil {
+		var bucket sql.NullString
+		if err := rows.Scan(&bucket, &b.Total, &b.Errors, &b.Warnings, &b.Info); err != nil {
 			return nil, err
+		}
+		if bucket.Valid {
+			b.Bucket = bucket.String
+		} else {
+			continue // skip NULL buckets
 		}
 		results = append(results, b)
 	}
@@ -870,10 +876,16 @@ func (s *Storage) ListSessions() ([]map[string]interface{}, error) {
 	var sessions []map[string]interface{}
 	for rows.Next() {
 		var sid string
-		var lastActive time.Time
+		var lastActiveRaw string
 		var count int
-		if err := rows.Scan(&sid, &lastActive, &count); err != nil {
+		if err := rows.Scan(&sid, &lastActiveRaw, &count); err != nil {
 			return nil, err
+		}
+		var lastActive time.Time
+		if t, err := time.Parse("2006-01-02 15:04:05", lastActiveRaw); err == nil {
+			lastActive = t
+		} else if t, err := time.Parse(time.RFC3339, lastActiveRaw); err == nil {
+			lastActive = t
 		}
 		sessions = append(sessions, map[string]interface{}{
 			"session_id":  sid,

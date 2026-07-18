@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { ProgressBar } from '@/components/ui/ProgressBar'
+import { Panel } from '@/components/ui/Panel'
 import type { CPUInfo, CPUExtendedInfo, PerformanceData } from '@/types'
 
 interface CpuTabProps {
@@ -30,7 +31,7 @@ export function CpuTab({ cpuInfo }: CpuTabProps) {
   return (
     <div className="space-y-8">
       {/* CPU Overview */}
-      <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-8 shadow-2xl">
+      <Panel variant="elevated" padding="lg" category="system">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <Cpu size={20} className="text-[var(--color-accent)]" />
@@ -43,7 +44,7 @@ export function CpuTab({ cpuInfo }: CpuTabProps) {
             </span>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
           <div className="text-center">
             <p className="text-2xl font-bold text-[var(--color-text)] tabular-nums">{cpuInfo.physical_cores}</p>
             <p className="text-xs font-bold text-[var(--color-text-faint)] uppercase">Physical Cores</p>
@@ -62,16 +63,16 @@ export function CpuTab({ cpuInfo }: CpuTabProps) {
             <ProgressBar key={i} label={`Core ${i}`} value={p} showValue />
           ))}
         </div>
-      </div>
+      </Panel>
 
       {/* Load Average */}
       {perfData && (
-        <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-8 shadow-2xl">
+        <Panel variant="elevated" padding="lg" category="system">
           <div className="flex items-center gap-3 mb-6">
             <Activity size={20} className="text-[var(--color-accent)]" />
             <h3 className="text-lg font-bold text-[var(--color-text)] uppercase tracking-widest">Load Average</h3>
           </div>
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="text-center">
               <p className="text-3xl font-bold text-[var(--color-text)] tabular-nums">{perfData.load_average.load_1.toFixed(2)}</p>
               <p className="text-xs font-bold text-[var(--color-text-faint)] uppercase">1 Minute</p>
@@ -85,7 +86,7 @@ export function CpuTab({ cpuInfo }: CpuTabProps) {
               <p className="text-xs font-bold text-[var(--color-text-faint)] uppercase">15 Minutes</p>
             </div>
           </div>
-        </div>
+        </Panel>
       )}
     </div>
   )

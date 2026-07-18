@@ -7,6 +7,7 @@ import { SectionBriefing } from '@/components/ui/SectionBriefing'
 import { MiniStat } from '@/components/ui/MiniStat'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Panel } from '@/components/ui/Panel'
 import type { SecurityEvent, ScheduledTask, PrivilegeEvent, SecTimelineEvent } from '@/types'
 import { cn } from '@/lib/utils'
 import { useVirtualizer } from '@tanstack/react-virtual'
@@ -34,7 +35,7 @@ export function EventsTab() {
     refetchInterval: refreshInterval,
   })
 
-  const { data: _timeline } = useQuery<SecTimelineEvent[]>({
+  useQuery<SecTimelineEvent[]>({
     queryKey: ['secops-timeline'],
     queryFn: async () => (await call('SecOps.GetEventTimeline') as SecTimelineEvent[]) || [],
     refetchInterval: refreshInterval,
@@ -103,7 +104,7 @@ export function EventsTab() {
       </div>
 
       {/* Events Table */}
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] overflow-hidden shadow-xl">
+      <Panel padding="none" category="security" className="overflow-hidden">
         <div ref={parentRef} className="max-h-[600px] overflow-y-auto">
           {filtered.length === 0 ? (
             <div className="py-12">
@@ -161,10 +162,10 @@ export function EventsTab() {
             </table>
           )}
         </div>
-      </div>
+      </Panel>
 
       {/* Scheduled Tasks */}
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl">
+      <Panel padding="lg" category="security">
         <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6 flex items-center gap-3">
           <Clock size={22} className="text-warning" /> Scheduled Tasks
         </h3>
@@ -194,7 +195,7 @@ export function EventsTab() {
             </table>
           </div>
         )}
-      </div>
+      </Panel>
     </div>
   )
 }

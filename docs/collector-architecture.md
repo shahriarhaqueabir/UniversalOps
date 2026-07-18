@@ -22,6 +22,11 @@ const (
     CollectorNet    CollectorID = "network"
     CollectorTemp   CollectorID = "temperature"
     CollectorProc   CollectorID = "processes"
+    CollectorUptime CollectorID = "uptime"
+    CollectorLoad   CollectorID = "load"
+    CollectorSwap   CollectorID = "swap"
+    CollectorDiskIO CollectorID = "diskio"
+    CollectorOpenFD CollectorID = "openfds"
 )
 
 type MetricSample struct {
@@ -92,16 +97,21 @@ On collector **error**, the scheduler logs + moves on (no crash, no backpressure
 
 ### 4. Collector Implementations (`internal/app/collectors.go`)
 
-Six collectors, each wrapping existing sysops/netops calls:
+Eleven collectors, each wrapping existing sysops/netops calls:
 
-| ID | Wraps | Metric Name | Unit |
-|----|-------|-------------|------|
-| `cpu` | `sysops.GetCPUStats()` | `cpu.percent` | `%` |
-| `memory` | `sysops.GetMemoryStats()` | `memory.percent` | `%` |
-| `disk` | `sysops.GetDiskStats()` | `disk.percent` | `%` |
-| `network` | `NetOps.collectInterfaces()` | `network.rx.rate`, `network.tx.rate` | `bps` |
-| `temperature` | `sensors.SensorsTemperatures()` | `cpu.temperature` | `°C` |
-| `processes` | `sysops.GetSystemInfo()` | `process.count` | `count` |
+| ID | Wraps | Metric Name | Unit | Default |
+|----|-------|-------------|------|---------|
+| `cpu` | `sysops.GetCPUStats()` | `cpu.percent` | `%` | enabled |
+| `memory` | `sysops.GetMemoryStats()` | `memory.percent` | `%` | enabled |
+| `disk` | `sysops.GetDiskStats()` | `disk.percent` | `%` | enabled |
+| `network` | `NetOps.collectInterfaces()` | `network.rx.rate`, `network.tx.rate` | `bps` | enabled |
+| `temperature` | `sensors.SensorsTemperatures()` | `cpu.temperature` | `°C` | enabled |
+| `processes` | `sysops.GetSystemInfo()` | `process.count` | `count` | enabled |
+| `uptime` | `sysops.GetSystemInfo()` | `system.uptime` | `s` | enabled |
+| `load` | `load.Avg()` | `load.1m`, `load.5m`, `load.15m` | `load` | enabled |
+| `swap` | `sysops.GetMemoryStats()` | `swap.percent` | `%` | enabled |
+| `diskio` | `sysops.GetDiskIO()` | `disk.io.read`, `disk.io.write` | `bytes` | enabled |
+| `openfds` | `process.NumFDs()` | `system.open_fds` | `count` | **disabled** (expensive on Windows) |
 
 Note: **GPU** and **Battery** stay on-demand only (not tick-based) — called via existing facade methods.
 

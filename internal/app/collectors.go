@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/shirou/gopsutil/v4/load"
+	"github.com/shirou/gopsutil/v4/process"
 	"github.com/shirou/gopsutil/v4/sensors"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -181,6 +183,137 @@ func (c *processCountCollector) Collect(ctx context.Context) ([]common.MetricSam
 	}, nil
 }
 
+// ── Uptime Collector ────────────────────────────────────────────────────────
+
+type uptimeCollector struct{}
+
+func (c *uptimeCollector) Info() common.CollectorInfo {
+	return common.CollectorInfo{
+		ID:              common.CollectorUptime,
+		Name:            "System Uptime",
+		Description:     "Seconds since system boot",
+		DefaultInterval: 60 * time.Second,
+		DefaultEnabled:  true,
+	}
+}
+
+func (c *uptimeCollector) Collect(ctx context.Context) ([]common.MetricSample, error) {
+	info, err := sysops.GetSystemInfo()
+	if err != nil {
+		return nil, err
+	}
+	return []common.MetricSample{
+		{Name: "system.uptime", Unit: "s", Value: float64(info.UptimeSeconds)},
+	}, nil
+}
+
+// ── Load Average Collector ──────────────────────────────────────────────────
+
+type loadAvgCollector struct{}
+
+func (c *loadAvgCollector) Info() common.CollectorInfo {
+	return common.CollectorInfo{
+		ID:              common.CollectorLoad,
+		Name:            "Load Average",
+		Description:     "System load averages (1m, 5m, 15m)",
+		DefaultInterval: 10 * time.Second,
+		DefaultEnabled:  true,
+	}
+}
+
+func (c *loadAvgCollector) Collect(ctx context.Context) ([]common.MetricSample, error) {
+	avg, err := load.Avg()
+	if err != nil {
+		return nil, err
+	}
+	return []common.MetricSample{
+		{Name: "load.1m", Unit: "load", Value: avg.Load1},
+		{Name: "load.5m", Unit: "load", Value: avg.Load5},
+		{Name: "load.15m", Unit: "load", Value: avg.Load15},
+	}, nil
+}
+
+// ── Swap Collector ──────────────────────────────────────────────────────────
+
+type swapCollector struct{}
+
+func (c *swapCollector) Info() common.CollectorInfo {
+	return common.CollectorInfo{
+		ID:              common.CollectorSwap,
+		Name:            "Swap Usage",
+		Description:     "Swap space utilization percentage",
+		DefaultInterval: 15 * time.Second,
+		DefaultEnabled:  true,
+	}
+}
+
+func (c *swapCollector) Collect(ctx context.Context) ([]common.MetricSample, error) {
+	stats, err := sysops.GetMemoryStats()
+	if err != nil {
+		return nil, err
+	}
+	return []common.MetricSample{
+		{Name: "swap.percent", Unit: "%", Value: stats.SwapPercent},
+	}, nil
+}
+
+// ── Disk I/O Collector ──────────────────────────────────────────────────────
+
+type diskIOCollector struct{}
+
+func (c *diskIOCollector) Info() common.CollectorInfo {
+	return common.CollectorInfo{
+		ID:              common.CollectorDiskIO,
+		Name:            "Disk I/O",
+		Description:     "Aggregate disk read/write bytes",
+		DefaultInterval: 10 * time.Second,
+		DefaultEnabled:  true,
+	}
+}
+
+func (c *diskIOCollector) Collect(ctx context.Context) ([]common.MetricSample, error) {
+	stats, err := sysops.GetDiskIO()
+	if err != nil {
+		return nil, err
+	}
+	return []common.MetricSample{
+		{Name: "disk.io.read", Unit: "bytes", Value: float64(stats.TotalRead)},
+		{Name: "disk.io.write", Unit: "bytes", Value: float64(stats.TotalWrite)},
+	}, nil
+}
+
+// ── Open File Descriptors Collector ─────────────────────────────────────────
+
+type openFDCollector struct{}
+
+func (c *openFDCollector) Info() common.CollectorInfo {
+	return common.CollectorInfo{
+		ID:              common.CollectorOpenFD,
+		Name:            "Open File Descriptors",
+		Description:     "Total open file descriptors across all processes",
+		DefaultInterval: 15 * time.Second,
+		DefaultEnabled:  false, // requires per-process scan, expensive on Windows
+	}
+}
+
+func (c *openFDCollector) Collect(ctx context.Context) ([]common.MetricSample, error) {
+	procs, err := process.Processes()
+	if err != nil {
+		return nil, err
+	}
+	var totalFDs int32
+	for _, p := range procs {
+		fds, err := p.NumFDs()
+		if err != nil {
+			continue // skip processes we can't read
+		}
+		totalFDs += fds
+	}
+	return []common.MetricSample{
+		{Name: "system.open_fds", Unit: "count", Value: float64(totalFDs)},
+	}, nil
+}
+
 // ── Factory ───────────────────────────────────────────────────────────────────
 
 func RegisterCollectors(registry *common.CollectorRegistry, app *App) {
@@ -190,4 +323,9 @@ func RegisterCollectors(registry *common.CollectorRegistry, app *App) {
 	registry.Register(&networkCollector{netOps: app.NetOps})
 	registry.Register(&temperatureCollector{})
 	registry.Register(&processCountCollector{})
+	registry.Register(&uptimeCollector{})
+	registry.Register(&loadAvgCollector{})
+	registry.Register(&swapCollector{})
+	registry.Register(&diskIOCollector{})
+	registry.Register(&openFDCollector{})
 }

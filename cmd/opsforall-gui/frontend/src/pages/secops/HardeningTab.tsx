@@ -5,6 +5,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { SectionBriefing } from '@/components/ui/SectionBriefing'
 import { MiniStat } from '@/components/ui/MiniStat'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { Panel } from '@/components/ui/Panel'
 import type { HardeningCheck, SSHConfig } from '@/types'
 
 export function HardeningTab() {
@@ -42,7 +43,7 @@ export function HardeningTab() {
       </div>
 
       {/* Hardening Checks */}
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl">
+      <Panel padding="lg" category="security">
         <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6">Hardening Checks</h3>
         <div className="space-y-3">
           {checks.map((c, i) => (
@@ -67,11 +68,11 @@ export function HardeningTab() {
             </div>
           ))}
         </div>
-      </div>
+      </Panel>
 
       {/* SSH Config */}
       {sshConfig && sshConfig.permit_root_login !== 'unknown' && (
-        <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-xl">
+        <Panel padding="lg" category="security">
           <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6 flex items-center gap-3">
             <ShieldAlert size={22} className="text-accent" /> SSH Configuration
           </h3>
@@ -83,7 +84,7 @@ export function HardeningTab() {
               </div>
             ))}
           </div>
-        </div>
+        </Panel>
       )}
     </div>
   )

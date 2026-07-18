@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Calendar, CheckCircle, XCircle } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { Panel } from '@/components/ui/Panel'
 import type { ScheduledTaskData } from '@/types'
 
 export function SchedulerTab() {
@@ -28,7 +29,7 @@ export function SchedulerTab() {
           <p className="text-[var(--color-text-dim)]">No scheduled tasks found</p>
         </div>
       ) : (
-        <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-xl overflow-hidden">
+        <Panel variant="default" padding="none" category="system">
           <div className="max-h-[500px] overflow-y-auto">
             <table className="w-full text-left">
               <thead className="sticky top-0 bg-[var(--color-panel-2)] border-b border-[var(--color-border)]">
@@ -53,7 +54,7 @@ export function SchedulerTab() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Panel>
       )}
     </div>
   )
