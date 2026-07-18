@@ -44,6 +44,9 @@ type App struct {
 	collectorRegistry *common.CollectorRegistry
 	scheduler         *common.CollectorScheduler
 
+	// Capability discovery
+	capabilities *common.CapabilityRegistry
+
 	// Alert and dashboard evaluation loop
 	alertQuit chan struct{}
 	alertWg   sync.WaitGroup
@@ -64,11 +67,12 @@ func NewApp() *App {
 	alertEngine.AddDefaultRules()
 
 	a := &App{
-		pipeline:  pipeline,
-		alerts:    alertEngine,
-		eventBus:  common.NewEventBus(1000),
-		startedAt: time.Now(),
-		alertQuit: make(chan struct{}),
+		pipeline:     pipeline,
+		alerts:       alertEngine,
+		eventBus:     common.NewEventBus(1000),
+		startedAt:    time.Now(),
+		alertQuit:    make(chan struct{}),
+		capabilities: common.NewCapabilityRegistry(),
 	}
 
 	// Initialize subsystem facades
@@ -193,6 +197,14 @@ func (a *App) ClearOnboarded() {
 	if err := common.ClearOnboarded(); err != nil {
 		common.LogWarn("ClearOnboarded: %v", err)
 	}
+}
+
+// GetSystemCapabilities returns a list of detected tools and binaries on the host.
+func (a *App) GetSystemCapabilities() []common.CapabilityInfo {
+	if a.capabilities == nil {
+		return nil
+	}
+	return a.capabilities.List()
 }
 
 // ── Dialogs ─────────────────────────────────────────────────────────────────

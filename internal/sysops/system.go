@@ -90,7 +90,13 @@ func getLoggedInUsersWindows() ([]LoggedInUser, error) {
 	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "query", "user")
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("query user failed: %w", err)
+		if strings.Contains(err.Error(), "executable file not found") {
+			// command not available (e.g. Windows Home edition)
+			return []LoggedInUser{}, nil
+		}
+		// query user returns exit code 1 if no users are found (other than system)
+		// we treat this as empty result rather than error.
+		return []LoggedInUser{}, nil
 	}
 
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")

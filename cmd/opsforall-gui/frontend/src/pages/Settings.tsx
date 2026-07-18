@@ -32,6 +32,7 @@ import { Panel, PanelHeader } from '@/components/ui/Panel'
 import { SettingsSidebar, type SettingsTab } from '@/components/settings/SettingsSidebar'
 import { useConfigStore } from '@/stores/useConfigStore'
 import { DeploymentBar } from '@/components/settings/DeploymentBar'
+import { CapabilityMatrix } from '@/components/settings/CapabilityMatrix'
 
 // ── Setting Row ──
 
@@ -417,6 +418,17 @@ export function Settings() {
 
                 <p className="text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-widest mb-3">Active Collectors</p>
                 <CollectorList call={call} />
+              </div>
+            </Panel>
+
+            <Panel category="system">
+              <PanelHeader
+                icon={<Monitor size={20} />}
+                title="System Capabilities"
+                subtitle="Discovered workstation powers and tool integrations"
+              />
+              <div className="mt-6">
+                <CapabilityMatrix />
               </div>
             </Panel>
 
