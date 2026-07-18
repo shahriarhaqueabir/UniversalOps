@@ -420,6 +420,53 @@ export function Settings() {
               </div>
             </Panel>
 
+            <Panel category="system">
+              <PanelHeader
+                icon={<Zap size={20} />}
+                title="Core Maintenance"
+                subtitle="Optimize and verify the underlying data structures"
+              />
+              <div className="mt-6 flex flex-col gap-3">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]">
+                  <div>
+                    <p className="text-sm font-bold text-[var(--color-text)]">SQLite Optimization</p>
+                    <p className="text-xs text-[var(--color-text-dim)]">Rebuild database to reclaim space and improve performance.</p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const id = toast.loading('Optimizing database...')
+                      try {
+                        await call('App.VacuumDatabase')
+                        toast.success('Database optimized', { id })
+                      } catch { toast.error('Optimization failed', { id }) }
+                    }}
+                    className="px-4 py-2 bg-[var(--color-accent)]/10 hover:bg-[var(--color-accent)]/20 text-[var(--color-accent)] text-[10px] font-black uppercase rounded-lg border border-[var(--color-accent)]/30 transition-all"
+                  >
+                    OPTIMIZE
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]">
+                  <div>
+                    <p className="text-sm font-bold text-[var(--color-text)]">Integrity Check</p>
+                    <p className="text-xs text-[var(--color-text-dim)]">Verify table structures and update query statistics.</p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const id = toast.loading('Running integrity check...')
+                      try {
+                        await call('App.AnalyzeDatabase')
+                        toast.success('Integrity verified', { id })
+                      } catch { toast.error('Check failed', { id }) }
+                    }}
+                    className="px-4 py-2 bg-[var(--color-accent)]/10 hover:bg-[var(--color-accent)]/20 text-[var(--color-accent)] text-[10px] font-black uppercase rounded-lg border border-[var(--color-accent)]/30 transition-all"
+                  >
+                    ANALYZE
+                  </button>
+                </div>
+              </div>
+            </Panel>
+
             <Panel category="none">
               <PanelHeader icon={<Network size={20} />} title="Network Diagnostics" />
               <div className="mt-6 space-y-6">
@@ -525,7 +572,33 @@ export function Settings() {
         {activeTab === 'journal' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <Panel category="none">
-              <PanelHeader icon={<ScrollText size={20} />} title="System Log & Management" />
+              <PanelHeader
+                icon={<ScrollText size={20} />}
+                title="Verbosity & Logging"
+                subtitle="Control backend log output"
+              />
+              <div className="mt-6 space-y-6">
+                <SettingRow label="Backend Log Level" description="Set the granularity of Go system logs">
+                  <select
+                    className="bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm font-bold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+                    defaultValue="info"
+                    onChange={(e) => {
+                      call('App.SetLogLevel', e.target.value)
+                      toast.info(`Log level set to ${e.target.value}`)
+                    }}
+                  >
+                    <option value="trace">Trace</option>
+                    <option value="debug">Debug</option>
+                    <option value="info">Info</option>
+                    <option value="warn">Warning</option>
+                    <option value="error">Error</option>
+                  </select>
+                </SettingRow>
+              </div>
+            </Panel>
+
+            <Panel category="none">
+              <PanelHeader icon={<ScrollText size={20} />} title="System Management" />
               <div className="mt-6 space-y-6">
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between p-5 rounded-2xl bg-[var(--color-panel-2)] border border-[var(--color-border)] shadow-inner">
