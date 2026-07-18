@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"os"
@@ -38,6 +39,7 @@ func NewAIOps(app *App) *AIOps {
 type ChatResponse struct {
 	Content string                `json:"content"`
 	Action  *common.ActionPreview `json:"action,omitempty"`
+	Payload map[string]interface{} `json:"payload,omitempty"`
 }
 
 // Chat sends a message to the Ollama chat API and returns the response.
@@ -624,6 +626,64 @@ func (a *AIOps) DeleteSession(sessionID string) {
 	if err := storage.DeleteSession(sessionID); err != nil {
 		common.LogWarn("DeleteSession: %v", err)
 	}
+}
+
+// RequestOptimization asks Hawk to analyze system load and settings to propose improvements.
+func (a *AIOps) RequestOptimization() ChatResponse {
+	// 1. Gather Context
+	knowledge := a.app.Knowledge.GetSnapshot()
+	settings := a.app.PipelineAPI.GetCurrentSettings()
+
+	prompt := fmt.Sprintf(`Analyze the current workstation load and engine settings.
+Metrics: CPU=%.1f%%, RAM=%.1f%%, Disk=%.1f%%, Anomalies=%d.
+Current Settings: refreshInterval=%vms, pingCount=%v, dnsTimeout=%vms.
+
+Propose optimizations to balance telemetry density and system performance.
+Your response MUST be a valid JSON object with this exact structure:
+{
+  "content": "Brief reasoning in your industrial co-pilot tone.",
+  "payload": {
+    "refreshInterval": 1000,
+    "pingCount": 4,
+    "dnsTimeout": 2000
+  }
+}
+If no changes are needed, return the current settings in the payload.`,
+		knowledge.CPUUsage, knowledge.MemoryUsage, knowledge.DiskUsage, knowledge.Anomalies,
+		settings["refreshInterval"], settings["pingCount"], settings["dnsTimeout"])
+
+	// 2. Call AI
+	resp, err := aiops.Chat([]aiops.ChatMessage{
+		{Role: "system", Content: "You are the OpsForAll Engine Optimizer. Output JSON only."},
+		{Role: "user", Content: prompt},
+	})
+
+	if err != nil {
+		return ChatResponse{Content: "Optimization analysis failed: " + err.Error()}
+	}
+
+	// 3. Simple JSON Extraction
+	// (AI might wrap JSON in markdown blocks)
+	jsonStr := resp
+	if strings.Contains(resp, "```json") {
+		parts := strings.Split(resp, "```json")
+		if len(parts) > 1 {
+			jsonStr = strings.Split(parts[1], "```")[0]
+		}
+	} else if strings.Contains(resp, "```") {
+		parts := strings.Split(resp, "```")
+		if len(parts) > 1 {
+			jsonStr = parts[1]
+		}
+	}
+
+	var result ChatResponse
+	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+		common.LogWarn("AIOps: Failed to parse optimization JSON: %v", err)
+		return ChatResponse{Content: "Hawk generated an invalid optimization payload. Please try again."}
+	}
+
+	return result
 }
 
 // metricCategory maps a metric name to an insight category.

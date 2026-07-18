@@ -132,6 +132,16 @@ func (p *PipelineAPI) UpdateSettings(intervalMs int, capacity int, pingCount int
 	p.app.pipeline.UpdateConfig(cfg)
 }
 
+// GetCurrentSettings returns the current operational settings of the data pipeline.
+func (p *PipelineAPI) GetCurrentSettings() map[string]interface{} {
+	cfg := p.app.pipeline.Config()
+	return map[string]interface{}{
+		"refreshInterval": int(cfg.TickInterval.Milliseconds()),
+		"pingCount":       cfg.PingCount,
+		"dnsTimeout":      cfg.DNSTimeout,
+	}
+}
+
 // ── Converters ───────────────────────────────────────────────────────────────
 
 func convertTrendInfo(t common.TrendInfo) TrendInfo {
