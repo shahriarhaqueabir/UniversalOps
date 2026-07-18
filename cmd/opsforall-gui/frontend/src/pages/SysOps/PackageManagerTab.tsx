@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Package, Search } from 'lucide-react'
+import { Package } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import type { PackageManagerData } from '@/types'

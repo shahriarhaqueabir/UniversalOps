@@ -327,6 +327,7 @@ export namespace app {
 	export class ChatResponse {
 	    content: string;
 	    action?: common.ActionPreview;
+	    payload?: Record<string, any>;
 	
 	    static createFrom(source: any = {}) {
 	        return new ChatResponse(source);
@@ -336,6 +337,7 @@ export namespace app {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.content = source["content"];
 	        this.action = this.convertValues(source["action"], common.ActionPreview);
+	        this.payload = source["payload"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -2398,6 +2400,24 @@ export namespace common {
 	        this.description = source["description"];
 	        this.risks = source["risks"];
 	        this.rollback = source["rollback"];
+	    }
+	}
+	export class CapabilityInfo {
+	    id: string;
+	    available: boolean;
+	    path: string;
+	    is_custom: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new CapabilityInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.available = source["available"];
+	        this.path = source["path"];
+	        this.is_custom = source["is_custom"];
 	    }
 	}
 	export class CollectorStatus {

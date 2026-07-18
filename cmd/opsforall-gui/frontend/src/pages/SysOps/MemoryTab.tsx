@@ -15,7 +15,7 @@ export function MemoryTab({ memInfo }: MemoryTabProps) {
 
   return (
     <div className="space-y-8">
-      <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-8 shadow-2xl">
+      <Panel variant="elevated" padding="lg" category="system">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <MemoryStick size={20} className="text-[var(--color-success)]" />

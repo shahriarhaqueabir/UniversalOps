@@ -5,6 +5,8 @@ import { TopBar } from './components/layout/TopBar'
 import { MainContent } from './components/layout/MainContent'
 import { HawkSidebar } from './components/layout/HawkSidebar'
 import { OnboardingModal } from './components/dialogs/OnboardingModal'
+import { useThemeStore, useAlertStore, useSettingsStore, useMetricsStore } from './stores'
+import type { AlertInfo, DashboardData } from './types'
 
 export type Page = 'dashboard' | 'sysops' | 'netops' | 'secops' | 'devops' | 'aiops' | 'logs' | 'settings'
 

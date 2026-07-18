@@ -4,7 +4,6 @@ import {
   Shield, LayoutDashboard, Users, Wifi, Monitor, AlertTriangle,
   HardHat, ClipboardCheck, Siren,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'

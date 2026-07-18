@@ -6,6 +6,8 @@ export function AllMetricNames():Promise<Array<app.MetricDef>>;
 
 export function ClearPipeline():Promise<void>;
 
+export function GetCurrentSettings():Promise<Record<string, any>>;
+
 export function GetForecast(arg1:string,arg2:number):Promise<Array<number>>;
 
 export function GetMetricHistory(arg1:string,arg2:number):Promise<Array<number>>;

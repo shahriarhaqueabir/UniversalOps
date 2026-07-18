@@ -14,6 +14,10 @@ export function GetAppInfo() {
   return window['go']['app']['App']['GetAppInfo']();
 }
 
+export function GetSystemCapabilities() {
+  return window['go']['app']['App']['GetSystemCapabilities']();
+}
+
 export function IsOnboarded() {
   return window['go']['app']['App']['IsOnboarded']();
 }
@@ -32,6 +36,10 @@ export function OpenFileDialog(arg1, arg2) {
 
 export function SaveFileDialog(arg1, arg2, arg3) {
   return window['go']['app']['App']['SaveFileDialog'](arg1, arg2, arg3);
+}
+
+export function SetCapabilityOverride(arg1, arg2) {
+  return window['go']['app']['App']['SetCapabilityOverride'](arg1, arg2);
 }
 
 export function SetCollectorEnabled(arg1, arg2) {

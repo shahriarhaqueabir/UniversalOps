@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect, memo } from 'react'
 import { motion } from 'motion/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Terminal, Server, Play, Trash2, Search,
+  Terminal, Server, Play, Trash2,
   PlayCircle, StopCircle, Zap, Activity, Globe,
   TerminalSquare, GitBranch, Box, Wrench, Container, Variable,
   GitMerge, GitPullRequest, RefreshCw,

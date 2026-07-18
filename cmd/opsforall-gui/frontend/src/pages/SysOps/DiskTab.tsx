@@ -41,6 +41,8 @@ export function DiskTab({ diskInfo }: { diskInfo: DiskInfo }) {
           ))}
         </div>
       </Panel>
+
+      {diskIO && (
         <Panel variant="elevated" padding="lg" category="system">
           <div className="flex items-center gap-3 mb-6">
             <HardDrive size={20} className="text-[var(--color-warning)]" />

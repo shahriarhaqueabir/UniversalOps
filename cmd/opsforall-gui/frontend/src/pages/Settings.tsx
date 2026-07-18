@@ -16,9 +16,9 @@ import {
   Pause,
   RefreshCw,
   BrainCircuit,
-  ShieldAlert,
   ScrollText,
-  Cpu,
+  Zap,
+  Database,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import * as Slider from '@radix-ui/react-slider'
@@ -34,6 +34,7 @@ import { useConfigStore } from '@/stores/useConfigStore'
 import { DeploymentBar } from '@/components/settings/DeploymentBar'
 import { CapabilityMatrix } from '@/components/settings/CapabilityMatrix'
 import { ModelfileEditor } from '@/components/settings/ModelfileEditor'
+import { ModelManager } from '@/components/settings/ModelManager'
 
 // ── Setting Row ──
 
@@ -369,6 +370,17 @@ export function Settings() {
               />
               <div className="mt-6">
                 <ModelfileEditor />
+              </div>
+            </Panel>
+
+            <Panel category="ai">
+              <PanelHeader
+                icon={<Database size={20} />}
+                title="Model Inventory"
+                subtitle="Manage local AI artifacts and pull new intelligence"
+              />
+              <div className="mt-6">
+                <ModelManager />
               </div>
             </Panel>
           </div>

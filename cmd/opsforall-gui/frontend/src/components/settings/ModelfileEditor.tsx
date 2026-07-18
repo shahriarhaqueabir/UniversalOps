@@ -12,7 +12,6 @@ export function ModelfileEditor() {
   const { call } = useBackend()
   const { stagedChanges, stageChange } = useConfigStore()
   const [content, setContent] = useState<string>('')
-  const [original, setOriginal] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -20,7 +19,6 @@ export function ModelfileEditor() {
       try {
         const res = await call('AIOps.GetModelfile')
         setContent(res as string)
-        setOriginal(res as string)
       } catch (err) {
         console.error('Failed to load Modelfile:', err)
       } finally {

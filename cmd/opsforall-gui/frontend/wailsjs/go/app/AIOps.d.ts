@@ -10,6 +10,8 @@ export function Chat(arg1:string):Promise<app.ChatResponse>;
 
 export function CreateOpsPersona():Promise<void>;
 
+export function DeleteModel(arg1:string):Promise<void>;
+
 export function DeleteSession(arg1:string):Promise<void>;
 
 export function DetectAnomalies():Promise<Array<app.AnomalyInfo>>;
@@ -24,6 +26,8 @@ export function GetLearnedBaselines():Promise<Array<app.LearnedBaseline>>;
 
 export function GetMessages(arg1:string):Promise<Array<app.ConversationMessage>>;
 
+export function GetModelfile():Promise<string>;
+
 export function GetOllamaStatus():Promise<app.OllamaStatus>;
 
 export function ListSessions():Promise<Array<Record<string, any>>>;
@@ -32,7 +36,11 @@ export function PullModel(arg1:string):Promise<void>;
 
 export function QuerySystemState(arg1:string):Promise<string>;
 
+export function RequestOptimization():Promise<app.ChatResponse>;
+
 export function SaveMessage(arg1:string,arg2:string,arg3:string):Promise<string>;
+
+export function SaveModelfile(arg1:string):Promise<void>;
 
 export function SetOllamaModel(arg1:string):Promise<void>;
 

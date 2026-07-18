@@ -107,6 +107,15 @@ func PullModel(name string, onProgress func(api.ProgressResponse) error) error {
 	return nil
 }
 
+// DeleteModel removes a local model.
+func DeleteModel(name string) error {
+	client := newClient()
+	req := &api.DeleteRequest{
+		Model: name,
+	}
+	return client.Delete(context.Background(), req)
+}
+
 // CreateModel creates a new model from structured parameters.
 // Note: v0.31.2 SDK uses structured fields instead of a raw Modelfile string.
 func CreateModel(name string, from string, system string, parameters map[string]any) error {
