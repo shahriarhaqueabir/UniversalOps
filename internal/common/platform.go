@@ -42,42 +42,30 @@ func IsAdminRequired() bool {
 	return IsWindows() || IsLinux()
 }
 
-// ConfigDir returns the application config directory path.
+// ConfigDir returns the application data directory path, forced to be local to the executable.
 func ConfigDir() (string, error) {
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, "opsforall"), nil
+	// Root-local 'data' directory for a self-contained portable experience.
+	return "data", nil
 }
 
-// IsOnboarded checks if the onboarding marker file exists.
+// IsOnboarded checks if the onboarding marker file exists in the local data dir.
 func IsOnboarded() bool {
-	dir, err := ConfigDir()
-	if err != nil {
-		return false
-	}
-	_, err = os.Stat(filepath.Join(dir, ".onboarded"))
+	dir, _ := ConfigDir()
+	_, err := os.Stat(filepath.Join(dir, ".onboarded"))
 	return err == nil
 }
 
-// MarkOnboarded creates the onboarding marker file.
+// MarkOnboarded creates the onboarding marker file locally.
 func MarkOnboarded() error {
-	dir, err := ConfigDir()
-	if err != nil {
-		return err
-	}
+	dir, _ := ConfigDir()
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
 	return os.WriteFile(filepath.Join(dir, ".onboarded"), []byte{}, 0644)
 }
 
-// ClearOnboarded removes the onboarding marker file.
+// ClearOnboarded removes the local onboarding marker.
 func ClearOnboarded() error {
-	dir, err := ConfigDir()
-	if err != nil {
-		return err
-	}
+	dir, _ := ConfigDir()
 	return os.Remove(filepath.Join(dir, ".onboarded"))
 }

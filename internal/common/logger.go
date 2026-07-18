@@ -3,6 +3,7 @@ package common
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -30,17 +31,18 @@ func startLogWorker() {
 	go func() {
 		defer logWg.Done()
 		for entry := range logChan {
-			if s := GetStorage(); s != nil {
+			s := GetStorage()
+			if s != nil && !s.CheckClosed() {
 				s.InsertLog(entry.level, "SYSTEM", entry.msg)
 			}
 		}
 	}()
 }
 
-// InitLogger initializes the session logger with zerolog.
+// InitLogger initializes the session logger locally.
 func InitLogger(filename string) error {
 	if filename == "" {
-		filename = "opsforall.log"
+		filename = filepath.Join("logs", "allopsfull.log")
 	}
 
 	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -59,7 +61,7 @@ func InitLogger(filename string) error {
 	zlog = zerolog.New(output).
 		With().
 		Timestamp().
-		Str("app", "opsforall").
+		Str("app", "allopsfull").
 		Logger()
 
 	logOnce.Do(startLogWorker)

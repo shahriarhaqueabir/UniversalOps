@@ -40,16 +40,17 @@ type TabId = 'ai-chat' | 'anomalies' | 'insights'
 
 interface ChatResponse {
   content: string
-  action?: ActionPreview
+  actions?: ActionPreview[]
 }
 
 // ── Inline helpers ──
 
-function ChatBubble({ role, content, action }: ChatMessage) {
+function ChatBubble({ role, content, actions }: ChatMessage) {
   const { call } = useBackend()
   const isAssistant = role === 'assistant' || role === 'system'
   const [copied, setCopied] = useState(false)
-  const [status, setStatus] = useState<'pending' | 'authorized' | 'aborted'>('pending')
+  const [authorizedIds, setAuthorizedIds] = useState<Set<string>>(new Set())
+  const [abortedIds, setAbortedIds] = useState<Set<string>>(new Set())
 
   const handleCopy = async () => {
     try {
@@ -59,15 +60,19 @@ function ChatBubble({ role, content, action }: ChatMessage) {
     } catch { /* ignore */ }
   }
 
-  const handleAuthorize = async () => {
-    if (!action) return
+  const handleAuthorize = async (action: ActionPreview) => {
     try {
-      await call('SecOps.AuthorizeAction', action.handshake_id)
-      setStatus('authorized')
+      await call('App.ConfirmAction', action.handshake_id)
+      setAuthorizedIds(prev => new Set(prev).add(action.handshake_id))
+      toast.success('Action executed successfully')
     } catch (err) {
       console.error(err)
       toast.error('Neural Authorization Failed')
     }
+  }
+
+  const handleAbort = (action: ActionPreview) => {
+    setAbortedIds(prev => new Set(prev).add(action.handshake_id))
   }
 
   return (
@@ -105,63 +110,69 @@ function ChatBubble({ role, content, action }: ChatMessage) {
           )}
         </div>
 
-        {action && status === 'pending' && (
-          <div className="bg-panel border-2 border-warning/30 rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="bg-warning/10 px-6 py-3 border-b border-warning/20 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <ShieldAlert size={18} className="text-warning" />
-                <span className="text-xs font-black uppercase tracking-widest text-warning">Neural Authorization Required</span>
+        {actions && actions.map((action) => (
+          <div key={action.handshake_id}>
+            {!authorizedIds.has(action.handshake_id) && !abortedIds.has(action.handshake_id) && (
+              <div className="bg-panel border-2 border-warning/30 rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 mb-4">
+                <div className="bg-warning/10 px-6 py-3 border-b border-warning/20 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <ShieldAlert size={18} className="text-warning" />
+                    <span className="text-xs font-black uppercase tracking-widest text-warning">Neural Authorization Required</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-warning/60">{action.handshake_id.slice(0, 8)}</span>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div>
+                    <p className="text-xs font-bold text-text-faint uppercase tracking-tighter mb-1">Proposed Action</p>
+                    <p className="text-base font-bold text-text">{action.description}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-text-faint uppercase tracking-tighter mb-2">Technical Risks</p>
+                    <ul className="space-y-1">
+                      {action.risks.map((risk, i) => (
+                        <li key={i} className="text-xs text-danger/80 flex items-start gap-2">
+                          <span className="mt-1.5 w-1 h-1 rounded-full bg-danger shrink-0" />
+                          {risk}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="pt-2 flex gap-3">
+                    <button
+                      onClick={() => handleAuthorize(action)}
+                      aria-label={`Authorize execution of ${action.action}: ${action.description}`}
+                      className="flex-1 bg-accent text-white py-2.5 rounded-xl font-bold text-sm hover:bg-accent/90 transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                    >
+                      <LockOpen size={16} aria-hidden="true" />
+                      Authorize Execution
+                    </button>
+                    <button
+                      onClick={() => handleAbort(action)}
+                      aria-label="Abort this proposed action"
+                      className="px-6 border border-border bg-panel-2 py-2.5 rounded-xl font-bold text-sm text-text-dim hover:bg-panel-3 transition-all active:scale-95"
+                    >
+                      Abort
+                    </button>
+                  </div>
+                </div>
               </div>
-              <span className="text-[10px] font-mono text-warning/60">{action.handshake_id.slice(0, 8)}</span>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <p className="text-xs font-bold text-text-faint uppercase tracking-tighter mb-1">Proposed Action</p>
-                <p className="text-base font-bold text-text">{action.description}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-text-faint uppercase tracking-tighter mb-2">Technical Risks</p>
-                <ul className="space-y-1">
-                  {action.risks.map((risk, i) => (
-                    <li key={i} className="text-xs text-danger/80 flex items-start gap-2">
-                      <span className="mt-1.5 w-1 h-1 rounded-full bg-danger shrink-0" />
-                      {risk}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="pt-2 flex gap-3">
-                <button
-                  onClick={handleAuthorize}
-                  className="flex-1 bg-accent text-white py-2.5 rounded-xl font-bold text-sm hover:bg-accent/90 transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
-                >
-                  <LockOpen size={16} />
-                  Authorize Execution
-                </button>
-                <button
-                  onClick={() => setStatus('aborted')}
-                  className="px-6 border border-border bg-panel-2 py-2.5 rounded-xl font-bold text-sm text-text-dim hover:bg-panel-3 transition-all active:scale-95"
-                >
-                  Abort
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+            )}
 
-        {status === 'authorized' && (
-          <div className="bg-success/10 border border-success/30 rounded-xl px-4 py-2 flex items-center gap-3 animate-in fade-in duration-500 max-w-fit">
-            <ShieldCheck size={16} className="text-success" />
-            <span className="text-[10px] font-black text-success uppercase tracking-widest">Handshake Complete: Action Executed</span>
-          </div>
-        )}
+            {authorizedIds.has(action.handshake_id) && (
+              <div className="bg-success/10 border border-success/30 rounded-xl px-4 py-2 flex items-center gap-3 animate-in fade-in duration-500 max-w-fit mb-4">
+                <ShieldCheck size={16} className="text-success" />
+                <span className="text-[10px] font-black text-success uppercase tracking-widest">Handshake Complete: Action Executed</span>
+              </div>
+            )}
 
-        {status === 'aborted' && (
-          <div className="bg-panel-3 border border-border rounded-xl px-4 py-2 flex items-center gap-3 opacity-60 max-w-fit">
-            <XCircle size={16} className="text-text-faint" />
-            <span className="text-[10px] font-black text-text-faint uppercase tracking-widest">Neural Handshake Aborted</span>
+            {abortedIds.has(action.handshake_id) && (
+              <div className="bg-panel-3 border border-border rounded-xl px-4 py-2 flex items-center gap-3 opacity-60 max-w-fit mb-4">
+                <XCircle size={16} className="text-text-faint" />
+                <span className="text-[10px] font-black text-text-faint uppercase tracking-widest">Neural Handshake Aborted</span>
+              </div>
+            )}
           </div>
-        )}
+        ))}
 
         <span className={cn("text-[10px] font-bold text-[var(--color-text-faint)] px-1 uppercase tracking-tighter", !isAssistant ? "text-right" : "text-left")}>
           {role} \u2022 {format(new Date(), 'HH:mm')}
@@ -421,11 +432,11 @@ function ChatTab() {
         if (!cancelled && msgs && msgs.length > 0) {
           setMessages(msgs)
         } else if (!cancelled) {
-          setMessages([{ role: 'assistant', content: 'Greetings. I am the OpsForAll AI Analyst. I have analyzed your system metrics and identified several areas for potential optimization. How can I assist you today?' }])
+          setMessages([{ role: 'assistant', content: 'Greetings. I am the AllOpsFull AI Analyst. I have analyzed your system metrics and identified several areas for potential optimization. How can I assist you today?' }])
         }
       } catch { /* ignore */
         if (!cancelled) {
-          setMessages([{ role: 'assistant', content: 'Greetings. I am the OpsForAll AI Analyst. I have analyzed your system metrics and identified several areas for potential optimization. How can I assist you today?' }])
+          setMessages([{ role: 'assistant', content: 'Greetings. I am the AllOpsFull AI Analyst. I have analyzed your system metrics and identified several areas for potential optimization. How can I assist you today?' }])
         }
       } finally {
         if (!cancelled) setLoaded(true)
@@ -454,7 +465,7 @@ function ChatTab() {
       const assistantMsg: ChatMessage = {
         role: 'assistant',
         content: response.content,
-        action: response.action
+        actions: response.actions
       }
       setMessages(prev => [...prev, assistantMsg])
       // Persist assistant message
@@ -580,7 +591,7 @@ function ChatTab() {
               {/* Messages */}
               <div ref={chatRef} className="flex-1 overflow-y-auto p-10 space-y-8 relative z-10 scroll-smooth">
                 {messages.map((msg, i) => (
-                  <ChatBubble key={i} role={msg.role} content={msg.content} />
+                  <ChatBubble key={i} role={msg.role} content={msg.content} actions={msg.actions} />
                 ))}
                 {isTyping && (
                   <div className="flex gap-6 max-w-[80%] animate-pulse">

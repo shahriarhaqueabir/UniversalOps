@@ -3,6 +3,8 @@
 import {app} from '../models';
 import {common} from '../models';
 
+export function ApplyOperationalProfile(arg1:string):Promise<void>;
+
 export function ClearOnboarded():Promise<void>;
 
 export function ConfirmAction(arg1:string):Promise<app.SecActionResult>;
@@ -27,4 +29,8 @@ export function SetCollectorEnabled(arg1:string,arg2:boolean):Promise<void>;
 
 export function SetCollectorInterval(arg1:string,arg2:number):Promise<void>;
 
+export function SetLogLevel(arg1:string):Promise<void>;
+
 export function TriggerCollector(arg1:string):Promise<void>;
+
+export function UpdateStorageConfig(arg1:string):Promise<void>;

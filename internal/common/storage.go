@@ -29,11 +29,15 @@ type Storage struct {
 	writerWg   sync.WaitGroup
 	pruneWg    sync.WaitGroup
 	flushCh    chan chan struct{}
+
+	// mu protects metricsCh and closed flag
+	mu     sync.RWMutex
+	closed bool
 }
 
 var (
 	// DefaultDBName is the name of the SQLite database file.
-	DefaultDBName = "ops_core.db"
+	DefaultDBName = "allopsfull.db"
 	globalStorage *Storage
 )
 
@@ -65,6 +69,7 @@ func InitStorage(path string) error {
 		"PRAGMA journal_mode=WAL",
 		"PRAGMA synchronous=NORMAL",
 		"PRAGMA cache_size=-8000",
+		"PRAGMA busy_timeout=5000",
 	}
 	for _, p := range pragmas {
 		if _, err := db.Exec(p); err != nil {
@@ -75,7 +80,7 @@ func InitStorage(path string) error {
 
 	s := &Storage{
 		db:        db,
-		metricsCh: make(chan MetricWrite, 256),
+		metricsCh: make(chan MetricWrite, 2048), // Increased from 256 to handle spikes
 		closeCh:   make(chan struct{}),
 		flushCh:   make(chan chan struct{}),
 	}
@@ -113,12 +118,17 @@ func GetStorage() *Storage {
 
 // Close closes the database connection after flushing pending writes.
 func (s *Storage) Close() error {
-	// Signal the daily prune loop to stop
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return nil
+	}
+	s.closed = true
 	close(s.closeCh)
-	s.pruneWg.Wait()
-
-	// Signal the writer loop to flush and stop by closing the metrics channel
 	close(s.metricsCh)
+	s.mu.Unlock()
+
+	s.pruneWg.Wait()
 	s.writerWg.Wait()
 
 	if s.insertStmt != nil {
@@ -132,8 +142,18 @@ func (s *Storage) Close() error {
 
 // ── Migrations ──────────────────────────────────────────────────────────────
 
+// Begin starts a new SQL transaction.
+func (s *Storage) Begin() (*sql.Tx, error) {
+	return s.db.Begin()
+}
+
 func (s *Storage) migrate() error {
 	queries := []string{
+		`CREATE TABLE IF NOT EXISTS schema_versions (
+			version INTEGER PRIMARY KEY,
+			applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`INSERT OR IGNORE INTO schema_versions (version) VALUES (1)`,
 		`CREATE TABLE IF NOT EXISTS metrics (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -315,16 +335,27 @@ var (
 )
 
 func (s *Storage) InsertMetric(name, unit string, value float64) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.closed {
+		return fmt.Errorf("storage closed")
+	}
+
 	w := MetricWrite{Name: name, Unit: unit, Value: value, Time: time.Now()}
+
+	// Wait up to 500ms to enqueue the metric.
+	timer := time.NewTimer(500 * time.Millisecond)
+	defer timer.Stop()
+
 	select {
 	case s.metricsCh <- w:
 		return nil
-	default:
-		// Channel full — drop sample and log a warning (rate-limited)
+	case <-timer.C:
+		// Channel full and timeout reached — drop sample and log a warning
 		lastDropLogMu.Lock()
 		if time.Since(lastDropLog) > 10*time.Second {
 			lastDropLog = time.Now()
-			LogWarn("InsertMetric: metrics channel full, dropping sample (name=%s)", name)
+			LogWarn("InsertMetric: metrics channel full, dropped sample after 500ms (name=%s). SYSTEM UNDER HEAVY DISK LOAD.", name)
 		}
 		lastDropLogMu.Unlock()
 		return nil
@@ -396,6 +427,11 @@ func (s *Storage) GetMetricHistoryWithTimestamps(name string, limit int) ([]Metr
 
 // InsertLog persists a log entry.
 func (s *Storage) InsertLog(level, module, message string) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.closed {
+		return fmt.Errorf("storage closed")
+	}
 	query := `INSERT INTO logs (level, module, message, timestamp) VALUES (?, ?, ?, ?)`
 	_, err := s.db.Exec(query, level, module, message, time.Now())
 	return err
@@ -617,7 +653,12 @@ func (s *Storage) Prune(olderThan time.Duration) {
 // ── Events CRUD ────────────────────────────────────────────────────────────────
 
 // InsertEvent persists a timeline event.
-func (s *Storage) InsertEvent(evt TimelineEvent) error {
+func (s *Storage) InsertEvent(evt TimelineEvent, tx *sql.Tx) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.closed && tx == nil {
+		return fmt.Errorf("storage closed")
+	}
 	// Encode related IDs as comma-separated
 	related := ""
 	for i, r := range evt.Related {
@@ -635,7 +676,7 @@ func (s *Storage) InsertEvent(evt TimelineEvent) error {
 		}
 	}
 
-	_, err := s.db.Exec(
+	_, err := s.getDB(tx).Exec(
 		`INSERT OR IGNORE INTO events (id, timestamp, category, level, title, detail, module, related, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		evt.ID, evt.Timestamp, string(evt.Category), evt.Level.String(), evt.Title, evt.Detail, evt.Module, related, metaJSON,
 	)
@@ -762,9 +803,35 @@ type AlertRecord struct {
 	ResolvedAt *time.Time
 }
 
+// queryable is an interface that works with both sql.DB and sql.Tx.
+type queryable interface {
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+}
+
+func (s *Storage) getDB(tx *sql.Tx) queryable {
+	if tx != nil {
+		return tx
+	}
+	return s.db
+}
+
+// CheckClosed returns true if the storage is closed.
+func (s *Storage) CheckClosed() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.closed
+}
+
 // InsertAlert persists a fired alert to SQLite.
-func (s *Storage) InsertAlert(a AlertRecord) error {
-	_, err := s.db.Exec(
+func (s *Storage) InsertAlert(a AlertRecord, tx *sql.Tx) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.closed && tx == nil {
+		return fmt.Errorf("storage closed")
+	}
+	_, err := s.getDB(tx).Exec(
 		`INSERT OR REPLACE INTO alerts (id, timestamp, level, metric, message, value, threshold, resolved, resolved_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		a.ID, a.Timestamp, a.Level, a.Metric, a.Message, a.Value, a.Threshold, boolToInt(a.Resolved), timePtrToSQL(a.ResolvedAt),
 	)
@@ -775,8 +842,13 @@ func (s *Storage) InsertAlert(a AlertRecord) error {
 }
 
 // UpdateAlertResolved marks an alert as resolved in SQLite.
-func (s *Storage) UpdateAlertResolved(id string) error {
-	_, err := s.db.Exec(
+func (s *Storage) UpdateAlertResolved(id string, tx *sql.Tx) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.closed && tx == nil {
+		return fmt.Errorf("storage closed")
+	}
+	_, err := s.getDB(tx).Exec(
 		`UPDATE alerts SET resolved = 1, resolved_at = ? WHERE id = ?`,
 		time.Now(), id,
 	)

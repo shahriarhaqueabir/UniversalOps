@@ -3,6 +3,7 @@ package common
 import (
 	"math"
 	"sort"
+	"sync"
 	"time"
 )
 
@@ -20,6 +21,7 @@ type TimeSeries struct {
 	maxSize int
 	head    int
 	count   int
+	mu      sync.RWMutex
 }
 
 // NewTimeSeries creates a ring-buffer time series with the given capacity.
@@ -34,6 +36,8 @@ func NewTimeSeries(name, unit string, capacity int) *TimeSeries {
 
 // Push adds a data point, overwriting the oldest if full.
 func (ts *TimeSeries) Push(t time.Time, v float64) {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
 	ts.data[ts.head] = DataPoint{Time: t, Value: v}
 	ts.head = (ts.head + 1) % ts.maxSize
 	if ts.count < ts.maxSize {
@@ -43,6 +47,8 @@ func (ts *TimeSeries) Push(t time.Time, v float64) {
 
 // Values returns the stored values in chronological order.
 func (ts *TimeSeries) Values() []float64 {
+	ts.mu.RLock()
+	defer ts.mu.RUnlock()
 	n := ts.count
 	if n == 0 {
 		return nil
@@ -57,6 +63,8 @@ func (ts *TimeSeries) Values() []float64 {
 
 // DataPoints returns all stored points in chronological order.
 func (ts *TimeSeries) DataPoints() []DataPoint {
+	ts.mu.RLock()
+	defer ts.mu.RUnlock()
 	n := ts.count
 	if n == 0 {
 		return nil
@@ -71,6 +79,8 @@ func (ts *TimeSeries) DataPoints() []DataPoint {
 
 // Last returns the most recent value, or 0 if empty.
 func (ts *TimeSeries) Last() float64 {
+	ts.mu.RLock()
+	defer ts.mu.RUnlock()
 	if ts.count == 0 {
 		return 0
 	}
@@ -146,6 +156,7 @@ func percentile(sorted []float64, p float64) float64 {
 type TimeSeriesStore struct {
 	series map[string]*TimeSeries
 	cap    int
+	mu     sync.RWMutex
 }
 
 // NewTimeSeriesStore creates a store where each series has the given capacity.
@@ -158,11 +169,21 @@ func NewTimeSeriesStore(capacity int) *TimeSeriesStore {
 
 // Get returns the named series, creating it if needed.
 func (s *TimeSeriesStore) Get(name, unit string) *TimeSeries {
+	s.mu.RLock()
 	ts, ok := s.series[name]
-	if !ok {
-		ts = NewTimeSeries(name, unit, s.cap)
-		s.series[name] = ts
+	s.mu.RUnlock()
+	if ok {
+		return ts
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	// Check again in case it was created between locks
+	if ts, ok := s.series[name]; ok {
+		return ts
+	}
+	ts = NewTimeSeries(name, unit, s.cap)
+	s.series[name] = ts
 	return ts
 }
 
@@ -171,12 +192,21 @@ func (s *TimeSeriesStore) Push(name, unit string, t time.Time, v float64) {
 	s.Get(name, unit).Push(t, v)
 }
 
-// Series returns all stored series names.
+// Series returns a map of all series. Note: the map is a shallow copy
+// but the TimeSeries pointers are the same.
 func (s *TimeSeriesStore) Series() map[string]*TimeSeries {
-	return s.series
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make(map[string]*TimeSeries, len(s.series))
+	for k, v := range s.series {
+		out[k] = v
+	}
+	return out
 }
 
 // ClearAll resets all series.
 func (s *TimeSeriesStore) ClearAll() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.series = make(map[string]*TimeSeries)
 }

@@ -80,7 +80,7 @@ AllOpsFull/
 
 - **Go**: Follow standard Go project layout and idiomatic patterns. Use `common.LogInfo` for logging.
 - **Frontend**: React + TypeScript with Tailwind v4 and Radix UI.
-- **Database**: Use `ops_core.db` for all persistent storage logic.
+- **Database**: Use `allopsfull.db` for all persistent storage logic.
 
 ## Security
 

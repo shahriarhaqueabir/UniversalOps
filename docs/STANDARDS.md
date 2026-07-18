@@ -2,6 +2,11 @@
 
 ## Go Conventions (Backend)
 
+### Versioning & Idioms
+- **Go 1.26+**: Leverage new reflection iterators (`reflect.Value.Fields()`) for system-state mapping.
+- **Strict URL Parsing**: Be aware of `urlstrictcolons=1`. Ensure all hostname strings provided by users are validated before `url.Parse`.
+- **Error Handling**: Use the optimized `fmt.Errorf` (automatic direct return of `errors.New` if no formatting is present).
+
 ### Naming
 
 | Pattern | Convention | Example |
@@ -42,6 +47,11 @@ import (
 ```
 
 ## React & TypeScript Conventions (Frontend)
+
+### React 19 Standards
+- **Actions**: Prefer `useActionState` and `useOptimistic` for data mutations (e.g., AI chat input, setting overrides).
+- **Transitions**: Use `startTransition(async () => ...)` for long-running IPC calls to maintain UI responsiveness.
+- **Hook Primatives**: Use `use(Context)` or `use(Promise)` where applicable for cleaner async data loading.
 
 ### Naming
 

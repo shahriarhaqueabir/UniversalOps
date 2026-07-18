@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"net/url"
 	"os"
@@ -58,6 +59,9 @@ type App struct {
 	// binding invoked directly from the frontend goroutine). See IPC-3.
 	lastMu                     sync.Mutex
 	lastCPU, lastMem, lastDisk float64
+
+	// storageMu protects storage relocation
+	storageMu sync.Mutex
 }
 
 // NewApp creates a new App with initialized subsystems.
@@ -93,7 +97,7 @@ func NewApp() *App {
 	a.eventBus.Subscribe(func(evt common.TimelineEvent) {
 		// Persist to database
 		if s := common.GetStorage(); s != nil {
-			s.InsertEvent(evt)
+			s.InsertEvent(evt, nil)
 		}
 
 		// Emit to frontend via Wails runtime
@@ -110,17 +114,30 @@ func NewApp() *App {
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 
-	// Initialize persistent storage
-	if err := common.InitStorage("opsforall.db"); err != nil {
-		common.LogWarn("Failed to init storage: %v", err)
+	// Root-local portable directory structure
+	dataDir := "data"
+	logsDir := "logs"
+
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		common.LogWarn("Failed to create local data directory: %v", err)
+	}
+	if err := os.MkdirAll(logsDir, 0755); err != nil {
+		common.LogWarn("Failed to create local logs directory: %v", err)
 	}
 
-	// Initialize the common logger
-	if err := common.InitLogger("opsforall.log"); err != nil {
-		common.LogWarn("Failed to init logger: %v", err)
+	// Initialize persistent storage locally
+	dbPath := filepath.Join(dataDir, "allopsfull.db")
+	if err := common.InitStorage(dbPath); err != nil {
+		common.LogWarn("Failed to init local storage: %v", err)
 	}
 
-	common.LogInfo("OpsForAll starting up")
+	// Initialize the session logger locally
+	logPath := filepath.Join(logsDir, "allopsfull.log")
+	if err := common.InitLogger(logPath); err != nil {
+		common.LogWarn("Failed to init local logger: %v", err)
+	}
+
+	common.LogInfo("AllOpsFull initialized in self-contained mode (portable)")
 
 	// Initialize System Knowledge Layer
 	common.InitKnowledge()
@@ -174,8 +191,8 @@ func (a *App) Shutdown(ctx context.Context) {
 // GetAppInfo returns metadata about the application.
 func (a *App) GetAppInfo() AppInfo {
 	return AppInfo{
-		Name:      "OpsForAll Universal Platform",
-		Version:   "1.3.0",
+		Name:      "AllOpsFull Universal Platform",
+		Version:   "1.3.1",
 		GoVersion: goruntime.Version(),
 		Uptime:    common.FormatUptime(uint64(time.Since(a.startedAt).Seconds())),
 	}
@@ -225,15 +242,37 @@ func (a *App) SetLogLevel(level string) {
 
 // UpdateStorageConfig moves the internal database and log files to a new location.
 func (a *App) UpdateStorageConfig(dbDir string) error {
-	common.LogInfo("App: Re-locating storage to %s", dbDir)
+	a.storageMu.Lock()
+	defer a.storageMu.Unlock()
 
-	// Shutdown current storage
-	if s := common.GetStorage(); s != nil {
+	dbPath := filepath.Join(dbDir, "allopsfull.db")
+
+	common.LogInfo("App: Suspending operations for storage relocation to %s", dbDir)
+
+	// 1. Stop the scheduler to prevent background writes during relocation
+	if a.scheduler != nil {
+		a.scheduler.Stop(2 * time.Second)
+	}
+
+	// 2. Shutdown current storage
+	s := common.GetStorage()
+	if s != nil {
 		s.Close()
 	}
 
-	dbPath := filepath.Join(dbDir, "opsforall.db")
-	return common.InitStorage(dbPath)
+	// 3. Initialize new storage
+	if err := common.InitStorage(dbPath); err != nil {
+		return fmt.Errorf("failed to re-init storage: %w", err)
+	}
+
+	// 4. Restart the scheduler
+	if a.scheduler != nil {
+		a.scheduler = common.NewCollectorScheduler(a.collectorRegistry, a.pipeline)
+		a.scheduler.Start()
+	}
+
+	common.LogInfo("App: Storage successfully relocated and operations resumed.")
+	return nil
 }
 
 // GetSystemCapabilities returns a list of detected tools and binaries on the host.
@@ -326,6 +365,29 @@ func (a *App) evaluateAndEmit() {
 		return
 	}
 
+	storage := common.GetStorage()
+	var tx *sql.Tx
+	var err error
+	if storage != nil {
+		tx, err = storage.Begin()
+		if err != nil {
+			common.LogWarn("evaluateAndEmit: failed to begin transaction: %v", err)
+		}
+	}
+
+	// Ensure transaction is handled
+	defer func() {
+		if tx != nil {
+			if r := recover(); r != nil {
+				tx.Rollback()
+				panic(r)
+			}
+			if err := tx.Commit(); err != nil {
+				common.LogWarn("evaluateAndEmit: failed to commit transaction: %v", err)
+			}
+		}
+	}()
+
 	// Snapshot active alert IDs before evaluation (for resolve detection)
 	prevActive := make(map[string]bool)
 	for _, al := range a.alerts.ActiveAlerts() {
@@ -335,10 +397,10 @@ func (a *App) evaluateAndEmit() {
 	// Evaluate alerts
 	newAlerts := a.alerts.Evaluate()
 
-	// Persist fired alerts to SQLite
-	if store := common.GetStorage(); store != nil {
+	// Persist fired alerts to SQLite (Within Transaction)
+	if storage != nil && tx != nil {
 		for _, alert := range newAlerts {
-			store.InsertAlert(common.AlertRecord{
+			storage.InsertAlert(common.AlertRecord{
 				ID:        alert.ID,
 				Timestamp: alert.Timestamp,
 				Level:     alert.Level.String(),
@@ -346,7 +408,7 @@ func (a *App) evaluateAndEmit() {
 				Message:   alert.Message,
 				Value:     alert.Value,
 				Threshold: alert.Threshold,
-			})
+			}, tx)
 		}
 
 		for id := range prevActive {
@@ -358,7 +420,7 @@ func (a *App) evaluateAndEmit() {
 				}
 			}
 			if !found {
-				_ = store.UpdateAlertResolved(id)
+				_ = storage.UpdateAlertResolved(id, tx)
 			}
 		}
 	}
@@ -537,8 +599,9 @@ func (a *App) TriggerCollector(id string) error {
 		a.pipeline.PushMetric(s.Name, s.Unit, s.Value)
 	}
 
-	// Trigger immediate alert evaluation
-	a.evaluateAndEmit()
+	// Trigger immediate alert evaluation in a separate goroutine to avoid
+	// blocking the Wails binding return.
+	go a.evaluateAndEmit()
 
 	return nil
 }

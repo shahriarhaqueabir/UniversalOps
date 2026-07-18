@@ -149,6 +149,10 @@ func DefaultSandbox() SandboxConfig {
 // Suitable for secops, sysops, and diagnostic commands that invoke
 // OS tools (netsh, netstat, powershell) but don't need network access.
 // DenyProcessSpawn is false because these tools are themselves sub-processes.
+// SystemQuerySandbox returns a SandboxConfig for read-only system queries.
+// Suitable for secops, sysops, and diagnostic commands that invoke
+// OS tools (netsh, netstat, powershell) but don't need network access.
+// DenyProcessSpawn is false because these tools are themselves sub-processes.
 func SystemQuerySandbox() SandboxConfig {
 	cfg := SandboxConfig{
 		DenyNetworkAccess: true,
@@ -162,6 +166,18 @@ func SystemQuerySandbox() SandboxConfig {
 		cfg.ReadOnlyFS = false
 	}
 	return cfg
+}
+
+// RemediationSandbox returns a SandboxConfig for system remediation actions.
+// Allows process spawning, denies network access, and keeps privileges
+// (required for IR actions like taskkill or firewall changes).
+func RemediationSandbox() SandboxConfig {
+	return SandboxConfig{
+		DenyNetworkAccess: true,
+		ReadOnlyFS:        false,
+		DenyProcessSpawn:  false,
+		DropPrivileges:    false,
+	}
 }
 
 // SandboxedCommand creates a sandboxed command with default restrictions.

@@ -75,7 +75,19 @@ func (r *CapabilityRegistry) Refresh() {
 			isCustom = true
 		}
 
-		// 2. Standard PATH lookup
+		// 2. Check local 'bin' directory (Self-contained preference)
+		if path == "" {
+			localPath := filepath.Join("bin", string(id))
+			if runtime.GOOS == "windows" {
+				localPath += ".exe"
+			}
+			if _, errStat := os.Stat(localPath); errStat == nil {
+				path = localPath
+				err = nil
+			}
+		}
+
+		// 3. Standard PATH lookup
 		if path == "" {
 			path, err = exec.LookPath(string(id))
 		}

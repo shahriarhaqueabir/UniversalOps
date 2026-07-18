@@ -28,35 +28,10 @@ type OllamaStatus struct {
 	AvailableModels []string
 }
 
-// effectiveModel is resolved by CheckOllama and read by Chat. Both can run
-// concurrently (e.g. a status poll while a chat request is in flight), so
-// access is guarded by effectiveModelMu instead of a bare package var (H5).
-var (
-	effectiveModelMu sync.RWMutex
-	effectiveModel   string
-)
-
-func setEffectiveModel(model string) {
-	effectiveModelMu.Lock()
-	effectiveModel = model
-	effectiveModelMu.Unlock()
-}
-
-func getEffectiveModel() string {
-	effectiveModelMu.RLock()
-	defer effectiveModelMu.RUnlock()
-	return effectiveModel
-}
-
-// SetModel updates the effective model to be used for future Chat calls.
-func SetModel(model string) {
-	setEffectiveModel(model)
-}
-
 const (
 	defaultOllamaURL   = "http://localhost:11434"
 	defaultOllamaModel = "opsforall"
-	defaultHttpTimeout = 60 * time.Second // Increased from 30s for general metadata queries
+	defaultHttpTimeout = 60 * time.Second
 )
 
 func getOllamaURL() string {
@@ -74,16 +49,93 @@ func getOllamaModel() string {
 }
 
 func newClient() *api.Client {
-	return newClientWithTimeout(defaultHttpTimeout)
-}
-
-func newClientWithTimeout(timeout time.Duration) *api.Client {
 	baseURL := getOllamaURL()
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		u = &url.URL{Scheme: "http", Host: "localhost:11434"}
 	}
-	return api.NewClient(u, &http.Client{Timeout: timeout})
+	return api.NewClient(u, &http.Client{Timeout: defaultHttpTimeout})
+}
+
+// ── Global Compatibility Wrappers ───────────────────────────────────────────
+
+var (
+	defaultClientOnce sync.Once
+	defaultClient     *OllamaClient
+)
+
+func getDefaultClient() *OllamaClient {
+	// Note: We don't use sync.Once here because we want to allow tests to
+	// potentially re-initialize if environment variables change.
+	// For production, the first call will lock in the URL.
+	if defaultClient == nil {
+		defaultClient = NewOllamaClient()
+	}
+	return defaultClient
+}
+
+// ResetDefaultClient forces the global client to be re-initialized from environment.
+// Primarily used for testing.
+func ResetDefaultClient() {
+	defaultClient = nil
+}
+
+// Chat sends a chat request using the default client.
+func Chat(messages []ChatMessage) (string, error) {
+	return getDefaultClient().Chat(messages)
+}
+
+// SetModel updates the model for the default client.
+func SetModel(model string) {
+	getDefaultClient().SetModel(model)
+}
+
+// CheckOllama checks the status using the default client.
+func CheckOllama() (*OllamaStatus, error) {
+	return getDefaultClient().CheckStatus()
+}
+
+// PullModel downloads a model using the default client.
+func PullModel(name string, onProgress func(api.ProgressResponse) error) error {
+	return getDefaultClient().PullModel(name, onProgress)
+}
+
+// CreateModel creates a model using the default client.
+func CreateModel(name, from, system string, parameters map[string]any) error {
+	return getDefaultClient().CreateModel(name, from, system, parameters)
+}
+
+// DeleteModel removes a model using the default client.
+func DeleteModel(name string) error {
+	return getDefaultClient().DeleteModel(name)
+}
+
+// ── OllamaClient Implementation ─────────────────────────────────────────────
+
+// OllamaClient wraps the official Ollama API client.
+type OllamaClient struct {
+	api            *api.Client
+	modelMu        sync.RWMutex
+	effectiveModel string
+}
+
+func NewOllamaClient() *OllamaClient {
+	return &OllamaClient{
+		api:            newClient(),
+		effectiveModel: getOllamaModel(),
+	}
+}
+
+func (c *OllamaClient) SetModel(model string) {
+	c.modelMu.Lock()
+	defer c.modelMu.Unlock()
+	c.effectiveModel = model
+}
+
+func (c *OllamaClient) GetModel() string {
+	c.modelMu.RLock()
+	defer c.modelMu.RUnlock()
+	return c.effectiveModel
 }
 
 // CheckOllamaBinary returns true if the ollama binary is found in the system PATH.
@@ -93,34 +145,19 @@ func CheckOllamaBinary() bool {
 }
 
 // PullModel downloads a model from the Ollama library.
-func PullModel(name string, onProgress func(api.ProgressResponse) error) error {
-	// Pulling models can take a long time; use no timeout on the client (0)
-	client := newClientWithTimeout(0)
-	req := &api.PullRequest{
-		Model: name,
-	}
-
-	err := client.Pull(context.Background(), req, onProgress)
-	if err != nil {
-		return fmt.Errorf("failed to pull model: %w", err)
-	}
-	return nil
+func (c *OllamaClient) PullModel(name string, onProgress func(api.ProgressResponse) error) error {
+	req := &api.PullRequest{Model: name}
+	return c.api.Pull(context.Background(), req, onProgress)
 }
 
 // DeleteModel removes a local model.
-func DeleteModel(name string) error {
-	client := newClient()
-	req := &api.DeleteRequest{
-		Model: name,
-	}
-	return client.Delete(context.Background(), req)
+func (c *OllamaClient) DeleteModel(name string) error {
+	req := &api.DeleteRequest{Model: name}
+	return c.api.Delete(context.Background(), req)
 }
 
 // CreateModel creates a new model from structured parameters.
-// Note: v0.31.2 SDK uses structured fields instead of a raw Modelfile string.
-func CreateModel(name string, from string, system string, parameters map[string]any) error {
-	// Creating models (especially if it involves downloading layers) can take time
-	client := newClientWithTimeout(0)
+func (c *OllamaClient) CreateModel(name string, from string, system string, parameters map[string]any) error {
 	req := &api.CreateRequest{
 		Model:      name,
 		From:       from,
@@ -128,44 +165,34 @@ func CreateModel(name string, from string, system string, parameters map[string]
 		Parameters: parameters,
 	}
 
-	err := client.Create(context.Background(), req, func(resp api.ProgressResponse) error {
+	return c.api.Create(context.Background(), req, func(resp api.ProgressResponse) error {
 		return nil
 	})
-	if err != nil {
-		return fmt.Errorf("failed to create model: %w", err)
-	}
-	return nil
 }
 
-// CheckOllama checks if the Ollama service is available using the typed SDK.
-func CheckOllama() (*OllamaStatus, error) {
-	client := newClient()
-
-	listResp, err := client.List(context.Background())
+// CheckStatus checks if the Ollama service is available.
+func (c *OllamaClient) CheckStatus() (*OllamaStatus, error) {
+	listResp, err := c.api.List(context.Background())
 	if err != nil {
-		// Ollama not running or unreachable
 		return &OllamaStatus{Available: false}, nil
 	}
 
-	modelName := getOllamaModel()
+	currentModel := c.GetModel()
 	availableModels := make([]string, 0, len(listResp.Models))
-	if len(listResp.Models) > 0 {
-		found := false
-		for _, m := range listResp.Models {
-			availableModels = append(availableModels, m.Name)
-			// Fuzzy match to handle :latest or other tags
-			if m.Name == modelName || strings.HasPrefix(m.Name, modelName+":") {
-				found = true
-				modelName = m.Name // Use the fully qualified name
-			}
-		}
-		if !found {
-			modelName = listResp.Models[0].Name
+	found := false
+	for _, m := range listResp.Models {
+		availableModels = append(availableModels, m.Name)
+		if m.Name == currentModel || strings.HasPrefix(m.Name, currentModel+":") {
+			found = true
+			currentModel = m.Name
 		}
 	}
 
-	// Store the effective model so Chat() uses the same resolved model
-	setEffectiveModel(modelName)
+	if !found && len(listResp.Models) > 0 {
+		currentModel = listResp.Models[0].Name
+	}
+
+	c.SetModel(currentModel)
 
 	version := "detected"
 	if len(listResp.Models) > 0 {
@@ -176,18 +203,14 @@ func CheckOllama() (*OllamaStatus, error) {
 
 	return &OllamaStatus{
 		Available:       true,
-		Model:           modelName,
+		Model:           currentModel,
 		Version:         version,
 		AvailableModels: availableModels,
 	}, nil
 }
 
-// Chat sends a chat request to the Ollama API using the typed SDK and returns the response text.
-func Chat(messages []ChatMessage) (string, error) {
-	// Use a longer timeout for chat generation, as reasoning can take time
-	client := newClientWithTimeout(5 * time.Minute)
-
-	// Convert our ChatMessage type to the SDK's Message type
+// Chat sends a chat request to the Ollama API.
+func (c *OllamaClient) Chat(messages []ChatMessage) (string, error) {
 	apiMessages := make([]api.Message, len(messages))
 	for i, m := range messages {
 		apiMessages[i] = api.Message{
@@ -196,21 +219,15 @@ func Chat(messages []ChatMessage) (string, error) {
 		}
 	}
 
-	// Use the model resolved by CheckOllama, falling back to env/default
-	model := getEffectiveModel()
-	if model == "" {
-		model = getOllamaModel()
-	}
-
 	stream := false
 	req := &api.ChatRequest{
-		Model:    model,
+		Model:    c.GetModel(),
 		Messages: apiMessages,
 		Stream:   &stream,
 	}
 
 	var responseText string
-	err := client.Chat(context.Background(), req, func(resp api.ChatResponse) error {
+	err := c.api.Chat(context.Background(), req, func(resp api.ChatResponse) error {
 		responseText += resp.Message.Content
 		return nil
 	})

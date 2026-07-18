@@ -19,12 +19,36 @@ type HandshakeRegistry struct {
 	pending map[string]PendingAction
 }
 
-var globalHandshakes = &HandshakeRegistry{
-	pending: make(map[string]PendingAction),
-}
+var globalHandshakes = func() *HandshakeRegistry {
+	r := &HandshakeRegistry{
+		pending: make(map[string]PendingAction),
+	}
+	go r.cleanupLoop()
+	return r
+}()
 
 func GetHandshakeRegistry() *HandshakeRegistry {
 	return globalHandshakes
+}
+
+func (r *HandshakeRegistry) cleanupLoop() {
+	defer RecoverPanic()
+	ticker := time.NewTicker(1 * time.Minute)
+	for {
+		<-ticker.C
+		r.Cleanup()
+	}
+}
+
+func (r *HandshakeRegistry) Cleanup() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	now := time.Now()
+	for id, p := range r.pending {
+		if now.After(p.Expiry) {
+			delete(r.pending, id)
+		}
+	}
 }
 
 func (r *HandshakeRegistry) Register(action string, params map[string]interface{}) string {

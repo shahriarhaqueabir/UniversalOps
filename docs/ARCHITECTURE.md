@@ -79,7 +79,7 @@ graph TD
 
 ### 2. NetOps (Network Operations)
 - Continuous ICMP ping, DNS lookup (A/MX/TXT/etc.), port scanning.
-- Interactive network topology designer with save/load capability.
+- Interface bandwidth monitoring with real-time rate calculation.
 
 ### 3. SecOps (Security Operations)
 - Firewall rule management, user audit, listening ports.
@@ -204,12 +204,13 @@ AllOpsFull/
 Backend logic is exposed to the frontend via structs in `internal/app/`. Wails automatically generates TypeScript definitions for these methods, ensuring type safety across the IPC boundary.
 
 ### 2. The Data Pipeline
-A centralized Go ticker (`Pipeline`) collects system metrics every 3 seconds. This data is:
-1. Pushed to a SQLite database for historical analysis.
-2. Emitted as a Wails event to all frontend listeners.
+A centralized Go ticker (`Pipeline`) collects system metrics.
+- **Memoized Analysis**: Statistical math (linear regression, Pearson R) is memoized and only recalculated when new data is pushed.
+- **Sharded Concurrency**: To avoid global lock contention, the pipeline is sharded; metrics and forecast engines manage their own local locks.
 
-### 3. Event-Driven UI
-The frontend uses a custom `useEvents` hook to listen for backend ticks. This allows the Dashboard to update in real-time without expensive polling.
+### 3. Event-Driven UI & Backpressure
+The frontend uses a custom `useEvents` hook to listen for backend ticks. 
+- **Backpressure Aware**: Wails events are emitted without delivery confirmation. The UI uses debounced rendering for high-frequency logs to prevent goroutine bloat.
 
 ### 4. Settings Persistence
 Settings (refresh intervals, themes, etc.) are managed in a Zustand store and synchronized with the backend via a dedicated `UpdateSettings` binding.
@@ -226,10 +227,13 @@ Compared to heavy Electron apps:
 
 ### Why SQLite with WAL Mode?
 To handle frequent metric writes from the `DataPipeline` without blocking read queries from the UI, we use **Write-Ahead Logging (WAL)**.
+- **Atomic Persistence**: Every evaluation cycle (Alerts + Metrics) is wrapped in an explicit `*sql.Tx` to ensure the database never holds partial or inconsistent system states.
+- **Resilient Ingestion**: `InsertMetric` utilizes a 500ms resilient window to handle transient disk I/O spikes without telemetry loss.
 
 ### Why Local-First AI?
-OpsForAll
- integrates with **Ollama** locally. This ensures that sensitive system architecture and logs never leave the user's machine, satisfying enterprise privacy requirements.
+OpsForAll integrates with **Ollama** locally. 
+- **Portable Sovereignty**: All data (DB, logs, markers) is stored strictly in the application root (`./data`, `./logs`).
+- **Request Isolation**: AI state is instance-based via `OllamaClient`, ensuring zero state-leakage between concurrent user sessions and background diagnostics.
 
 ---
 

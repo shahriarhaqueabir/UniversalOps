@@ -27,6 +27,7 @@ func TestCheckOllama_Mock(t *testing.T) {
 
 	os.Setenv("OLLAMA_HOST", server.URL)
 	defer os.Unsetenv("OLLAMA_HOST")
+	ResetDefaultClient()
 
 	status, err := CheckOllama()
 	if err != nil {
@@ -56,6 +57,7 @@ func TestChat_Mock(t *testing.T) {
 
 	os.Setenv("OLLAMA_HOST", server.URL)
 	defer os.Unsetenv("OLLAMA_HOST")
+	ResetDefaultClient()
 
 	resp, err := Chat([]ChatMessage{{Role: "user", Content: "hello"}})
 	if err != nil {
@@ -94,6 +96,7 @@ func TestPullModel_Mock(t *testing.T) {
 
 	os.Setenv("OLLAMA_HOST", server.URL)
 	defer os.Unsetenv("OLLAMA_HOST")
+	ResetDefaultClient()
 
 	var progressCalled bool
 	err := PullModel("test-model", func(p api.ProgressResponse) error {
@@ -120,6 +123,7 @@ func TestCreateModel_Mock(t *testing.T) {
 
 	os.Setenv("OLLAMA_HOST", server.URL)
 	defer os.Unsetenv("OLLAMA_HOST")
+	ResetDefaultClient()
 
 	err := CreateModel("test-persona", "llama3", "You are a test", map[string]any{"temperature": 0.1})
 	if err != nil {

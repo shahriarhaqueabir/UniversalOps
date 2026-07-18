@@ -193,13 +193,13 @@ func (d *DevOps) RunPowerShell(cmd string) CommandResult {
 	}
 }
 
-// GetDefaultPath returns a safe default directory for file browsing.
+// GetDefaultPath returns the application root directory for file browsing.
 func (d *DevOps) GetDefaultPath() string {
-	home, err := os.UserHomeDir()
+	root, err := os.Getwd()
 	if err != nil {
-		return os.TempDir()
+		return "."
 	}
-	return home
+	return root
 }
 
 // GetPowerShellWorkflows returns a list of available PowerShell diagnostic workflows.

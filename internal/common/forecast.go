@@ -2,15 +2,21 @@ package common
 
 import (
 	"math"
+	"sync"
 )
 
 // ForecastEngine provides trend prediction using linear regression
-// and exponential smoothing — no external dependencies, just stdlib math.
+// and exponential smoothing.
 type ForecastEngine struct {
 	values   []float64
 	capacity int
 	head     int // index to the next insert position
 	full     bool
+	mu       sync.RWMutex
+
+	// Cache for expensive trend/forecast calculations
+	cacheValid bool
+	lastTrend  TrendInfo
 }
 
 // NewForecastEngine creates a forecast engine with a lookback window.
@@ -24,17 +30,22 @@ func NewForecastEngine(capacity int) *ForecastEngine {
 	}
 }
 
-// Push adds a new observed value.
+// Push adds a new observed value and invalidates the cache.
 func (fe *ForecastEngine) Push(v float64) {
+	fe.mu.Lock()
+	defer fe.mu.Unlock()
 	fe.values[fe.head] = v
 	fe.head = (fe.head + 1) % fe.capacity
 	if fe.head == 0 {
 		fe.full = true
 	}
+	fe.cacheValid = false
 }
 
 // Values returns the current observation window.
 func (fe *ForecastEngine) Values() []float64 {
+	fe.mu.RLock()
+	defer fe.mu.RUnlock()
 	size := fe.head
 	if fe.full {
 		size = fe.capacity
@@ -51,32 +62,16 @@ func (fe *ForecastEngine) Values() []float64 {
 	return out
 }
 
-// Clear resets the engine.
-func (fe *ForecastEngine) Clear() {
-	fe.head = 0
-	fe.full = false
-}
-
-// TrendInfo describes the direction and magnitude of a trend.
-type TrendInfo struct {
-	Direction   TrendDirection
-	ChangePct   float64 // percent change over the window
-	Slope       float64 // linear regression slope
-	Intercept   float64 // linear regression intercept
-	Correlation float64 // Pearson R (how well the line fits)
-}
-
-// TrendDirection indicates the direction of movement.
-type TrendDirection int
-
-const (
-	TrendStable  TrendDirection = 0
-	TrendRising  TrendDirection = 1
-	TrendFalling TrendDirection = -1
-)
-
-// DetectTrend performs linear regression on the current values.
+// DetectTrend performs linear regression on the current values with memoization.
 func (fe *ForecastEngine) DetectTrend() TrendInfo {
+	fe.mu.RLock()
+	if fe.cacheValid {
+		trend := fe.lastTrend
+		fe.mu.RUnlock()
+		return trend
+	}
+	fe.mu.RUnlock()
+
 	values := fe.Values()
 	n := len(values)
 	if n < 2 {
@@ -144,13 +139,20 @@ func (fe *ForecastEngine) DetectTrend() TrendInfo {
 		dir = TrendFalling
 	}
 
-	return TrendInfo{
+	res := TrendInfo{
 		Direction:   dir,
 		ChangePct:   changePct,
 		Slope:       slope,
 		Intercept:   intercept,
 		Correlation: corr,
 	}
+
+	fe.mu.Lock()
+	fe.lastTrend = res
+	fe.cacheValid = true
+	fe.mu.Unlock()
+
+	return res
 }
 
 // Predict estimates the value at a future step using the linear trend.

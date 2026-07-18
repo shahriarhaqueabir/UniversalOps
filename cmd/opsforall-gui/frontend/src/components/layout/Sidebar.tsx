@@ -75,7 +75,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         {!collapsed && (
           <div className="flex flex-col min-w-0 flex-1 wails-no-drag">
             <span className="font-bold text-lg tracking-wider text-[var(--color-text)] truncate">
-              OPSFORALL
+              ALLOPSFULL
             </span>
             <span className="text-xs text-[var(--color-text-faint)] truncate leading-tight uppercase font-medium">
               UNIVERSAL OPS
@@ -189,7 +189,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
 
       {/* Footer */}
       <div className="px-3 pb-4 pt-1 wails-no-drag">
-        <p className="text-[11px] text-[var(--color-text-faint)]">OpsForAll v1.3.0</p>
+        <p className="text-[11px] text-[var(--color-text-faint)]">AllOpsFull v1.3.1</p>
       </div>
     </aside>
   )

@@ -1,14 +1,14 @@
-# Collector Architecture — Design Proposal
+# Collector Architecture — Implementation Reference
 
-## Problem
+## Overview
 
-Today `collectAndEmit()` in `App.go` runs a single ticker and pulls **every** data source on every tick — CPU, memory, disk, network interfaces, temperature sensors, process count — then evaluates alerts and emits dashboard events all in one fused function. Users cannot:
+OpsForAll uses a modular, multi-threaded collector system. Every data source — CPU, memory, disk, network — runs in its own independent goroutine with its own schedule and lifecycle.
 
-- Disable subsystems they don't need (e.g., temperature on a VM)
-- Set per-collector intervals (network at 30s vs CPU at 3s)
-- Trigger a single collector manually
-
-## Design
+## Design Goals
+- **Zero Lock Contention**: Sharded data stores ensure concurrent collection does not block telemetry reading.
+- **Granular Control**: Every collector can be independently enabled/disabled or re-scheduled.
+- **Resilient Pipeline**: Collectors use exponential backoff on OS failure and never block the main loop.
+- **Efficiency**: Expensive statistical analysis is memoized and only recalculated when new metrics arrive.
 
 ### 1. Core Types (`internal/common/collector.go`)
 
@@ -50,50 +50,17 @@ type Collector interface {
 ```
 
 ### 2. Registry (`internal/common/registry.go`)
-
-```go
-type CollectorRegistry struct {
-    mu         sync.RWMutex
-    collectors map[CollectorID]*managedCollector
-    pipeline   *DataPipeline
-}
-
-type managedCollector struct {
-    Collector
-    enabled  bool
-    interval time.Duration
-    lastRun  time.Time
-}
-
-func (r *CollectorRegistry) Register(c Collector)
-func (r *CollectorRegistry) Enable(id CollectorID) error
-func (r *CollectorRegistry) Disable(id CollectorID) error
-func (r *CollectorRegistry) SetInterval(id CollectorID, d time.Duration) error
-func (r *CollectorRegistry) CollectNow(id CollectorID) ([]MetricSample, error)
-func (r *CollectorRegistry) Snapshot() []CollectorStatus
-```
-
-Collecting pushes directly into the pipeline via `r.pipeline.PushMetric()`.
+The registry manages the state of all available collectors and provides a unified injection point for the DataPipeline.
 
 ### 3. Scheduler (`internal/common/scheduler.go`)
+The scheduler spawns one goroutine per **enabled** collector.
+- **Isolation**: A failing collector cannot crash the system or stall other collectors.
+- **Backoff**: Automatic exponential backoff is applied if a collector returns repeated errors.
 
-Replaces the single `startTickLoop()` goroutine with one goroutine per **enabled** collector:
-
-```go
-type CollectorScheduler struct {
-    registry *CollectorRegistry
-    quit     chan struct{}
-    wg       sync.WaitGroup
-    logger   *log.Logger
-}
-
-func (s *CollectorScheduler) Start()
-func (s *CollectorScheduler) Stop(timeout time.Duration)
-```
-
-Each goroutine reads its collector's interval from the registry (hot-swappable via `SetInterval`), ticks independently, and pushes samples to the pipeline. When a collector is disabled mid-flight, its goroutine simply skips ticks until re-enabled.
-
-On collector **error**, the scheduler logs + moves on (no crash, no backpressure). On repeated errors, exponential backoff is applied.
+### 4. Pipeline & Memoization (`internal/common/pipeline.go`)
+The `DataPipeline` acts as the sharded metric buffer.
+- **Linear Regression**: Pearson R correlation and trend slopes are calculated on-ingestion and cached. 
+- **Read Performance**: The UI (Dashboard) reads pre-computed stats from the cache, ensuring sub-millisecond response times even under high ingest load.
 
 ### 4. Collector Implementations (`internal/app/collectors.go`)
 

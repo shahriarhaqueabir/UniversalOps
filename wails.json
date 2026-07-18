@@ -1,20 +1,20 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "opsforall-gui",
-  "outputfilename": "opsforall",
+  "name": "allopsfull",
+  "outputfilename": "allopsfull",
   "frontend:dir": "cmd/opsforall-gui/frontend",
   "frontend:install": "npm install",
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "http://localhost:5173",
   "info": {
-    "productName": "OpsForAll Universal Platform",
-    "productVersion": "1.3.0",
-    "copyright": "Copyright 2026 OpsForAll",
+    "productName": "AllOpsFull Universal Platform",
+    "productVersion": "1.3.1",
+    "copyright": "Copyright 2026 AllOpsFull",
     "comments": "Operations Intelligence & Release Hardening"
   },
   "author": {
-    "name": "OpsForAll",
-    "email": "dev@opsforall.io"
+    "name": "AllOpsFull",
+    "email": "dev@allopsfull.io"
   }
 }

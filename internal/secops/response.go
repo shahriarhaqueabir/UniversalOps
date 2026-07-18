@@ -42,25 +42,28 @@ func isolateHostWindows(autoExpireSeconds int) (*ActionResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), cmdTimeout)
 	defer cancel()
 
+	cfg := common.RemediationSandbox()
+
 	// Enable firewall
-	err := exec.CommandContext(ctx, "netsh", "advfirewall", "set", "allprofiles", "state", "on").Run()
-	if err != nil {
+	cmd := common.SandboxedCommandWithConfigContext(ctx, cfg, "netsh", "advfirewall", "set", "allprofiles", "state", "on")
+	if err := cmd.Run(); err != nil {
 		return &ActionResult{Success: false, Error: err.Error()}, nil
 	}
 	// Add block-all inbound rule
-	err = exec.CommandContext(ctx, "netsh", "advfirewall", "firewall", "add", "rule",
-		"name=SECOPS_Isolate_BlockAll", "dir=in", "action=block").Run()
-	if err != nil {
+	cmd = common.SandboxedCommandWithConfigContext(ctx, cfg, "netsh", "advfirewall", "firewall", "add", "rule",
+		"name=SECOPS_Isolate_BlockAll", "dir=in", "action=block")
+	if err := cmd.Run(); err != nil {
 		return &ActionResult{Success: false, Error: err.Error()}, nil
 	}
 	// Also block outbound to fully isolate
-	err = exec.CommandContext(ctx, "netsh", "advfirewall", "firewall", "add", "rule",
-		"name=SECOPS_Isolate_BlockAll_Out", "dir=out", "action=block").Run()
-	if err != nil {
+	cmd = common.SandboxedCommandWithConfigContext(ctx, cfg, "netsh", "advfirewall", "firewall", "add", "rule",
+		"name=SECOPS_Isolate_BlockAll_Out", "dir=out", "action=block")
+	if err := cmd.Run(); err != nil {
 		// Roll back inbound rule if outbound failed
 		rollbackCtx, rollbackCancel := context.WithTimeout(context.Background(), cmdTimeout)
 		defer rollbackCancel()
-		_ = exec.CommandContext(rollbackCtx, "netsh", "advfirewall", "firewall", "delete", "rule", "name=SECOPS_Isolate_BlockAll").Run()
+		cmdRollback := common.SandboxedCommandWithConfigContext(rollbackCtx, cfg, "netsh", "advfirewall", "firewall", "delete", "rule", "name=SECOPS_Isolate_BlockAll")
+		_ = cmdRollback.Run()
 		return &ActionResult{Success: false, Error: fmt.Sprintf("outbound block failed: %v", err)}, nil
 	}
 
@@ -83,18 +86,21 @@ func isolateHostLinux(autoExpireSeconds int) (*ActionResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), cmdTimeout)
 	defer cancel()
 
+	cfg := common.RemediationSandbox()
+
 	// Block inbound
-	err := exec.CommandContext(ctx, "iptables", "-A", "INPUT", "-j", "DROP").Run()
-	if err != nil {
+	cmd := common.SandboxedCommandWithConfigContext(ctx, cfg, "iptables", "-A", "INPUT", "-j", "DROP")
+	if err := cmd.Run(); err != nil {
 		return &ActionResult{Success: false, Error: err.Error()}, nil
 	}
 	// Also block outbound to fully isolate
-	err = exec.CommandContext(ctx, "iptables", "-A", "OUTPUT", "-j", "DROP").Run()
-	if err != nil {
+	cmd = common.SandboxedCommandWithConfigContext(ctx, cfg, "iptables", "-A", "OUTPUT", "-j", "DROP")
+	if err := cmd.Run(); err != nil {
 		// Roll back inbound rule if outbound failed
 		rollbackCtx, rollbackCancel := context.WithTimeout(context.Background(), cmdTimeout)
 		defer rollbackCancel()
-		_ = exec.CommandContext(rollbackCtx, "iptables", "-D", "INPUT", "-j", "DROP").Run()
+		cmdRollback := common.SandboxedCommandWithConfigContext(rollbackCtx, cfg, "iptables", "-D", "INPUT", "-j", "DROP")
+		_ = cmdRollback.Run()
 		return &ActionResult{Success: false, Error: fmt.Sprintf("outbound block failed: %v", err)}, nil
 	}
 
@@ -126,14 +132,16 @@ func removeIsolationWindows() (*ActionResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), cmdTimeout)
 	defer cancel()
 	var errs []string
+	cfg := common.RemediationSandbox()
+
 	// Remove inbound rule
-	err := exec.CommandContext(ctx, "netsh", "advfirewall", "firewall", "delete", "rule", "name=SECOPS_Isolate_BlockAll").Run()
-	if err != nil {
+	cmd := common.SandboxedCommandWithConfigContext(ctx, cfg, "netsh", "advfirewall", "firewall", "delete", "rule", "name=SECOPS_Isolate_BlockAll")
+	if err := cmd.Run(); err != nil {
 		errs = append(errs, fmt.Sprintf("inbound: %v", err))
 	}
 	// Remove outbound rule
-	err = exec.CommandContext(ctx, "netsh", "advfirewall", "firewall", "delete", "rule", "name=SECOPS_Isolate_BlockAll_Out").Run()
-	if err != nil {
+	cmd = common.SandboxedCommandWithConfigContext(ctx, cfg, "netsh", "advfirewall", "firewall", "delete", "rule", "name=SECOPS_Isolate_BlockAll_Out")
+	if err := cmd.Run(); err != nil {
 		errs = append(errs, fmt.Sprintf("outbound: %v", err))
 	}
 	if len(errs) > 0 {
@@ -146,14 +154,16 @@ func removeIsolationLinux() (*ActionResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), cmdTimeout)
 	defer cancel()
 	var errs []string
+	cfg := common.RemediationSandbox()
+
 	// Remove inbound DROP rule
-	err := exec.CommandContext(ctx, "iptables", "-D", "INPUT", "-j", "DROP").Run()
-	if err != nil {
+	cmd := common.SandboxedCommandWithConfigContext(ctx, cfg, "iptables", "-D", "INPUT", "-j", "DROP")
+	if err := cmd.Run(); err != nil {
 		errs = append(errs, fmt.Sprintf("inbound: %v", err))
 	}
 	// Remove outbound DROP rule
-	err = exec.CommandContext(ctx, "iptables", "-D", "OUTPUT", "-j", "DROP").Run()
-	if err != nil {
+	cmd = common.SandboxedCommandWithConfigContext(ctx, cfg, "iptables", "-D", "OUTPUT", "-j", "DROP")
+	if err := cmd.Run(); err != nil {
 		errs = append(errs, fmt.Sprintf("outbound: %v", err))
 	}
 	if len(errs) > 0 {
@@ -169,14 +179,18 @@ func KillProcess(pid int) (*ActionResult, error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), cmdTimeout)
 	defer cancel()
+	cfg := common.RemediationSandbox()
+
 	if common.IsWindows() {
-		out, err := exec.CommandContext(ctx, "taskkill", "/F", "/PID", fmt.Sprintf("%d", pid)).Output()
+		cmd := common.SandboxedCommandWithConfigContext(ctx, cfg, "taskkill", "/F", "/PID", fmt.Sprintf("%d", pid))
+		out, err := cmd.Output()
 		if err != nil {
 			return &ActionResult{Success: false, Error: err.Error()}, nil
 		}
 		return &ActionResult{Success: true, Message: strings.TrimSpace(string(out))}, nil
 	}
-	out, err := exec.CommandContext(ctx, "kill", "-9", fmt.Sprintf("%d", pid)).Output()
+	cmd := common.SandboxedCommandWithConfigContext(ctx, cfg, "kill", "-9", fmt.Sprintf("%d", pid))
+	out, err := cmd.Output()
 	if err != nil {
 		return &ActionResult{Success: false, Error: err.Error()}, nil
 	}
@@ -190,16 +204,18 @@ func BlockIP(ip string) (*ActionResult, error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), cmdTimeout)
 	defer cancel()
+	cfg := common.RemediationSandbox()
+
 	if common.IsWindows() {
-		err := exec.CommandContext(ctx, "netsh", "advfirewall", "firewall", "add", "rule",
-			"name=SECOPS_Block_"+ip, "dir=in", "action=block", "remoteip="+ip).Run()
-		if err != nil {
+		cmd := common.SandboxedCommandWithConfigContext(ctx, cfg, "netsh", "advfirewall", "firewall", "add", "rule",
+			"name=SECOPS_Block_"+ip, "dir=in", "action=block", "remoteip="+ip)
+		if err := cmd.Run(); err != nil {
 			return &ActionResult{Success: false, Error: err.Error()}, nil
 		}
 		return &ActionResult{Success: true, Message: fmt.Sprintf("Blocked IP %s", ip)}, nil
 	}
-	err := exec.CommandContext(ctx, "iptables", "-A", "INPUT", "-s", ip, "-j", "DROP").Run()
-	if err != nil {
+	cmd := common.SandboxedCommandWithConfigContext(ctx, cfg, "iptables", "-A", "INPUT", "-s", ip, "-j", "DROP")
+	if err := cmd.Run(); err != nil {
 		return &ActionResult{Success: false, Error: err.Error()}, nil
 	}
 	return &ActionResult{Success: true, Message: fmt.Sprintf("Blocked IP %s", ip)}, nil
@@ -212,15 +228,17 @@ func DisableAccount(username string) (*ActionResult, error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), cmdTimeout)
 	defer cancel()
+	cfg := common.RemediationSandbox()
+
 	if common.IsWindows() {
-		err := exec.CommandContext(ctx, "net", "user", username, "/active:no").Run()
-		if err != nil {
+		cmd := common.SandboxedCommandWithConfigContext(ctx, cfg, "net", "user", username, "/active:no")
+		if err := cmd.Run(); err != nil {
 			return &ActionResult{Success: false, Error: err.Error()}, nil
 		}
 		return &ActionResult{Success: true, Message: fmt.Sprintf("Account %s disabled", username)}, nil
 	}
-	err := exec.CommandContext(ctx, "passwd", "-l", username).Run()
-	if err != nil {
+	cmd := common.SandboxedCommandWithConfigContext(ctx, cfg, "passwd", "-l", username)
+	if err := cmd.Run(); err != nil {
 		return &ActionResult{Success: false, Error: err.Error()}, nil
 	}
 	return &ActionResult{Success: true, Message: fmt.Sprintf("Account %s locked", username)}, nil

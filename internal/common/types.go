@@ -20,16 +20,23 @@ type SystemStats struct {
 	AnomalyCount int
 }
 
-// SystemKnowledge represents the unified "Current Truth" of the system.
-type SystemKnowledge struct {
-	CPUUsage      float64 `json:"cpu_usage"`
-	MemoryUsage   float64 `json:"memory_usage"`
-	DiskUsage     float64 `json:"disk_usage"`
-	ActiveConns   int     `json:"active_conns"`
-	Anomalies     int     `json:"anomalies"`
-	Uptime        string  `json:"uptime"`
-	SecurityGrade string  `json:"security_grade"`
+// TrendInfo describes the direction and magnitude of a trend.
+type TrendInfo struct {
+	Direction   TrendDirection `json:"direction"`
+	ChangePct   float64        `json:"change_pct"`   // percent change over the window
+	Slope       float64        `json:"slope"`        // linear regression slope
+	Intercept   float64        `json:"intercept"`    // linear regression intercept
+	Correlation float64        `json:"correlation"`  // Pearson R (how well the line fits)
 }
+
+// TrendDirection indicates the direction of movement.
+type TrendDirection int
+
+const (
+	TrendStable  TrendDirection = 0
+	TrendRising  TrendDirection = 1
+	TrendFalling TrendDirection = -1
+)
 
 // ActionPreview represents a proposed system change.
 type ActionPreview struct {
@@ -40,7 +47,16 @@ type ActionPreview struct {
 	Rollback    string   `json:"rollback"`
 }
 
-// Display limits for report output.
+// SystemKnowledge represents the unified "Current Truth" of the system.
+type SystemKnowledge struct {
+	CPUUsage      float64 `json:"cpu_usage"`
+	MemoryUsage   float64 `json:"memory_usage"`
+	DiskUsage     float64 `json:"disk_usage"`
+	ActiveConns   int     `json:"active_conns"`
+	Anomalies     int     `json:"anomalies"`
+	Uptime        string  `json:"uptime"`
+	SecurityGrade string  `json:"security_grade"`
+}
 // These prevent excessive output in terminal views where space is constrained.
 const (
 	MaxFirewallRules        = 100 // cap for firewall rule lists in Markdown reports
