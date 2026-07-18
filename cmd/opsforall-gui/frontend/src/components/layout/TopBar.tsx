@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Sun, Moon, Bell, Trash2, RefreshCw, AlertTriangle, AlertOctagon, Info, CheckCircle2, Clock } from 'lucide-react'
+import { Sun, Moon, Bell, Trash2, RefreshCw, AlertTriangle, AlertOctagon, Info, CheckCircle2, Clock, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import type { Page } from '../../App'
-import { useThemeStore, useAlertStore, useSettingsStore } from '../../stores/useSettingsStore'
+import { useThemeStore, useAlertStore, useSettingsStore } from '../../stores'
 import type { AlertInfo } from '@/types'
 
 interface TopBarProps {
   currentPage: Page
+  onToggleHawk?: () => void
 }
 
 const pageLabels: Record<Page, string> = {
@@ -28,7 +29,7 @@ const severityIcon: Record<string, { icon: typeof Info; color: string }> = {
   info: { icon: Info, color: 'text-[var(--color-accent)]' },
 }
 
-export function TopBar({ currentPage }: TopBarProps) {
+export function TopBar({ currentPage, onToggleHawk }: TopBarProps) {
   const { theme, toggle } = useThemeStore()
   const { call } = useBackend()
   const { refreshInterval } = useSettingsStore()
@@ -185,10 +186,19 @@ export function TopBar({ currentPage }: TopBarProps) {
         {/* Theme toggle */}
         <button
           onClick={toggle}
-          className="text-[var(--color-text-dim)] hover:text-[var(--color-text)] transition-colors"
+          className="text-[var(--color-text-dim)] hover:text-[var(--color-text)] transition-colors p-1.5 rounded-lg hover:bg-[var(--color-sidebar-hover)]"
           aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+
+        {/* Hawk Toggle */}
+        <button
+          onClick={onToggleHawk}
+          className="text-[var(--color-text-dim)] hover:text-[var(--color-accent)] transition-colors p-1.5 rounded-lg hover:bg-[var(--color-accent)]/10"
+          aria-label="Toggle Hawk Companion"
+        >
+          <Sparkles size={18} />
         </button>
       </div>
     </header>

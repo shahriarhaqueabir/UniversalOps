@@ -3,9 +3,8 @@ import { toast } from 'sonner'
 import { Sidebar } from './components/layout/Sidebar'
 import { TopBar } from './components/layout/TopBar'
 import { MainContent } from './components/layout/MainContent'
+import { HawkSidebar } from './components/layout/HawkSidebar'
 import { OnboardingModal } from './components/dialogs/OnboardingModal'
-import { useThemeStore, useAlertStore, useSettingsStore, useMetricsStore } from './stores'
-import type { AlertInfo, DashboardData } from './types'
 
 export type Page = 'dashboard' | 'sysops' | 'netops' | 'secops' | 'devops' | 'aiops' | 'logs' | 'settings'
 
@@ -22,6 +21,7 @@ function getRuntime(): WailsRuntime | null {
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
   const [onboarded, setOnboarded] = useState<boolean | null>(null)
+  const [showHawk, setShowHawk] = useState(false)
   const { theme } = useThemeStore()
   const refreshInterval = useSettingsStore((s) => s.refreshInterval)
   const pingCount = useSettingsStore((s) => s.pingCount)
@@ -129,9 +129,12 @@ function App() {
     <div className="flex h-screen w-screen overflow-hidden bg-[var(--color-bg)] noise-overlay">
       {onboarded === false && <OnboardingModal onComplete={() => setOnboarded(true)} />}
       <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <TopBar currentPage={currentPage} />
-        <MainContent currentPage={currentPage} onNavigate={setCurrentPage} />
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+        <TopBar currentPage={currentPage} onToggleHawk={() => setShowHawk(!showHawk)} />
+        <div className="flex-1 flex overflow-hidden">
+          <MainContent currentPage={currentPage} onNavigate={setCurrentPage} />
+          <HawkSidebar isOpen={showHawk} onClose={() => setShowHawk(false)} />
+        </div>
       </div>
     </div>
   )
