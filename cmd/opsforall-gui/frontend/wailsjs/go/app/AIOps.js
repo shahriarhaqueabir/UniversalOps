@@ -62,6 +62,10 @@ export function SaveMessage(arg1, arg2, arg3) {
   return window['go']['app']['AIOps']['SaveMessage'](arg1, arg2, arg3);
 }
 
+export function SetOllamaModel(arg1) {
+  return window['go']['app']['AIOps']['SetOllamaModel'](arg1);
+}
+
 export function WithTimeout(arg1) {
   return window['go']['app']['AIOps']['WithTimeout'](arg1);
 }

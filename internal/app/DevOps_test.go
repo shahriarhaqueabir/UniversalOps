@@ -1,8 +1,6 @@
 package app
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -25,50 +23,6 @@ func TestDevOps_RunCommand_BlockedCommand(t *testing.T) {
 	}
 }
 
-func TestDevOps_ListDirectory_Root(t *testing.T) {
-	d := NewDevOps(NewApp())
-	entries := d.ListDirectory(".")
-	if entries == nil {
-		t.Fatal("ListDirectory returned nil, expected non-nil slice")
-	}
-	if len(entries) > 0 && entries[0].Name == "" {
-		t.Error("First entry has empty Name")
-	}
-}
-
-func TestDevOps_ListDirectory_Nonexistent(t *testing.T) {
-	d := NewDevOps(NewApp())
-	entries := d.ListDirectory("/nonexistent/path/that/does/not/exist/12345")
-	if entries == nil {
-		t.Fatal("ListDirectory returned nil for nonexistent path, expected non-nil slice")
-	}
-}
-
-func TestDevOps_ReadFile_Nonexistent(t *testing.T) {
-	d := NewDevOps(NewApp())
-	content := d.ReadFile("/nonexistent/file.txt")
-	if content != "" {
-		t.Logf("ReadFile returned content for nonexistent file: %s", content)
-	}
-}
-
-func TestDevOps_WriteFile(t *testing.T) {
-	d := NewDevOps(NewApp())
-	tmpDir := t.TempDir()
-	tmpFile := filepath.Join(tmpDir, "test.txt")
-	result := d.WriteFile(tmpFile, "hello world")
-	if !result {
-		t.Fatal("WriteFile returned false")
-	}
-	data, err := os.ReadFile(tmpFile)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(data) != "hello world" {
-		t.Errorf("WriteFile wrote %q, want %q", string(data), "hello world")
-	}
-}
-
 func TestDevOps_GetDevProcesses(t *testing.T) {
 	d := NewDevOps(NewApp())
 	procs := d.GetDevProcesses()
@@ -85,22 +39,6 @@ func TestDevOps_KillProcess_Nonexistent(t *testing.T) {
 	result := d.KillProcess(-9999)
 	if result.Error == "" {
 		t.Log("KillProcess with invalid PID returned no error (may be expected)")
-	}
-}
-
-func TestDevOps_TailLog_Nonexistent(t *testing.T) {
-	d := NewDevOps(NewApp())
-	lines := d.TailLog("/nonexistent/file.log", 10)
-	if lines == nil {
-		t.Fatal("TailLog returned nil for nonexistent file, expected non-nil slice")
-	}
-}
-
-func TestDevOps_SearchLog_Nonexistent(t *testing.T) {
-	d := NewDevOps(NewApp())
-	lines := d.SearchLog("/nonexistent/file.log", "pattern")
-	if lines == nil {
-		t.Fatal("SearchLog returned nil for nonexistent file, expected non-nil slice")
 	}
 }
 
@@ -221,14 +159,6 @@ func TestDevOps_GetLocalServers(t *testing.T) {
 	servers := d.GetLocalServers()
 	if servers == nil {
 		t.Fatal("GetLocalServers returned nil, expected non-nil slice")
-	}
-}
-
-func TestDevOps_GetGitSummary(t *testing.T) {
-	d := NewDevOps(NewApp())
-	summary := d.GetGitSummary()
-	if summary.Repositories == nil {
-		t.Fatal("GetGitSummary.Repositories is nil, expected non-nil slice")
 	}
 }
 

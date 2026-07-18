@@ -1,0 +1,24 @@
+# Secrets and credentials
+*.pem
+*.key
+*.p12
+*.pfx
+.env
+.env.*
+*.secret
+
+# Build artifacts
+build/bin/
+dist/
+node_modules/
+*.exe
+*.exe~
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# OS files
+.DS_Store
+Thumbs.db

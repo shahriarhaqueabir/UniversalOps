@@ -20,6 +20,26 @@ type SystemStats struct {
 	AnomalyCount int
 }
 
+// SystemKnowledge represents the unified "Current Truth" of the system.
+type SystemKnowledge struct {
+	CPUUsage      float64 `json:"cpu_usage"`
+	MemoryUsage   float64 `json:"memory_usage"`
+	DiskUsage     float64 `json:"disk_usage"`
+	ActiveConns   int     `json:"active_conns"`
+	Anomalies     int     `json:"anomalies"`
+	Uptime        string  `json:"uptime"`
+	SecurityGrade string  `json:"security_grade"`
+}
+
+// ActionPreview represents a proposed system change.
+type ActionPreview struct {
+	HandshakeID string   `json:"handshake_id"`
+	Action      string   `json:"action"`
+	Description string   `json:"description"`
+	Risks       []string `json:"risks"`
+	Rollback    string   `json:"rollback"`
+}
+
 // Display limits for report output.
 // These prevent excessive output in terminal views where space is constrained.
 const (

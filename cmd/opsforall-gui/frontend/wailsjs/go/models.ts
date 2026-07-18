@@ -38,24 +38,6 @@ export namespace app {
 	        this.timestamp = source["timestamp"];
 	    }
 	}
-	export class ARPEntryData {
-	    ip: string;
-	    mac: string;
-	    vendor: string;
-	    interface: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new ARPEntryData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.ip = source["ip"];
-	        this.mac = source["mac"];
-	        this.vendor = source["vendor"];
-	        this.interface = source["interface"];
-	    }
-	}
 	export class ActionResult {
 	    action: string;
 	    success: boolean;
@@ -182,24 +164,6 @@ export namespace app {
 	        this.remediation = source["remediation"];
 	    }
 	}
-	export class BandwidthSampleData {
-	    timestamp: string;
-	    rx_bytes_per_sec: number;
-	    tx_bytes_per_sec: number;
-	    interface: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new BandwidthSampleData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.timestamp = source["timestamp"];
-	        this.rx_bytes_per_sec = source["rx_bytes_per_sec"];
-	        this.tx_bytes_per_sec = source["tx_bytes_per_sec"];
-	        this.interface = source["interface"];
-	    }
-	}
 	export class BatteryData {
 	    percent: number;
 	    charging: boolean;
@@ -255,128 +219,6 @@ export namespace app {
 	        this.content = source["content"];
 	        this.level = source["level"];
 	    }
-	}
-	export class BuildSystemInfo {
-	    name: string;
-	    version: string;
-	    found: boolean;
-	    path: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new BuildSystemInfo(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.version = source["version"];
-	        this.found = source["found"];
-	        this.path = source["path"];
-	    }
-	}
-	export class BuildTargetInfo {
-	    name: string;
-	    type: string;
-	    path: string;
-	    has_build: boolean;
-	    has_test: boolean;
-	    has_lint: boolean;
-	    has_package: boolean;
-	    dep_count: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new BuildTargetInfo(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.type = source["type"];
-	        this.path = source["path"];
-	        this.has_build = source["has_build"];
-	        this.has_test = source["has_test"];
-	        this.has_lint = source["has_lint"];
-	        this.has_package = source["has_package"];
-	        this.dep_count = source["dep_count"];
-	    }
-	}
-	export class CICDConfig {
-	    platform: string;
-	    config_files: string[];
-	    detected: boolean;
-	
-	    static createFrom(source: any = {}) {
-	        return new CICDConfig(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.platform = source["platform"];
-	        this.config_files = source["config_files"];
-	        this.detected = source["detected"];
-	    }
-	}
-	export class CICDPipelineInfo {
-	    name: string;
-	    status: string;
-	    branch: string;
-	    commit: string;
-	    duration: string;
-	    updated_at: string;
-	    url: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new CICDPipelineInfo(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.status = source["status"];
-	        this.branch = source["branch"];
-	        this.commit = source["commit"];
-	        this.duration = source["duration"];
-	        this.updated_at = source["updated_at"];
-	        this.url = source["url"];
-	    }
-	}
-	export class CICDStatus {
-	    platform: string;
-	    enabled: boolean;
-	    config_found: boolean;
-	    pipelines: CICDPipelineInfo[];
-	    configs: CICDConfig[];
-	
-	    static createFrom(source: any = {}) {
-	        return new CICDStatus(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.platform = source["platform"];
-	        this.enabled = source["enabled"];
-	        this.config_found = source["config_found"];
-	        this.pipelines = this.convertValues(source["pipelines"], CICDPipelineInfo);
-	        this.configs = this.convertValues(source["configs"], CICDConfig);
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
 	}
 	export class PerCPUInfoData {
 	    core: number;
@@ -481,6 +323,38 @@ export namespace app {
 	        this.steal = source["steal"];
 	        this.total = source["total"];
 	    }
+	}
+	export class ChatResponse {
+	    content: string;
+	    action?: common.ActionPreview;
+	
+	    static createFrom(source: any = {}) {
+	        return new ChatResponse(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.content = source["content"];
+	        this.action = this.convertValues(source["action"], common.ActionPreview);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class CommandResult {
 	    command: string;
@@ -593,8 +467,7 @@ export namespace app {
 	    session_id: string;
 	    role: string;
 	    content: string;
-	    // Go type: time
-	    timestamp: any;
+	    timestamp: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ConversationMessage(source);
@@ -606,26 +479,8 @@ export namespace app {
 	        this.session_id = source["session_id"];
 	        this.role = source["role"];
 	        this.content = source["content"];
-	        this.timestamp = this.convertValues(source["timestamp"], null);
+	        this.timestamp = source["timestamp"];
 	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
 	}
 	export class DNSResult {
 	    hostname: string;
@@ -651,36 +506,6 @@ export namespace app {
 	        this.cname = source["cname"];
 	        this.txt = source["txt"];
 	        this.error = source["error"];
-	    }
-	}
-	export class DORAMetrics {
-	    deployment_frequency: string;
-	    lead_time_for_changes: string;
-	    change_failure_rate: string;
-	    mttr: string;
-	    period: string;
-	    deploy_count: number;
-	    incident_count: number;
-	    lead_time_avg_hours: number;
-	    mttr_avg_minutes: number;
-	    failure_pct: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new DORAMetrics(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.deployment_frequency = source["deployment_frequency"];
-	        this.lead_time_for_changes = source["lead_time_for_changes"];
-	        this.change_failure_rate = source["change_failure_rate"];
-	        this.mttr = source["mttr"];
-	        this.period = source["period"];
-	        this.deploy_count = source["deploy_count"];
-	        this.incident_count = source["incident_count"];
-	        this.lead_time_avg_hours = source["lead_time_avg_hours"];
-	        this.mttr_avg_minutes = source["mttr_avg_minutes"];
-	        this.failure_pct = source["failure_pct"];
 	    }
 	}
 	export class NetworkMetric {
@@ -787,6 +612,20 @@ export namespace app {
 		    return a;
 		}
 	}
+	export class DataPoint {
+	    time: string;
+	    value: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DataPoint(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.time = source["time"];
+	        this.value = source["value"];
+	    }
+	}
 	export class DefenderStatus {
 	    enabled: boolean;
 	    up_to_date: boolean;
@@ -819,32 +658,6 @@ export namespace app {
 	        this.quick_scan_age = source["quick_scan_age"];
 	        this.full_scan_age = source["full_scan_age"];
 	        this.threats_detected = source["threats_detected"];
-	    }
-	}
-	export class DeploymentRecord {
-	    id: string;
-	    version: string;
-	    environment: string;
-	    status: string;
-	    timestamp: string;
-	    duration: string;
-	    commit: string;
-	    trigger: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new DeploymentRecord(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.version = source["version"];
-	        this.environment = source["environment"];
-	        this.status = source["status"];
-	        this.timestamp = source["timestamp"];
-	        this.duration = source["duration"];
-	        this.commit = source["commit"];
-	        this.trigger = source["trigger"];
 	    }
 	}
 	export class DevOpsDiagCheck {
@@ -954,62 +767,6 @@ export namespace app {
 	        this.value = source["value"];
 	        this.unit = source["unit"];
 	    }
-	}
-	export class DiscoveredDeviceData {
-	    ip: string;
-	    mac: string;
-	    vendor: string;
-	    hostname: string;
-	    open_ports: number[];
-	    response_time_ms: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new DiscoveredDeviceData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.ip = source["ip"];
-	        this.mac = source["mac"];
-	        this.vendor = source["vendor"];
-	        this.hostname = source["hostname"];
-	        this.open_ports = source["open_ports"];
-	        this.response_time_ms = source["response_time_ms"];
-	    }
-	}
-	export class DiscoveryResultData {
-	    devices: DiscoveredDeviceData[];
-	    subnet: string;
-	    scan_time_ms: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new DiscoveryResultData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.devices = this.convertValues(source["devices"], DiscoveredDeviceData);
-	        this.subnet = source["subnet"];
-	        this.scan_time_ms = source["scan_time_ms"];
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
 	}
 	export class DiskEncryption {
 	    volume: string;
@@ -1139,129 +896,6 @@ export namespace app {
 		}
 	}
 	
-	export class DoHResultData {
-	    server: string;
-	    latency_ms: number;
-	    success: boolean;
-	    resolved_ip: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new DoHResultData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.server = source["server"];
-	        this.latency_ms = source["latency_ms"];
-	        this.success = source["success"];
-	        this.resolved_ip = source["resolved_ip"];
-	    }
-	}
-	export class DockerComposeService {
-	    name: string;
-	    state: string;
-	    ports: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new DockerComposeService(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.state = source["state"];
-	        this.ports = source["ports"];
-	    }
-	}
-	export class DockerComposeProject {
-	    project: string;
-	    status: string;
-	    work_dir: string;
-	    services: DockerComposeService[];
-	
-	    static createFrom(source: any = {}) {
-	        return new DockerComposeProject(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.project = source["project"];
-	        this.status = source["status"];
-	        this.work_dir = source["work_dir"];
-	        this.services = this.convertValues(source["services"], DockerComposeService);
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
-	
-	export class DockerNetworkInfo {
-	    id: string;
-	    name: string;
-	    driver: string;
-	    scope: string;
-	    subnet: string;
-	    gateway: string;
-	    containers: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new DockerNetworkInfo(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.name = source["name"];
-	        this.driver = source["driver"];
-	        this.scope = source["scope"];
-	        this.subnet = source["subnet"];
-	        this.gateway = source["gateway"];
-	        this.containers = source["containers"];
-	    }
-	}
-	export class DockerStatsEntry {
-	    container_id: string;
-	    name: string;
-	    cpu_percent: string;
-	    memory_usage: string;
-	    memory_limit: string;
-	    memory_percent: string;
-	    net_io: string;
-	    block_io: string;
-	    pid_count: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new DockerStatsEntry(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.container_id = source["container_id"];
-	        this.name = source["name"];
-	        this.cpu_percent = source["cpu_percent"];
-	        this.memory_usage = source["memory_usage"];
-	        this.memory_limit = source["memory_limit"];
-	        this.memory_percent = source["memory_percent"];
-	        this.net_io = source["net_io"];
-	        this.block_io = source["block_io"];
-	        this.pid_count = source["pid_count"];
-	    }
-	}
 	export class DockerStatus {
 	    installed: boolean;
 	    running: boolean;
@@ -1297,24 +931,6 @@ export namespace app {
 		    }
 		    return a;
 		}
-	}
-	export class DockerVolumeInfo {
-	    driver: string;
-	    name: string;
-	    mountpoint: string;
-	    size: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new DockerVolumeInfo(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.driver = source["driver"];
-	        this.name = source["name"];
-	        this.mountpoint = source["mountpoint"];
-	        this.size = source["size"];
-	    }
 	}
 	export class EnvVarInfo {
 	    name: string;
@@ -1432,32 +1048,6 @@ export namespace app {
 	        this.count = source["count"];
 	    }
 	}
-	export class FileEntry {
-	    name: string;
-	    path: string;
-	    size: string;
-	    raw_size: number;
-	    is_dir: boolean;
-	    is_binary: boolean;
-	    mode: string;
-	    mod_time: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new FileEntry(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.path = source["path"];
-	        this.size = source["size"];
-	        this.raw_size = source["raw_size"];
-	        this.is_dir = source["is_dir"];
-	        this.is_binary = source["is_binary"];
-	        this.mode = source["mode"];
-	        this.mod_time = source["mod_time"];
-	    }
-	}
 	export class FirewallProfile {
 	    name: string;
 	    enabled: boolean;
@@ -1500,32 +1090,6 @@ export namespace app {
 	        this.profile = source["profile"];
 	        this.enabled = source["enabled"];
 	        this.is_high_risk = source["is_high_risk"];
-	    }
-	}
-	export class FirewallRuleData {
-	    name: string;
-	    direction: string;
-	    action: string;
-	    protocol: string;
-	    ports: string;
-	    enabled: boolean;
-	    source: string;
-	    destination: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new FirewallRuleData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.direction = source["direction"];
-	        this.action = source["action"];
-	        this.protocol = source["protocol"];
-	        this.ports = source["ports"];
-	        this.enabled = source["enabled"];
-	        this.source = source["source"];
-	        this.destination = source["destination"];
 	    }
 	}
 	export class FirewallStatus {
@@ -1581,151 +1145,7 @@ export namespace app {
 	        this.detected = source["detected"];
 	    }
 	}
-	export class GatewayInfo {
-	    ip: string;
-	    interface: string;
-	    reachable: boolean;
 	
-	    static createFrom(source: any = {}) {
-	        return new GatewayInfo(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.ip = source["ip"];
-	        this.interface = source["interface"];
-	        this.reachable = source["reachable"];
-	    }
-	}
-	
-	export class GitBranchInfo {
-	    name: string;
-	    current: boolean;
-	    upstream: string;
-	    ahead: number;
-	    behind: number;
-	    last_commit: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new GitBranchInfo(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.current = source["current"];
-	        this.upstream = source["upstream"];
-	        this.ahead = source["ahead"];
-	        this.behind = source["behind"];
-	        this.last_commit = source["last_commit"];
-	    }
-	}
-	export class GitRemoteInfo {
-	    name: string;
-	    url: string;
-	    type: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new GitRemoteInfo(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.url = source["url"];
-	        this.type = source["type"];
-	    }
-	}
-	export class GitRepoInfo {
-	    path: string;
-	    branch: string;
-	    modified_files: number;
-	    untracked_files: number;
-	    ahead: number;
-	    behind: number;
-	    clean: boolean;
-	
-	    static createFrom(source: any = {}) {
-	        return new GitRepoInfo(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.path = source["path"];
-	        this.branch = source["branch"];
-	        this.modified_files = source["modified_files"];
-	        this.untracked_files = source["untracked_files"];
-	        this.ahead = source["ahead"];
-	        this.behind = source["behind"];
-	        this.clean = source["clean"];
-	    }
-	}
-	export class GitStashEntry {
-	    index: number;
-	    branch: string;
-	    message: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new GitStashEntry(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.index = source["index"];
-	        this.branch = source["branch"];
-	        this.message = source["message"];
-	    }
-	}
-	export class GitSummary {
-	    repositories: GitRepoInfo[];
-	    total_repos: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new GitSummary(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.repositories = this.convertValues(source["repositories"], GitRepoInfo);
-	        this.total_repos = source["total_repos"];
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
-	export class GitTagInfo {
-	    name: string;
-	    commit: string;
-	    date: string;
-	    msg: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new GitTagInfo(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.commit = source["commit"];
-	        this.date = source["date"];
-	        this.msg = source["msg"];
-	    }
-	}
 	export class HardeningCheck {
 	    category: string;
 	    check: string;
@@ -1745,60 +1165,6 @@ export namespace app {
 	        this.severity = source["severity"];
 	        this.remediation = source["remediation"];
 	    }
-	}
-	export class HealthCheckData {
-	    name: string;
-	    status: string;
-	    detail: string;
-	    score: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new HealthCheckData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.status = source["status"];
-	        this.detail = source["detail"];
-	        this.score = source["score"];
-	    }
-	}
-	export class HealthReportData {
-	    score: number;
-	    checks: HealthCheckData[];
-	    summary: string;
-	    duration: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new HealthReportData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.score = source["score"];
-	        this.checks = this.convertValues(source["checks"], HealthCheckData);
-	        this.summary = source["summary"];
-	        this.duration = source["duration"];
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
 	}
 	export class InterfaceInfo {
 	    name: string;
@@ -1834,102 +1200,6 @@ export namespace app {
 	        this.tx_rate_bps = source["tx_rate_bps"];
 	        this.rx_history = source["rx_history"];
 	        this.tx_history = source["tx_history"];
-	    }
-	}
-	export class K8sEvent {
-	    last_seen: string;
-	    type: string;
-	    reason: string;
-	    object: string;
-	    message: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new K8sEvent(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.last_seen = source["last_seen"];
-	        this.type = source["type"];
-	        this.reason = source["reason"];
-	        this.object = source["object"];
-	        this.message = source["message"];
-	    }
-	}
-	export class K8sNamespaceInfo {
-	    name: string;
-	    status: string;
-	    age: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new K8sNamespaceInfo(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.status = source["status"];
-	        this.age = source["age"];
-	    }
-	}
-	export class K8sResourceItem {
-	    name: string;
-	    namespace: string;
-	    status: string;
-	    age: string;
-	    details: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new K8sResourceItem(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.namespace = source["namespace"];
-	        this.status = source["status"];
-	        this.age = source["age"];
-	        this.details = source["details"];
-	    }
-	}
-	export class K8sRolloutStatus {
-	    name: string;
-	    kind: string;
-	    ready: boolean;
-	    replicas: string;
-	    updated: string;
-	    available: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new K8sRolloutStatus(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.kind = source["kind"];
-	        this.ready = source["ready"];
-	        this.replicas = source["replicas"];
-	        this.updated = source["updated"];
-	        this.available = source["available"];
-	    }
-	}
-	export class K8sScalingResult {
-	    current: number;
-	    desired: number;
-	    success: boolean;
-	    output: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new K8sScalingResult(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.current = source["current"];
-	        this.desired = source["desired"];
-	        this.success = source["success"];
-	        this.output = source["output"];
 	    }
 	}
 	export class KubernetesStatus {
@@ -2332,57 +1602,7 @@ export namespace app {
 		    return a;
 		}
 	}
-	export class NetworkActionResult {
-	    action: string;
-	    message: string;
-	    success: boolean;
 	
-	    static createFrom(source: any = {}) {
-	        return new NetworkActionResult(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.action = source["action"];
-	        this.message = source["message"];
-	        this.success = source["success"];
-	    }
-	}
-	export class NetworkChange {
-	    type: string;
-	    interface: string;
-	    detail: string;
-	    timestamp: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new NetworkChange(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.type = source["type"];
-	        this.interface = source["interface"];
-	        this.detail = source["detail"];
-	        this.timestamp = source["timestamp"];
-	    }
-	}
-	
-	export class NetworkSummary {
-	    summaryText: string;
-	    topInterface: string;
-	    issues: string[];
-	
-	    static createFrom(source: any = {}) {
-	        return new NetworkSummary(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.summaryText = source["summaryText"];
-	        this.topInterface = source["topInterface"];
-	        this.issues = source["issues"];
-	    }
-	}
 	export class OllamaStatus {
 	    available: boolean;
 	    binary_exists: boolean;
@@ -2404,54 +1624,6 @@ export namespace app {
 	        this.available_models = source["available_models"];
 	        this.error = source["error"];
 	    }
-	}
-	export class PackageData {
-	    name: string;
-	    version: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new PackageData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.version = source["version"];
-	    }
-	}
-	export class PackageManagerData {
-	    name: string;
-	    found: boolean;
-	    packages: PackageData[];
-	
-	    static createFrom(source: any = {}) {
-	        return new PackageManagerData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.found = source["found"];
-	        this.packages = this.convertValues(source["packages"], PackageData);
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
 	}
 	export class PasswordPolicy {
 	    max_age: number;
@@ -2540,54 +1712,6 @@ export namespace app {
 	        this.error = source["error"];
 	    }
 	}
-	export class PingResultMultiData {
-	    target: string;
-	    min_ms: number;
-	    avg_ms: number;
-	    max_ms: number;
-	    stddev_ms: number;
-	    packet_loss: number;
-	    jitter_ms: number;
-	    individual_rtts: number[];
-	    success: boolean;
-	    error?: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new PingResultMultiData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.target = source["target"];
-	        this.min_ms = source["min_ms"];
-	        this.avg_ms = source["avg_ms"];
-	        this.max_ms = source["max_ms"];
-	        this.stddev_ms = source["stddev_ms"];
-	        this.packet_loss = source["packet_loss"];
-	        this.jitter_ms = source["jitter_ms"];
-	        this.individual_rtts = source["individual_rtts"];
-	        this.success = source["success"];
-	        this.error = source["error"];
-	    }
-	}
-	export class PingStatsData {
-	    avg_latency: number;
-	    max_latency: number;
-	    total_loss: number;
-	    worst_target: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new PingStatsData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.avg_latency = source["avg_latency"];
-	        this.max_latency = source["max_latency"];
-	        this.total_loss = source["total_loss"];
-	        this.worst_target = source["worst_target"];
-	    }
-	}
 	export class PortResult {
 	    port: number;
 	    open: boolean;
@@ -2666,65 +1790,6 @@ export namespace app {
 	        this.severity = source["severity"];
 	    }
 	}
-	export class ReleaseInfo {
-	    version: string;
-	    date: string;
-	    branch: string;
-	    tag: string;
-	    commit: string;
-	    status: string;
-	    notes: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new ReleaseInfo(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.version = source["version"];
-	        this.date = source["date"];
-	        this.branch = source["branch"];
-	        this.tag = source["tag"];
-	        this.commit = source["commit"];
-	        this.status = source["status"];
-	        this.notes = source["notes"];
-	    }
-	}
-	export class ReleaseHistory {
-	    releases: ReleaseInfo[];
-	    total_count: number;
-	    last_release: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new ReleaseHistory(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.releases = this.convertValues(source["releases"], ReleaseInfo);
-	        this.total_count = source["total_count"];
-	        this.last_release = source["last_release"];
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
-	
 	export class RiskInfo {
 	    category: string;
 	    severity: string;
@@ -2743,28 +1808,6 @@ export namespace app {
 	        this.title = source["title"];
 	        this.description = source["description"];
 	        this.recommendation = source["recommendation"];
-	    }
-	}
-	export class RouteEntryData {
-	    destination: string;
-	    mask: string;
-	    gateway: string;
-	    interface: string;
-	    metric: number;
-	    is_default: boolean;
-	
-	    static createFrom(source: any = {}) {
-	        return new RouteEntryData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.destination = source["destination"];
-	        this.mask = source["mask"];
-	        this.gateway = source["gateway"];
-	        this.interface = source["interface"];
-	        this.metric = source["metric"];
-	        this.is_default = source["is_default"];
 	    }
 	}
 	export class SSHConfig {
@@ -3332,75 +2375,31 @@ export namespace app {
 	        this.last_logon = source["last_logon"];
 	    }
 	}
-	export class VPNStatusData {
-	    active: boolean;
-	    type: string;
-	    interface: string;
-	    remote_ip: string;
-	    local_ip: string;
-	    protocol: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new VPNStatusData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.active = source["active"];
-	        this.type = source["type"];
-	        this.interface = source["interface"];
-	        this.remote_ip = source["remote_ip"];
-	        this.local_ip = source["local_ip"];
-	        this.protocol = source["protocol"];
-	    }
-	}
-	export class WiFiInfoData {
-	    interface: string;
-	    ssid: string;
-	    signal: number;
-	    speed: string;
-	    channel: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new WiFiInfoData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.interface = source["interface"];
-	        this.ssid = source["ssid"];
-	        this.signal = source["signal"];
-	        this.speed = source["speed"];
-	        this.channel = source["channel"];
-	    }
-	}
-	export class WiFiNetworkData {
-	    ssid: string;
-	    signal: number;
-	    channel: number;
-	    security: string;
-	    bssid: string;
-	    frequency: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new WiFiNetworkData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.ssid = source["ssid"];
-	        this.signal = source["signal"];
-	        this.channel = source["channel"];
-	        this.security = source["security"];
-	        this.bssid = source["bssid"];
-	        this.frequency = source["frequency"];
-	    }
-	}
 
 }
 
 export namespace common {
 	
+	export class ActionPreview {
+	    handshake_id: string;
+	    action: string;
+	    description: string;
+	    risks: string[];
+	    rollback: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ActionPreview(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.handshake_id = source["handshake_id"];
+	        this.action = source["action"];
+	        this.description = source["description"];
+	        this.risks = source["risks"];
+	        this.rollback = source["rollback"];
+	    }
+	}
 	export class CollectorStatus {
 	    id: string;
 	    name: string;
@@ -3423,134 +2422,6 @@ export namespace common {
 	        this.interval_ms = source["interval_ms"];
 	        this.default_interval_ms = source["default_interval_ms"];
 	        this.last_run = source["last_run"];
-	    }
-	}
-	export class DataPoint {
-	    // Go type: time
-	    Time: any;
-	    Value: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new DataPoint(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.Time = this.convertValues(source["Time"], null);
-	        this.Value = source["Value"];
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
-
-}
-
-export namespace networkdesign {
-	
-	export class DuplicateIP {
-	    ip: string;
-	    nodes: string[];
-	
-	    static createFrom(source: any = {}) {
-	        return new DuplicateIP(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.ip = source["ip"];
-	        this.nodes = source["nodes"];
-	    }
-	}
-	export class TopologyHealth {
-	    totalNodes: number;
-	    totalEdges: number;
-	    brokenLinks: number;
-	    missingLabels: number;
-	    orphanNodes: string[];
-	    duplicateIPs: DuplicateIP[];
-	    subnetErrors: string[];
-	    suggestions: string[];
-	
-	    static createFrom(source: any = {}) {
-	        return new TopologyHealth(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.totalNodes = source["totalNodes"];
-	        this.totalEdges = source["totalEdges"];
-	        this.brokenLinks = source["brokenLinks"];
-	        this.missingLabels = source["missingLabels"];
-	        this.orphanNodes = source["orphanNodes"];
-	        this.duplicateIPs = this.convertValues(source["duplicateIPs"], DuplicateIP);
-	        this.subnetErrors = source["subnetErrors"];
-	        this.suggestions = source["suggestions"];
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
-	export class TopologyNode {
-	    id: string;
-	    type: string;
-	    label: string;
-	    ip: string;
-	    subnet: string;
-	    mac: string;
-	    notes: string;
-	    vendor: string;
-	    vlan: string;
-	    online: boolean;
-	    props: Record<string, string>;
-	
-	    static createFrom(source: any = {}) {
-	        return new TopologyNode(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.type = source["type"];
-	        this.label = source["label"];
-	        this.ip = source["ip"];
-	        this.subnet = source["subnet"];
-	        this.mac = source["mac"];
-	        this.notes = source["notes"];
-	        this.vendor = source["vendor"];
-	        this.vlan = source["vlan"];
-	        this.online = source["online"];
-	        this.props = source["props"];
 	    }
 	}
 

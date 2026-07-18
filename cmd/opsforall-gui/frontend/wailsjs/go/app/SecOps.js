@@ -118,6 +118,6 @@ export function RunSecurityAuditChecklist() {
   return window['go']['app']['SecOps']['RunSecurityAuditChecklist']();
 }
 
-export function SetFirewallRuleState(arg1, arg2) {
-  return window['go']['app']['SecOps']['SetFirewallRuleState'](arg1, arg2);
+export function SetFirewallRuleHandshake(arg1, arg2) {
+  return window['go']['app']['SecOps']['SetFirewallRuleHandshake'](arg1, arg2);
 }

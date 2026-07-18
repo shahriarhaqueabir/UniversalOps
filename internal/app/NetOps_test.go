@@ -96,30 +96,3 @@ func TestNetOps_GetInterfaces(t *testing.T) {
 		}
 	}
 }
-
-func TestNetOps_GetRecentChanges(t *testing.T) {
-	n := NewNetOps(NewApp())
-	changes := n.GetRecentChanges()
-	if changes == nil {
-		t.Fatal("GetRecentChanges returned nil, expected non-nil slice")
-	}
-}
-
-func TestNetOps_GetNetworkSummary(t *testing.T) {
-	n := NewNetOps(NewApp())
-	summary := n.GetNetworkSummary()
-	if summary.SummaryText == "" {
-		t.Log("Network summary text is empty")
-	}
-	if summary.Issues == nil {
-		t.Error("GetNetworkSummary.Issues is nil, expected non-nil slice")
-	}
-}
-
-func TestNetOps_GetDefaultGateway(t *testing.T) {
-	n := NewNetOps(NewApp())
-	gw := n.GetDefaultGateway()
-	if gw.IP == "" {
-		t.Log("Default gateway IP is empty (expected on some environments)")
-	}
-}

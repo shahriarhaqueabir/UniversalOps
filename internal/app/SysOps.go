@@ -396,24 +396,6 @@ func (s *SysOps) GetSystemLogs(n int, source string) SystemLogsResultData {
 	}
 }
 
-// GetInstalledPackages detects available package managers and lists installed packages.
-func (s *SysOps) GetInstalledPackages() []PackageManagerData {
-	managers := sysops.GetInstalledPackages()
-	var result []PackageManagerData
-	for _, m := range managers {
-		pkgs := make([]PackageData, 0, len(m.Packages))
-		for _, p := range m.Packages {
-			pkgs = append(pkgs, PackageData{Name: p.Name, Version: p.Version})
-		}
-		result = append(result, PackageManagerData{
-			Name:     m.Name,
-			Found:    m.Found,
-			Packages: pkgs,
-		})
-	}
-	return result
-}
-
 // GetScheduledTasks returns all scheduled tasks.
 func (s *SysOps) GetScheduledTasks() []ScheduledTaskData {
 	tasks, err := sysops.GetScheduledTasks()
@@ -455,4 +437,13 @@ func (s *SysOps) RunExtendedDiagnostics() ExtendedDiagnosticResult {
 		Score:     result.Score,
 		Timestamp: result.Timestamp,
 	}
+}
+
+// executeRestartService restarts a system service (internal use for handshake).
+func (s *SysOps) executeRestartService(name string) SecActionResult {
+	result, err := sysops.RestartService(name)
+	if err != nil {
+		return SecActionResult{Success: false, Message: err.Error()}
+	}
+	return SecActionResult{Success: result.Success, Message: result.Message}
 }

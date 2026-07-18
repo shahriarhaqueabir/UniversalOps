@@ -9,7 +9,6 @@ import (
 type DevReport struct {
 	ShellResults []ShellResult
 	LogContent   []string
-	FileList     []FileEntry
 	Processes    []ProcessEntry
 	Services     []ServiceEntry
 }
@@ -35,18 +34,6 @@ func RunDevDiagnostics() (*DevReport, error) {
 		errs = append(errs, "Git not found")
 	}
 
-	// Get current directory listing
-	files, err := ListDir(".")
-	if err != nil {
-		errs = append(errs, fmt.Sprintf("FileBrowser: %v", err))
-	} else {
-		report.FileList = files
-	}
-
-	if len(report.ShellResults) == 0 && len(report.FileList) == 0 {
-		errs = append(errs, "No shell or file diagnostics succeeded")
-	}
-
 	processes, err := ListProcesses(10)
 	if err == nil {
 		report.Processes = processes
@@ -61,7 +48,7 @@ func RunDevDiagnostics() (*DevReport, error) {
 		errs = append(errs, fmt.Sprintf("Services: %v", err))
 	}
 
-	if len(report.ShellResults) == 0 && len(report.FileList) == 0 && len(report.Processes) == 0 && len(report.Services) == 0 {
+	if len(report.ShellResults) == 0 && len(report.Processes) == 0 && len(report.Services) == 0 {
 		return nil, fmt.Errorf("all dev diagnostics failed: %s", strings.Join(errs, "; "))
 	}
 
@@ -81,17 +68,6 @@ func (r *DevReport) String() string {
 			b.WriteString(fmt.Sprintf("  %s\n", strings.TrimSpace(result.Output)))
 		}
 		b.WriteString("\n")
-	}
-
-	if len(r.FileList) > 0 {
-		b.WriteString(fmt.Sprintf("DIRECTORY: %d entries\n", len(r.FileList)))
-		dirs := 0
-		for _, f := range r.FileList {
-			if f.IsDir {
-				dirs++
-			}
-		}
-		b.WriteString(fmt.Sprintf("  %d directories, %d files\n", dirs, len(r.FileList)-dirs))
 	}
 
 	if len(r.Processes) > 0 {
@@ -121,18 +97,6 @@ func (r *DevReport) Markdown() string {
 			}
 			b.WriteString(fmt.Sprintf("| `%s` | %d | %s | %s |\n",
 				result.Command, result.ExitCode, result.Duration, output))
-		}
-	}
-
-	if len(r.FileList) > 0 {
-		b.WriteString("\n## Working Directory\n\n")
-		b.WriteString("| Name | Type | Size |\n|------|------|------|\n")
-		for _, f := range r.FileList {
-			ftype := "File"
-			if f.IsDir {
-				ftype = "Directory"
-			}
-			b.WriteString(fmt.Sprintf("| %s | %s | %s |\n", f.Name, ftype, f.Size))
 		}
 	}
 

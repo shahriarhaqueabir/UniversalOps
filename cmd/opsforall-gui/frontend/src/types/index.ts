@@ -858,9 +858,18 @@ export interface NetworkSummary {
 
 // ── AIOps Types ──
 
+export interface ActionPreview {
+  handshake_id: string
+  action: string
+  description: string
+  risks: string[]
+  rollback: string
+}
+
 export interface ChatMessage {
   role: string
   content: string
+  action?: ActionPreview
 }
 
 export interface OllamaStatus {

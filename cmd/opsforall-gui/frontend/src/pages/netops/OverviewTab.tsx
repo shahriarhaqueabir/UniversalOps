@@ -13,7 +13,6 @@ import {
   ArrowDownRight,
   Activity,
   Play,
-  Square,
   RefreshCw,
   Network,
   Clock,
@@ -62,9 +61,9 @@ function formatBytes(bytes: number): string {
 
 function ConnectivityCard({ label, icon, status, detail }: ConnectivityCardData) {
   const statusStyle = {
-    ok: 'border-success/40 bg-success/5',
-    error: 'border-danger/40 bg-danger/5',
-    unknown: 'border-warning/40 bg-warning/5',
+    ok: 'border-success/40 bg-success/5 hover:border-success/60',
+    error: 'border-danger/40 bg-danger/5 hover:border-danger/60',
+    unknown: 'border-warning/40 bg-warning/5 hover:border-warning/60',
     checking: 'border-border bg-panel-2',
   }[status]
 
@@ -76,16 +75,16 @@ function ConnectivityCard({ label, icon, status, detail }: ConnectivityCardData)
   }[status]
 
   return (
-    <div className={cn('border rounded-2xl p-4 flex items-center gap-3 transition-all', statusStyle)}>
-      <div className="w-10 h-10 rounded-xl bg-panel-3 flex items-center justify-center border border-border shadow-inner">
+    <div className={cn('border rounded-2xl p-5 flex items-center gap-4 transition-all duration-300 group hover:shadow-lg', statusStyle)}>
+      <div className="w-12 h-12 rounded-xl bg-panel flex items-center justify-center border border-border shadow-inner group-hover:scale-110 transition-transform">
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
+        <div className="flex items-center gap-2 mb-1">
           <span className={cn('w-2 h-2 rounded-full shrink-0', dotStyle)} />
-          <span className="text-[11px] font-bold text-text uppercase tracking-wider">{label}</span>
+          <span className="text-[10px] font-black text-text uppercase tracking-[0.2em]">{label}</span>
         </div>
-        <p className="text-[11px] font-medium text-text-faint truncate">{detail}</p>
+        <p className="text-xs font-bold text-text-dim truncate tabular-nums">{detail}</p>
       </div>
     </div>
   )
@@ -275,27 +274,27 @@ export function OverviewTab() {
       </div>
 
       {/* ── Section 2: Active Connections ── */}
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-xl">
-        <SectionHeader icon={<Activity size={18} className="text-accent" />} title="Active Connections" count={connections.length} />
-        <div className="grid grid-cols-3 gap-4">
+      <div className="bg-panel border border-border rounded-[2rem] p-8 shadow-xl">
+        <SectionHeader icon={<Activity size={20} className="text-accent" />} title="Active Connections" count={connections.length} />
+        <div className="grid grid-cols-3 gap-6">
           {[
-            { label: 'Established', value: establishedCount, color: 'var(--color-success)', icon: <ArrowUpRight size={18} /> },
-            { label: 'Listening', value: listeningCount, color: 'var(--color-accent)', icon: <Radio size={18} /> },
-            { label: 'Time Wait', value: timeWaitCount, color: 'var(--color-warning)', icon: <Clock size={18} /> },
+            { label: 'Established', value: establishedCount, color: 'var(--color-success)', icon: <ArrowUpRight size={20} /> },
+            { label: 'Listening', value: listeningCount, color: 'var(--color-accent)', icon: <Radio size={20} /> },
+            { label: 'Time Wait', value: timeWaitCount, color: 'var(--color-warning)', icon: <Clock size={20} /> },
           ].map(card => (
             <div
               key={card.label}
-              className="bg-panel-2 border border-border rounded-xl p-5 flex items-center gap-4 hover:border-accent/30 transition-colors"
+              className="bg-panel-2 border border-border rounded-2xl p-6 flex items-center gap-5 hover:border-accent/40 transition-all hover:shadow-lg group"
             >
               <div
-                className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0"
-                style={{ backgroundColor: `color-mix(in srgb, ${card.color} 15%, transparent)`, color: card.color }}
+                className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-inner group-hover:scale-105 transition-transform"
+                style={{ backgroundColor: `color-mix(in srgb, ${card.color} 10%, transparent)`, color: card.color, border: `1px solid color-mix(in srgb, ${card.color} 20%, transparent)` }}
               >
                 {card.icon}
               </div>
               <div>
-                <p className="text-2xl font-bold text-text tabular-nums">{card.value}</p>
-                <p className="text-[10px] font-bold text-text-dim uppercase tracking-wider">{card.label}</p>
+                <p className="text-3xl font-black text-text tabular-nums tracking-tighter">{card.value}</p>
+                <p className="text-[10px] font-black text-text-faint uppercase tracking-[0.2em] mt-1">{card.label}</p>
               </div>
             </div>
           ))}
@@ -361,24 +360,24 @@ export function OverviewTab() {
       </div>
 
       {/* ── Section 4: Network Quality ── */}
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-xl">
-        <SectionHeader icon={<Zap size={18} className="text-accent" />} title="Network Quality" />
-        <div className="flex items-center gap-6">
+      <div className="bg-panel border border-border rounded-[2rem] p-8 shadow-xl">
+        <SectionHeader icon={<Zap size={20} className="text-accent" />} title="Network Quality" />
+        <div className="flex items-center gap-8">
           <button
             onClick={runPingTest}
             disabled={pingRunning}
             className={cn(
-              'flex items-center gap-3 px-5 py-2.5 text-sm font-semibold rounded-xl transition-all shadow-xl',
+              'flex items-center gap-3 px-8 py-4 text-base font-black uppercase tracking-widest rounded-2xl transition-all shadow-xl active:scale-95',
               pingRunning
                 ? 'bg-panel-3 text-text-faint border border-border cursor-not-allowed'
-                : 'bg-accent text-white hover:bg-accent/90',
+                : 'bg-accent text-white hover:bg-accent/90 shadow-accent/20 hover:shadow-accent/30',
             )}
           >
-            {pingRunning ? <Square size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
-            {pingRunning ? 'Testing...' : 'Run Ping Test'}
+            {pingRunning ? <RefreshCw size={20} className="animate-spin" /> : <Play size={20} fill="currentColor" />}
+            {pingRunning ? 'PROBING...' : 'RUN PING DIAGNOSTIC'}
           </button>
           {!pingRunning && !pingResult && (
-            <p className="text-xs font-medium text-text-faint">Ping 8.8.8.8 (4 packets) to check network quality.</p>
+            <p className="text-xs font-bold text-text-faint uppercase tracking-widest">Target: ICMP ECHO (8.8.8.8)</p>
           )}
         </div>
 

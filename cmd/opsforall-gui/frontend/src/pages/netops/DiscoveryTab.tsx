@@ -94,7 +94,7 @@ export function DiscoveryTab() {
           </div>
           <p className="text-sm font-bold text-text uppercase tracking-widest mb-1">Scanning Subnet</p>
           <p className="text-xs font-medium text-text-faint">
-            ARP lookup and ping sweep in progress — this may take a moment...
+            ARP lookup and ping sweep in progress: this may take a moment...
           </p>
         </div>
       )}
@@ -182,7 +182,7 @@ export function DiscoveryTab() {
                         </td>
                         <td className="px-4 py-3">
                           <span className="text-xs font-medium text-text-dim">
-                            {device.hostname || '—'}
+                            {device.hostname || 'N/A'}
                           </span>
                         </td>
                         <td className="px-4 py-3">

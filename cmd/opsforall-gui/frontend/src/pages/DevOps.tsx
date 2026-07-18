@@ -1,12 +1,13 @@
 import { useState, useRef, useCallback, useEffect, memo } from 'react'
+import { motion } from 'motion/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Terminal, Server, Folder, Play, Trash2, Search, ChevronRight,
-  FileText, X, PlayCircle, StopCircle, Zap, Activity, Globe,
+  Terminal, Server, Play, Trash2, Search,
+  PlayCircle, StopCircle, Zap, Activity, Globe,
   TerminalSquare, GitBranch, Box, Wrench, Container, Variable,
-  Rocket, GanttChart, GitMerge, GitPullRequest, RefreshCw,
-  Shield, BarChart3, Layers, Ship, RotateCcw,
-  Download, Upload, Eye,
+  GitMerge, GitPullRequest, RefreshCw,
+  Shield, Layers, RotateCcw,
+  Download, Upload,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import * as Tabs from '@radix-ui/react-tabs'
@@ -17,20 +18,18 @@ import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { nanoid } from 'nanoid'
 import type {
-  CommandResult, ServiceEntry, FileEntry, ToolInfo, ContainerSummary,
+  CommandResult, ServiceEntry, ToolInfo, ContainerSummary,
   GitSummary, LocalServer, EnvironmentInfo, DockerStatus, KubernetesStatus,
   ServiceGroupSummary, GitBranchInfo, GitTagInfo, GitStashEntry, GitRemoteInfo,
   DockerStatsEntry, DockerComposeProject, DockerNetworkInfo, DockerVolumeInfo,
   K8sResourceItem, K8sRolloutStatus, K8sEvent, K8sNamespaceInfo,
-  BuildSystemInfo, BuildTargetInfo, CICDStatus, ReleaseHistory, DeploymentRecord,
-  DORAMetrics, DevOpsDiagResult,
 } from '@/types'
 
 function stripAnsi(text: string): string {
   return text.replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, '')
 }
 
-type TabId = 'overview' | 'terminal' | 'powershell-pro' | 'services' | 'file-browser' | 'toolbox' | 'docker' | 'git' | 'servers' | 'environment' | 'kubernetes' | 'pipelines' | 'releases' | 'diagnostics'
+type TabId = 'overview' | 'terminal' | 'powershell-pro' | 'services' | 'toolbox' | 'docker' | 'git' | 'servers' | 'environment' | 'kubernetes' | 'diagnostics'
 
 const ActionButton = memo(function ActionButton({ icon, label, onClick, variant, disabled }: { icon: React.ReactNode; label: string; onClick: () => void; variant?: string; disabled?: boolean }) {
   const colors: Record<string, string> = {
@@ -54,13 +53,10 @@ const TAB_LIST = [
   { id: 'git', label: 'Git', icon: <GitBranch size={20} /> },
   { id: 'docker', label: 'Docker', icon: <Container size={20} /> },
   { id: 'kubernetes', label: 'K8s', icon: <Layers size={20} /> },
-  { id: 'pipelines', label: 'Pipelines', icon: <GanttChart size={20} /> },
-  { id: 'releases', label: 'Releases', icon: <Rocket size={20} /> },
   { id: 'diagnostics', label: 'Health', icon: <Shield size={20} /> },
   { id: 'services', label: 'Services', icon: <Server size={20} /> },
   { id: 'servers', label: 'Servers', icon: <Globe size={20} /> },
   { id: 'environment', label: 'Env', icon: <Variable size={20} /> },
-  { id: 'file-browser', label: 'Files', icon: <Folder size={20} /> },
   { id: 'toolbox', label: 'Toolbox', icon: <Wrench size={20} /> },
 ] as const
 
@@ -68,27 +64,38 @@ export function DevOps() {
   const [activeTab, setActiveTab] = useState<TabId>('overview')
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-bg)]">
-      <div className="p-8 border-b border-border bg-panel-2">
-        <h1 className="text-3xl font-bold text-text flex items-center gap-3">
-          <TerminalSquare size={32} className="text-accent" />
-          DevOps Console
-        </h1>
-        <p className="text-text-dim text-lg mt-2">
-          Build, deploy, observe, and operate — unified control center.
-        </p>
+    <div className="flex flex-col h-full bg-[var(--color-bg)] animate-in fade-in duration-500">
+      <div className="py-8 border-b border-[var(--color-border)] bg-[var(--color-panel-2)]/50 flex items-center justify-between px-10">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
+               <TerminalSquare size={18} />
+            </div>
+            <h1 className="text-sm font-black text-[var(--color-text)] uppercase tracking-[0.25em]">Unified Control Center</h1>
+          </div>
+          <p className="text-3xl font-bold text-[var(--color-text)] tracking-tight">DevOps Console</p>
+          <p className="text-[var(--color-text-dim)] text-xs font-semibold uppercase tracking-widest mt-2">Build, deploy, observe, and operate with local high-density telemetry</p>
+        </div>
       </div>
 
       <Tabs.Root defaultValue="overview" onValueChange={(v) => setActiveTab(v as TabId)} className="flex-1 flex flex-col min-w-0">
-        <Tabs.List className="flex border-b border-border bg-panel px-4 overflow-x-auto no-scrollbar">
+        <Tabs.List className="flex border-b border-[var(--color-border)] bg-[var(--color-panel)] px-6 overflow-x-auto no-scrollbar">
           {TAB_LIST.map((tab) => (
             <Tabs.Trigger key={tab.id} value={tab.id}
               data-automation-id={`devops-tab-${tab.id}`}
               className={cn(
-                'flex items-center gap-2 px-4 py-3 text-sm font-bold transition-all border-b-2 border-transparent whitespace-nowrap',
-                activeTab === tab.id ? 'border-accent text-text bg-accent/5' : 'text-text-faint hover:text-text hover:bg-[var(--color-sidebar-hover)]',
+                'flex items-center gap-3 px-6 py-5 text-sm font-bold transition-all border-b-2 border-transparent whitespace-nowrap relative',
+                activeTab === tab.id ? 'text-accent' : 'text-text-faint hover:text-text hover:bg-[var(--color-sidebar-hover)]',
               )}>
-              {tab.icon}{tab.label}
+              {tab.icon}
+              <span className="uppercase tracking-widest text-[10px] font-black">{tab.label}</span>
+              {activeTab === tab.id && (
+                <motion.div
+                  layoutId="devops-tab-indicator"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent"
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                />
+              )}
             </Tabs.Trigger>
           ))}
         </Tabs.List>
@@ -100,16 +107,25 @@ export function DevOps() {
           <Tabs.Content value="git" className="h-full"><GitTabExpanded /></Tabs.Content>
           <Tabs.Content value="docker" className="h-full"><DockerTabExpanded /></Tabs.Content>
           <Tabs.Content value="kubernetes" className="h-full"><KubernetesTab /></Tabs.Content>
-          <Tabs.Content value="pipelines" className="h-full"><PipelinesTab /></Tabs.Content>
-          <Tabs.Content value="releases" className="h-full"><ReleasesTab /></Tabs.Content>
           <Tabs.Content value="diagnostics" className="h-full"><DiagnosticsTab /></Tabs.Content>
           <Tabs.Content value="services" className="h-full"><ServicesTab /></Tabs.Content>
-          <Tabs.Content value="file-browser" className="h-full"><FileBrowserTab /></Tabs.Content>
           <Tabs.Content value="toolbox" className="h-full"><ToolboxTab /></Tabs.Content>
           <Tabs.Content value="servers" className="h-full"><ServersTab /></Tabs.Content>
           <Tabs.Content value="environment" className="h-full"><EnvironmentTab /></Tabs.Content>
         </div>
       </Tabs.Root>
+    </div>
+  )
+}
+
+function DiagnosticsTab() {
+  return (
+    <div className="flex items-center justify-center h-full">
+      <div className="text-center space-y-4">
+        <Shield size={48} className="mx-auto text-accent opacity-20" />
+        <p className="text-text-faint font-bold uppercase tracking-widest">Health Diagnostics</p>
+        <p className="text-sm text-text-dim max-w-xs mx-auto">This module is currently being optimized for high-density telemetry.</p>
+      </div>
     </div>
   )
 }
@@ -145,94 +161,73 @@ function OverviewTab() {
     refetchInterval: refreshInterval,
   })
 
-  const { data: dora } = useQuery<DORAMetrics>({
-    queryKey: ['devops-dora'],
-    queryFn: async () => {
-      try { return await call('DevOps.GetDORAMetrics', '.') as DORAMetrics }
-      catch { return null as unknown as DORAMetrics }
-    },
-  })
-
   return (
-    <div className="flex flex-col h-full space-y-6 overflow-y-auto p-8">
-      <div className="grid grid-cols-2 gap-6">
-        <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-2xl">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Box size={24} className="text-accent" />
-              <h3 className="text-lg font-bold text-text uppercase tracking-widest">Docker</h3>
+    <div className="flex flex-col h-full space-y-6 overflow-y-auto p-10">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-8 shadow-2xl group hover:border-accent/30 transition-all">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+                <Box size={20} />
+              </div>
+              <div>
+                <h3 className="text-xs font-black text-text uppercase tracking-[0.2em]">Docker Engine</h3>
+                <p className="text-[10px] text-text-faint font-bold uppercase tracking-wider">{dockerData?.version || 'N/A'}</p>
+              </div>
             </div>
-            <span className={cn('text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest border',
-              dockerData?.installed ? (dockerData?.running ? 'bg-success/20 text-success border-success/30' : 'bg-warning/20 text-warning border-warning/30') : 'bg-text-faint/20 text-text-faint border-text-faint/30')}>
+            <span className={cn('text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-[0.15em] border',
+              dockerData?.installed ? (dockerData?.running ? 'bg-success/10 text-success border-success/30' : 'bg-warning/10 text-warning border-warning/30') : 'bg-text-faint/10 text-text-faint border-text-faint/30')}>
               {dockerData?.installed ? (dockerData?.running ? 'Running' : 'Installed') : 'Not Found'}
             </span>
           </div>
           {dockerData?.installed ? (
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-4 gap-4">
               {[{ label: 'Running', value: dockerData.containers?.running ?? 0, cl: 'text-success' },
                 { label: 'Stopped', value: dockerData.containers?.stopped ?? 0, cl: 'text-warning' },
                 { label: 'Failed', value: dockerData.containers?.failed ?? 0, cl: 'text-danger' },
-                { label: 'Total', value: dockerData.containers?.total ?? 0, cl: 'text-text-dim' }].map(item => (
-                  <div key={item.label} className="flex flex-col items-center bg-panel-2 border border-border rounded-xl p-3">
-                    <span className={cn('text-2xl font-bold tabular-nums', item.cl)}>{item.value}</span>
-                    <span className="text-[10px] font-semibold text-text-faint uppercase tracking-wider">{item.label}</span>
+                { label: 'Total', value: dockerData.containers?.total ?? 0, cl: 'text-text' }].map(item => (
+                  <div key={item.label} className="flex flex-col items-center bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-xl p-4 transition-all hover:border-accent/20">
+                    <span className={cn('text-3xl font-black tabular-nums tracking-tighter', item.cl)}>{item.value}</span>
+                    <span className="text-[9px] font-black text-text-faint uppercase tracking-widest mt-1">{item.label}</span>
                   </div>
               ))}
             </div>
-          ) : <p className="text-text-faint text-sm">Docker not detected.</p>}
+          ) : <p className="text-text-faint text-xs font-medium italic">Docker subsystem not detected on this node.</p>}
         </div>
 
-        <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-2xl">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Server size={24} className="text-info" />
-              <h3 className="text-lg font-bold text-text uppercase tracking-widest">Kubernetes</h3>
+        <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-8 shadow-2xl group hover:border-accent/30 transition-all">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+                <Layers size={20} />
+              </div>
+              <div>
+                <h3 className="text-xs font-black text-text uppercase tracking-[0.2em]">Kubernetes</h3>
+                <p className="text-[10px] text-text-faint font-bold uppercase tracking-wider">{k8sData?.cluster || 'Standalone Node'}</p>
+              </div>
             </div>
-            <span className={cn('text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest border',
-              k8sData?.installed ? (k8sData?.connected ? 'bg-success/20 text-success border-success/30' : 'bg-warning/20 text-warning border-warning/30') : 'bg-text-faint/20 text-text-faint border-text-faint/30')}>
+            <span className={cn('text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-[0.15em] border',
+              k8sData?.installed ? (k8sData?.connected ? 'bg-success/10 text-success border-success/30' : 'bg-warning/10 text-warning border-warning/30') : 'bg-text-faint/10 text-text-faint border-text-faint/30')}>
               {k8sData?.installed ? (k8sData?.connected ? 'Connected' : 'Offline') : 'Not Found'}
             </span>
           </div>
           {k8sData?.installed ? (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col items-center bg-panel-2 border border-border rounded-xl p-3">
-                <span className="text-2xl font-bold tabular-nums text-info">{k8sData.nodes}</span>
-                <span className="text-xs font-semibold text-text-faint uppercase">Nodes</span>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col items-center bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-xl p-5 transition-all hover:border-accent/20">
+                <span className="text-3xl font-black tabular-nums text-text tracking-tighter">{k8sData.nodes}</span>
+                <span className="text-[9px] font-black text-text-faint uppercase tracking-widest mt-1">Nodes</span>
               </div>
-              <div className="flex flex-col items-center bg-panel-2 border border-border rounded-xl p-3">
-                <span className="text-2xl font-bold tabular-nums text-accent">{k8sData.pods}</span>
-                <span className="text-xs font-semibold text-text-faint uppercase">Pods</span>
+              <div className="flex flex-col items-center bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-xl p-5 transition-all hover:border-accent/20">
+                <span className="text-3xl font-black tabular-nums text-accent tracking-tighter">{k8sData.pods}</span>
+                <span className="text-[9px] font-black text-text-faint uppercase tracking-widest mt-1">Pods</span>
               </div>
             </div>
-          ) : <p className="text-text-faint text-sm">kubectl not detected.</p>}
+          ) : <p className="text-text-faint text-xs font-medium italic">kubectl orchestrator not detected on this node.</p>}
         </div>
       </div>
 
-      {dora && (
-        <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-2xl">
-          <div className="flex items-center gap-3 mb-4">
-            <BarChart3 size={24} className="text-accent" />
-            <h3 className="text-lg font-bold text-text uppercase tracking-widest">DORA Metrics</h3>
-            <span className="text-xs text-text-faint ml-auto">{dora.period}</span>
-          </div>
-          <div className="grid grid-cols-4 gap-4">
-            {[
-              { label: 'Deploy Frequency', value: dora.deployment_frequency, cl: 'text-accent' },
-              { label: 'Lead Time', value: dora.lead_time_for_changes, cl: 'text-info' },
-              { label: 'Change Failure Rate', value: dora.change_failure_rate, cl: dora.failure_pct > 15 ? 'text-danger' : 'text-success' },
-              { label: 'MTTR', value: dora.mttr, cl: 'text-warning' },
-            ].map(item => (
-              <div key={item.label} className="flex flex-col items-center bg-panel-2 border border-border rounded-xl p-3">
-                <span className={cn('text-lg font-bold tabular-nums', item.cl)}>{item.value}</span>
-                <span className="text-[10px] font-semibold text-text-faint uppercase tracking-wider">{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-4 shadow-2xl">
-        <div className="grid grid-cols-5 gap-4">
+      <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6 shadow-2xl">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {[
             { label: 'Databases', value: summary?.databases ?? 0, cl: 'text-accent' },
             { label: 'Queues', value: summary?.messageQueues ?? 0, cl: 'text-accent-2' },
@@ -240,9 +235,9 @@ function OverviewTab() {
             { label: 'Running', value: summary?.running ?? 0, cl: 'text-success' },
             { label: 'Stopped', value: summary?.stopped ?? 0, cl: 'text-danger' },
           ].map(kpi => (
-            <div key={kpi.label} className="flex flex-col items-center gap-1 bg-panel-2 border border-border rounded-xl p-4">
-              <span className={cn('text-2xl font-bold tabular-nums', kpi.cl)}>{kpi.value}</span>
-              <span className="text-[10px] font-semibold text-text-faint uppercase tracking-wider">{kpi.label}</span>
+            <div key={kpi.label} className="flex flex-col items-center gap-1 bg-[var(--color-panel-2)] border border-[var(--color-border)]/50 rounded-xl p-6 transition-all hover:border-accent/20">
+              <span className={cn('text-3xl font-black tabular-nums tracking-tighter', kpi.cl)}>{kpi.value}</span>
+              <span className="text-[9px] font-black text-text-faint uppercase tracking-widest">{kpi.label}</span>
             </div>
           ))}
         </div>
@@ -254,7 +249,7 @@ function OverviewTab() {
 function TerminalTab() {
   const { call } = useBackend()
   const [input, setInput] = useState('')
-  const [output, setOutput] = useState<string[]>([`Unified Terminal — Type a command...\n`])
+  const [output, setOutput] = useState<string[]>([`Unified Terminal: Type a command...\n`])
   const [history, setHistory] = useState<string[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
   const [isRunning, setIsRunning] = useState(false)
@@ -315,29 +310,32 @@ function TerminalTab() {
   }, [output])
 
   return (
-    <div className="flex flex-col h-full p-6 space-y-4">
+    <div className="flex flex-col h-full p-8 space-y-6">
       <ConfirmDialog open={confirmOpen} title="Impactful Command Detected"
         description={`Run: "${pendingCmd}"?`} type="danger" confirmText="Execute"
         onConfirm={() => { runCommand(pendingCmd); setInput(''); setPendingCmd('') }}
         onClose={() => setConfirmOpen(false)} />
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1">
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 group">
           <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown}
             placeholder="Enter shell command..." disabled={isRunning}
-            className="w-full bg-[var(--color-bg)] border border-border rounded-xl pl-10 pr-4 py-3 text-sm font-mono text-text focus:outline-none focus:border-accent shadow-inner" />
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-success text-sm font-bold font-mono">$</span>
+            className="w-full bg-[var(--color-bg)] border border-[var(--color-border)] rounded-2xl pl-12 pr-6 py-4 text-sm font-mono text-text focus:outline-none focus:border-accent transition-all shadow-inner group-hover:border-accent/30" />
+          <span className="absolute left-5 top-1/2 -translate-y-1/2 text-success text-sm font-black font-mono opacity-60 group-focus-within:opacity-100 transition-opacity">$</span>
         </div>
         <button onClick={() => { if (input.trim()) runCommand(input) }} disabled={isRunning || !input.trim()}
-          className="flex items-center gap-2 px-6 py-3 text-sm font-bold bg-accent text-white rounded-xl hover:bg-accent/90 disabled:opacity-50 transition-all shadow-lg active:scale-95">
-          <Play size={16} /> Run
+          className="flex items-center gap-2.5 px-8 py-4 text-xs font-black uppercase tracking-widest bg-accent text-white rounded-2xl hover:bg-accent/90 disabled:opacity-50 transition-all shadow-xl active:scale-95">
+          <Play size={16} /> Run Execution
         </button>
-        <button onClick={() => setOutput([`Output cleared.\n`])} className="px-4 py-3 text-sm font-bold text-text-dim border border-border rounded-xl hover:bg-panel-3 transition-all">
-          <Trash2 size={16} />
+        <button onClick={() => setOutput([`Unified Terminal: Type a command...\n`])} className="px-6 py-4 text-sm font-bold text-text-faint border border-border rounded-2xl hover:bg-panel-3 transition-all hover:text-danger">
+          <Trash2 size={18} />
         </button>
       </div>
-      <div ref={outputRef} className="flex-1 bg-[var(--color-terminal-bg)] border border-border rounded-2xl p-6 overflow-y-auto font-mono text-sm leading-relaxed whitespace-pre-wrap shadow-inner">
-        {output.map((block, i) => <div key={i} className="mb-0.5">{stripAnsi(block)}</div>)}
-        {isRunning && <div className="flex items-center gap-2 mt-2"><span className="inline-block w-2 h-4 bg-success animate-pulse" /><span className="text-xs font-bold text-success uppercase animate-pulse">Running...</span></div>}
+      <div ref={outputRef} className="flex-1 bg-[var(--color-terminal-bg)] border border-[var(--color-border)] rounded-3xl p-8 overflow-y-auto font-mono text-sm leading-relaxed whitespace-pre-wrap shadow-2xl relative">
+        <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-[var(--color-terminal-bg)] to-transparent pointer-events-none z-10" />
+        <div className="relative z-0">
+          {output.map((block, i) => <div key={i} className="mb-1">{stripAnsi(block)}</div>)}
+          {isRunning && <div className="flex items-center gap-3 mt-4"><span className="inline-block w-2.5 h-5 bg-success animate-pulse" /><span className="text-[10px] font-black text-success uppercase tracking-[0.2em] animate-pulse">Processing Stream...</span></div>}
+        </div>
       </div>
     </div>
   )
@@ -624,8 +622,8 @@ function DockerTabExpanded() {
               <div className="flex items-center gap-4">
                 <span className={cn('w-2 h-2 rounded-full', c.state === 'running' ? 'bg-success' : 'bg-text-faint')} />
                 <div>
-                  <p className="font-bold text-sm">{c.name} <span className="text-xs font-mono text-text-faint ml-2">{c.id.slice(0, 12)}</span></p>
-                  <p className="text-xs text-text-dim font-mono">{c.image} — {c.status}</p>
+                  <p className="font-bold text-sm tracking-tight">{c.name} <span className="text-[10px] font-black font-mono text-text-faint ml-2 uppercase tracking-widest">{c.id.slice(0, 12)}</span></p>
+                  <p className="text-[10px] text-text-dim font-mono font-medium mt-1">{c.image} \u2022 {c.status}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -786,8 +784,8 @@ function KubernetesTab() {
         {subTab === 'deployments' && deployments.map(d => (
           <div key={d.name + d.namespace} className="bg-panel border border-border rounded-xl p-4 flex items-center justify-between">
             <div>
-              <p className="font-bold text-sm">{d.name}</p>
-              <p className="text-xs text-text-dim font-mono">{d.namespace} — {d.details}</p>
+              <p className="font-bold text-sm tracking-tight">{d.name}</p>
+              <p className="text-[10px] text-text-dim font-mono font-medium mt-1 uppercase tracking-tighter">{d.namespace} \u2022 {d.details}</p>
             </div>
             <div className="flex items-center gap-2">
               <StatusBadge status={d.status} />
@@ -799,8 +797,8 @@ function KubernetesTab() {
         {subTab === 'services' && services.map(s => (
           <div key={s.name + s.namespace} className="bg-panel border border-border rounded-xl p-4 flex items-center justify-between">
             <div>
-              <p className="font-bold text-sm">{s.name}</p>
-              <p className="text-xs text-text-dim font-mono">{s.namespace} — {s.details}</p>
+              <p className="font-bold text-sm tracking-tight">{s.name}</p>
+              <p className="text-[10px] text-text-dim font-mono font-medium mt-1 uppercase tracking-tighter">{s.namespace} \u2022 {s.details}</p>
             </div>
             <StatusBadge status={s.status} />
           </div>
@@ -827,259 +825,12 @@ function KubernetesTab() {
           <div key={i} className="bg-panel border border-border rounded-xl p-3 flex items-start gap-3">
             <span className={cn('w-2 h-2 rounded-full mt-1 shrink-0', e.type === 'Normal' ? 'bg-success' : 'bg-warning')} />
             <div className="min-w-0">
-              <p className="text-xs font-bold"><span className="text-text-faint">{e.last_seen}</span> {e.reason} — {e.object}</p>
-              <p className="text-xs text-text-dim truncate">{e.message}</p>
+              <p className="text-[10px] font-black uppercase tracking-tight"><span className="text-text-faint">{e.last_seen}</span> {e.reason} \u2022 {e.object}</p>
+              <p className="text-[11px] text-text-dim truncate font-medium">{e.message}</p>
             </div>
           </div>
         ))}
       </div>
-    </div>
-  )
-}
-
-function PipelinesTab() {
-  const { call } = useBackend()
-  const [activeSubTab, setActiveSubTab] = useState<'cicd' | 'builds'>('cicd')
-
-  const { data: cicd } = useQuery<CICDStatus>({
-    queryKey: ['devops-cicd'],
-    queryFn: async () => (await call('DevOps.GetCICDStatus', '.') as CICDStatus) || {},
-  })
-
-  const { data: buildSystems = [] } = useQuery<BuildSystemInfo[]>({
-    queryKey: ['devops-build-systems'],
-    queryFn: async () => (await call('DevOps.GetBuildSystems') as BuildSystemInfo[]) || [],
-  })
-
-  const { data: buildTargets = [] } = useQuery<BuildTargetInfo[]>({
-    queryKey: ['devops-build-targets'],
-    queryFn: async () => (await call('DevOps.FindBuildTargets', '.') as BuildTargetInfo[]) || [],
-    enabled: activeSubTab === 'builds',
-  })
-
-  const runBuild = async (target: BuildTargetInfo, action: string) => {
-    const r = await call('DevOps.RunBuildCommand', target.type, target.path, action) as CommandResult
-    console.log(r.output)
-  }
-
-  return (
-    <div className="flex flex-col h-full p-6 space-y-4 overflow-y-auto">
-      <div className="flex gap-2 border-b border-border pb-2">
-        {(['cicd', 'builds'] as const).map(tab => (
-          <button key={tab} onClick={() => setActiveSubTab(tab)}
-            className={cn('px-4 py-2 text-sm font-bold rounded-t-lg transition-colors',
-              activeSubTab === tab ? 'text-accent border-b-2 border-accent' : 'text-text-faint hover:text-text')}>
-            {tab === 'cicd' ? 'CI/CD' : 'Build Systems'}
-          </button>
-        ))}
-      </div>
-
-      {activeSubTab === 'cicd' && (
-        <div className="space-y-3">
-          <div className="grid grid-cols-5 gap-3 mb-4">
-            {(cicd?.configs ?? []).map(c => (
-              <div key={c.platform} className={cn('bg-panel border rounded-xl p-4 text-center', c.detected ? 'border-success/30' : 'border-border')}>
-                <span className={cn('text-xs font-bold block mb-1', c.detected ? 'text-success' : 'text-text-faint')}>
-                  {c.platform}
-                </span>
-                <span className={cn('text-2xl', c.detected ? 'text-success' : 'text-text-faint')}>
-                  {c.detected ? '✓' : '○'}
-                </span>
-              </div>
-            ))}
-          </div>
-          <h4 className="text-sm font-bold text-text-dim uppercase tracking-widest">Detected Pipelines</h4>
-          {(cicd?.pipelines ?? []).map(p => (
-            <div key={p.name} className="bg-panel border border-border rounded-xl p-4 flex items-center justify-between">
-              <div>
-                <p className="font-bold text-sm">{p.name}</p>
-                <p className="text-xs text-text-dim">{p.branch && `Branch: ${p.branch}`}{p.duration && ` | ${p.duration}`}</p>
-              </div>
-              <StatusBadge status={p.status} />
-            </div>
-          ))}
-          {(!cicd?.pipelines || cicd.pipelines.length === 0) && <p className="text-text-faint text-sm">No CI/CD pipelines detected. Configure one to get started.</p>}
-        </div>
-      )}
-
-      {activeSubTab === 'builds' && (
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <h4 className="text-sm font-bold text-text-dim uppercase tracking-widest mb-3">Installed Build Systems</h4>
-            <div className="space-y-2">
-              {buildSystems.map(bs => (
-                <div key={bs.name} className="bg-panel border border-border rounded-xl p-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-sm">{bs.name}</p>
-                    <p className="text-xs font-mono text-text-dim">{bs.version || 'not found'}</p>
-                  </div>
-                  <span className={cn('text-xs font-bold', bs.found ? 'text-success' : 'text-text-faint')}>
-                    {bs.found ? 'Installed' : 'Missing'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-text-dim uppercase tracking-widest mb-3">Build Targets</h4>
-            <div className="space-y-2">
-              {buildTargets.map(t => (
-                <div key={t.path} className="bg-panel border border-border rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-bold text-sm">{t.name}</p>
-                    <StatusBadge status={t.type} />
-                  </div>
-                  <div className="flex gap-3 text-xs text-text-dim mb-2">
-                    {t.has_build && <span className="text-success">✓ Build</span>}
-                    {t.has_test && <span className="text-success">✓ Test</span>}
-                    {t.has_lint && <span className="text-success">✓ Lint</span>}
-                    <span className="text-text-faint">{t.dep_count} deps</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <ActionButton icon={<Play size={12} />} label="Build" variant="primary" onClick={() => runBuild(t, 'build')} />
-                    <ActionButton icon={<Eye size={12} />} label="Test" onClick={() => runBuild(t, 'test')} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function ReleasesTab() {
-  const { call } = useBackend()
-  const [subTab, setSubTab] = useState<'releases' | 'deployments'>('releases')
-
-  const { data: releases } = useQuery<ReleaseHistory>({
-    queryKey: ['devops-releases'],
-    queryFn: async () => (await call('DevOps.GetReleases', '.') as ReleaseHistory) || { releases: [] },
-  })
-
-  const { data: deployments = [] } = useQuery<DeploymentRecord[]>({
-    queryKey: ['devops-deployments'],
-    queryFn: async () => (await call('DevOps.GetDeploymentHistory', '.') as DeploymentRecord[]) || [],
-    enabled: subTab === 'deployments',
-  })
-
-  const { data: dora } = useQuery<DORAMetrics>({
-    queryKey: ['devops-dora-metrics'],
-    queryFn: async () => (await call('DevOps.GetDORAMetrics', '.') as DORAMetrics) || null as unknown as DORAMetrics,
-  })
-
-  return (
-    <div className="flex flex-col h-full p-6 space-y-4 overflow-y-auto">
-      {dora && (
-        <div className="grid grid-cols-4 gap-3">
-          {[
-            { label: 'Deploy Frequency', value: dora.deployment_frequency, cl: 'text-accent' },
-            { label: 'Lead Time', value: dora.lead_time_for_changes, cl: 'text-info' },
-            { label: 'Change Failure Rate', value: dora.change_failure_rate, cl: dora.failure_pct > 15 ? 'text-danger' : 'text-success' },
-            { label: 'MTTR', value: dora.mttr, cl: 'text-warning' },
-          ].map(item => (
-            <div key={item.label} className="bg-panel border border-border rounded-xl p-4 text-center">
-              <span className={cn('text-xl font-bold tabular-nums', item.cl)}>{item.value}</span>
-              <p className="text-[10px] font-semibold text-text-faint uppercase tracking-wider mt-1">{item.label}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="flex gap-2 border-b border-border pb-2">
-        {(['releases', 'deployments'] as const).map(tab => (
-          <button key={tab} onClick={() => setSubTab(tab)}
-            className={cn('px-4 py-2 text-sm font-bold rounded-t-lg transition-colors',
-              subTab === tab ? 'text-accent border-b-2 border-accent' : 'text-text-faint hover:text-text')}>
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      {subTab === 'releases' && (releases?.releases ?? []).map(r => (
-        <div key={r.version} className="bg-panel border border-border rounded-xl p-4 flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <Ship size={16} className="text-accent" />
-              <p className="font-bold text-sm">{r.version}</p>
-              <StatusBadge status={r.status} />
-            </div>
-            <p className="text-xs text-text-dim mt-1">{r.notes || r.date}</p>
-          </div>
-          <span className="text-xs font-mono text-text-faint">{r.date ? new Date(r.date).toLocaleDateString() : ''}</span>
-        </div>
-      ))}
-      {subTab === 'deployments' && deployments.map(d => (
-        <div key={d.id} className="bg-panel border border-border rounded-xl p-4 flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <p className="font-bold text-sm">{d.version}</p>
-              <span className="text-xs font-mono text-text-faint">→ {d.environment}</span>
-            </div>
-            <p className="text-xs text-text-dim">{d.trigger} · {d.timestamp}</p>
-          </div>
-          <StatusBadge status={d.status} />
-        </div>
-      ))}
-      {subTab === 'releases' && (!releases?.releases || releases.releases.length === 0) && <p className="text-text-faint text-sm text-center py-8">No releases found. Create a git tag to track releases.</p>}
-    </div>
-  )
-}
-
-function DiagnosticsTab() {
-  const { call } = useBackend()
-  const [result, setResult] = useState<DevOpsDiagResult | null>(null)
-  const [running, setRunning] = useState(false)
-
-  const runDiagnostics = async () => {
-    setRunning(true)
-    try {
-      const res = await call('DevOps.RunDevOpsDiagnostics') as DevOpsDiagResult
-      setResult(res)
-    } catch (err) { console.error(err) }
-    finally { setRunning(false) }
-  }
-
-  return (
-    <div className="flex flex-col h-full p-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <button onClick={runDiagnostics} disabled={running}
-          className="flex items-center gap-3 px-8 py-4 text-lg font-bold bg-accent text-white rounded-xl hover:bg-accent/90 disabled:opacity-50 transition-all shadow-lg active:scale-95">
-          <Activity size={24} className={cn(running && 'animate-pulse')} />
-          {running ? 'Running Checks...' : 'Run DevOps Health Check'}
-        </button>
-      </div>
-
-      {result && (
-        <>
-          <div className="flex items-center gap-4">
-            <span className={cn('text-4xl font-bold', result.score >= 80 ? 'text-success' : result.score >= 50 ? 'text-warning' : 'text-danger')}>
-              {result.score}%
-            </span>
-            <span className="text-sm text-text-dim">Health Score</span>
-          </div>
-
-          <div className="flex-1 overflow-y-auto space-y-2">
-            {result.checks.map((check, i) => (
-              <div key={i} className={cn('bg-panel border rounded-xl p-4 flex items-center justify-between',
-                check.status === 'pass' ? 'border-success/20' : check.status === 'warn' ? 'border-warning/20' : 'border-danger/20')}>
-                <div>
-                  <p className="font-bold text-sm">{check.name}</p>
-                  <p className="text-xs text-text-dim">{check.message}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono text-text-faint">{check.value}</span>
-                  <span className={cn('text-lg font-bold',
-                    check.status === 'pass' ? 'text-success' : check.status === 'warn' ? 'text-warning' : 'text-danger')}>
-                    {check.status === 'pass' ? '✓' : check.status === 'warn' ? '!' : '✗'}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
     </div>
   )
 }
@@ -1149,68 +900,6 @@ function ServicesTab() {
           </table>
         </div>
       </div>
-    </div>
-  )
-}
-
-function FileBrowserTab() {
-  const { call } = useBackend()
-  const [currentPath, setCurrentPath] = useState('')
-  const [entries, setEntries] = useState<FileEntry[]>([])
-  const [history, setHistory] = useState<string[]>([])
-  const [, setLoading] = useState(false)
-  const [previewFile, setPreviewFile] = useState<FileEntry | null>(null)
-  const [fileContent, setPreviewContent] = useState('')
-
-  const fetchDir = useCallback(async (path: string) => {
-    setLoading(true)
-    try {
-      const res = await call('DevOps.ListDirectory', path)
-      setEntries((res as FileEntry[]) || []); setCurrentPath(path)
-    } catch (err) { console.error(err) } finally { setLoading(false) }
-  }, [call])
-
-  useEffect(() => {
-    if (!currentPath) call('DevOps.GetDefaultPath').then(p => { if (p) { setCurrentPath(p as string); fetchDir(p as string) } })
-    else fetchDir(currentPath)
-  }, [fetchDir, currentPath, call])
-
-  const openFile = async (file: FileEntry) => {
-    if (file.is_dir) { setHistory(prev => [...prev, currentPath]); fetchDir(file.path); setPreviewFile(null) }
-    else { setPreviewFile(file); setPreviewContent(await call('DevOps.ReadFile', file.path) as string) }
-  }
-
-  return (
-    <div className="flex h-full p-6 gap-6">
-      <div className={cn('flex flex-col flex-1 min-w-0 space-y-3', previewFile ? 'w-1/2' : 'w-full')}>
-        <div className="flex items-center gap-3 bg-panel border border-border rounded-xl px-4 py-2">
-          <button onClick={() => { const prev = history.pop(); if (prev) fetchDir(prev) }} disabled={history.length === 0} className="p-1 hover:bg-panel-3 rounded-lg"><ChevronRight size={16} className="rotate-180" /></button>
-          <span className="text-sm font-mono truncate">{currentPath}</span>
-        </div>
-        <div className="flex-1 bg-panel border border-border rounded-2xl overflow-y-auto">
-          <table className="w-full text-left">
-            <tbody>
-              {entries.map(file => (
-                <tr key={file.path} onClick={() => openFile(file)} className="border-b border-border/10 hover:bg-panel-3 cursor-pointer group">
-                  <td className="px-4 py-2 flex items-center gap-3">
-                    {file.is_dir ? <Folder size={16} className="text-accent" /> : <FileText size={16} className="text-text-faint" />}
-                    <span className="text-sm font-medium group-hover:text-accent">{file.name}</span>
-                  </td>
-                  <td className="px-4 py-2 text-right text-xs font-mono text-text-faint">{file.size}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      {previewFile && (
-        <div className="w-1/2 flex flex-col space-y-3">
-          <div className="flex items-center justify-between"><h3 className="font-bold truncate">{previewFile.name}</h3><button onClick={() => setPreviewFile(null)}><X size={16} /></button></div>
-          <div className="flex-1 bg-[var(--color-terminal-bg)] border border-border rounded-2xl p-4 overflow-auto font-mono text-sm">
-            {previewFile.is_binary ? 'Binary content hidden' : fileContent}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

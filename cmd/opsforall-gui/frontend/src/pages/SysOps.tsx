@@ -2,7 +2,7 @@ import { useState, Suspense, lazy } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Cpu, Server, MemoryStick, Disc, Activity, Settings, FileText,
-  HardDrive, Users, BarChart3, Package, Calendar, Stethoscope,
+  HardDrive, Users, Stethoscope,
   Zap, Monitor,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -20,13 +20,10 @@ const ProcessesTab = lazy(() => import('./SysOps/ProcessesTab').then(m => ({ def
 const ServicesTab = lazy(() => import('./SysOps/ServicesTab').then(m => ({ default: m.ServicesTab })))
 const LogsTab = lazy(() => import('./SysOps/LogsTab').then(m => ({ default: m.LogsTab })))
 const UsersTab = lazy(() => import('./SysOps/UsersTab').then(m => ({ default: m.UsersTab })))
-const PerformanceTab = lazy(() => import('./SysOps/PerformanceTab').then(m => ({ default: m.PerformanceTab })))
-const PackageManagerTab = lazy(() => import('./SysOps/PackageManagerTab').then(m => ({ default: m.PackageManagerTab })))
-const SchedulerTab = lazy(() => import('./SysOps/SchedulerTab').then(m => ({ default: m.SchedulerTab })))
 const DiagnosticsTab = lazy(() => import('./SysOps/DiagnosticsTab').then(m => ({ default: m.DiagnosticsTab })))
 const ActionsTab = lazy(() => import('./SysOps/ActionsTab').then(m => ({ default: m.ActionsTab })))
 
-type SysOpsCategory = 'system-info' | 'cpu' | 'memory' | 'disk' | 'processes' | 'services' | 'logs' | 'storage' | 'users' | 'performance' | 'packages' | 'scheduler' | 'diagnostics' | 'actions'
+type SysOpsCategory = 'system-info' | 'cpu' | 'memory' | 'disk' | 'processes' | 'services' | 'logs' | 'storage' | 'users' | 'diagnostics' | 'actions'
 
 interface CategoryDef {
   id: SysOpsCategory
@@ -45,9 +42,6 @@ const categories: CategoryDef[] = [
   { id: 'logs', label: 'Logs', icon: <FileText size={18} />, group: 'inspection' },
   { id: 'storage', label: 'Storage', icon: <HardDrive size={18} />, group: 'inspection' },
   { id: 'users', label: 'Users', icon: <Users size={18} />, group: 'inspection' },
-  { id: 'performance', label: 'Performance', icon: <BarChart3 size={18} />, group: 'diagnosis' },
-  { id: 'packages', label: 'Packages', icon: <Package size={18} />, group: 'diagnosis' },
-  { id: 'scheduler', label: 'Scheduler', icon: <Calendar size={18} />, group: 'diagnosis' },
   { id: 'diagnostics', label: 'Diagnostics', icon: <Stethoscope size={18} />, group: 'diagnosis' },
   { id: 'actions', label: 'Actions', icon: <Zap size={18} />, group: 'action' },
 ]
@@ -84,11 +78,11 @@ export function SysOps() {
 
   if (!cpuInfo || !memInfo || !sysInfo || !diskInfo) {
     return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-8 w-48 bg-[var(--color-panel-2)] rounded" />
-        <div className="grid grid-cols-2 gap-4">
-          <div className="h-32 bg-[var(--color-panel-2)] rounded" />
-          <div className="h-32 bg-[var(--color-panel-2)] rounded" />
+      <div className="space-y-12 animate-pulse p-10">
+        <div className="h-10 w-64 bg-[var(--color-panel-2)] rounded-xl" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="h-48 bg-[var(--color-panel-2)] rounded-[24px]" />
+          <div className="h-48 bg-[var(--color-panel-2)] rounded-[24px]" />
         </div>
       </div>
     )
@@ -109,9 +103,6 @@ export function SysOps() {
       case 'logs': return <LogsTab />
       case 'storage': return <DiskTab diskInfo={diskInfo} />
       case 'users': return <UsersTab />
-      case 'performance': return <PerformanceTab />
-      case 'packages': return <PackageManagerTab />
-      case 'scheduler': return <SchedulerTab />
       case 'diagnostics': return <DiagnosticsTab />
       case 'actions': return <ActionsTab />
       default: return <DiagnosticsTab />
@@ -119,32 +110,37 @@ export function SysOps() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-bg)]">
+    <div className="flex flex-col h-full bg-[var(--color-bg)] animate-in fade-in duration-500">
       {/* Header */}
-      <div className="border-b border-[var(--color-border)] bg-[var(--color-panel-2)] py-4 px-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-4">
-              <Monitor size={32} className="text-[var(--color-accent)]" /> SYSTEM OPERATIONS
-            </h1>
-            <p className="text-[var(--color-text-dim)] text-sm mt-1">Inspection, diagnosis, and action for system administrators.</p>
-            <DataFreshnessIndicator lastUpdated={cpuUpdatedAt ? new Date(cpuUpdatedAt) : null} className="mt-1" />
+      <div className="py-8 border-b border-[var(--color-border)] bg-[var(--color-panel-2)]/50 flex items-center justify-between px-10">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
+               <Monitor size={18} />
+            </div>
+            <h1 className="text-sm font-black text-[var(--color-text)] uppercase tracking-[0.25em]">Subsystem Diagnostics</h1>
           </div>
+          <p className="text-3xl font-bold text-[var(--color-text)] tracking-tight">System Operations</p>
+          <p className="text-[var(--color-text-dim)] text-xs font-semibold uppercase tracking-widest mt-2">Inspection, diagnosis, and action for system administrators</p>
+          <DataFreshnessIndicator lastUpdated={cpuUpdatedAt ? new Date(cpuUpdatedAt) : null} className="mt-4" />
         </div>
       </div>
 
       {/* Content: Sidebar + Main */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
-        <div className="w-56 border-r border-[var(--color-border)] bg-[var(--color-panel-2)] overflow-y-auto p-3">
+        <div className="w-64 border-r border-[var(--color-border)] bg-[var(--color-panel)] overflow-y-auto p-4 scroll-smooth">
           <CategoryGroup label="INSPECTION" categories={inspectionCategories} active={activeCategory} onSelect={setActiveCategory} />
           <CategoryGroup label="DIAGNOSIS" categories={diagnosisCategories} active={activeCategory} onSelect={setActiveCategory} />
           <CategoryGroup label="ACTION" categories={actionCategories} active={activeCategory} onSelect={setActiveCategory} />
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-y-auto p-8">
-          <Suspense fallback={<div className="flex items-center justify-center h-32 text-text-faint text-sm">Loading...</div>}>
+        <div className="flex-1 overflow-y-auto p-10 relative">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-10">
+            <div className="absolute -top-24 -left-24 w-96 h-96 bg-accent rounded-full blur-[120px]" />
+          </div>
+          <Suspense fallback={<div className="flex items-center justify-center h-full text-text-faint text-xs font-black uppercase tracking-widest animate-pulse">Initializing Subsystem...</div>}>
             {renderContent()}
           </Suspense>
         </div>
@@ -155,21 +151,27 @@ export function SysOps() {
 
 function CategoryGroup({ label, categories, active, onSelect }: { label: string; categories: CategoryDef[]; active: SysOpsCategory; onSelect: (id: SysOpsCategory) => void }) {
   return (
-    <div className="mb-4">
-      <p className="text-[10px] font-bold text-[var(--color-text-faint)] uppercase tracking-widest px-3 mb-2">{label}</p>
-      {categories.map(cat => (
-        <button
-          key={cat.id}
-          onClick={() => onSelect(cat.id)}
-          className={cn(
-            'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-all mb-0.5',
-            active === cat.id ? 'bg-[var(--color-accent)] text-white' : 'text-[var(--color-text-dim)] hover:text-[var(--color-text)] hover:bg-[var(--color-sidebar-hover)]'
-          )}
-        >
-          {cat.icon}
-          {cat.label}
-        </button>
-      ))}
+    <div className="mb-5">
+      <p className="text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-[0.2em] px-2.5 mb-2.5">{label}</p>
+      <div className="space-y-1">
+        {categories.map(cat => (
+          <button
+            key={cat.id}
+            onClick={() => onSelect(cat.id)}
+            className={cn(
+              'w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-sm font-bold transition-all active:scale-[0.97]',
+              active === cat.id
+                ? 'bg-accent text-white shadow-lg shadow-accent/20'
+                : 'text-text-dim hover:text-text hover:bg-[var(--color-sidebar-hover)]'
+            )}
+          >
+            <div className={cn("transition-colors", active === cat.id ? "text-white" : "text-accent")}>
+              {cat.icon}
+            </div>
+            {cat.label}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

@@ -6,7 +6,7 @@ import {time} from '../models';
 
 export function AskAI(arg1:context.Context,arg2:string):Promise<string>;
 
-export function Chat(arg1:string):Promise<string>;
+export function Chat(arg1:string):Promise<app.ChatResponse>;
 
 export function CreateOpsPersona():Promise<void>;
 
@@ -33,5 +33,7 @@ export function PullModel(arg1:string):Promise<void>;
 export function QuerySystemState(arg1:string):Promise<string>;
 
 export function SaveMessage(arg1:string,arg2:string,arg3:string):Promise<string>;
+
+export function SetOllamaModel(arg1:string):Promise<void>;
 
 export function WithTimeout(arg1:time.Duration):Promise<context.Context|context.CancelFunc>;

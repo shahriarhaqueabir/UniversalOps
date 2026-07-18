@@ -48,10 +48,15 @@ func getEffectiveModel() string {
 	return effectiveModel
 }
 
+// SetModel updates the effective model to be used for future Chat calls.
+func SetModel(model string) {
+	setEffectiveModel(model)
+}
+
 const (
 	defaultOllamaURL   = "http://localhost:11434"
 	defaultOllamaModel = "opsforall"
-	httpTimeout        = 30 * time.Second
+	defaultHttpTimeout = 60 * time.Second // Increased from 30s for general metadata queries
 )
 
 func getOllamaURL() string {
@@ -69,12 +74,16 @@ func getOllamaModel() string {
 }
 
 func newClient() *api.Client {
+	return newClientWithTimeout(defaultHttpTimeout)
+}
+
+func newClientWithTimeout(timeout time.Duration) *api.Client {
 	baseURL := getOllamaURL()
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		u = &url.URL{Scheme: "http", Host: "localhost:11434"}
 	}
-	return api.NewClient(u, &http.Client{Timeout: httpTimeout})
+	return api.NewClient(u, &http.Client{Timeout: timeout})
 }
 
 // CheckOllamaBinary returns true if the ollama binary is found in the system PATH.
@@ -85,7 +94,8 @@ func CheckOllamaBinary() bool {
 
 // PullModel downloads a model from the Ollama library.
 func PullModel(name string, onProgress func(api.ProgressResponse) error) error {
-	client := newClient()
+	// Pulling models can take a long time; use no timeout on the client (0)
+	client := newClientWithTimeout(0)
 	req := &api.PullRequest{
 		Model: name,
 	}
@@ -100,7 +110,8 @@ func PullModel(name string, onProgress func(api.ProgressResponse) error) error {
 // CreateModel creates a new model from structured parameters.
 // Note: v0.31.2 SDK uses structured fields instead of a raw Modelfile string.
 func CreateModel(name string, from string, system string, parameters map[string]any) error {
-	client := newClient()
+	// Creating models (especially if it involves downloading layers) can take time
+	client := newClientWithTimeout(0)
 	req := &api.CreateRequest{
 		Model:      name,
 		From:       from,
@@ -164,7 +175,8 @@ func CheckOllama() (*OllamaStatus, error) {
 
 // Chat sends a chat request to the Ollama API using the typed SDK and returns the response text.
 func Chat(messages []ChatMessage) (string, error) {
-	client := newClient()
+	// Use a longer timeout for chat generation, as reasoning can take time
+	client := newClientWithTimeout(5 * time.Minute)
 
 	// Convert our ChatMessage type to the SDK's Message type
 	apiMessages := make([]api.Message, len(messages))

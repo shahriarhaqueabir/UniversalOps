@@ -93,12 +93,20 @@ body {
     "Segoe UI",
     sans-serif;
   font-size: 0.9375rem; /* 15px — tighter for ops density */
-  background-color: var(--color-bg);
+  background-color: transparent; /* Changed: allow native backdrop (Mica/Acrylic) to show through */
   color: var(--color-text);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   line-height: 1.5;
   letter-spacing: -0.011em;
+}
+
+/* ── Wails Draggable Areas ── */
+.wails-drag {
+  --wails-draggable: drag;
+}
+.wails-no-drag {
+  --wails-draggable: no-drag;
 }
 
 .tabular-nums {
