@@ -4,8 +4,10 @@ import { useSettingsStore } from './useSettingsStore'
 interface ConfigState {
   stagedChanges: Map<string, any>
   stageChange: (key: string, value: any) => void
+  stageBatch: (changes: Record<string, any>) => void
   discardAll: () => void
   getOriginalValue: (key: string) => any
+  getRiskLevel: (key: string, value: any) => StagedRisk
 }
 
 /**
@@ -23,6 +25,14 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   stageChange: (key, value) => {
     const next = new Map(get().stagedChanges)
     next.set(key, value)
+    set({ stagedChanges: next })
+  },
+
+  stageBatch: (changes) => {
+    const next = new Map(get().stagedChanges)
+    Object.entries(changes).forEach(([key, value]) => {
+      next.set(key, value)
+    })
     set({ stagedChanges: next })
   },
 
