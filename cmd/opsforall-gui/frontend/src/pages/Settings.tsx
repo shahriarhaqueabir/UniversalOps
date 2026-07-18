@@ -33,6 +33,7 @@ import { SettingsSidebar, type SettingsTab } from '@/components/settings/Setting
 import { useConfigStore } from '@/stores/useConfigStore'
 import { DeploymentBar } from '@/components/settings/DeploymentBar'
 import { CapabilityMatrix } from '@/components/settings/CapabilityMatrix'
+import { ModelfileEditor } from '@/components/settings/ModelfileEditor'
 
 // ── Setting Row ──
 
@@ -363,27 +364,11 @@ export function Settings() {
             <Panel category="ai">
               <PanelHeader
                 icon={<BrainCircuit size={20} />}
-                title={`${companionName} Persona`}
-                subtitle="Configure specialized intelligence profiles"
+                title={`${companionName} Neural Core`}
+                subtitle="Configure specialized intelligence and persona instructions"
               />
-              <div className="mt-6 space-y-6">
-                <SettingRow label="Neural Persona" description="Select the specialized intelligence profile">
-                  <select
-                    className="bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm font-bold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
-                    defaultValue="opsforall"
-                  >
-                    <option value="opsforall">Default Technical</option>
-                    <option value="architect">System Architect</option>
-                    <option value="security">Security Auditor</option>
-                    <option value="concise">Concise Heuristics</option>
-                  </select>
-                </SettingRow>
-
-                <SettingRow label="Extended Context" description="Allow access to historical metric trends">
-                  <button className="w-10 h-5 rounded-full bg-[var(--color-accent)] relative shadow-inner">
-                    <div className="absolute right-0.5 top-0.5 w-4 h-4 rounded-full bg-white shadow-sm" />
-                  </button>
-                </SettingRow>
+              <div className="mt-6">
+                <ModelfileEditor />
               </div>
             </Panel>
           </div>
