@@ -7,9 +7,11 @@ interface SettingsState {
   refreshInterval: number
   pingCount: number
   dnsTimeout: number
+  companionName: string
   setRefreshInterval: (val: number) => void
   setPingCount: (val: number) => void
   setDnsTimeout: (val: number) => void
+  setCompanionName: (name: string) => void
 }
 
 function loadSetting<T>(key: string, fallback: T): T {
@@ -27,6 +29,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   refreshInterval: loadSetting('opsforall_refreshInterval', 5000),
   pingCount: loadSetting('opsforall_pingCount', 4),
   dnsTimeout: loadSetting('opsforall_dnsTimeout', 2000),
+  companionName: loadSetting('opsforall_companionName', 'Hawk'),
 
   setRefreshInterval: (val) => {
     saveSetting('opsforall_refreshInterval', val)
@@ -39,6 +42,10 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setDnsTimeout: (val) => {
     saveSetting('opsforall_dnsTimeout', val)
     set({ dnsTimeout: val })
+  },
+  setCompanionName: (name) => {
+    saveSetting('opsforall_companionName', name)
+    set({ companionName: name })
   },
 }))
 
