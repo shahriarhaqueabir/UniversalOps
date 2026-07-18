@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"regexp"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -35,11 +35,11 @@ func NewAIOps(app *App) *AIOps {
 	return &AIOps{app: app}
 }
 
-// ChatResponse contains the AI message and any proposed action.
+// ChatResponse contains the AI message and any proposed actions.
 type ChatResponse struct {
-	Content string                `json:"content"`
-	Action  *common.ActionPreview `json:"action,omitempty"`
-	Payload map[string]interface{} `json:"payload,omitempty"`
+	Content string                 `json:"content"`
+	Actions []common.ActionPreview `json:"actions,omitempty"`
+	Payload map[string]interface{}  `json:"payload,omitempty"`
 }
 
 // Chat sends a message to the Ollama chat API and returns the response.
@@ -57,22 +57,12 @@ func (a *AIOps) Chat(message string) ChatResponse {
 		}
 	}
 
-	systemPrompt := fmt.Sprintf(`You are the OpsForAll Technical Auditor.
-Current System State:
-- CPU: %.1f%%
-- RAM: %.1f%%
-- Disk: %.1f%%
-- Active Connections: %d
-- Active Anomalies: %d
-- Security Grade: %s
-%s
-Use the tools <action_request name="ACTION" param="VALUE" /> when remediation is needed.`,
-		knowledge.CPUUsage, knowledge.MemoryUsage, knowledge.DiskUsage,
-		knowledge.ActiveConns, knowledge.Anomalies, knowledge.SecurityGrade, historyContext)
+	systemPrompt := aiops.BuildAnalystPrompt(knowledge, historyContext)
+	wrappedMessage := fmt.Sprintf("<user_query>%s</user_query>", aiops.SanitizeInput(message))
 
 	messages := []aiops.ChatMessage{
 		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: message},
+		{Role: "user", Content: wrappedMessage},
 	}
 
 	// 2. Execute Chat
@@ -83,53 +73,19 @@ Use the tools <action_request name="ACTION" param="VALUE" /> when remediation is
 	}
 
 	// 3. Parse for Action Requests
-	// Regex for <action_request name="action" param1="val1" ... />
-	re := regexp.MustCompile(`<action_request\s+name="([^"]+)"\s*(.*?)\s*/>`)
-	match := re.FindStringSubmatch(rawResponse)
-
-	var preview *common.ActionPreview
-	if len(match) >= 3 {
-		actionName := match[1]
-		paramsRaw := match[2]
-
-		// Simple param parser
-		params := make(map[string]interface{})
-		paramRe := regexp.MustCompile(`([a-zA-Z0-9]+)="([^"]+)"`)
-		paramMatches := paramRe.FindAllStringSubmatch(paramsRaw, -1)
-		for _, pm := range paramMatches {
-			params[pm[1]] = pm[2]
-		}
-
-		// Create Handshake Preview
-		p := common.GetHandshakeRegistry().CreatePreview(actionName, params)
-		preview = &p
-
-		// Strip the tag from the visible content
-		rawResponse = strings.ReplaceAll(rawResponse, match[0], "")
-	}
+	content, actions := aiops.ParseActions(rawResponse)
 
 	return ChatResponse{
-		Content: strings.TrimSpace(rawResponse),
-		Action:  preview,
+		Content: content,
+		Actions: actions,
 	}
-}
-
-// sanitizePromptInput strips content that could facilitate prompt injection.
-func sanitizePromptInput(s string) string {
-	s = strings.TrimSpace(s)
-	if len(s) > 200 {
-		s = s[:200]
-	}
-	s = strings.ReplaceAll(s, "\n", " ")
-	s = strings.ReplaceAll(s, "\r", " ")
-	return s
 }
 
 // GenerateReport creates a formatted text report from the given sections.
 func (a *AIOps) GenerateReport(sections []string) string {
 	var reportSections []aiops.ReportSection
 	for _, title := range sections {
-		title = sanitizePromptInput(title)
+		title = aiops.SanitizeInput(title)
 		prompt := "Generate a brief operations report section for: " + title +
 			". Include key metrics and observations based on recent system data."
 		resp, err := aiops.Chat([]aiops.ChatMessage{
@@ -177,21 +133,23 @@ func (a *AIOps) GetOllamaStatus() OllamaStatus {
 	}
 }
 
-// GetModelfile reads the local Modelfile and returns its content.
+// GetModelfile reads the local allopsfull.modelfile and returns its content.
 func (a *AIOps) GetModelfile() (string, error) {
-	content, err := os.ReadFile("Modelfile")
+	path := filepath.Join("data", "allopsfull.modelfile")
+	content, err := os.ReadFile(path)
 	if err != nil {
-		return "", fmt.Errorf("failed to read Modelfile: %w", err)
+		return "", fmt.Errorf("failed to read allopsfull.modelfile: %w", err)
 	}
 	return string(content), nil
 }
 
-// SaveModelfile writes the given content to the local Modelfile.
+// SaveModelfile writes the given content to the local allopsfull.modelfile.
 func (a *AIOps) SaveModelfile(content string) error {
-	common.LogInfo("AIOps: Saving updated Modelfile")
-	err := os.WriteFile("Modelfile", []byte(content), 0644)
+	common.LogInfo("AIOps: Saving updated allopsfull.modelfile")
+	path := filepath.Join("data", "allopsfull.modelfile")
+	err := os.WriteFile(path, []byte(content), 0644)
 	if err != nil {
-		return fmt.Errorf("failed to save Modelfile: %w", err)
+		return fmt.Errorf("failed to save allopsfull.modelfile: %w", err)
 	}
 	return nil
 }
@@ -234,20 +192,74 @@ func (a *AIOps) DeleteModel(modelName string) error {
 	return aiops.DeleteModel(modelName)
 }
 
-// CreateOpsPersona creates the specialized 'opsforall' model from the local Modelfile.
+// CreateOpsPersona creates the specialized 'allopsfull' model from the local modelfile.
 func (a *AIOps) CreateOpsPersona() error {
-	common.LogInfo("AIOps: Creating opsforall persona")
+	common.LogInfo("AIOps: Creating allopsfull persona")
 
-	modelfilePath := "Modelfile"
+	modelfilePath := filepath.Join("data", "allopsfull.modelfile")
 
-	// 1. Parse Modelfile
+	// 1. Check for legacy root Modelfile and migrate if necessary
+	legacyPaths := []string{"Modelfile", filepath.Join("data", "Modelfile")}
+	for _, lp := range legacyPaths {
+		if _, err := os.Stat(lp); err == nil {
+			if _, errData := os.Stat(modelfilePath); os.IsNotExist(errData) {
+				common.LogInfo("AIOps: Migrating legacy %s to %s", lp, modelfilePath)
+				_ = os.Rename(lp, modelfilePath)
+			}
+		}
+	}
+
+	// 2. Ensure allopsfull.modelfile exists in data/
+	if _, err := os.Stat(modelfilePath); os.IsNotExist(err) {
+		common.LogInfo("AIOps: allopsfull.modelfile missing in data/. Creating default.")
+		content := `FROM hf.co/empero-ai/Qwythos-9B-Claude-Mythos-5-1M-GGUF:Q6_K
+
+# System message for AllOpsFull Technical Auditor
+SYSTEM """
+You are the AllOpsFull Technical Auditor, a professional system, network, and security intelligence agent.
+Your primary objective is to synthesize complex telemetry into high-density technical briefings.
+Muted industrial tone. Mechanics-first explanation. Zero fluff.
+Anchor all claims in metrics and specific protocol mechanisms.
+
+### Neural Sandbox & Execution Safety
+You have the ability to request system actions via a specialized handshake protocol.
+When you identify a critical issue requiring remediation, you must:
+1. Provide a technical justification for the action.
+2. Emit an action request tag in the following format:
+   <action_request name="ACTION_NAME" param1="VALUE" />
+
+Available Actions:
+- kill_process (params: pid) -> Terminate a specific process.
+- block_ip (params: ip) -> Add a firewall rule to block an IP.
+- isolate_host (params: none) -> Sever all network traffic.
+- restart_service (params: name) -> Restart a system service.
+
+Example:
+"I have detected a high-entropy process (PID 4412) with suspicious network callouts.
+Requesting termination to prevent potential exfiltration.
+<action_request name="kill_process" pid="4412" />"
+
+NEVER request an action without a metric-backed justification.
+"""
+
+# Parameters for technical precision
+PARAMETER temperature 0.1
+PARAMETER top_p 0.95
+PARAMETER repeat_penalty 1.1
+PARAMETER stop "──"
+`
+		if err := os.WriteFile(modelfilePath, []byte(content), 0644); err != nil {
+			common.LogWarn("AIOps: Failed to create modelfile: %v", err)
+		}
+	}
+
+	// 2. Parse Modelfile
 	config, err := aiops.ParseModelfile(modelfilePath)
 	if err != nil {
-		common.LogWarn("AIOps: Failed to parse Modelfile: %v. Using defaults.", err)
-		// Fallback defaults in case the file is missing or corrupted
+		common.LogWarn("AIOps: Failed to parse Modelfile: %v. Using hardcoded fallbacks.", err)
 		config = &aiops.ModelfileConfig{
 			From:   "hf.co/empero-ai/Qwythos-9B-Claude-Mythos-5-1M-GGUF:Q6_K",
-			System: "You are the OpsForAll Technical Auditor, a professional system, network, and security intelligence agent.\nYour primary objective is to synthesize complex telemetry into high-density technical briefings.\nMuted industrial tone. Mechanics-first explanation. Zero fluff.\nAnchor all claims in metrics and specific protocol mechanisms.",
+			System: "You are the AllOpsFull Technical Auditor, a professional system, network, and security intelligence agent.\nYour primary objective is to synthesize complex telemetry into high-density technical briefings.\nMuted industrial tone. Mechanics-first explanation. Zero fluff.\nAnchor all claims in metrics and specific protocol mechanisms.",
 			Parameters: map[string]any{
 				"temperature":    0.1,
 				"top_p":          0.95,
@@ -259,14 +271,14 @@ func (a *AIOps) CreateOpsPersona() error {
 		common.LogInfo("AIOps: Successfully parsed Modelfile from %s (Base: %s)", modelfilePath, config.From)
 	}
 
-	// 2. Create Model via SDK
-	err = aiops.CreateModel("opsforall", config.From, config.System, config.Parameters)
+	// 3. Create Model via SDK
+	err = aiops.CreateModel("allopsfull", config.From, config.System, config.Parameters)
 	if err != nil {
 		common.LogWarn("AIOps: CreateModel failed: %v", err)
 		return err
 	}
 
-	common.LogInfo("AIOps: Successfully created opsforall persona")
+	common.LogInfo("AIOps: Successfully created allopsfull persona")
 	return nil
 }
 

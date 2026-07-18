@@ -2,7 +2,6 @@ package common
 
 import (
 	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -175,9 +174,9 @@ func TestConfigDir(t *testing.T) {
 	if dir == "" {
 		t.Error("ConfigDir() returned an empty path")
 	}
-	// Should end with "opsforall"
-	if filepath.Base(dir) != "opsforall" {
-		t.Errorf("ConfigDir() = %q, want path ending with 'opsforall'", dir)
+	// Should be "data" for self-contained mode
+	if dir != "data" {
+		t.Errorf("ConfigDir() = %q, want 'data'", dir)
 	}
 }
 

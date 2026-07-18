@@ -3,6 +3,7 @@ package app
 import (
 	"testing"
 
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/aiops"
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
@@ -202,21 +203,21 @@ func TestSanitizePromptInput(t *testing.T) {
 		{"", ""},
 	}
 	for _, tt := range tests {
-		got := sanitizePromptInput(tt.input)
+		got := aiops.SanitizeInput(tt.input)
 		if got != tt.want {
-			t.Errorf("sanitizePromptInput(%q) = %q, want %q", tt.input, got, tt.want)
+			t.Errorf("SanitizeInput(%q) = %q, want %q", tt.input, got, tt.want)
 		}
 	}
 }
 
 func TestSanitizePromptInput_Long(t *testing.T) {
 	long := ""
-	for i := 0; i < 300; i++ {
+	for i := 0; i < 600; i++ {
 		long += "x"
 	}
-	got := sanitizePromptInput(long)
-	if len(got) > 200 {
-		t.Errorf("sanitizePromptInput returned %d chars, want <=200", len(got))
+	got := aiops.SanitizeInput(long)
+	if len(got) > 500 {
+		t.Errorf("SanitizeInput returned %d chars, want <=500", len(got))
 	}
 }
 

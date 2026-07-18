@@ -24,6 +24,6 @@ OpsForAll is a native desktop operations platform (Go/Wails v2 + React 19/TypeSc
 ## Rules
 - **Go**: Idiomatic Go, error wrapping, log via `common.LogInfo`
 - **Frontend**: Functional components, memoize expensive renders, CSS variables for theming
-- **Database**: All persistence through `ops_core.db` (SQLite)
+- **Database**: All persistence through `allopsfull.db` (SQLite)
 - **No cloud deps**: Never add external API calls or telemetry
 - **Tests required**: New features must include tests. Run full suite before claiming done.

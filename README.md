@@ -116,7 +116,7 @@ If you prefer a proper installer with Start Menu shortcuts:
 
 - **Backend**: Go (Wails v2 bindings with gopsutil/v4, miekg/dns, modernc.org/sqlite)
 - **Frontend**: React (TypeScript, Vite, Tailwind v4, Recharts, Lucide React)
-- **Database**: `ops_core.db` — SQLite with WAL mode and 7-day retention.
+- **Database**: `allopsfull.db` — SQLite with WAL mode and 7-day retention.
 
 ---
 

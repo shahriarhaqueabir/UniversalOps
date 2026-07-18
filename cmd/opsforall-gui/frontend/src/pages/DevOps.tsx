@@ -261,11 +261,11 @@ function TerminalTab() {
   const [currentCmdId, setCurrentCmdId] = useState<string | null>(null)
   const outputRef = useRef<HTMLDivElement>(null)
 
-  useEvents('DevOps.EventCmdLine', (data: any) => {
+  useEvents('cmd:line', (data: any) => {
     if (data.id === currentCmdId) setOutput(prev => [...prev, data.line])
   })
 
-  useEvents('DevOps.EventCmdDone', (id) => {
+  useEvents('cmd:done', (id) => {
     if (id === currentCmdId) { setIsRunning(false); setCurrentCmdId(null) }
   })
 

@@ -60,13 +60,12 @@ type MetricForecast struct {
 // ── DataPipeline ────────────────────────────────────────────────────────────
 
 // DataPipeline is the central manager for metric time-series ingestion,
-// forecasting, and retrieval. It fans every PushMetric call into both the
-// TimeSeriesStore and the corresponding ForecastEngine.
+// forecasting, and retrieval.
 type DataPipeline struct {
-	mu       sync.RWMutex
 	store    *TimeSeriesStore
 	forecast map[string]*ForecastEngine
 	config   CollectionConfig
+	mu       sync.RWMutex // Protects the forecast map and config only
 }
 
 // NewDataPipeline creates a pipeline with the given configuration.
@@ -97,21 +96,18 @@ func NewDataPipeline(cfg CollectionConfig) *DataPipeline {
 // ── Ingestion ───────────────────────────────────────────────────────────────
 
 // PushMetric pushes a single value to both the time-series store and the
-// forecast engine for the named metric. The unit is used only when creating
-// a new time series (subsequent calls with the same name reuse the original
-// unit).
+// forecast engine for the named metric.
 func (dp *DataPipeline) PushMetric(name, unit string, value float64) {
+	dp.store.Push(name, unit, time.Now(), value)
+
 	dp.mu.Lock()
-	defer dp.mu.Unlock()
-
-	now := time.Now()
-	dp.store.Push(name, unit, now, value)
-
 	fe, ok := dp.forecast[name]
 	if !ok {
 		fe = NewForecastEngine(dp.config.ForecastWindow)
 		dp.forecast[name] = fe
 	}
+	dp.mu.Unlock()
+
 	fe.Push(value)
 
 	// Persist to database

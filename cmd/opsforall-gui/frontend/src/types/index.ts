@@ -869,7 +869,7 @@ export interface ActionPreview {
 export interface ChatMessage {
   role: string
   content: string
-  action?: ActionPreview
+  actions?: ActionPreview[]
 }
 
 export interface OllamaStatus {

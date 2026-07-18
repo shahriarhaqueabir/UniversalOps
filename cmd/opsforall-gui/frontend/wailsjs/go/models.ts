@@ -326,7 +326,7 @@ export namespace app {
 	}
 	export class ChatResponse {
 	    content: string;
-	    action?: common.ActionPreview;
+	    actions?: common.ActionPreview[];
 	    payload?: Record<string, any>;
 	
 	    static createFrom(source: any = {}) {
@@ -336,7 +336,7 @@ export namespace app {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.content = source["content"];
-	        this.action = this.convertValues(source["action"], common.ActionPreview);
+	        this.actions = this.convertValues(source["actions"], common.ActionPreview);
 	        this.payload = source["payload"];
 	    }
 	
