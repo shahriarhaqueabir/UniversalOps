@@ -61,7 +61,7 @@ export function ConfirmDialog({
             {description}
           </p>
 
-          <div className="mt-8 p-4 rounded-xl bg-panel-3 border border-border flex items-start gap-4">
+          <div className="mt-8 p-5 rounded-xl bg-panel-3 border border-border flex items-start gap-4">
             <div className="mt-1">
               <ShieldAlert size={20} className="text-warning" />
             </div>

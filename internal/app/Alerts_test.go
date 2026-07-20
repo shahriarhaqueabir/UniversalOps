@@ -6,7 +6,7 @@ import (
 
 func TestAlertAPI_GetActiveAlerts(t *testing.T) {
 	a := NewApp()
-	api := NewAlertAPI(a)
+	api := NewAlertAPI(a.alerts)
 	alerts := api.GetActiveAlerts()
 	if alerts == nil {
 		t.Fatal("GetActiveAlerts returned nil, expected non-nil slice")
@@ -15,7 +15,7 @@ func TestAlertAPI_GetActiveAlerts(t *testing.T) {
 
 func TestAlertAPI_GetAlertHistory(t *testing.T) {
 	a := NewApp()
-	api := NewAlertAPI(a)
+	api := NewAlertAPI(a.alerts)
 	alerts := api.GetAlertHistory()
 	if alerts == nil {
 		t.Fatal("GetAlertHistory returned nil, expected non-nil slice")
@@ -24,7 +24,7 @@ func TestAlertAPI_GetAlertHistory(t *testing.T) {
 
 func TestAlertAPI_GetRules(t *testing.T) {
 	a := NewApp()
-	api := NewAlertAPI(a)
+	api := NewAlertAPI(a.alerts)
 	rules := api.GetRules()
 	if rules == nil {
 		t.Fatal("GetRules returned nil, expected non-nil slice")
@@ -33,7 +33,7 @@ func TestAlertAPI_GetRules(t *testing.T) {
 
 func TestAlertAPI_GetAlertCount(t *testing.T) {
 	a := NewApp()
-	api := NewAlertAPI(a)
+	api := NewAlertAPI(a.alerts)
 	count := api.GetAlertCount()
 	if count < 0 {
 		t.Errorf("GetAlertCount returned %d, want >= 0", count)
@@ -42,13 +42,13 @@ func TestAlertAPI_GetAlertCount(t *testing.T) {
 
 func TestAlertAPI_ResolveAlert_Nonexistent(t *testing.T) {
 	a := NewApp()
-	api := NewAlertAPI(a)
+	api := NewAlertAPI(a.alerts)
 	api.ResolveAlert("nonexistent-id")
 }
 
 func TestAlertAPI_AddRule(t *testing.T) {
 	a := NewApp()
-	api := NewAlertAPI(a)
+	api := NewAlertAPI(a.alerts)
 	api.AddRule("cpu.percent", 90.0, "critical", "gt")
 	rules := api.GetRules()
 	if len(rules) == 0 {
@@ -58,7 +58,7 @@ func TestAlertAPI_AddRule(t *testing.T) {
 
 func TestAlertAPI_RemoveRule(t *testing.T) {
 	a := NewApp()
-	api := NewAlertAPI(a)
+	api := NewAlertAPI(a.alerts)
 	api.AddRule("cpu.percent", 90.0, "critical", "gt")
 	api.RemoveRule("cpu.percent", 90.0)
 	rules := api.GetRules()
@@ -71,7 +71,7 @@ func TestAlertAPI_RemoveRule(t *testing.T) {
 
 func TestAlertAPI_EvaluateNow(t *testing.T) {
 	a := NewApp()
-	api := NewAlertAPI(a)
+	api := NewAlertAPI(a.alerts)
 	fired := api.EvaluateNow()
 	if fired == nil {
 		t.Fatal("EvaluateNow returned nil, expected non-nil slice")
@@ -80,12 +80,12 @@ func TestAlertAPI_EvaluateNow(t *testing.T) {
 
 func TestAlertAPI_AddRule_InfoSeverity(t *testing.T) {
 	a := NewApp()
-	api := NewAlertAPI(a)
+	api := NewAlertAPI(a.alerts)
 	api.AddRule("mem.used", 85.0, "info", "gt")
 }
 
 func TestAlertAPI_AddRule_LtCondition(t *testing.T) {
 	a := NewApp()
-	api := NewAlertAPI(a)
+	api := NewAlertAPI(a.alerts)
 	api.AddRule("disk.free", 10.0, "warning", "lt")
 }

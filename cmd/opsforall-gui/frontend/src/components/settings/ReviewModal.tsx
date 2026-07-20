@@ -78,7 +78,7 @@ export function ReviewModal({ isOpen, onOpenChange }: ReviewModalProps) {
           </div>
 
           {/* Hawk Pre-Flight Gate */}
-          <div className="mb-6 p-4 rounded-2xl bg-[var(--color-panel-2)] border border-[var(--color-border)] flex items-start gap-4">
+          <div className="mb-6 p-5 rounded-2xl bg-[var(--color-panel-2)] border border-[var(--color-border)] flex items-start gap-4">
             <div className={cn(
               "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border shadow-inner",
               highestRisk === 'high' ? "bg-danger/10 text-danger border-danger/20" :
@@ -148,7 +148,7 @@ export function ReviewModal({ isOpen, onOpenChange }: ReviewModalProps) {
                 <FileCode size={14} className="text-violet-400" />
                 <p className="text-[10px] font-black uppercase tracking-widest text-violet-400">Neural Core Instructions Updated</p>
               </div>
-              <div className="max-h-32 overflow-y-auto bg-black/20 rounded-xl p-3 border border-violet-400/10">
+              <div className="max-h-32 overflow-y-auto bg-black/20 rounded-xl p-4 border border-violet-400/10">
                 <pre className="text-[9px] font-mono text-violet-200/70 whitespace-pre-wrap leading-relaxed">
                   {modelfileChange.split('\n').slice(0, 10).join('\n')}
                   {modelfileChange.split('\n').length > 10 && '\n... [truncated]'}

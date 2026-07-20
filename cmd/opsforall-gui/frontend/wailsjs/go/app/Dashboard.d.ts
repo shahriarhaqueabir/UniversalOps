@@ -6,4 +6,6 @@ export function GenerateDashboardBriefing():Promise<Array<app.BriefingSection>>;
 
 export function GetDashboardData():Promise<app.DashboardData>;
 
+export function GetSystemSnapshot():Promise<app.SystemSnapshot>;
+
 export function RunQuickDiag():Promise<Array<app.DiagnosticResult>>;

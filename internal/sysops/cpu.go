@@ -2,11 +2,35 @@ package sysops
 
 import (
 	"runtime"
-	"time"
+	"sync"
 
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/load"
 )
+
+var (
+	lastTimes   []cpu.TimesStat
+	lastTimesMu sync.Mutex
+)
+
+func calculateDelta(last, current []cpu.TimesStat) []float64 {
+	deltas := make([]float64, len(current))
+	for i := range current {
+		t1 := last[i]
+		t2 := current[i]
+
+		t1All := t1.User + t1.System + t1.Idle + t1.Nice + t1.Iowait + t1.Irq + t1.Softirq + t1.Steal
+		t2All := t2.User + t2.System + t2.Idle + t2.Nice + t2.Iowait + t2.Irq + t2.Softirq + t2.Steal
+
+		tAll := t2All - t1All
+		tIdle := t2.Idle - t1.Idle
+
+		if tAll > 0 {
+			deltas[i] = (float64(tAll - tIdle) / float64(tAll)) * 100
+		}
+	}
+	return deltas
+}
 
 // CPUStats holds CPU information.
 type CPUStats struct {
@@ -68,15 +92,29 @@ func GetCPUExtended() (*CPUExtendedStats, error) {
 
 // GetCPUStats returns current CPU usage and info.
 func GetCPUStats() (*CPUStats, error) {
-	// Single blocking call for total CPU percentage (500ms delta)
-	percent, err := cpu.Percent(500*time.Millisecond, false)
+	lastTimesMu.Lock()
+	defer lastTimesMu.Unlock()
+
+	currentTimes, err := cpu.Times(true)
 	if err != nil {
 		return nil, err
 	}
 
+	var perCPU []float64
+	if lastTimes != nil && len(lastTimes) == len(currentTimes) {
+		perCPU = calculateDelta(lastTimes, currentTimes)
+	} else {
+		perCPU = make([]float64, len(currentTimes))
+	}
+	lastTimes = currentTimes
+
 	cpuPercent := 0.0
-	if len(percent) > 0 {
-		cpuPercent = percent[0]
+	if len(perCPU) > 0 {
+		total := 0.0
+		for _, p := range perCPU {
+			total += p
+		}
+		cpuPercent = total / float64(len(perCPU))
 	}
 
 	logicalCores, _ := cpu.Counts(true)
@@ -85,15 +123,6 @@ func GetCPUStats() (*CPUStats, error) {
 	// If logicalCores is 0 (failure), fallback to runtime.NumCPU()
 	if logicalCores == 0 {
 		logicalCores = runtime.NumCPU()
-	}
-
-	var perCPU []float64
-	if logicalCores > 0 {
-		perCPUEstimate := cpuPercent / float64(logicalCores)
-		perCPU = make([]float64, logicalCores)
-		for i := range perCPU {
-			perCPU[i] = perCPUEstimate
-		}
 	}
 
 	// Get CPU info (instant, cached by gopsutil)

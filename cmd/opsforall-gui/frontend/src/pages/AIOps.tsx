@@ -76,11 +76,11 @@ function ChatBubble({ role, content, actions }: ChatMessage) {
   }
 
   return (
-    <div className={cn('flex gap-6 max-w-[90%] animate-in fade-in slide-in-from-bottom-2 duration-300', !isAssistant ? 'ml-auto flex-row-reverse' : '')}>
+    <div className={cn('flex gap-6 max-w-[95%] animate-in fade-in slide-in-from-bottom-2 duration-300', !isAssistant ? 'ml-auto flex-row-reverse' : '')}>
       <div
         className={cn(
-          'w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg border',
-          !isAssistant ? 'bg-[var(--color-accent)] border-[var(--color-accent)]/20' : 'bg-[var(--color-panel-3)] border-[var(--color-accent)]/20',
+          'w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-lg border transition-transform duration-500 hover:rotate-6',
+          !isAssistant ? 'bg-[var(--color-accent)] border-white/20 shadow-accent/20' : 'bg-[var(--color-panel-3)] border-[var(--color-border)]',
         )}
       >
         {!isAssistant ? (
@@ -89,23 +89,23 @@ function ChatBubble({ role, content, actions }: ChatMessage) {
           <Bot size={24} className="text-[var(--color-accent)]" />
         )}
       </div>
-      <div className="flex flex-col space-y-4 flex-1 min-w-0">
+      <div className="flex flex-col space-y-3 flex-1 min-w-0">
         <div
           className={cn(
-            'rounded-2xl px-6 py-4 text-base shadow-xl relative group',
+            'rounded-[2rem] px-8 py-6 text-base shadow-2xl relative group transition-all',
             !isAssistant
-              ? 'bg-[var(--color-accent)] text-white rounded-tr-none ml-auto'
+              ? 'bg-[var(--color-accent)] text-white rounded-tr-none ml-auto border-t-white/20'
               : 'bg-[var(--color-panel-2)] border border-[var(--color-border)] text-[var(--color-text)] rounded-tl-none',
           )}
         >
-          <div className="whitespace-pre-wrap leading-relaxed tabular-nums font-medium">{content}</div>
+          <div className="whitespace-pre-wrap leading-relaxed tabular-nums font-medium text-wrap-pretty">{content}</div>
           {isAssistant && (
             <button
               onClick={handleCopy}
-              className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[var(--color-panel-3)] text-[var(--color-text-faint)] hover:text-[var(--color-text)]"
+              className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all p-2 rounded-xl bg-panel-3/50 hover:bg-panel-3 text-[var(--color-text-faint)] hover:text-text border border-border"
               aria-label="Copy message"
             >
-              {copied ? <Check size={14} className="text-[var(--color-success)]" /> : <Copy size={14} />}
+              {copied ? <Check size={16} className="text-[var(--color-success)]" /> : <Copy size={16} />}
             </button>
           )}
         </div>
@@ -279,10 +279,10 @@ export function AIOps() {
             <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
                <BrainCircuit size={18} />
             </div>
-            <h1 className="text-sm font-black text-[var(--color-text)] uppercase tracking-[0.25em]">Neural Processing</h1>
+            <h1 className="text-sm font-black text-[var(--color-text)] uppercase tracking-[0.25em] text-wrap-balance">Neural Processing</h1>
           </div>
           <p className="text-3xl font-bold text-[var(--color-text)] tracking-tight">AI Operations Analyst</p>
-          <p className="text-[var(--color-text-dim)] text-xs font-semibold uppercase tracking-widest mt-2">Local intelligence for system diagnostics and trend analysis</p>
+          <p className="text-[var(--color-text-dim)] text-xs font-semibold uppercase tracking-widest mt-2 text-wrap-pretty">Local intelligence for system diagnostics and trend analysis</p>
         </div>
         <div className="flex items-center gap-4">
           {isPersonaMissing && (

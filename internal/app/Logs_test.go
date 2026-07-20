@@ -2,17 +2,16 @@ package app
 
 import (
 	"testing"
+
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
 func TestGetLogs(t *testing.T) {
-	app := NewApp()
-
 	// Initialize in-memory storage for test
 	common.InitStorage(":memory:")
 	defer common.GetStorage().Close()
 
-	l := NewLogs(app)
+	l := NewLogs()
 	logs := l.GetLogs("", "", 10)
 
 	// Should return empty slice if no logs yet, not nil

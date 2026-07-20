@@ -30,10 +30,45 @@ func startLogWorker() {
 	logWg.Add(1)
 	go func() {
 		defer logWg.Done()
-		for entry := range logChan {
+
+		var batch []logEntry
+		ticker := time.NewTicker(3 * time.Second)
+		defer ticker.Stop()
+
+		flush := func() {
+			if len(batch) == 0 {
+				return
+			}
 			s := GetStorage()
 			if s != nil && !s.CheckClosed() {
-				s.InsertLog(entry.level, "SYSTEM", entry.msg)
+				tx, err := s.Begin()
+				if err != nil {
+					return
+				}
+				query := `INSERT INTO logs (level, module, message, timestamp) VALUES (?, ?, ?, ?)`
+				for _, entry := range batch {
+					if _, err := tx.Exec(query, entry.level, "SYSTEM", entry.msg, time.Now().UTC().Format(time.RFC3339)); err != nil {
+						continue
+					}
+				}
+				_ = tx.Commit()
+			}
+			batch = nil
+		}
+
+		for {
+			select {
+			case entry, ok := <-logChan:
+				if !ok {
+					flush()
+					return
+				}
+				batch = append(batch, entry)
+				if len(batch) >= 50 {
+					flush()
+				}
+			case <-ticker.C:
+				flush()
 			}
 		}
 	}()
@@ -63,6 +98,13 @@ func InitLogger(filename string) error {
 		Timestamp().
 		Str("app", "allopsfull").
 		Logger()
+
+	// AUDIT: Default to Debug level to capture Phase 2 telemetry
+	if os.Getenv("GO_ENV") != "production" {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	}
 
 	logOnce.Do(startLogWorker)
 

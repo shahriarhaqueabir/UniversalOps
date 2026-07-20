@@ -3,6 +3,8 @@ package main
 import (
 	"embed"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -18,6 +20,14 @@ import (
 var assets embed.FS
 
 func main() {
+	// Start pprof server for Phase 0 instrumentation
+	go func() {
+		log.Println("pprof server starting on :6060")
+		if err := http.ListenAndServe("localhost:6060", nil); err != nil {
+			log.Printf("pprof server failed: %v", err)
+		}
+	}()
+
 	application := app.NewApp()
 
 	err := wails.Run(&options.App{
@@ -68,6 +78,7 @@ func main() {
 			application.AlertAPI,
 			application.Logs,
 			application.Timeline,
+			application.Workflows,
 		},
 	})
 

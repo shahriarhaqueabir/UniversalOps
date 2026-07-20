@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 )
 
@@ -13,20 +14,35 @@ import (
 type CapabilityID string
 
 const (
-	CapNmap       CapabilityID = "nmap"
-	CapDocker     CapabilityID = "docker"
-	CapOllama     CapabilityID = "ollama"
-	CapGit        CapabilityID = "git"
-	CapPowerShell CapabilityID = "pwsh"
+	CapNmap         CapabilityID = "nmap"
+	CapDocker       CapabilityID = "docker"
+	CapDockerCompose CapabilityID = "docker-compose"
+	CapPodman       CapabilityID = "podman"
+	CapKubernetes   CapabilityID = "k8s"
+	CapKubectl      CapabilityID = "kubectl"
+	CapHelm         CapabilityID = "helm"
+	CapTerraform    CapabilityID = "terraform"
+	CapOpenTofu     CapabilityID = "tofu"
+	CapOllama       CapabilityID = "ollama"
+	CapGit          CapabilityID = "git"
+	CapPowerShell   CapabilityID = "pwsh"
+	CapPython        CapabilityID = "python"
+	CapGo           CapabilityID = "go"
+	CapNode         CapabilityID = "node"
+	CapWireshark     CapabilityID = "wireshark"
+	CapSSH          CapabilityID = "ssh"
 )
 
 // CapabilityInfo provides status and path information for a detected capability.
 type CapabilityInfo struct {
-	ID        CapabilityID `json:"id"`
-	Available bool         `json:"available"`
-	Path      string       `json:"path"`
-	IsCustom  bool         `json:"is_custom"`
+	ID          CapabilityID `json:"id"`
+	Available   bool         `json:"available"`
+	Path        string       `json:"path"`
+	Version     string       `json:"version"`
+	IsCustom    bool         `json:"is_custom"`
+	IsSupported bool         `json:"is_supported"`
 }
+
 
 /**
  * CapabilityRegistry — Probes the local workstation for installed tools and binaries.
@@ -62,7 +78,13 @@ func (r *CapabilityRegistry) Refresh() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	ids := []CapabilityID{CapNmap, CapDocker, CapOllama, CapGit, CapPowerShell}
+	ids := []CapabilityID{
+		CapNmap, CapDocker, CapDockerCompose, CapPodman,
+		CapKubernetes, CapKubectl, CapHelm, CapTerraform, CapOpenTofu,
+		CapOllama, CapGit, CapPowerShell, CapPython, CapGo, CapNode,
+		CapWireshark, CapSSH,
+	}
+
 	for _, id := range ids {
 		var path string
 		var err error
@@ -89,22 +111,56 @@ func (r *CapabilityRegistry) Refresh() {
 
 		// 3. Standard PATH lookup
 		if path == "" {
-			path, err = exec.LookPath(string(id))
+			binaryName := string(id)
+			if id == CapPowerShell && runtime.GOOS == "windows" {
+				binaryName = "powershell"
+			} else if id == CapKubernetes {
+				binaryName = "kubectl"
+			}
+			path, err = exec.LookPath(binaryName)
 		}
 
-		// 3. Smart Windows Discovery (Heuristics - only for common apps)
+		// 4. Smart Windows Discovery
 		if err != nil && runtime.GOOS == "windows" {
 			path, err = r.discoverWindows(id)
 		}
 
+		version := ""
+		if err == nil {
+			version = r.detectVersion(id, path)
+		}
+
 		r.tools[id] = CapabilityInfo{
-			ID:        id,
-			Available: err == nil,
-			Path:      path,
-			IsCustom:  isCustom,
+			ID:          id,
+			Available:   err == nil,
+			Path:        path,
+			Version:     version,
+			IsCustom:    isCustom,
+			IsSupported: true, // Mark all as supported if detected for now
 		}
 	}
 }
+
+func (r *CapabilityRegistry) detectVersion(id CapabilityID, path string) string {
+	arg := "--version"
+	switch id {
+	case CapPowerShell, CapNmap:
+		arg = "-version"
+	case CapGo:
+		arg = "version"
+	}
+
+	cmd := exec.Command(path, arg)
+	out, err := cmd.Output()
+	if err != nil {
+		return "unknown"
+	}
+
+	// Simple first-line extraction
+	line := strings.Split(string(out), "\n")[0]
+	return strings.TrimSpace(line)
+}
+
 
 // discoverWindows performs heuristic probing for tools likely to be in non-standard paths.
 func (r *CapabilityRegistry) discoverWindows(id CapabilityID) (string, error) {

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"os/exec"
 	"strings"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -32,7 +33,9 @@ type FirewallProfile struct {
 // GetFirewallProfiles retrieves firewall profile status (Domain, Private, Public).
 func GetFirewallProfiles() ([]FirewallProfile, error) {
 	if common.IsWindows() {
-		cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-NoProfile", "-Command",
+		// Use direct exec.Command because Get-NetFirewallProfile needs registry access
+		// often restricted by sandboxing.
+		cmd := exec.Command("powershell", "-NoProfile", "-Command",
 			"Get-NetFirewallProfile -ErrorAction SilentlyContinue | Select-Object Name,Enabled | ConvertTo-Json -As Array -Depth 1")
 		output, err := cmd.Output()
 		if err != nil {
@@ -81,7 +84,7 @@ func GetFirewallProfiles() ([]FirewallProfile, error) {
 
 // getFirewallStatusFallback uses netsh as a fallback when Get-NetFirewallProfile fails.
 func getFirewallStatusFallback() ([]FirewallProfile, error) {
-	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "netsh", "advfirewall", "show", "allprofiles", "state")
+	cmd := exec.Command("netsh", "advfirewall", "show", "allprofiles", "state")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("netsh firewall fallback failed: %w", err)

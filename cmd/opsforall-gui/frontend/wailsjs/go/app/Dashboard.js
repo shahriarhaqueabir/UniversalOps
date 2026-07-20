@@ -10,6 +10,10 @@ export function GetDashboardData() {
   return window['go']['app']['Dashboard']['GetDashboardData']();
 }
 
+export function GetSystemSnapshot() {
+  return window['go']['app']['Dashboard']['GetSystemSnapshot']();
+}
+
 export function RunQuickDiag() {
   return window['go']['app']['Dashboard']['RunQuickDiag']();
 }

@@ -32,6 +32,42 @@ export function HawkSidebar({ isOpen, onClose }: HawkSidebarProps) {
     },
   ])
   const [loading, setLoading] = useState(false)
+  const [input, setInput] = useState('')
+
+  const handleSend = async () => {
+    if (!input.trim() || loading) return
+
+    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: input }
+    setMessages((prev) => [...prev, userMsg])
+    setInput('')
+    setLoading(true)
+
+    try {
+      const res = await call('AIOps.Chat', input) as { content: string; actions?: any }
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: res.content,
+        },
+      ])
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        { id: (Date.now() + 1).toString(), role: 'assistant', content: 'Chat failed: ' + err },
+      ])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+  }
 
   const handleOptimize = async () => {
     setLoading(true)
@@ -123,11 +159,17 @@ export function HawkSidebar({ isOpen, onClose }: HawkSidebarProps) {
         <div className="relative group">
           <input
             type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={loading}
             placeholder={`Message ${companionName}...`}
-            className="w-full bg-[var(--color-panel)] border border-[var(--color-border)] rounded-xl pl-4 pr-10 py-2.5 text-xs text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)] transition-all"
+            className="w-full bg-[var(--color-panel)] border border-[var(--color-border)] rounded-xl pl-4 pr-10 py-2.5 text-xs text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)] transition-all disabled:opacity-50"
           />
           <button
-            className="absolute right-2 top-1.5 p-1.5 rounded-lg bg-[var(--color-accent)] text-white hover:opacity-90 transition-all active:scale-95"
+            onClick={handleSend}
+            disabled={!input.trim() || loading}
+            className="absolute right-2 top-1.5 p-1.5 rounded-lg bg-[var(--color-accent)] text-white hover:opacity-90 transition-all active:scale-95 disabled:opacity-50"
           >
             <Send size={14} />
           </button>

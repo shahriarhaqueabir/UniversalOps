@@ -10,16 +10,14 @@ import (
 
 // SysOps exposes system operations bindings to the frontend.
 type SysOps struct {
-	app       *App
 	collector *sysopsFacade
 }
 
 type sysopsFacade struct{}
 
 // NewSysOps creates a new SysOps facade.
-func NewSysOps(app *App) *SysOps {
+func NewSysOps() *SysOps {
 	return &SysOps{
-		app:       app,
 		collector: &sysopsFacade{},
 	}
 }

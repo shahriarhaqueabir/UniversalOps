@@ -5,8 +5,7 @@ import (
 )
 
 func TestSysOps_GetCPUInfo(t *testing.T) {
-	a := NewApp()
-	s := NewSysOps(a)
+	s := NewSysOps()
 
 	info := s.GetCPUInfo()
 	// On most systems this should return something, on CI it might be empty
@@ -17,8 +16,7 @@ func TestSysOps_GetCPUInfo(t *testing.T) {
 }
 
 func TestSysOps_GetMemoryInfo(t *testing.T) {
-	a := NewApp()
-	s := NewSysOps(a)
+	s := NewSysOps()
 
 	info := s.GetMemoryInfo()
 	if info.TotalBytes == 0 {
@@ -27,8 +25,7 @@ func TestSysOps_GetMemoryInfo(t *testing.T) {
 }
 
 func TestSysOps_GetDiskInfo(t *testing.T) {
-	a := NewApp()
-	s := NewSysOps(a)
+	s := NewSysOps()
 
 	info := s.GetDiskInfo()
 	// Should at least return the struct
@@ -36,8 +33,7 @@ func TestSysOps_GetDiskInfo(t *testing.T) {
 }
 
 func TestSysOps_GetTopProcesses(t *testing.T) {
-	a := NewApp()
-	s := NewSysOps(a)
+	s := NewSysOps()
 
 	procs := s.GetTopProcesses(5)
 	if len(procs) > 5 {
@@ -46,8 +42,7 @@ func TestSysOps_GetTopProcesses(t *testing.T) {
 }
 
 func TestSysOps_GetSystemInfo(t *testing.T) {
-	a := NewApp()
-	s := NewSysOps(a)
+	s := NewSysOps()
 
 	info := s.GetSystemInfo()
 	if info.Hostname == "" {

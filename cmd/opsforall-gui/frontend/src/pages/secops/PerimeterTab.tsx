@@ -117,7 +117,7 @@ export function PerimeterTab() {
         <div className="max-h-[500px] overflow-y-auto pr-2 space-y-2">
           {ports.map((p, i) => (
             <div key={i} className={cn(
-              "flex items-center justify-between p-4 rounded-xl border transition-all duration-300",
+              "flex items-center justify-between p-5 rounded-xl border transition-all duration-300",
               p.is_external ? "bg-warning/5 border-warning/30" : "bg-panel-2 border-border/50"
             )}>
               <div className="flex items-center gap-4">

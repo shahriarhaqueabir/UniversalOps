@@ -5,10 +5,11 @@ import { TopBar } from './components/layout/TopBar'
 import { MainContent } from './components/layout/MainContent'
 import { HawkSidebar } from './components/layout/HawkSidebar'
 import { OnboardingModal } from './components/dialogs/OnboardingModal'
-import { useThemeStore, useAlertStore, useSettingsStore, useMetricsStore } from './stores'
-import type { AlertInfo, DashboardData } from './types'
+import { useThemeStore, useAlertStore, useSettingsStore } from './stores'
+import type { AlertInfo } from './types'
 
-export type Page = 'dashboard' | 'sysops' | 'netops' | 'secops' | 'devops' | 'aiops' | 'logs' | 'settings'
+export type Page = 'dashboard' | 'sysops' | 'workflows' | 'netops' | 'secops' | 'devops' | 'aiops' | 'logs' | 'settings'
+
 
 interface WailsRuntime {
   EventsOn: (event: string, handler: (...args: unknown[]) => void) => void
@@ -29,26 +30,35 @@ function App() {
   const pingCount = useSettingsStore((s) => s.pingCount)
   const dnsTimeout = useSettingsStore((s) => s.dnsTimeout)
   const addAlert = useAlertStore((s) => s.addAlert)
-  const setMetrics = useMetricsStore((s) => s.setMetrics)
 
   // Check onboarding status on mount
   useEffect(() => {
-    const checkOnboarded = async () => {
+    let cancelled = false
+    let retryTimer: ReturnType<typeof setTimeout> | null = null
+
+    const checkOnboarded = async (attempt = 0) => {
       try {
         const go = (window as any).go
         const method = go?.app?.App?.IsOnboarded
         if (method) {
           const res = await method()
-          setOnboarded(res)
+          if (!cancelled) setOnboarded(res)
+        } else if (attempt < 20) {
+          // Retry up to 20 times (10s total) then assume onboarded
+          retryTimer = setTimeout(() => checkOnboarded(attempt + 1), 500)
         } else {
-          // Retry logic or wait for runtime
-          setTimeout(checkOnboarded, 500)
+          if (!cancelled) setOnboarded(true)
         }
       } catch {
-        setOnboarded(true)
+        if (!cancelled) setOnboarded(true)
       }
     }
     checkOnboarded()
+
+    return () => {
+      cancelled = true
+      if (retryTimer) clearTimeout(retryTimer)
+    }
   }, [])
 
   // Sync all settings to backend whenever they change
@@ -71,7 +81,7 @@ function App() {
 
   // Global keyboard shortcuts
   useEffect(() => {
-    const pages: Page[] = ['dashboard', 'sysops', 'netops', 'secops', 'devops', 'aiops', 'logs', 'settings']
+    const pages: Page[] = ['dashboard', 'sysops', 'workflows', 'netops', 'secops', 'devops', 'aiops', 'logs', 'settings']
     const handler = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey) {
         const num = parseInt(e.key)
@@ -114,18 +124,28 @@ function App() {
     if (runtime?.EventsOn) {
       runtime.EventsOn('alert', handleAlertEvent)
 
-      const handleMetrics = (payload: unknown) => {
-        const d = (payload as any)?.data ?? payload
-        if (d && d.cpu) setMetrics(d as DashboardData)
-      }
-      runtime.EventsOn('metrics', handleMetrics)
-
       return () => {
         runtime.EventsOff('alert', handleAlertEvent)
-        runtime.EventsOff('metrics', handleMetrics)
       }
     }
-  }, [handleAlertEvent, setMetrics])
+  }, [handleAlertEvent])
+
+  // Show a neutral loading state while checking onboarding status
+  if (onboarded === null) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-[var(--color-bg)]">
+        <div className="flex flex-col items-center gap-3 text-[var(--color-text-faint)]">
+          <div className="w-8 h-8 rounded-lg bg-[var(--color-accent)]/20 flex items-center justify-center">
+            <svg className="w-4 h-4 text-[var(--color-accent)] animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          </div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em]">Initializing...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[var(--color-bg)] noise-overlay">

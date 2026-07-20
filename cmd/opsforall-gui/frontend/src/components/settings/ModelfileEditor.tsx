@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useBackend } from '@/hooks/useBackend'
 import { useConfigStore } from '@/stores/useConfigStore'
-import { FileCode, Loader2, Info, AlertTriangle } from 'lucide-react'
+import { FileCode, Loader2, Info, AlertTriangle, FileUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 /**
  * ModelfileEditor — Raw text editor for the AI's neural core.
@@ -41,6 +42,25 @@ export function ModelfileEditor() {
     stageChange('modelfile', newVal)
   }
 
+  const handleLoadFile = async () => {
+    try {
+      const path = await call('App.OpenFileDialog', 'Select Modelfile', ['Modelfile|*.modelfile', 'All Files|*.*'])
+      if (path) {
+        // Since we can't easily read arbitrary files via App.OpenFileDialog result in this specific bridge
+        // without a dedicated reader, we'll assume the user wants to load the CONTENT.
+        // Actually, let's add a ReadFile binding to App to make this useful.
+        const fileContent = await call('App.ReadTextFile', path)
+        if (fileContent) {
+          setContent(fileContent as string)
+          stageChange('modelfile', fileContent)
+          toast.success('Modelfile loaded into editor')
+        }
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to load file')
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center p-12 bg-[var(--color-panel-2)] rounded-2xl border border-[var(--color-border)] border-dashed">
@@ -64,11 +84,19 @@ export function ModelfileEditor() {
             <p className="text-[10px] text-[var(--color-text-dim)] mt-0.5">Edit the raw persona definition and parameters</p>
           </div>
         </div>
-        {isModified && (
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-violet-400/10 border border-violet-400/20 text-violet-400 text-[9px] font-black uppercase animate-pulse">
-            <AlertTriangle size={10} /> Staged for Deployment
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleLoadFile}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[9px] font-black uppercase text-white hover:bg-white/10 transition-all"
+          >
+            <FileUp size={12} /> Import File
+          </button>
+          {isModified && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-violet-400/10 border border-violet-400/20 text-violet-400 text-[9px] font-black uppercase animate-pulse">
+              <AlertTriangle size={10} /> Staged
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="relative group">

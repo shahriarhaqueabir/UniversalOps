@@ -8,7 +8,7 @@ import (
 
 func TestTimeline_GetTimelineEvents_DefaultFilter(t *testing.T) {
 	a := NewApp()
-	tl := NewTimeline(a)
+	tl := NewTimeline(a.eventBus, a.AIOps)
 	events := tl.GetTimelineEvents("", "", 10, 0)
 	if events == nil {
 		t.Fatal("GetTimelineEvents returned nil, expected non-nil slice")
@@ -17,7 +17,7 @@ func TestTimeline_GetTimelineEvents_DefaultFilter(t *testing.T) {
 
 func TestTimeline_GetTimelineEvents_WithCategory(t *testing.T) {
 	a := NewApp()
-	tl := NewTimeline(a)
+	tl := NewTimeline(a.eventBus, a.AIOps)
 	events := tl.GetTimelineEvents("system", "", 10, 0)
 	if events == nil {
 		t.Fatal("GetTimelineEvents with category returned nil, expected non-nil slice")
@@ -26,7 +26,7 @@ func TestTimeline_GetTimelineEvents_WithCategory(t *testing.T) {
 
 func TestTimeline_GetTimelineEvents_WithOffset(t *testing.T) {
 	a := NewApp()
-	tl := NewTimeline(a)
+	tl := NewTimeline(a.eventBus, a.AIOps)
 	events := tl.GetTimelineEvents("", "", 10, 100)
 	if events == nil {
 		t.Fatal("GetTimelineEvents with large offset returned nil, expected non-nil slice")
@@ -35,7 +35,7 @@ func TestTimeline_GetTimelineEvents_WithOffset(t *testing.T) {
 
 func TestTimeline_GetTimelineEvents_NegativeLimit(t *testing.T) {
 	a := NewApp()
-	tl := NewTimeline(a)
+	tl := NewTimeline(a.eventBus, a.AIOps)
 	events := tl.GetTimelineEvents("", "", -1, 0)
 	if events == nil {
 		t.Fatal("GetTimelineEvents with negative limit returned nil, expected non-nil slice")
@@ -44,7 +44,7 @@ func TestTimeline_GetTimelineEvents_NegativeLimit(t *testing.T) {
 
 func TestTimeline_GetTimelineEvents_OverLimit(t *testing.T) {
 	a := NewApp()
-	tl := NewTimeline(a)
+	tl := NewTimeline(a.eventBus, a.AIOps)
 	events := tl.GetTimelineEvents("", "", 9999, 0)
 	if events == nil {
 		t.Fatal("GetTimelineEvents with over-limit returned nil, expected non-nil slice")
@@ -53,7 +53,7 @@ func TestTimeline_GetTimelineEvents_OverLimit(t *testing.T) {
 
 func TestTimeline_GetTimelineEventByID_Nonexistent(t *testing.T) {
 	a := NewApp()
-	tl := NewTimeline(a)
+	tl := NewTimeline(a.eventBus, a.AIOps)
 	evt := tl.GetTimelineEventByID("nonexistent-id")
 	if evt != nil {
 		t.Log("GetTimelineEventByID returned non-nil for nonexistent ID (may be in bus)")
@@ -62,7 +62,7 @@ func TestTimeline_GetTimelineEventByID_Nonexistent(t *testing.T) {
 
 func TestTimeline_GetRelatedEvents_Nonexistent(t *testing.T) {
 	a := NewApp()
-	tl := NewTimeline(a)
+	tl := NewTimeline(a.eventBus, a.AIOps)
 	events := tl.GetRelatedEvents("nonexistent-id")
 	if events == nil {
 		t.Fatal("GetRelatedEvents returned nil, expected non-nil slice")
@@ -71,7 +71,7 @@ func TestTimeline_GetRelatedEvents_Nonexistent(t *testing.T) {
 
 func TestTimeline_GetTimelineCategories(t *testing.T) {
 	a := NewApp()
-	tl := NewTimeline(a)
+	tl := NewTimeline(a.eventBus, a.AIOps)
 	cats := tl.GetTimelineCategories()
 	if cats == nil {
 		t.Fatal("GetTimelineCategories returned nil, expected non-nil slice")
@@ -92,7 +92,7 @@ func TestTimeline_GetTimelineCategories(t *testing.T) {
 
 func TestTimeline_GetTimelineSummary_NegativeMinutes(t *testing.T) {
 	a := NewApp()
-	tl := NewTimeline(a)
+	tl := NewTimeline(a.eventBus, a.AIOps)
 	summary := tl.GetTimelineSummary(-1)
 	if summary == nil {
 		t.Fatal("GetTimelineSummary returned nil, expected non-nil map")
@@ -101,7 +101,7 @@ func TestTimeline_GetTimelineSummary_NegativeMinutes(t *testing.T) {
 
 func TestTimeline_GetTimelineSummary(t *testing.T) {
 	a := NewApp()
-	tl := NewTimeline(a)
+	tl := NewTimeline(a.eventBus, a.AIOps)
 	summary := tl.GetTimelineSummary(60)
 	if summary == nil {
 		t.Fatal("GetTimelineSummary returned nil, expected non-nil map")
@@ -110,7 +110,7 @@ func TestTimeline_GetTimelineSummary(t *testing.T) {
 
 func TestTimeline_ExplainEvents_Empty(t *testing.T) {
 	a := NewApp()
-	tl := NewTimeline(a)
+	tl := NewTimeline(a.eventBus, a.AIOps)
 	result := tl.ExplainEvents(nil)
 	if result == "" {
 		t.Error("ExplainEvents with nil returned empty string")
@@ -119,7 +119,7 @@ func TestTimeline_ExplainEvents_Empty(t *testing.T) {
 
 func TestTimeline_ExplainEvents_NonexistentIDs(t *testing.T) {
 	a := NewApp()
-	tl := NewTimeline(a)
+	tl := NewTimeline(a.eventBus, a.AIOps)
 	result := tl.ExplainEvents([]string{"id1", "id2"})
 	if result == "" {
 		t.Error("ExplainEvents with nonexistent IDs returned empty string")

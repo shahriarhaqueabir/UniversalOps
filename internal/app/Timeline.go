@@ -12,12 +12,16 @@ import (
 
 // Timeline exposes timeline operations to the frontend.
 type Timeline struct {
-	app *App
+	eventBus *common.EventBus
+	aiOps    *AIOps
 }
 
 // NewTimeline creates a new Timeline facade.
-func NewTimeline(app *App) *Timeline {
-	return &Timeline{app: app}
+func NewTimeline(eventBus *common.EventBus, aiOps *AIOps) *Timeline {
+	return &Timeline{
+		eventBus: eventBus,
+		aiOps:    aiOps,
+	}
 }
 
 // GetTimelineEvents returns timeline events with optional filters.
@@ -36,8 +40,11 @@ func (t *Timeline) GetTimelineEvents(category, level string, limit, offset int) 
 		}
 	}
 
-	// Fall back to in-memory bus
-	all := t.app.eventBus.All()
+	// Fallback to in-memory bus
+	if t.eventBus == nil {
+		return []TimelineEvent{}
+	}
+	all := t.eventBus.All()
 	var filtered []common.TimelineEvent
 	for _, e := range all {
 		if category != "" && string(e.Category) != category {
@@ -64,6 +71,11 @@ func (t *Timeline) GetTimelineEvents(category, level string, limit, offset int) 
 	}
 
 	return convertTimelineEvents(filtered)
+}
+
+// GetRecentEvents is a Batch IPC helper that avoids Wails event overhead for polls.
+func (t *Timeline) GetRecentEvents(limit int) []TimelineEvent {
+	return t.GetTimelineEvents("", "", limit, 0)
 }
 
 // GetTimelineEventByID returns a single event by ID.
@@ -164,11 +176,11 @@ func (t *Timeline) ExplainEvents(eventIDs []string) string {
 	}
 
 	// Try AI analysis
-	if t.app.AIOps != nil {
+	if t.aiOps != nil {
 		prompt := buildTimelineAnalysisPrompt(events)
-		ctx, cancel := t.app.AIOps.WithTimeout(30 * time.Second)
+		ctx, cancel := t.aiOps.WithTimeout(30 * time.Second)
 		defer cancel()
-		analysis, err := t.app.AIOps.AskAI(ctx, prompt)
+		analysis, err := t.aiOps.AskAI(ctx, prompt)
 		if err == nil && analysis != "" {
 			return analysis
 		}

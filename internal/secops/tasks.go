@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -24,7 +25,9 @@ type ScheduledTask struct {
 // GetScheduledTasks retrieves scheduled tasks.
 func GetScheduledTasks() ([]ScheduledTask, error) {
 	if common.IsWindows() {
-		cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-Command",
+		// Use direct exec.Command for Windows system tools because Get-ScheduledTask
+		// requires access often restricted by sandboxing.
+		cmd := exec.Command("powershell", "-Command",
 			"Get-ScheduledTask | Select-Object TaskName,State,NextRunTime,LastRunTime,Author,Triggers | ConvertTo-Json -Compress -Depth 1")
 		output, err := cmd.Output()
 		if err == nil {
@@ -34,7 +37,7 @@ func GetScheduledTasks() ([]ScheduledTask, error) {
 			}
 		}
 
-		cmd2 := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-Command",
+		cmd2 := exec.Command("powershell", "-Command",
 			"Get-ScheduledTask | Select-Object TaskName,State,NextRunTime,LastRunTime | ConvertTo-Json -Compress")
 		output2, err2 := cmd2.Output()
 		if err2 == nil {
@@ -67,8 +70,8 @@ func GetScheduledTasks() ([]ScheduledTask, error) {
 // tasksSchTasksFallback queries scheduled tasks via schtasks.exe as a fallback
 // when PowerShell is unavailable.
 func tasksSchTasksFallback() ([]ScheduledTask, error) {
-	// Try verbose format first (more fields)
-	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "cmd", "/c", "schtasks /query /v /fo csv")
+	// Try verbose format first (more fields). Using direct exec.Command.
+	cmd := exec.Command("cmd", "/c", "schtasks /query /v /fo csv")
 	output, err := cmd.Output()
 	if err == nil {
 		tasks, parseErr := parseTasksSchTasksCSV(string(output))
@@ -78,7 +81,7 @@ func tasksSchTasksFallback() ([]ScheduledTask, error) {
 	}
 
 	// Fallback: simpler format without /v
-	cmd2 := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "cmd", "/c", "schtasks /query /fo csv")
+	cmd2 := exec.Command("cmd", "/c", "schtasks /query /fo csv")
 	output2, err2 := cmd2.Output()
 	if err2 == nil {
 		tasks, parseErr := parseTasksSchTasksSimpleCSV(string(output2))

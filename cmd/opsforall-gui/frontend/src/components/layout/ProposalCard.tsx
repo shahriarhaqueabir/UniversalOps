@@ -26,7 +26,7 @@ export function ProposalCard({ reasoning, payload }: ProposalCardProps) {
 
   return (
     <div className="bg-[var(--color-panel-2)] border border-[var(--color-accent)]/30 rounded-2xl overflow-hidden shadow-lg animate-in slide-in-from-left-4 duration-300">
-      <div className="p-4 bg-[var(--color-accent)]/5 border-b border-[var(--color-accent)]/10">
+      <div className="p-5 bg-[var(--color-accent)]/5 border-b border-[var(--color-accent)]/10">
         <div className="flex items-center gap-2 mb-2">
           <Rocket size={14} className="text-[var(--color-accent)]" />
           <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-accent)]">Optimization Proposal</p>
@@ -36,7 +36,7 @@ export function ProposalCard({ reasoning, payload }: ProposalCardProps) {
         </p>
       </div>
 
-      <div className="p-4 space-y-3 bg-[var(--color-panel-3)]/50">
+      <div className="p-5 space-y-3 bg-[var(--color-panel-3)]/50">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-[var(--color-border)]/50">

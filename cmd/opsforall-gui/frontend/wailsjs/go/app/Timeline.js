@@ -6,6 +6,10 @@ export function ExplainEvents(arg1) {
   return window['go']['app']['Timeline']['ExplainEvents'](arg1);
 }
 
+export function GetRecentEvents(arg1) {
+  return window['go']['app']['Timeline']['GetRecentEvents'](arg1);
+}
+
 export function GetRelatedEvents(arg1) {
   return window['go']['app']['Timeline']['GetRelatedEvents'](arg1);
 }

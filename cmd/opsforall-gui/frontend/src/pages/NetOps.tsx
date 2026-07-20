@@ -98,32 +98,37 @@ export function NetOps() {
   const actionCategories = categories.filter(c => c.group === 'action')
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-bg)]">
+    <div className="flex flex-col h-full bg-[var(--color-bg)] animate-in fade-in duration-500">
       {/* Header */}
-      <div className="border-b border-[var(--color-border)] bg-[var(--color-panel-2)] py-3 px-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-4">
-              <Network size={32} className="text-[var(--color-accent)]" /> NETWORK OPERATIONS
-            </h1>
-            <p className="text-[var(--color-text-dim)] text-sm mt-1">Inspection, diagnosis, and action for network engineering workflows.</p>
-            <DataFreshnessIndicator lastUpdated={ifacesUpdatedAt ? new Date(ifacesUpdatedAt) : null} className="mt-1" />
+      <div className="py-8 border-b border-[var(--color-border)] bg-[var(--color-panel-2)]/50 flex items-center justify-between px-10">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
+               <Network size={18} />
+            </div>
+            <h1 className="text-sm font-black text-[var(--color-text)] uppercase tracking-[0.25em]">Traffic & Connectivity</h1>
           </div>
+          <p className="text-3xl font-bold text-[var(--color-text)] tracking-tight">Network Operations</p>
+          <p className="text-[var(--color-text-dim)] text-xs font-semibold uppercase tracking-widest mt-2">Inspection, diagnosis, and action for network engineering workflows.</p>
+          <DataFreshnessIndicator lastUpdated={ifacesUpdatedAt ? new Date(ifacesUpdatedAt) : null} className="mt-4" />
         </div>
       </div>
 
       {/* Content: Sidebar + Main */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
-        <div className="w-52 border-r border-[var(--color-border)] bg-[var(--color-panel-2)] overflow-y-auto p-2.5">
+        <div className="w-64 border-r border-[var(--color-border)] bg-[var(--color-panel)] overflow-y-auto p-4 scroll-smooth">
           <CategoryGroup label="INSPECTION" group="inspection" page="netops" categories={inspectionCategories} active={activeCategory} onSelect={setActiveCategory} />
           <CategoryGroup label="DIAGNOSIS" group="diagnosis" page="netops" categories={diagnosisCategories} active={activeCategory} onSelect={setActiveCategory} />
           <CategoryGroup label="ACTION" group="action" page="netops" categories={actionCategories} active={activeCategory} onSelect={setActiveCategory} />
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <Suspense fallback={<div className="flex items-center justify-center h-32 text-[var(--color-text-faint)] text-sm">Loading...</div>}>
+        <div className="flex-1 overflow-y-auto p-10 relative">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-10">
+            <div className="absolute -top-24 -left-24 w-96 h-96 bg-accent rounded-full blur-[120px]" />
+          </div>
+          <Suspense fallback={<div className="flex items-center justify-center h-full text-text-faint text-xs font-black uppercase tracking-widest animate-pulse">Synchronizing Topology...</div>}>
             {renderContent()}
           </Suspense>
         </div>

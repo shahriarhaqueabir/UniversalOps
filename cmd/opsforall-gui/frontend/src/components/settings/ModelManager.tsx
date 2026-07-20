@@ -71,7 +71,7 @@ export function ModelManager() {
         <div>
           <p className="text-sm font-bold text-danger uppercase tracking-tight">Ollama Not Detected</p>
           <p className="text-xs text-[var(--color-text-dim)] mt-1">
-            Ensure Ollama is running and accessible at http://localhost:11434.
+            Ensure Ollama is running and accessible at http://127.0.0.1:11434.
             Checked PATH and common installation directories.
           </p>
         </div>

@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -78,7 +79,19 @@ func (s *CollectorScheduler) run(c Collector) {
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), interval)
+
+		// Phase 0 Instrumentation: Start
+		var m1, m2 runtime.MemStats
+		runtime.ReadMemStats(&m1)
+		start := time.Now()
+
 		samples, err := c.Collect(ctx)
+
+		duration := time.Since(start)
+		runtime.ReadMemStats(&m2)
+		allocs := m2.Mallocs - m1.Mallocs
+		bytesAlloc := m2.TotalAlloc - m1.TotalAlloc
+
 		cancel()
 
 		if err != nil {
@@ -98,6 +111,10 @@ func (s *CollectorScheduler) run(c Collector) {
 			}
 			continue
 		}
+
+		// Phase 0 Instrumentation: Log telemetry
+		LogDebug("COLLECTOR_METRICS | id=%s | duration=%v | mallocs=%d | total_alloc=%d | samples=%d",
+			info.ID, duration, allocs, bytesAlloc, len(samples))
 
 		consecutiveErrors = 0
 		backoff = backoffInitial

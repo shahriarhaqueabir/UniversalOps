@@ -27,7 +27,9 @@ func newTestStorage(t *testing.T) *Storage {
 	s := GetStorage()
 	t.Cleanup(func() {
 		s.Close()
+		globalStorageMu.Lock()
 		globalStorage = nil
+		globalStorageMu.Unlock()
 	})
 	return s
 }

@@ -112,7 +112,7 @@ export function IdentityTab() {
           <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6 text-danger">Failed Login Attempts</h3>
           <div className="space-y-2">
             {failedLogins.map((fl, i) => (
-              <div key={i} className="flex items-center justify-between bg-panel-2 border border-border rounded-xl px-4 py-3">
+              <div key={i} className="flex items-center justify-between bg-panel-2 border border-border rounded-xl px-5 py-3">
                 <span className="text-sm font-bold text-text">{fl.username}</span>
                 <span className="text-sm text-text-dim">{fl.source_ip}</span>
                 <span className="text-sm font-bold text-danger tabular-nums">{fl.count} attempts</span>
@@ -128,7 +128,7 @@ export function IdentityTab() {
           <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6 text-warning">Locked Accounts</h3>
           <div className="space-y-2">
             {lockouts.map((l, i) => (
-              <div key={i} className="flex items-center justify-between bg-panel-2 border border-border rounded-xl px-4 py-3">
+              <div key={i} className="flex items-center justify-between bg-panel-2 border border-border rounded-xl px-5 py-3">
                 <span className="text-sm font-bold text-text">{l.username}</span>
                 <span className="text-sm text-text-dim">Locked since: {l.locked_since || 'Unknown'}</span>
               </div>

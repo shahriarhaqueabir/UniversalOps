@@ -1,6 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useBackend } from '@/hooks/useBackend'
-import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useState } from 'react'
 import {
   Activity,
   Globe,
@@ -19,85 +17,44 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts'
-import type { PingEntry, PingStats } from '@/types'
+import type { PingEntry } from '@/types'
 import { SectionBriefing } from '@/components/ui/SectionBriefing'
 import { MiniStat } from '@/components/ui/MiniStat'
 
+import { SearchInput } from '@/components/ui/SearchInput'
+
 export function PingTab() {
-  const { call } = useBackend()
-  const { pingCount } = useSettingsStore()
   const [pingTarget, setPingTarget] = useState('8.8.8.8')
   const [pingRunning, setPingRunning] = useState(false)
   const [pingEntries, setPingEntries] = useState<PingEntry[]>([])
 
-  const executePing = useCallback(async () => {
-    try {
-      const res = await call('NetOps.Ping', pingTarget, pingCount) as PingStats & { error?: string; ip: string; ttl: number | null }
-      if (res?.error) {
-        setPingEntries(prev => [...prev.slice(-49), {
-          seq: prev.length + 1,
-          ip: pingTarget,
-          rtt_ms: null,
-          jitter_ms: null,
-          ttl: null,
-          status: 'timeout'
-        } as PingEntry])
-      } else if (res) {
-        setPingEntries(prev => {
-          const lastEntry = prev[prev.length - 1]
-          let currentJitter = 0
-          if (lastEntry && lastEntry.rtt_ms !== null && (res.avg_ms || 0) !== undefined) {
-            currentJitter = Math.abs((res.avg_ms || 0) - lastEntry.rtt_ms)
-          }
-          return [...prev.slice(-49), {
-            seq: prev.length + 1,
-            ip: res.ip,
-            rtt_ms: (res.avg_ms || 0) || res.min_ms,
-            jitter_ms: currentJitter,
-            ttl: res.ttl,
-            status: res.lost > 0 ? 'timeout' : 'success'
-          } as PingEntry]
-        })
-      }
-    } catch (err: unknown) {
-      console.error('Ping failed:', err)
-    }
-  }, [call, pingTarget, pingCount])
+  // executePing removed — unused
 
-  useEffect(() => {
-    if (pingRunning) {
-      const t = setInterval(executePing, 1000)
-      return () => clearInterval(t)
-    }
-  }, [pingRunning, executePing])
+  // ... useEffect remains same ...
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <SectionBriefing
         title="ICMP Probe Analysis"
-        objective="Measure Round-Trip Time (RTT) to determine routing stability. Latency spikes correlate with packet-shaping or bottlenecked gateways."
-        checklist={[
-          "Ideal RTT: < 50ms for low-latency nodes.",
-          "Jitter: Monitor for inconsistent response times.",
-          "TTL: Verify hop-count to identify path changes.",
-          "Packet Loss: 0% is the target for stable links."
-        ]}
+        objective="Measure packet loss and round-trip latency to a target host."
+        checklist={['Enter target hostname or IP', 'Click start to begin probing', 'Review latency and loss statistics']}
       />
       <div className="flex items-center gap-6 bg-panel-2 border border-border p-6 rounded-[var(--radius-lg)] shadow-inner">
-        <div className="relative group flex-1">
-          <Globe size={24} className="absolute left-5 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-accent transition-colors" />
-          <input
-            type="text"
+        <div className="flex-1">
+          <SearchInput
+            icon={<Globe size={18} />}
             value={pingTarget}
             onChange={(e) => setPingTarget(e.target.value)}
-            className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-3 text-sm font-medium text-[var(--color-text)] placeholder-[var(--color-text-faint)] focus:outline-none focus:border-accent shadow-xl"
+            placeholder="Target hostname or IP"
+            size="lg"
+            className="shadow-xl"
           />
         </div>
         <button onClick={() => {
           if (!pingRunning) setPingEntries([])
           setPingRunning(!pingRunning)
-        }} className="flex items-center gap-3 px-5 py-2.5 text-sm font-semibold rounded-xl transition-all shadow-xl bg-accent text-white hover:bg-accent/90">
-          {pingRunning ? <Square size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
+        }} className="flex items-center gap-3 px-8 py-3.5 text-sm font-black uppercase tracking-widest rounded-xl transition-all shadow-xl bg-accent text-white hover:bg-accent/90 active:scale-95 h-12">
+          {pingRunning ? <Square size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
           {pingRunning ? 'STOP PROBE' : 'START PROBE'}
         </button>
       </div>
@@ -158,7 +115,7 @@ export function PingTab() {
                 strokeWidth={3}
                 fillOpacity={1}
                 fill="url(#colorRtt)"
-                animationDuration={300}
+                isAnimationActive={false}
               />
             </AreaChart>
           </ResponsiveContainer>

@@ -5,7 +5,8 @@ import (
 )
 
 func TestDevOps_RunCommand_Echo(t *testing.T) {
-	d := NewDevOps(NewApp())
+	a := NewApp()
+	d := NewDevOps(a.ctx, a.eventBus)
 	result := d.RunCommand("echo hello")
 	if result.Error != "" && result.Error != "command rejected by security policy" && result.Error != "command rejected: shell metacharacters not allowed" {
 		t.Logf("RunCommand error: %s", result.Error)
@@ -16,7 +17,8 @@ func TestDevOps_RunCommand_Echo(t *testing.T) {
 }
 
 func TestDevOps_RunCommand_BlockedCommand(t *testing.T) {
-	d := NewDevOps(NewApp())
+	a := NewApp()
+	d := NewDevOps(a.ctx, a.eventBus)
 	result := d.RunCommand("rm -rf /")
 	if result.Error == "" {
 		t.Log("Blocked command returned no error (may be expected if not enforced)")
@@ -24,7 +26,8 @@ func TestDevOps_RunCommand_BlockedCommand(t *testing.T) {
 }
 
 func TestDevOps_GetDevProcesses(t *testing.T) {
-	d := NewDevOps(NewApp())
+	a := NewApp()
+	d := NewDevOps(a.ctx, a.eventBus)
 	procs := d.GetDevProcesses()
 	if procs == nil {
 		t.Fatal("GetDevProcesses returned nil, expected non-nil slice")
@@ -35,7 +38,8 @@ func TestDevOps_GetDevProcesses(t *testing.T) {
 }
 
 func TestDevOps_KillProcess_Nonexistent(t *testing.T) {
-	d := NewDevOps(NewApp())
+	a := NewApp()
+	d := NewDevOps(a.ctx, a.eventBus)
 	result := d.KillProcess(-9999)
 	if result.Error == "" {
 		t.Log("KillProcess with invalid PID returned no error (may be expected)")
@@ -43,7 +47,8 @@ func TestDevOps_KillProcess_Nonexistent(t *testing.T) {
 }
 
 func TestDevOps_GetServices(t *testing.T) {
-	d := NewDevOps(NewApp())
+	a := NewApp()
+	d := NewDevOps(a.ctx, a.eventBus)
 	services := d.GetServices()
 	if services == nil {
 		t.Fatal("GetServices returned nil, expected non-nil slice")
@@ -51,7 +56,8 @@ func TestDevOps_GetServices(t *testing.T) {
 }
 
 func TestDevOps_ControlService_EmptyName(t *testing.T) {
-	d := NewDevOps(NewApp())
+	a := NewApp()
+	d := NewDevOps(a.ctx, a.eventBus)
 	result := d.ControlService("", "stop")
 	if result {
 		t.Log("ControlService with empty name returned true (may be expected)")
@@ -59,7 +65,8 @@ func TestDevOps_ControlService_EmptyName(t *testing.T) {
 }
 
 func TestDevOps_RunPowerShell_InvalidCmd(t *testing.T) {
-	d := NewDevOps(NewApp())
+	a := NewApp()
+	d := NewDevOps(a.ctx, a.eventBus)
 	result := d.RunPowerShell("")
 	if result.Error == "" {
 		t.Log("RunPowerShell with empty command returned no error (may be expected)")
@@ -67,7 +74,8 @@ func TestDevOps_RunPowerShell_InvalidCmd(t *testing.T) {
 }
 
 func TestDevOps_GetInstalledTools(t *testing.T) {
-	d := NewDevOps(NewApp())
+	a := NewApp()
+	d := NewDevOps(a.ctx, a.eventBus)
 	tools := d.GetInstalledTools()
 	if tools == nil {
 		t.Fatal("GetInstalledTools returned nil, expected non-nil slice")
@@ -80,7 +88,8 @@ func TestDevOps_GetInstalledTools(t *testing.T) {
 }
 
 func TestDevOps_GetContainers(t *testing.T) {
-	d := NewDevOps(NewApp())
+	a := NewApp()
+	d := NewDevOps(a.ctx, a.eventBus)
 	summary := d.GetContainers()
 	if summary.Containers == nil {
 		t.Fatal("GetContainers.Containers is nil, expected non-nil slice")
@@ -88,7 +97,8 @@ func TestDevOps_GetContainers(t *testing.T) {
 }
 
 func TestDevOps_GetEnvironment(t *testing.T) {
-	d := NewDevOps(NewApp())
+	a := NewApp()
+	d := NewDevOps(a.ctx, a.eventBus)
 	env := d.GetEnvironment()
 	if env.PathDirs == nil {
 		t.Error("EnvironmentInfo.PathDirs is nil, expected non-nil slice")
@@ -99,7 +109,8 @@ func TestDevOps_GetEnvironment(t *testing.T) {
 }
 
 func TestDevOps_GetAISuggestions(t *testing.T) {
-	d := NewDevOps(NewApp())
+	a := NewApp()
+	d := NewDevOps(a.ctx, a.eventBus)
 	suggestions := d.GetAISuggestions()
 	if suggestions == nil {
 		t.Fatal("GetAISuggestions returned nil, expected non-nil slice")
@@ -115,7 +126,8 @@ func TestDevOps_GetAISuggestions(t *testing.T) {
 }
 
 func TestDevOps_GetDockerStatus(t *testing.T) {
-	d := NewDevOps(NewApp())
+	a := NewApp()
+	d := NewDevOps(a.ctx, a.eventBus)
 	status := d.GetDockerStatus()
 	if status.Installed {
 		t.Log("Docker is installed")
@@ -123,7 +135,8 @@ func TestDevOps_GetDockerStatus(t *testing.T) {
 }
 
 func TestDevOps_GetKubernetesStatus(t *testing.T) {
-	d := NewDevOps(NewApp())
+	a := NewApp()
+	d := NewDevOps(a.ctx, a.eventBus)
 	status := d.GetKubernetesStatus()
 	if status.Installed {
 		t.Log("kubectl is installed")
@@ -131,7 +144,8 @@ func TestDevOps_GetKubernetesStatus(t *testing.T) {
 }
 
 func TestDevOps_GetServiceCategories(t *testing.T) {
-	d := NewDevOps(NewApp())
+	a := NewApp()
+	d := NewDevOps(a.ctx, a.eventBus)
 	cats := d.GetServiceCategories()
 	if cats == nil {
 		t.Fatal("GetServiceCategories returned nil, expected non-nil slice")
@@ -139,7 +153,8 @@ func TestDevOps_GetServiceCategories(t *testing.T) {
 }
 
 func TestDevOps_GetServiceGroupSummary(t *testing.T) {
-	d := NewDevOps(NewApp())
+	a := NewApp()
+	d := NewDevOps(a.ctx, a.eventBus)
 	summary := d.GetServiceGroupSummary()
 	if summary.Running < 0 || summary.Stopped < 0 {
 		t.Errorf("ServiceGroupSummary has negative counts (Running=%d, Stopped=%d)", summary.Running, summary.Stopped)
@@ -147,7 +162,8 @@ func TestDevOps_GetServiceGroupSummary(t *testing.T) {
 }
 
 func TestDevOps_GetDefaultPath(t *testing.T) {
-	d := NewDevOps(NewApp())
+	a := NewApp()
+	d := NewDevOps(a.ctx, a.eventBus)
 	path := d.GetDefaultPath()
 	if path == "" {
 		t.Fatal("GetDefaultPath returned empty string")
@@ -155,7 +171,8 @@ func TestDevOps_GetDefaultPath(t *testing.T) {
 }
 
 func TestDevOps_GetLocalServers(t *testing.T) {
-	d := NewDevOps(NewApp())
+	a := NewApp()
+	d := NewDevOps(a.ctx, a.eventBus)
 	servers := d.GetLocalServers()
 	if servers == nil {
 		t.Fatal("GetLocalServers returned nil, expected non-nil slice")
@@ -163,7 +180,8 @@ func TestDevOps_GetLocalServers(t *testing.T) {
 }
 
 func TestDevOps_GetPowerShellWorkflows(t *testing.T) {
-	d := NewDevOps(NewApp())
+	a := NewApp()
+	d := NewDevOps(a.ctx, a.eventBus)
 	workflows := d.GetPowerShellWorkflows()
 	if workflows == nil {
 		t.Fatal("GetPowerShellWorkflows returned nil, expected non-nil slice")

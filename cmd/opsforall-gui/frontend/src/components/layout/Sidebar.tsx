@@ -11,6 +11,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Library,
 } from 'lucide-react'
 import type { Page } from '../../App'
 import { cn } from '../../lib/utils'
@@ -25,15 +26,16 @@ interface NavItem {
 const opsItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, shortcut: 1 },
   { id: 'sysops', label: 'System Ops', icon: <Monitor size={20} />, shortcut: 2 },
-  { id: 'netops', label: 'Network Ops', icon: <Network size={20} />, shortcut: 3 },
-  { id: 'secops', label: 'Security Ops', icon: <Shield size={20} />, shortcut: 4 },
-  { id: 'devops', label: 'DevOps', icon: <Terminal size={20} />, shortcut: 5 },
-  { id: 'aiops', label: 'AI Ops', icon: <Bot size={20} />, shortcut: 6 },
+  { id: 'workflows', label: 'Workflow Library', icon: <Library size={20} />, shortcut: 3 },
+  { id: 'netops', label: 'Network Ops', icon: <Network size={20} />, shortcut: 4 },
+  { id: 'secops', label: 'Security Ops', icon: <Shield size={20} />, shortcut: 5 },
+  { id: 'devops', label: 'DevOps', icon: <Terminal size={20} />, shortcut: 6 },
+  { id: 'aiops', label: 'AI Ops', icon: <Bot size={20} />, shortcut: 7 },
 ]
 
 const toolsItems: NavItem[] = [
-  { id: 'logs', label: 'Logs', icon: <ScrollText size={20} />, shortcut: 7 },
-  { id: 'settings', label: 'Settings', icon: <Settings size={20} />, shortcut: 8 },
+  { id: 'logs', label: 'Logs', icon: <ScrollText size={20} />, shortcut: 8 },
+  { id: 'settings', label: 'Settings', icon: <Settings size={20} />, shortcut: 9 },
 ]
 
 interface SidebarProps {

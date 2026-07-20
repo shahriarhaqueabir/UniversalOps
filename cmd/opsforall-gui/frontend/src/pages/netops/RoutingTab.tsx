@@ -73,7 +73,7 @@ export function RoutingTab() {
             {defaultRoutes.map((route, idx) => (
               <div
                 key={`default-${idx}`}
-                className="flex items-center gap-4 bg-accent/5 border border-accent/20 rounded-xl px-4 py-3"
+                className="flex items-center gap-4 bg-accent/5 border border-accent/20 rounded-xl px-5 py-3"
               >
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-accent/15 border border-accent/30">
                   <Globe size={16} className="text-accent" />

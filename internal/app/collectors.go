@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/shirou/gopsutil/v4/load"
-	"github.com/shirou/gopsutil/v4/process"
 	"github.com/shirou/gopsutil/v4/sensors"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -174,12 +173,8 @@ func (c *processCountCollector) Info() common.CollectorInfo {
 }
 
 func (c *processCountCollector) Collect(ctx context.Context) ([]common.MetricSample, error) {
-	info, err := sysops.GetSystemInfo()
-	if err != nil {
-		return nil, err
-	}
 	return []common.MetricSample{
-		{Name: "process.count", Unit: "count", Value: float64(info.ProcessCount)},
+		{Name: "process.count", Unit: "count", Value: float64(sysops.GetProcessCount())},
 	}, nil
 }
 
@@ -292,25 +287,39 @@ func (c *openFDCollector) Info() common.CollectorInfo {
 		Name:            "Open File Descriptors",
 		Description:     "Total open file descriptors across all processes",
 		DefaultInterval: 15 * time.Second,
-		DefaultEnabled:  false, // requires per-process scan, expensive on Windows
+		DefaultEnabled:  false, // expensive, now uses cached snapshot
 	}
 }
 
 func (c *openFDCollector) Collect(ctx context.Context) ([]common.MetricSample, error) {
-	procs, err := process.Processes()
-	if err != nil {
-		return nil, err
+	return []common.MetricSample{
+		{Name: "system.open_fds", Unit: "count", Value: float64(sysops.GetTotalOpenFDs())},
+	}, nil
+}
+
+// ── GPU Collector ────────────────────────────────────────────────────────────
+
+type gpuCollector struct {
+	sysOps *SysOps
+}
+
+func (c *gpuCollector) Info() common.CollectorInfo {
+	return common.CollectorInfo{
+		ID:              common.CollectorID("gpu"),
+		Name:            "GPU Status",
+		Description:     "GPU hardware details and memory",
+		DefaultInterval: 30 * time.Second,
+		DefaultEnabled:  true,
 	}
-	var totalFDs int32
-	for _, p := range procs {
-		fds, err := p.NumFDs()
-		if err != nil {
-			continue // skip processes we can't read
-		}
-		totalFDs += fds
+}
+
+func (c *gpuCollector) Collect(ctx context.Context) ([]common.MetricSample, error) {
+	gpu := c.sysOps.GetGPUInfo()
+	if !gpu.Detected {
+		return nil, nil
 	}
 	return []common.MetricSample{
-		{Name: "system.open_fds", Unit: "count", Value: float64(totalFDs)},
+		{Name: "gpu.memory.total", Unit: "GB", Value: gpu.MemoryGB},
 	}, nil
 }
 
@@ -321,6 +330,7 @@ func RegisterCollectors(registry *common.CollectorRegistry, app *App) {
 	registry.Register(&memoryCollector{})
 	registry.Register(&diskCollector{})
 	registry.Register(&networkCollector{netOps: app.NetOps})
+	registry.Register(&gpuCollector{sysOps: app.SysOps})
 	registry.Register(&temperatureCollector{})
 	registry.Register(&processCountCollector{})
 	registry.Register(&uptimeCollector{})

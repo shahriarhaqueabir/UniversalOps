@@ -10,6 +10,19 @@ type AppInfo struct {
 	Uptime    string `json:"uptime"`
 }
 
+// EnvReport holds information about the host environment.
+type EnvReport struct {
+	Hostname    string   `json:"hostname"`
+	CPU         string   `json:"cpu"`
+	Cores       int      `json:"cores"`
+	Memory      string   `json:"memory"`
+	OS          string   `json:"os"`
+	Arch        string   `json:"arch"`
+	Interfaces  []string `json:"interfaces"`
+	PackageMgrs []string `json:"package_mgrs"`
+	Shells      []string `json:"shells"`
+}
+
 // ── Dashboard Types ──────────────────────────────────────────────────────────
 
 // DiagnosticResult holds a quick diagnostic check result.
@@ -40,6 +53,14 @@ type DashboardData struct {
 	Connections int           `json:"connections"`
 	Alerts      int           `json:"alerts"`
 	Uptime      string        `json:"uptime"`
+}
+
+// SystemSnapshot provides a single-call state for Batch IPC.
+type SystemSnapshot struct {
+	Metrics   DashboardData   `json:"metrics"`
+	Timeline  []TimelineEvent `json:"timeline"`
+	Alerts    []AlertInfo     `json:"alerts"`
+	Timestamp string          `json:"timestamp"`
 }
 
 // GaugeMetric holds a single gauge value with optional history and forecast.
@@ -253,6 +274,22 @@ type ExtendedDiagnosticResult struct {
 }
 
 // ── NetOps Types ─────────────────────────────────────────────────────────────
+
+// NetworkHealthCheck holds a single network health check result.
+type NetworkHealthCheck struct {
+	Name   string `json:"name"`
+	Status string `json:"status"` // "pass", "warn", "fail"
+	Detail string `json:"detail"`
+	Score  int    `json:"score"`
+}
+
+// NetworkHealthReport holds the full network health check report for the frontend.
+type NetworkHealthReport struct {
+	Score    int                  `json:"score"`
+	Checks   []NetworkHealthCheck `json:"checks"`
+	Summary  string               `json:"summary"`
+	Duration string               `json:"duration"`
+}
 
 // PingResult holds the results of a ping operation.
 type PingResult struct {

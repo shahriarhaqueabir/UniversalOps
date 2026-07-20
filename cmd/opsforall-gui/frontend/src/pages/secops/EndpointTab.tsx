@@ -39,6 +39,10 @@ export function EndpointTab() {
         title="Endpoint Security"
         objective="Verify disk encryption, secure boot, and running services to ensure endpoint hardening."
         checklist={['Full disk encryption status', 'Secure Boot verification', 'Running services inventory', 'Service startup types']}
+        why="Endpoints are the front line of physical and network security. Ensuring they are 'locked' prevents local data exfiltration and persistent boot-level threats."
+        risks={['Insecure boot can allow rootkits', 'Unencrypted drives are vulnerable to theft', 'Rogue services can bypass firewalls']}
+        typicalValues="Secure Boot: ON, Disk: Encrypted (BitLocker/FileVault), Services: No unknown auto-start items"
+        recommendedActions={['Enable BitLocker/FileVault', 'Review auto-start services', 'Enable TPM 2.0 if available']}
       />
 
       <div className="grid grid-cols-4 gap-4">
@@ -55,7 +59,7 @@ export function EndpointTab() {
         </h3>
         <div className="space-y-3">
           {disks.map((d, i) => (
-            <div key={i} className="flex items-center justify-between bg-panel-2 border border-border rounded-xl px-4 py-3">
+            <div key={i} className="flex items-center justify-between bg-panel-2 border border-border rounded-xl px-5 py-3">
               <span className="text-sm font-bold text-text">{d.volume}</span>
               <StatusBadge status={d.encrypted ? 'enabled' : 'disabled'} />
               <span className="text-sm text-text-dim">{d.method}</span>

@@ -10,15 +10,10 @@ import (
 
 // processMetadata caches static process information.
 type processMetadata struct {
-	Name      string
-	PPID      int32
-	LastSeen  time.Time
+	Name     string
+	PPID     int32
+	LastSeen time.Time
 }
-
-var (
-	procCache   = make(map[int32]processMetadata)
-	procCacheMu sync.RWMutex
-)
 
 // ProcessInfo holds information about a single process.
 type ProcessInfo struct {
@@ -32,24 +27,29 @@ type ProcessInfo struct {
 	NumFDs int32
 }
 
-// GetTopProcesses returns the top N processes by CPU usage.
-// Uses a metadata cache to reduce overhead of redundant syscalls for static info.
-func GetTopProcesses(n int) ([]ProcessInfo, error) {
+var (
+	procCache   = make(map[int32]processMetadata)
+	procCacheMu sync.RWMutex
+
+	lastSnapshot   []ProcessInfo
+	lastSnapshotMu sync.RWMutex
+	lastSnapshotAt time.Time
+)
+
+// UpdateProcessSnapshot performs a full system process scan and caches the result.
+// This is intended to be called by a background worker to avoid blocking collectors.
+func UpdateProcessSnapshot() error {
 	procs, err := process.Processes()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	now := time.Now()
-	var result []ProcessInfo
-
-	// Pre-size result slice to avoid reallocations
-	result = make([]ProcessInfo, 0, len(procs))
+	result := make([]ProcessInfo, 0, len(procs))
 
 	for _, p := range procs {
 		pid := p.Pid
 
-		// 1. Resolve Metadata (Cache-First)
 		procCacheMu.RLock()
 		meta, found := procCache[pid]
 		procCacheMu.RUnlock()
@@ -65,37 +65,20 @@ func GetTopProcesses(n int) ([]ProcessInfo, error) {
 			procCacheMu.Lock()
 			procCache[pid] = meta
 			procCacheMu.Unlock()
-		} else {
-			// Update last seen to prevent cache eviction
-			procCacheMu.Lock()
-			meta.LastSeen = now
-			procCache[pid] = meta
-			procCacheMu.Unlock()
 		}
 
-		// 2. Fetch Dynamic Metrics
-		// Note: CPUPercent(0) returns usage since last call for this *process object.
-		// If we create a new object every time, we might get 0 or weird values.
-		// However, gopsutil v4 handles some internal caching if configured.
 		cpu, _ := p.CPUPercent()
-
-		memInfo, err := p.MemoryInfo()
+		memInfo, _ := p.MemoryInfo()
 		rss := float32(0)
-		if err == nil && memInfo != nil {
-			rss = float32(memInfo.RSS) / 1024 / 1024 // MB
+		if memInfo != nil {
+			rss = float32(memInfo.RSS) / 1024 / 1024
 		}
-
 		memPct, _ := p.MemoryPercent()
-
-		status, err := p.Status()
+		status, _ := p.Status()
 		statusStr := ""
-		if err == nil && len(status) > 0 {
+		if len(status) > 0 {
 			statusStr = status[0]
 		}
-
-		// 3. Optional but expensive: NumFDs
-		// Only fetch for top processes? No, we need it for all if we want to sort accurately by something else.
-		// For now, keep it but monitor performance.
 		fdCount, _ := p.NumFDs()
 
 		result = append(result, ProcessInfo{
@@ -110,27 +93,61 @@ func GetTopProcesses(n int) ([]ProcessInfo, error) {
 		})
 	}
 
-	// 4. Periodic Cache Eviction (cleanup dead PIDs)
-	go func() {
-		procCacheMu.Lock()
-		defer procCacheMu.Unlock()
-		if len(procCache) > 2000 { // Only cleanup if cache grows large
-			for pid, meta := range procCache {
-				if now.Sub(meta.LastSeen) > 5*time.Minute {
-					delete(procCache, pid)
-				}
-			}
-		}
-	}()
-
 	// Sort by CPU descending
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].CPU > result[j].CPU
 	})
 
+	lastSnapshotMu.Lock()
+	lastSnapshot = result
+	lastSnapshotAt = now
+	lastSnapshotMu.Unlock()
+
+	return nil
+}
+
+// GetTopProcesses returns the top N processes from the latest snapshot.
+func GetTopProcesses(n int) ([]ProcessInfo, error) {
+	lastSnapshotMu.RLock()
+	snap := lastSnapshot
+	lastSnapshotMu.RUnlock()
+
+	if snap == nil {
+		// Update outside the lock to avoid self-deadlock (UpdateProcessSnapshot
+		// also acquires lastSnapshotMu.Lock).
+		if err := UpdateProcessSnapshot(); err != nil {
+			return nil, err
+		}
+		lastSnapshotMu.RLock()
+		snap = lastSnapshot
+		lastSnapshotMu.RUnlock()
+	}
+
+	result := snap
 	if n > 0 && len(result) > n {
 		result = result[:n]
 	}
 
-	return result, nil
+	// Return a copy to prevent race conditions on slice header
+	out := make([]ProcessInfo, len(result))
+	copy(out, result)
+	return out, nil
+}
+
+// GetProcessCount returns the number of processes in the latest snapshot.
+func GetProcessCount() int {
+	lastSnapshotMu.RLock()
+	defer lastSnapshotMu.RUnlock()
+	return len(lastSnapshot)
+}
+
+// GetTotalOpenFDs returns the aggregate number of open FDs in the latest snapshot.
+func GetTotalOpenFDs() int32 {
+	lastSnapshotMu.RLock()
+	defer lastSnapshotMu.RUnlock()
+	var total int32
+	for _, p := range lastSnapshot {
+		total += p.NumFDs
+	}
+	return total
 }

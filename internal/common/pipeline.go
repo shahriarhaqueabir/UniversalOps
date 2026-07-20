@@ -28,6 +28,10 @@ type CollectionConfig struct {
 
 	// DNSTimeout is the default timeout in milliseconds for DNS lookups.
 	DNSTimeout int
+
+	// MaxSeries is the maximum number of unique metrics allowed in the pipeline.
+	// Used to prevent OOM from dynamic metric naming.
+	MaxSeries int
 }
 
 // DefaultCollectionConfig returns a sensible configuration.
@@ -39,6 +43,7 @@ func DefaultCollectionConfig() CollectionConfig {
 		ForecastWindow: 60,
 		PingCount:      4,
 		DNSTimeout:     2000,
+		MaxSeries:      500,
 	}
 }
 
@@ -85,6 +90,9 @@ func NewDataPipeline(cfg CollectionConfig) *DataPipeline {
 	if cfg.TickInterval <= 0 {
 		cfg.TickInterval = DefaultCollectionConfig().TickInterval
 	}
+	if cfg.MaxSeries <= 0 {
+		cfg.MaxSeries = DefaultCollectionConfig().MaxSeries
+	}
 
 	return &DataPipeline{
 		store:    NewTimeSeriesStore(cfg.Capacity),
@@ -98,17 +106,31 @@ func NewDataPipeline(cfg CollectionConfig) *DataPipeline {
 // PushMetric pushes a single value to both the time-series store and the
 // forecast engine for the named metric.
 func (dp *DataPipeline) PushMetric(name, unit string, value float64) {
+	dp.mu.RLock()
+	maxS := dp.config.MaxSeries
+	dp.mu.RUnlock()
+
+	// 1. Check Store Limit — use Exists (non-creating) to avoid auto-creating the series
+	if dp.store.NumSeries() >= maxS && !dp.store.Exists(name) {
+		// New metric and we are at capacity – drop it
+		return
+	}
+
 	dp.store.Push(name, unit, time.Now(), value)
 
 	dp.mu.Lock()
 	fe, ok := dp.forecast[name]
 	if !ok {
-		fe = NewForecastEngine(dp.config.ForecastWindow)
-		dp.forecast[name] = fe
+		if len(dp.forecast) < maxS {
+			fe = NewForecastEngine(dp.config.ForecastWindow)
+			dp.forecast[name] = fe
+		}
 	}
 	dp.mu.Unlock()
 
-	fe.Push(value)
+	if fe != nil {
+		fe.Push(value)
+	}
 
 	// Persist to database
 	if s := GetStorage(); s != nil {
@@ -178,10 +200,10 @@ func (dp *DataPipeline) GetWindowStats(name string) WindowStats {
 	defer dp.mu.RUnlock()
 
 	ts := dp.store.Get(name, "")
-	if ts == nil || ts.Count() == 0 {
+	if ts == nil {
 		return WindowStats{}
 	}
-	return ComputeWindowStats(ts.Values())
+	return ts.GetStats()
 }
 
 // GetMetricWithForecast returns a combined struct with raw values, forecast
@@ -202,9 +224,7 @@ func (dp *DataPipeline) GetMetricWithForecast(name string) MetricForecast {
 		if pts := ts.DataPoints(); len(pts) > 0 {
 			mf.LastTime = pts[len(pts)-1].Time
 		}
-		if ts.Count() > 0 {
-			mf.Stats = ComputeWindowStats(mf.Values)
-		}
+		mf.Stats = ts.GetStats()
 	}
 
 	if fe != nil {
@@ -252,6 +272,15 @@ func (dp *DataPipeline) NumSeries() int {
 	dp.mu.RLock()
 	defer dp.mu.RUnlock()
 	return len(dp.store.Series())
+}
+
+// GetLastValue returns the most recent value for a metric without allocations.
+func (dp *DataPipeline) GetLastValue(name string) float64 {
+	ts := dp.store.Get(name, "")
+	if ts == nil {
+		return 0
+	}
+	return ts.Last()
 }
 
 // Clear resets all stored data and forecast engines.

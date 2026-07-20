@@ -5,7 +5,8 @@ import (
 )
 
 func TestKnowledgeManager(t *testing.T) {
-	InitKnowledge()
+	dp := NewDataPipeline(CollectionConfig{})
+	InitKnowledge(dp)
 	km := GetKnowledge()
 
 	// Test Initial State
@@ -15,16 +16,9 @@ func TestKnowledgeManager(t *testing.T) {
 	}
 
 	// Test Update
-	km.Update(func(sk *SystemKnowledge) {
-		sk.CPUUsage = 45.5
-		sk.MemoryUsage = 70.2
-		sk.SecurityGrade = "A"
-	})
+	km.UpdateSecurityState("A", 2, 10, "1h30m")
 
 	s2 := km.GetSnapshot()
-	if s2.CPUUsage != 45.5 {
-		t.Errorf("expected 45.5 CPU, got %f", s2.CPUUsage)
-	}
 	if s2.SecurityGrade != "A" {
 		t.Errorf("expected Grade A, got %s", s2.SecurityGrade)
 	}

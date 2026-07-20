@@ -1,545 +1,896 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useRef, useCallback, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { toast } from 'sonner'
 import {
-  CheckCircle2,
-  Zap,
-  BrainCircuit,
   ShieldCheck,
   ChevronRight,
   RefreshCw,
-  Terminal,
   Activity,
   User,
-  HardDrive,
   Database,
   Globe,
-  Settings,
   Bot,
-  Info
+  ScrollText,
+  CheckCircle2,
+  Zap,
+  BrainCircuit,
+  HardDrive,
+  XCircle,
+  Cpu,
+  MemoryStick,
+  Server,
+  Eye,
+  X,
+  SkipForward,
+  AlertTriangle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
-import type { CapabilityInfo } from '@/types'
+import type {
+  EnvironmentReport,
+  PerformanceProfile,
+  SystemCapability,
+  SafetyPolicy,
+  OnboardingConfig,
+  OnboardingStep,
+} from '@/types/onboarding'
+import { ONBOARDING_STEPS } from '@/types/onboarding'
+
+// ── Constants ──
+
+const MAX_NAME_LENGTH = 32
+const NAME_PATTERN = /^[a-zA-Z0-9\s_-]+$/
+const AI_MODEL_BASE = 'hf.co/empero-ai/Qwythos-9B-Claude-Mythos-5-1M-GGUF:Q6_K'
+const DEFAULT_CONFIG: OnboardingConfig = {
+  companionName: 'Assistant',
+  storagePath: 'data',
+  logsPath: 'logs',
+  modelPath: '',
+  safetyPolicy: 'standard',
+  engineProfile: 'standard',
+}
+
+// ── Step metadata ──
+
+const STEP_META: Record<OnboardingStep, { label: string; title: string; subtitle: string }> = {
+  welcome: { label: 'Welcome', title: 'Welcome', subtitle: '' },
+  privacy: { label: 'Privacy', title: 'Data & Privacy', subtitle: 'Your configuration and system history are stored locally.' },
+  'system-check': { label: 'System', title: 'System Overview', subtitle: 'Reviewing your workstation resources and installed toolchains.' },
+  snapshot: { label: 'Snapshot', title: 'Baseline Snapshot', subtitle: 'Saving current system configuration for future monitoring.' },
+  'ai-setup': { label: 'AI', title: 'AI Assistant', subtitle: 'Configuring your local assistant for system analysis.' },
+  finished: { label: 'Done', title: 'Setup Complete', subtitle: 'Platform initialization is finished. Your environment is ready.' },
+}
+
+// ── Component ──
 
 interface OnboardingModalProps {
   onComplete: () => void
 }
 
-type Step =
-  | 'welcome'
-  | 'identity'
-  | 'sovereignty'
-  | 'ecosystem'
-  | 'governance'
-  | 'capabilities'
-  | 'pipeline'
-  | 'ai-setup'
-  | 'finished'
-
-const STEPS: Step[] = [
-  'welcome', 'identity', 'sovereignty', 'ecosystem', 'governance',
-  'capabilities', 'pipeline', 'ai-setup', 'finished'
-]
-
 export function OnboardingModal({ onComplete }: OnboardingModalProps) {
   const { call } = useBackend()
   const { setCompanionName } = useSettingsStore()
+  const modalRef = useRef<HTMLDivElement>(null)
+  const continueBtnRef = useRef<HTMLButtonElement>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
 
-  const [step, setStep] = useState<Step>('welcome')
-  const [pendingConfig, setPendingConfig] = useState({
-    companionName: 'Hawk',
-    storagePath: '',
-    modelPath: '',
-    safetyPolicy: 'standard', // sentinel | standard | tactical
-    engineProfile: 'standard', // eco | standard | burst
-    homeSubnet: 'Detecting...',
-  })
-
-  const [capabilities, setCapabilities] = useState<CapabilityInfo[]>([])
+  const [step, setStep] = useState<OnboardingStep>('welcome')
+  const [envReport, setEnvReport] = useState<EnvironmentReport | null>(null)
+  const [dependencies, setDependencies] = useState<SystemCapability[]>([])
+  const [perfProfile, setPerfProfile] = useState<PerformanceProfile | null>(null)
+  const [config, setConfig] = useState<OnboardingConfig>(DEFAULT_CONFIG)
   const [setupRunning, setSetupRunning] = useState(false)
+  const [snapshotDone, setSnapshotDone] = useState(false)
+  const [isCapturing, setIsCapturing] = useState(false)
+  const [nameError, setNameError] = useState('')
+  const [discoveryError, setDiscoveryError] = useState(false)
+  const [depError, setDepError] = useState(false)
 
-  // ── Data Fetching ──
+  const stepIndex = ONBOARDING_STEPS.indexOf(step)
+  const isLastStep = stepIndex === ONBOARDING_STEPS.length - 1
 
-  const refreshData = useCallback(async () => {
-    try {
-      const caps = await call('App.GetSystemCapabilities')
-      setCapabilities(caps as CapabilityInfo[])
-    } catch (err) {
-      console.error('Onboarding refresh failed:', err)
-    }
-  }, [call])
+  // ── Focus trap + restore ──
 
   useEffect(() => {
-    if (['capabilities', 'ai-setup'].includes(step)) {
-      refreshData()
+    previousFocusRef.current = document.activeElement as HTMLElement
+    const timer = setTimeout(() => modalRef.current?.focus(), 50)
+    return () => {
+      clearTimeout(timer)
+      previousFocusRef.current?.focus()
     }
-  }, [step, refreshData])
+  }, [])
 
-  // ── Actions ──
+  useEffect(() => {
+    if (!isLastStep) {
+      const timer = setTimeout(() => continueBtnRef.current?.focus(), 100)
+      return () => clearTimeout(timer)
+    }
+  }, [step, isLastStep])
 
-  const handleBrowse = async (field: 'storagePath' | 'modelPath') => {
+  // ── Actions (declared before keyboard handler) ──
+
+  const handleSkipAll = useCallback(() => {
+    setCompanionName(DEFAULT_CONFIG.companionName)
+    call('App.ApplyOperationalProfile', DEFAULT_CONFIG.engineProfile).catch(() => {})
+    call('App.MarkOnboarded').catch(() => {})
+    onComplete()
+  }, [call, setCompanionName, onComplete])
+
+  // ── Keyboard: Escape to skip, Tab trap ──
+
+  const handleKeyDown = useCallback((e: ReactKeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      handleSkipAll()
+      return
+    }
+    if (e.key === 'Tab' && modalRef.current) {
+      const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+  }, [handleSkipAll])
+
+  // ── Data fetching ──
+
+  const fetchDiscovery = async () => {
+    setDiscoveryError(false)
     try {
-      const path = await call('App.OpenFileDialog', 'Select Directory', [])
-      if (path) setPendingConfig(prev => ({ ...prev, [field]: path }))
-    } catch { toast.error('Failed to select directory') }
+      const [env, profile] = await Promise.all([
+        call('App.DiscoverEnvironment'),
+        call('App.GetPerformanceProfile'),
+      ])
+      setEnvReport(env as EnvironmentReport)
+      const p = profile as PerformanceProfile
+      setPerfProfile(p)
+      if (p?.category) {
+        setConfig((prev) => ({ ...prev, engineProfile: p.category }))
+      }
+    } catch {
+      setDiscoveryError(true)
+    }
   }
+
+  const fetchDependencies = async () => {
+    setDepError(false)
+    try {
+      const res = await call('App.GetSystemCapabilities')
+      setDependencies(res as SystemCapability[])
+    } catch {
+      setDepError(true)
+    }
+  }
+
+  const generateSnapshot = async () => {
+    if (snapshotDone) return
+    setIsCapturing(true)
+    try {
+      await call('App.GenerateBaselineSnapshot')
+      await new Promise((r) => setTimeout(r, 1200))
+      setSnapshotDone(true)
+    } catch {
+      toast.error('Baseline snapshot failed. You can retry or skip.')
+    } finally {
+      setIsCapturing(false)
+    }
+  }
+
+  // ── Folder/file pickers ──
+
+  const pickFolder = async (key: 'storagePath' | 'logsPath') => {
+    try {
+      const path = await call('App.SelectFolderDialog', `Select ${key === 'storagePath' ? 'Data' : 'Logs'} Folder`)
+      if (typeof path === 'string' && path) {
+        setConfig((prev) => ({ ...prev, [key]: path }))
+      }
+    } catch {
+      toast.error('Folder selection failed')
+    }
+  }
+
+  const pickModelfile = async () => {
+    try {
+      const path = await call('App.OpenFileDialog', 'Select Modelfile', ['Modelfile|*.modelfile', 'All Files|*.*'])
+      if (typeof path === 'string' && path) {
+        setConfig((prev) => ({ ...prev, modelPath: path }))
+      }
+    } catch {
+      toast.error('File selection failed')
+    }
+  }
+
+  // ── Name validation ──
+
+  const updateName = (value: string) => {
+    if (value.length > MAX_NAME_LENGTH) {
+      setNameError(`Max ${MAX_NAME_LENGTH} characters`)
+      return
+    }
+    if (value && !NAME_PATTERN.test(value)) {
+      setNameError('Letters, numbers, spaces, _ or - only')
+      return
+    }
+    setNameError('')
+    setConfig((prev) => ({ ...prev, companionName: value }))
+  }
+
+  // ── AI setup ──
 
   const handleAISetup = async () => {
     setSetupRunning(true)
     try {
-      const baseModel = "hf.co/empero-ai/Qwythos-9B-Claude-Mythos-5-1M-GGUF:Q6_K"
-      await call('AIOps.PullModel', baseModel)
+      await call('AIOps.PullModel', AI_MODEL_BASE)
       await call('AIOps.CreateOpsPersona')
       setStep('finished')
-    } catch (err: any) {
-      toast.error(err?.message || 'AI setup failed')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'AI setup failed'
+      toast.error(msg)
     } finally {
       setSetupRunning(false)
     }
   }
 
-  const handleFinalDeploy = async () => {
-    try {
-      // Apply all pending configs
-      setCompanionName(pendingConfig.companionName)
-      await call('App.ApplyOperationalProfile', pendingConfig.engineProfile)
-      if (pendingConfig.storagePath) {
-        await call('App.UpdateStorageConfig', pendingConfig.storagePath)
-      }
+  // ── Navigation ──
 
-      await call('App.MarkOnboarded')
-      onComplete()
-    } catch (err) {
-      toast.error('Final deployment failed. Check logs.')
+  const nextStep = () => {
+    const idx = ONBOARDING_STEPS.indexOf(step)
+    if (idx < ONBOARDING_STEPS.length - 1) {
+      const next = ONBOARDING_STEPS[idx + 1]
+      if (next === 'system-check') {
+        fetchDiscovery()
+        fetchDependencies()
+      }
+      if (next === 'snapshot' && !snapshotDone) generateSnapshot()
+      setStep(next)
     }
   }
 
-  const nextStep = () => {
-    const idx = STEPS.indexOf(step)
-    if (idx < STEPS.length - 1) setStep(STEPS[idx + 1])
+  const prevStep = () => {
+    const idx = ONBOARDING_STEPS.indexOf(step)
+    if (idx > 0) setStep(ONBOARDING_STEPS[idx - 1])
   }
 
-  const prevStep = () => {
-    const idx = STEPS.indexOf(step)
-    if (idx > 0) setStep(STEPS[idx - 1])
+  const handleFinalDeploy = async () => {
+    try {
+      setCompanionName(config.companionName)
+      await call('App.ApplyOperationalProfile', config.engineProfile)
+      if (config.storagePath !== 'data') {
+        await call('App.UpdateStorageConfig', config.storagePath)
+      }
+      if (config.logsPath !== 'logs') {
+        await call('App.UpdateLogsConfig', config.logsPath)
+      }
+      await call('App.MarkOnboarded')
+      onComplete()
+    } catch {
+      toast.error('Setup finalization failed')
+    }
   }
+
+  const canAdvance = (): boolean => {
+    if (step === 'welcome') return true
+    if (step === 'privacy') return !nameError && config.companionName.trim().length > 0
+    if (step === 'system-check') return true
+    if (step === 'snapshot') return snapshotDone || !isCapturing
+    if (step === 'ai-setup') return !setupRunning
+    return true
+  }
+
+  // ── Render ──
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/95 backdrop-blur-3xl animate-in fade-in duration-700">
-      <div className="bg-panel border border-white/10 rounded-[3rem] shadow-[0_0_150px_rgba(0,0,0,1)] w-full max-w-4xl min-h-[720px] flex flex-col overflow-hidden relative border-t-white/20">
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-[var(--color-overlay)] backdrop-blur-xl"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Platform Setup"
+      ref={modalRef}
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
+    >
+      <div className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-2xl shadow-2xl w-full max-w-4xl h-[85dvh] max-h-[800px] flex flex-col overflow-hidden relative">
 
-        {/* Animated Background Gradients */}
-        <div className="absolute -top-40 -left-40 w-[40rem] h-[40rem] bg-accent/20 rounded-full blur-[160px] animate-pulse pointer-events-none" />
-        <div className="absolute -bottom-40 -right-40 w-[40rem] h-[40rem] bg-accent/10 rounded-full blur-[160px] pointer-events-none" />
-
-        {/* Header Rail */}
-        <div className="px-12 py-8 border-b border-white/5 bg-panel-2/40 flex items-center justify-between">
-          <div className="flex items-center gap-5">
-            <div className="w-16 h-16 rounded-[1.5rem] bg-accent flex items-center justify-center shadow-[0_0_40px_rgba(var(--color-accent-rgb),0.4)]">
-              <ShieldCheck size={36} className="text-white" />
+        {/* ── Fixed Header ── */}
+        <header className="px-6 sm:px-10 py-4 sm:py-5 border-b border-[var(--color-border)] flex items-center justify-between shrink-0 bg-[var(--color-panel)]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[var(--color-accent)] flex items-center justify-center">
+              <ShieldCheck size={20} className="text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-white tracking-tighter uppercase italic">Grand Initialization</h2>
-              <p className="text-accent font-black uppercase tracking-[0.3em] text-[10px] mt-1 opacity-90">Workstation Setup Phase {STEPS.indexOf(step) + 1} of {STEPS.length}</p>
+              <h2 className="text-base sm:text-lg font-bold text-[var(--color-text)] tracking-tight">
+                Platform Setup
+              </h2>
+              <p className="text-[10px] text-[var(--color-text-faint)] font-semibold uppercase tracking-[0.15em]">
+                Step {stepIndex + 1} of {ONBOARDING_STEPS.length}
+              </p>
             </div>
           </div>
-          <div className="flex gap-1.5">
-            {STEPS.map((s, i) => (
-              <div
-                key={s}
-                className={cn(
-                  "h-1 rounded-full transition-all duration-700",
-                  step === s ? "w-8 bg-accent" :
-                  i < STEPS.indexOf(step) ? "w-4 bg-success/60" : "w-4 bg-white/10"
-                )}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Workspace */}
-        <div className="flex-1 p-12 overflow-y-auto">
-          {step === 'welcome' && (
-            <div className="flex flex-col items-center text-center space-y-12 animate-in slide-in-from-bottom-12 duration-1000 ease-out">
-              <div className="w-24 h-24 rounded-3xl bg-panel-3 border border-white/10 flex items-center justify-center text-accent shadow-2xl relative group">
-                <Zap size={48} className="relative z-10" />
-                <div className="absolute inset-0 bg-accent/30 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-              </div>
-              <div className="space-y-6">
-                <h3 className="text-5xl font-black text-white leading-tight tracking-tight">
-                  The future is local.<br />The future is <span className="text-accent italic">yours.</span>
-                </h3>
-                <p className="text-text-dim text-xl max-w-xl mx-auto leading-relaxed font-medium">
-                  Welcome to AllOpsFull. We are about to initialize your professional operations control center.
-                </p>
-              </div>
-              <div className="grid grid-cols-3 gap-6 w-full max-w-3xl pt-6">
-                {[
-                  { icon: <Globe className="text-blue-400" />, title: 'Zero Telemetry', desc: 'No data leaves this machine.' },
-                  { icon: <BrainCircuit className="text-violet-400" />, title: 'Local AI', desc: 'Private workstation intelligence.' },
-                  { icon: <Activity className="text-emerald-400" />, title: 'High Density', desc: 'Mechanics-first telemetry.' },
-                ].map((item, i) => (
-                  <div key={i} className="p-6 rounded-3xl bg-panel-2/50 border border-white/5 space-y-3 text-left hover:bg-panel-2 transition-all group">
-                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">{item.icon}</div>
-                    <p className="font-black text-xs uppercase tracking-widest text-white">{item.title}</p>
-                    <p className="text-[10px] text-text-faint font-bold leading-relaxed">{item.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {step === 'identity' && (
-            <div className="max-w-xl mx-auto space-y-10 animate-in slide-in-from-right-12 duration-700">
-              <div className="space-y-3">
-                <h3 className="text-3xl font-black text-white uppercase tracking-tight">Co-Pilot Identity</h3>
-                <p className="text-text-dim text-lg font-medium leading-relaxed">What should we call your primary AI assistant?</p>
-              </div>
-
-              <div className="relative group">
-                <input
-                  type="text"
-                  value={pendingConfig.companionName}
-                  onChange={(e) => setPendingConfig(prev => ({ ...prev, companionName: e.target.value }))}
-                  className="w-full bg-panel-2 border-2 border-white/10 rounded-[2rem] px-8 py-6 text-4xl font-black text-white focus:outline-none focus:border-accent transition-all shadow-inner"
-                  placeholder="Companion Name"
+          <div className="flex items-center gap-3">
+            {/* Progress dots */}
+            <div
+              className="flex gap-1"
+              role="progressbar"
+              aria-valuenow={stepIndex + 1}
+              aria-valuemin={1}
+              aria-valuemax={ONBOARDING_STEPS.length}
+              aria-label={`Step ${stepIndex + 1} of ${ONBOARDING_STEPS.length}`}
+            >
+              {ONBOARDING_STEPS.map((s, i) => (
+                <div
+                  key={s}
+                  className={cn(
+                    'h-1.5 rounded-full transition-all duration-300',
+                    i === stepIndex ? 'w-6 bg-[var(--color-accent)]' : i < stepIndex ? 'w-3 bg-[var(--color-accent)] opacity-50' : 'w-3 bg-[var(--color-text-faint)] opacity-20'
+                  )}
                 />
-                <User size={32} className="absolute right-8 top-8 text-white/10 group-focus-within:text-accent transition-colors" />
-              </div>
+              ))}
+            </div>
+            {/* Skip / close button */}
+            <button
+              onClick={handleSkipAll}
+              className="ml-2 p-2.5 min-h-[40px] min-w-[40px] rounded-lg text-[var(--color-text-faint)] hover:text-[var(--color-text)] hover:bg-[var(--color-panel-2)] transition-colors flex items-center justify-center"
+              aria-label="Skip setup and use defaults"
+              title="Skip setup (Esc)"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </header>
 
-              <div className="p-6 rounded-3xl bg-accent/5 border border-accent/10 flex items-start gap-5">
-                <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center text-accent shrink-0"><Bot size={24} /></div>
-                <p className="text-sm text-text-dim font-medium leading-relaxed italic">
-                  "I will use this name for all briefings, reports, and real-time alerts. You can change this later in the Control Plane."
+        {/* ── Scrollable Content ── */}
+        <div className="flex-1 overflow-y-auto px-6 sm:px-10 py-8 sm:py-12">
+
+          {/* ── WELCOME ── */}
+          {step === 'welcome' && (
+            <div
+              className="flex flex-col items-center text-center space-y-8 sm:space-y-10 h-full justify-center max-w-2xl mx-auto"
+              style={{ animation: 'onb-enter 0.6s cubic-bezier(0.32,0.72,0,1) both' }}
+            >
+              <div className="w-16 h-16 rounded-2xl bg-[var(--color-panel-2)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-accent)] shadow-md">
+                <Zap size={32} />
+              </div>
+              <div className="space-y-3">
+                <h3 className="text-2xl sm:text-3xl font-black text-[var(--color-text)]">
+                  Private. Local.{' '}
+                  <span className="text-[var(--color-accent)] italic">Professional.</span>
+                </h3>
+                <p className="text-[var(--color-text-dim)] text-base max-w-md mx-auto">
+                  Welcome to AllOpsFull. Let&apos;s configure your local operations environment.
                 </p>
               </div>
-            </div>
-          )}
-
-          {step === 'sovereignty' && (
-            <div className="max-w-2xl mx-auto space-y-10 animate-in slide-in-from-right-12 duration-700">
-              <div className="space-y-3 text-center">
-                <h3 className="text-3xl font-black text-white uppercase tracking-tight">Portable Sovereignty</h3>
-                <p className="text-text-dim text-lg font-medium leading-relaxed">AllOpsFull is strictly self-contained. No system registry entries or hidden folders.</p>
-              </div>
-
-              <div className="space-y-4">
-                <div className="p-6 rounded-3xl bg-panel-2/50 border border-white/5 flex items-center justify-between group transition-all hover:border-white/20">
-                  <div className="flex items-center gap-5">
-                    <div className="w-14 h-14 rounded-2xl bg-panel-3 flex items-center justify-center text-blue-400 shadow-inner"><Database size={28} /></div>
-                    <div>
-                      <p className="font-bold text-white text-lg leading-none">Telemetry Core</p>
-                      <p className="text-xs text-accent mt-1.5 font-mono">./data/allopsfull.db</p>
-                      <p className="text-[10px] text-text-faint mt-1 leading-relaxed">
-                        A portable SQLite instance containing all metrics, alerts, and chat history.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-6 rounded-3xl bg-panel-2/50 border border-white/5 flex items-center justify-between group transition-all hover:border-white/20">
-                  <div className="flex items-center gap-5">
-                    <div className="w-14 h-14 rounded-2xl bg-panel-3 flex items-center justify-center text-violet-400 shadow-inner"><HardDrive size={28} /></div>
-                    <div>
-                      <p className="font-bold text-white text-lg leading-none">AI Identity</p>
-                      <p className="text-xs text-accent mt-1.5 font-mono">./data/allopsfull.modelfile</p>
-                      <p className="text-[10px] text-text-faint mt-1 leading-relaxed">
-                        Your private intelligence configuration, forced into the local data folder.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-6 rounded-3xl bg-panel-2/50 border border-white/5 flex items-center justify-between group transition-all hover:border-white/20">
-                  <div className="flex items-center gap-5">
-                    <div className="w-14 h-14 rounded-2xl bg-panel-3 flex items-center justify-center text-emerald-400 shadow-inner"><ScrollText size={28} /></div>
-                    <div>
-                      <p className="font-bold text-white text-lg leading-none">Session Logs</p>
-                      <p className="text-xs text-accent mt-1.5 font-mono">./logs/opsforall.log</p>
-                      <p className="text-[10px] text-text-faint mt-1 leading-relaxed">
-                        Human-readable diagnostic logs for the current session.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {step === 'ecosystem' && (
-            <div className="max-w-3xl mx-auto space-y-8 animate-in slide-in-from-right-12 duration-700">
-              <div className="space-y-3 text-center">
-                <h3 className="text-3xl font-black text-white uppercase tracking-tight">Built-in Capabilities</h3>
-                <p className="text-text-dim text-lg font-medium leading-relaxed">Everything needed for core operation is already inside the binary.</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-black text-accent uppercase tracking-[0.2em] px-2">Core Tools (Native Go)</h4>
-                  <div className="space-y-2">
-                    {[
-                      { label: 'System Monitoring', desc: 'CPU, RAM, Disk, Process analytics.' },
-                      { label: 'Network Discovery', desc: 'Native ARP & ICMP subnet sweep.' },
-                      { label: 'Security Auditing', desc: 'Windows Defender & Firewall status.' },
-                      { label: 'Port Scanner', desc: 'Concurrent TCP socket probing.' },
-                    ].map((item, i) => (
-                      <div key={i} className="p-4 rounded-2xl bg-panel-2/30 border border-white/5 flex gap-4">
-                        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0"><CheckCircle2 size={16} className="text-success" /></div>
-                        <div>
-                          <p className="text-xs font-bold text-white">{item.label}</p>
-                          <p className="text-[9px] text-text-faint mt-0.5">{item.desc}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-black text-warning uppercase tracking-[0.2em] px-2">Extension Powers (External)</h4>
-                  <div className="space-y-2 opacity-80">
-                    {[
-                      { label: 'Ollama', desc: 'Drives the AI Analyst (Required for AI features).' },
-                      { label: 'Docker / K8s', desc: 'Enables container orchestration views.' },
-                      { label: 'Nmap / Git', desc: 'Unlocks advanced auditing & repo management.' },
-                      { label: 'PowerShell 7', desc: 'Runs high-fidelity diagnostic workflows.' },
-                    ].map((item, i) => (
-                      <div key={i} className="p-4 rounded-2xl bg-panel-2/30 border border-dashed border-white/10 flex gap-4">
-                        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0"><Zap size={16} className="text-warning" /></div>
-                        <div>
-                          <p className="text-xs font-bold text-white">{item.label}</p>
-                          <p className="text-[9px] text-text-faint mt-0.5">{item.desc}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="p-4 rounded-2xl bg-warning/5 border border-warning/10">
-                    <p className="text-[9px] text-warning font-medium leading-relaxed italic">
-                      Note: You don't need to install these now. The system will alert you only if an action specifically requires them.
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+                {[
+                  { icon: <Globe size={18} />, title: 'Private', desc: 'No data leaves this machine. Zero cloud sync or tracking.' },
+                  { icon: <BrainCircuit size={18} />, title: 'Local AI', desc: 'Intelligence powered by models running on your hardware.' },
+                  { icon: <Activity size={18} />, title: 'Telemetry', desc: 'Real-time monitoring of local system resources.' },
+                ].map((item, i) => (
+                  <div
+                    key={i}
+                    className="p-6 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)] space-y-3 text-left"
+                  >
+                    <div className="text-[var(--color-accent)]">{item.icon}</div>
+                    <p className="font-bold text-[var(--color-text)] text-[11px] uppercase tracking-[0.12em]">
+                      {item.title}
+                    </p>
+                    <p className="text-[11px] text-[var(--color-text-faint)] leading-relaxed font-medium">
+                      {item.desc}
                     </p>
                   </div>
-                </div>
+                ))}
               </div>
+              <button
+                onClick={handleSkipAll}
+                className="flex items-center gap-2 text-[11px] font-semibold text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-colors"
+              >
+                <SkipForward size={14} />
+                Skip to defaults
+              </button>
             </div>
           )}
 
-          {step === 'governance' && (
-            <div className="max-w-2xl mx-auto space-y-10 animate-in slide-in-from-right-12 duration-700">
-              <div className="space-y-3 text-center">
-                <h3 className="text-3xl font-black text-white uppercase tracking-tight">System Governance</h3>
-                <p className="text-text-dim text-lg font-medium leading-relaxed">Integrated tools are 100% optional. The system works out-of-the-box.</p>
+          {/* ── PRIVACY ── */}
+          {step === 'privacy' && (
+            <div
+              className="max-w-3xl mx-auto space-y-8 h-full flex flex-col justify-center"
+              style={{ animation: 'onb-enter 0.6s cubic-bezier(0.32,0.72,0,1) both' }}
+            >
+              <div className="text-center space-y-1">
+                <h3 className="text-xl sm:text-2xl font-black text-[var(--color-text)]">
+                  {STEP_META.privacy.title}
+                </h3>
+                <p className="text-sm text-[var(--color-text-dim)]">{STEP_META.privacy.subtitle}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-6 rounded-3xl bg-panel-2/50 border border-white/5 space-y-4">
-                  <div className="flex items-center gap-3">
-                    <Wrench size={18} className="text-accent" />
-                    <p className="text-xs font-black uppercase tracking-widest text-white">Integrated Power</p>
-                  </div>
-                  <p className="text-[10px] text-text-dim leading-relaxed">
-                    AllOpsFull detects tools like <span className="text-accent font-bold">Nmap</span> or <span className="text-accent font-bold">Docker</span> to unlock <span className="italic">extra</span> features. If they are missing, we use native Go code for core diagnostics. No installation is required for normal operation.
+              {/* Assistant name */}
+              <div className="space-y-2">
+                <label htmlFor="companion-name" className="text-[11px] font-bold text-[var(--color-text-faint)] uppercase tracking-[0.12em]">
+                  Assistant Name
+                </label>
+                <div className="relative">
+                  <input
+                    id="companion-name"
+                    type="text"
+                    value={config.companionName}
+                    onChange={(e) => updateName(e.target.value)}
+                    maxLength={MAX_NAME_LENGTH}
+                    aria-required="true"
+                    aria-invalid={!!nameError}
+                    aria-describedby={nameError ? 'name-error' : 'name-hint'}
+                    className={cn(
+                      'w-full bg-[var(--color-panel-2)] border rounded-xl px-6 py-4 text-lg font-bold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-all',
+                      nameError ? 'border-[var(--color-danger)]' : 'border-[var(--color-border)]'
+                    )}
+                    placeholder="e.g. Hawk"
+                  />
+                  <User size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)] opacity-40" />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-[var(--color-text-faint)] font-mono">
+                    {config.companionName.length}/{MAX_NAME_LENGTH}
+                  </span>
+                </div>
+                {nameError ? (
+                  <p id="name-error" className="text-[11px] text-[var(--color-danger)] font-medium" role="alert">
+                    {nameError}
                   </p>
-                </div>
-
-                <div className="p-6 rounded-3xl bg-panel-2/50 border border-white/5 space-y-4">
-                  <div className="flex items-center gap-3">
-                    <ShieldCheck size={18} className="text-success" />
-                    <p className="text-xs font-black uppercase tracking-widest text-white">Safety Gateway</p>
-                  </div>
-                  <p className="text-[10px] text-text-dim leading-relaxed">
-                    Choose your AI authority. <span className="text-white font-bold">Standard</span> mode requires you to manually click "Confirm" for every AI-suggested remediation.
+                ) : (
+                  <p id="name-hint" className="text-[11px] text-[var(--color-text-faint)]">
+                    <Bot size={12} className="inline mr-1 opacity-60" />
+                    Used for system briefings, reports, and security actions.
                   </p>
-                  <div className="flex gap-2">
-                    {['standard', 'tactical'].map(p => (
-                      <button key={p} onClick={() => setPendingConfig(prev => ({ ...prev, safetyPolicy: p }))}
-                        className={cn("px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border transition-all",
-                        pendingConfig.safetyPolicy === p ? "bg-accent border-accent text-white" : "bg-white/5 border-white/10 text-text-faint")}>{p}</button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {step === 'capabilities' && (
-            <div className="max-w-4xl mx-auto space-y-10 animate-in slide-in-from-right-12 duration-700">
-              <div className="space-y-3 text-center">
-                <h3 className="text-3xl font-black text-white uppercase tracking-tight">Command Encyclopedia</h3>
-                <p className="text-text-dim text-lg font-medium leading-relaxed">The following methods and workflows are available for local orchestration.</p>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <p className="text-[10px] font-black text-accent uppercase tracking-widest px-2">Go Backend Bindings</p>
-                  <div className="bg-panel-2/50 border border-white/5 rounded-2xl p-4 font-mono text-[9px] text-text-dim space-y-1.5 overflow-hidden">
-                    <p className="text-white font-bold opacity-100">// Domain Logic Facades</p>
-                    <p>App.GetSystemCapabilities()</p>
-                    <p>SysOps.GetCPUStats()</p>
-                    <p>NetOps.Ping(host, count)</p>
-                    <p>SecOps.executeBlockIP(ip)</p>
-                    <p>AIOps.Chat(session, prompt)</p>
-                    <p>Timeline.ExplainEvents(ids)</p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <p className="text-[10px] font-black text-warning uppercase tracking-widest px-2">Integrated Workflows</p>
-                  <div className="bg-panel-2/50 border border-white/5 rounded-2xl p-4 font-mono text-[9px] text-text-dim space-y-1.5">
-                    <p className="text-white font-bold opacity-100">// Handshake Orchestration</p>
-                    <p>IR: Kill Process -> Human Auth -> Exec</p>
-                    <p>Net: Isolate Host -> Restricted Token</p>
-                    <p>AIOps: Anomaly Scan -> Pearson R -> Toast</p>
-                    <p>DevOps: Script Runner -> System Sandbox</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-white/5 border border-dashed border-white/10 flex items-start gap-4">
-                <Terminal size={16} className="text-text-faint mt-1" />
-                <p className="text-[10px] text-text-faint leading-relaxed italic">
-                  All commands are executed via the <span className="text-white font-bold">Unified Sandbox Infrastructure</span>, ensuring that even under AI request, no process runs without predefined boundaries (CPU/RAM/Network).
+              {/* Storage paths */}
+              <div className="space-y-3">
+                <p className="text-[11px] font-bold text-[var(--color-text-faint)] uppercase tracking-[0.12em]">
+                  Storage Locations
                 </p>
-              </div>
-            </div>
-          )}
-
-          {step === 'pipeline' && (
-            <div className="max-w-3xl mx-auto space-y-10 animate-in slide-in-from-right-12 duration-700">
-              <div className="space-y-3 text-center">
-                <h3 className="text-3xl font-black text-white uppercase tracking-tight">Execution Pipeline</h3>
-                <p className="text-text-dim text-lg font-medium leading-relaxed">How AllOpsFull processes your workstation data.</p>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 relative">
-                <div className="absolute top-1/2 left-0 right-0 h-px bg-white/10 -z-10" />
                 {[
-                  { icon: <Activity />, label: 'Inquiry', desc: 'Collectors poll OS stats.' },
-                  { icon: <BrainCircuit />, label: 'Analysis', desc: 'AI evaluates trends.' },
-                  { icon: <RefreshCw />, label: 'Handshake', desc: 'You review & authorize.' },
-                  { icon: <Zap />, label: 'Action', desc: 'Sandboxed remediation.' },
+                  { icon: <Database size={16} />, title: 'Database', path: `${config.storagePath}/allopsfull.db`, desc: 'Local SQLite database for metrics and alerts.', action: () => pickFolder('storagePath'), pathKey: 'storagePath' as const },
+                  { icon: <HardDrive size={16} />, title: 'AI Configuration', path: config.modelPath || './data/allopsfull.modelfile', desc: 'Local assistant settings and rules.', action: pickModelfile, pathKey: 'modelPath' as const },
+                  { icon: <ScrollText size={16} />, title: 'Logs', path: `${config.logsPath}/allopsfull.log`, desc: 'System event logs for auditing.', action: () => pickFolder('logsPath'), pathKey: 'logsPath' as const },
                 ].map((item, i) => (
-                  <div key={i} className="flex flex-col items-center text-center space-y-3 bg-panel p-4 rounded-2xl border border-white/5 shadow-2xl">
-                    <div className="w-12 h-12 rounded-xl bg-panel-2 flex items-center justify-center text-accent border border-white/10">{item.icon}</div>
-                    <div>
-                      <p className="text-[10px] font-black uppercase text-white">{item.label}</p>
-                      <p className="text-[8px] text-text-faint font-bold w-24 leading-tight mt-1">{item.desc}</p>
+                  <div
+                    key={i}
+                    className="p-5 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)] flex items-center justify-between gap-4"
+                  >
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="w-9 h-9 rounded-lg bg-[var(--color-panel-3)] flex items-center justify-center shrink-0 border border-[var(--color-border)] text-[var(--color-accent)]">
+                        {item.icon}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-[var(--color-text)] text-[11px] uppercase tracking-wider">{item.title}</p>
+                        <p className="text-[10px] text-[var(--color-accent)] font-mono truncate mt-0.5">{item.path}</p>
+                        <p className="text-[10px] text-[var(--color-text-faint)] mt-0.5 font-medium">{item.desc}</p>
+                      </div>
                     </div>
+                    <button
+                      onClick={item.action}
+                      className="px-5 py-3 min-h-[44px] rounded-lg bg-[var(--color-panel-2)] hover:bg-[var(--color-panel-3)] text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text)] border border-[var(--color-border)] transition-all shrink-0"
+                    >
+                      Browse
+                    </button>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
+          {/* ── SYSTEM CHECK (merged discovery + dependency) ── */}
+          {step === 'system-check' && (
+            <div
+              className="max-w-4xl mx-auto space-y-8"
+              style={{ animation: 'onb-enter 0.6s cubic-bezier(0.32,0.72,0,1) both' }}
+            >
+              <div className="text-center space-y-1">
+                <h3 className="text-xl sm:text-2xl font-black text-[var(--color-text)]">
+                  {STEP_META['system-check'].title}
+                </h3>
+                <p className="text-sm text-[var(--color-text-dim)]">{STEP_META['system-check'].subtitle}</p>
+              </div>
+
+              {/* Environment section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-bold text-[var(--color-text-faint)] uppercase tracking-[0.12em]">
+                    Workstation Resources
+                  </p>
+                  {discoveryError && (
+                    <button
+                      onClick={fetchDiscovery}
+                      className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--color-accent)] hover:text-[var(--color-accent-2)] transition-colors"
+                    >
+                      <RefreshCw size={12} />
+                      Retry
+                    </button>
+                  )}
+                </div>
+
+                {!envReport && !discoveryError ? (
+                  <div className="py-16 flex flex-col items-center gap-3 text-[var(--color-text-faint)]">
+                    <RefreshCw size={32} className="animate-spin opacity-20" />
+                    <p className="text-[11px] font-bold uppercase tracking-[0.12em]">Checking System...</p>
+                  </div>
+                ) : discoveryError ? (
+                  <div className="py-12 flex flex-col items-center gap-3 text-[var(--color-text-faint)]">
+                    <AlertTriangle size={32} className="text-[var(--color-warning)] opacity-60" />
+                    <p className="text-[11px] font-bold uppercase tracking-[0.12em]">System Check Failed</p>
+                    <button onClick={fetchDiscovery} className="text-[11px] text-[var(--color-accent)] font-semibold hover:underline">
+                      Tap to retry
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-6 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)] grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-5">
+                    {[
+                      { label: 'Hostname', value: envReport!.hostname, icon: <Server size={12} /> },
+                      { label: 'Processor', value: envReport!.cpu, icon: <Cpu size={12} />, color: 'text-[var(--color-accent)]' },
+                      { label: 'Memory', value: envReport!.memory, icon: <MemoryStick size={12} /> },
+                      { label: 'OS Platform', value: `${envReport!.os} (${envReport!.arch})`, icon: <Globe size={12} /> },
+                    ].map((item, i) => (
+                      <div key={i} className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-2 opacity-40">
+                          {item.icon}
+                          <span className="text-[10px] font-bold uppercase tracking-[0.1em]">{item.label}</span>
+                        </div>
+                        <p className={cn('text-sm font-bold truncate', item.color || 'text-[var(--color-text)]')}>
+                          {item.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {envReport && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-5 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)] space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Zap size={14} className="text-[var(--color-warning)]" />
+                        <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text)]">Performance Profile</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-medium text-[var(--color-text-faint)]">Category</span>
+                        <span className="px-2 py-0.5 bg-[var(--color-warning)]/10 text-[var(--color-warning)] rounded text-[9px] font-bold uppercase border border-[var(--color-warning)]/20">
+                          {perfProfile?.category || '...'}
+                        </span>
+                      </div>
+                      {perfProfile && (
+                        <p className="text-[10px] text-[var(--color-text-dim)] leading-relaxed">
+                          Detected {perfProfile.cpu_threads} threads and {perfProfile.memory_gb.toFixed(0)}GB RAM.
+                        </p>
+                      )}
+                    </div>
+                    <div className="p-5 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)] space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Globe size={14} className="text-[var(--color-accent)]" />
+                        <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text)]">Network Interfaces</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {envReport.interfaces?.slice(0, 4).map((iface: string) => (
+                          <span key={iface} className="px-2 py-0.5 bg-[var(--color-panel-2)] rounded text-[9px] font-mono text-[var(--color-text-dim)] border border-[var(--color-border)]">
+                            {iface}
+                          </span>
+                        ))}
+                        {(!envReport.interfaces || envReport.interfaces.length === 0) && (
+                          <span className="text-[10px] text-[var(--color-text-faint)]">No interfaces detected</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Tools section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-bold text-[var(--color-text-faint)] uppercase tracking-[0.12em]">
+                    System Tools
+                  </p>
+                  {depError && (
+                    <button
+                      onClick={fetchDependencies}
+                      className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--color-accent)] hover:text-[var(--color-accent-2)] transition-colors"
+                    >
+                      <RefreshCw size={12} />
+                      Retry
+                    </button>
+                  )}
+                </div>
+
+                {depError ? (
+                  <div className="py-8 flex flex-col items-center gap-3 text-[var(--color-text-faint)]">
+                    <AlertTriangle size={24} className="text-[var(--color-warning)] opacity-60" />
+                    <p className="text-[11px] font-bold uppercase tracking-[0.12em]">Tool discovery failed</p>
+                    <button onClick={fetchDependencies} className="text-[11px] text-[var(--color-accent)] font-semibold hover:underline">
+                      Tap to retry
+                    </button>
+                  </div>
+                ) : dependencies.length === 0 && !depError ? (
+                  <div className="py-8 flex flex-col items-center gap-3 text-[var(--color-text-faint)]">
+                    <RefreshCw size={24} className="animate-spin opacity-20" />
+                    <p className="text-[11px] font-bold uppercase tracking-[0.12em]">Scanning tools...</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {dependencies.map((dep) => (
+                      <div
+                        key={dep.id}
+                        className={cn(
+                          'p-5 rounded-xl border flex flex-col items-center gap-3 transition-all',
+                          dep.available
+                            ? 'bg-[var(--color-panel-2)] border-[var(--color-success)]/20'
+                            : 'bg-[var(--color-panel-3)] border-[var(--color-border)] opacity-50'
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            'w-10 h-10 rounded-lg flex items-center justify-center',
+                            dep.available ? 'bg-[var(--color-success)]/10 text-[var(--color-success)]' : 'bg-[var(--color-panel-2)] text-[var(--color-text-faint)]'
+                          )}
+                        >
+                          {dep.available ? <CheckCircle2 size={20} /> : <XCircle size={20} />}
+                        </div>
+                        <div className="text-center">
+                          <p className="font-bold text-[var(--color-text)] uppercase text-[10px] tracking-[0.1em]">{dep.id}</p>
+                          <p className="text-[8px] text-[var(--color-text-faint)] mt-0.5 uppercase font-bold">
+                            {dep.available ? 'Found' : 'Not Found'}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="p-4 rounded-xl bg-[var(--color-panel-3)] border border-[var(--color-border)] flex items-center gap-3 max-w-2xl">
+                  <Eye size={14} className="text-[var(--color-text-faint)] shrink-0" />
+                  <p className="text-[10px] text-[var(--color-text-dim)] font-medium">
+                    Missing tools will not block startup. We use built-in system collectors.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── SNAPSHOT ── */}
+          {step === 'snapshot' && (
+            <div
+              className="max-w-xl mx-auto h-full flex flex-col items-center text-center justify-center space-y-8"
+              style={{ animation: 'onb-enter 0.6s cubic-bezier(0.32,0.72,0,1) both' }}
+            >
+              <div
+                className={cn(
+                  'w-20 h-20 rounded-2xl border-2 flex items-center justify-center transition-all duration-500',
+                  snapshotDone
+                    ? 'bg-[var(--color-success)]/10 border-[var(--color-success)]/40 text-[var(--color-success)]'
+                    : 'bg-[var(--color-accent)]/10 border-[var(--color-accent)]/40 text-[var(--color-accent)]'
+                )}
+              >
+                {snapshotDone ? <CheckCircle2 size={40} /> : <RefreshCw size={40} className="animate-spin" />}
+              </div>
+              <div className="space-y-3">
+                <h3 className="text-2xl sm:text-3xl font-black text-[var(--color-text)]">
+                  {snapshotDone ? 'Status Saved' : 'Saving State'}
+                </h3>
+                <p className="text-[var(--color-text-dim)] text-base leading-relaxed">
+                  {snapshotDone
+                    ? 'System baseline captured for drift detection.'
+                    : 'Saving current system configuration as a baseline for future monitoring.'}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 w-full">
+                {['Hardware', 'Software', 'Network', 'Security'].map((label, i) => (
+                  <div
+                    key={i}
+                    className="p-4 rounded-lg bg-[var(--color-panel-2)] border border-[var(--color-border)] flex items-center justify-between"
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text-faint)]">{label}</span>
+                    <span
+                      className={cn(
+                        'text-[10px] font-bold uppercase',
+                        snapshotDone ? 'text-[var(--color-success)]' : 'text-[var(--color-warning)]'
+                      )}
+                    >
+                      {snapshotDone ? 'Verified' : 'Saving...'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {!snapshotDone && !isCapturing && (
+                <button
+                  onClick={generateSnapshot}
+                  className="flex items-center gap-2 text-[11px] font-semibold text-[var(--color-accent)] hover:underline"
+                >
+                  <RefreshCw size={12} />
+                  Retry snapshot
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ── AI SETUP (merged with governance) ── */}
           {step === 'ai-setup' && (
-            <div className="max-w-2xl mx-auto space-y-10 animate-in slide-in-from-right-12 duration-700">
-              <div className="space-y-3 text-center">
-                <h3 className="text-3xl font-black text-white uppercase tracking-tight">Neural Core Initialization</h3>
-                <p className="text-text-dim text-lg font-medium leading-relaxed">Configuring the local intelligence layer.</p>
+            <div
+              className="max-w-2xl mx-auto h-full flex flex-col justify-center space-y-6"
+              style={{ animation: 'onb-enter 0.6s cubic-bezier(0.32,0.72,0,1) both' }}
+            >
+              <div className="text-center space-y-1">
+                <h3 className="text-xl sm:text-2xl font-black text-[var(--color-text)]">
+                  {STEP_META['ai-setup'].title}
+                </h3>
+                <p className="text-sm text-[var(--color-text-dim)]">{STEP_META['ai-setup'].subtitle}</p>
               </div>
 
               {setupRunning ? (
-                <div className="space-y-10 py-6">
-                  <div className="space-y-4">
-                    <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-accent">
-                      <span>Initializing Weights...</span>
-                      <span>50%</span>
+                <div className="space-y-6 flex flex-col items-center">
+                  <RefreshCw size={40} className="animate-spin text-[var(--color-accent)]" />
+                  <div className="w-full max-w-xs space-y-2">
+                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-accent)]">
+                      <span>Downloading model...</span>
+                      <span className="animate-pulse">In progress</span>
                     </div>
-                    <div className="h-2 bg-panel-3 rounded-full overflow-hidden border border-white/5">
+                    <div className="h-1.5 bg-[var(--color-panel-3)] rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-accent transition-all duration-500 shadow-[0_0_20px_rgba(var(--color-accent-rgb),0.5)]"
-                        style={{ width: `50%` }}
+                        className="h-full bg-[var(--color-accent)] rounded-full"
+                        style={{
+                          animation: 'onb-progress-indeterminate 2s ease-in-out infinite',
+                          width: '40%',
+                        }}
                       />
                     </div>
-                  </div>
-                  <div className="flex flex-col items-center gap-4">
-                    <RefreshCw size={32} className="animate-spin text-accent/50" />
-                    <p className="text-[10px] text-text-faint font-black uppercase tracking-widest">Inference engine is assembling weights...</p>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-6">
-                  <div className="p-6 rounded-3xl bg-violet-400/5 border border-violet-400/20 space-y-4">
-                    <div className="flex items-center gap-3">
-                      <BrainCircuit size={18} className="text-violet-400" />
-                      <p className="text-[10px] font-black uppercase tracking-widest text-violet-400">Persona Profile: {pendingConfig.companionName}</p>
-                    </div>
-                    <div className="bg-black/20 rounded-xl p-4 border border-white/5">
-                      <pre className="text-[9px] font-mono text-text-dim leading-relaxed">
-                        FROM hf.co/empero-ai/Qwythos-9B-Claude-Mythos-5-1M-GGUF:Q6_K{"\n"}
-                        SYSTEM You are the OpsForAll Technical Auditor...{"\n"}
-                        PARAMETER temperature 0.1
-                      </pre>
+                  {/* Safety policy selector */}
+                  <div className="space-y-3">
+                    <p className="text-[11px] font-bold text-[var(--color-text-faint)] uppercase tracking-[0.12em]">
+                      Security Policy
+                    </p>
+                    <p className="text-[11px] text-[var(--color-text-dim)]">
+                      Define how the AI assistant interacts with system settings.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {([
+                        { id: 'standard' as SafetyPolicy, title: 'Standard', desc: 'Manual control. Human confirmation required for all actions.', icon: <CheckCircle2 size={16} /> },
+                        { id: 'tactical' as SafetyPolicy, title: 'Tactical', desc: 'Faster response. Best for professional power users.', icon: <Zap size={16} /> },
+                      ]).map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => setConfig((prev) => ({ ...prev, safetyPolicy: p.id }))}
+                          className={cn(
+                            'p-6 rounded-xl border-2 transition-all text-left space-y-2',
+                            config.safetyPolicy === p.id
+                              ? 'bg-[var(--color-accent)]/10 border-[var(--color-accent)]'
+                              : 'bg-[var(--color-panel-2)] border-[var(--color-border)] hover:border-[var(--color-border)] hover:brightness-125'
+                          )}
+                          role="radio"
+                          aria-checked={config.safetyPolicy === p.id}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-sm uppercase tracking-[0.1em] text-[var(--color-text)]">{p.title}</span>
+                            <div className={config.safetyPolicy === p.id ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-faint)]'}>
+                              {p.icon}
+                            </div>
+                          </div>
+                          <p className="text-[11px] text-[var(--color-text-dim)] font-medium leading-relaxed">{p.desc}</p>
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  <button
-                    onClick={handleAISetup}
-                    className="w-full py-6 rounded-2xl bg-accent text-white font-black uppercase tracking-widest shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-4"
-                  >
-                    <Zap size={20} /> Initialize Intelligence
-                  </button>
-                  <button onClick={nextStep} className="w-full text-[10px] font-black uppercase tracking-widest text-text-faint hover:text-white transition-colors">Skip Activation</button>
+                  {/* AI profile card */}
+                  <div className="p-6 rounded-xl bg-[var(--color-accent)]/5 border border-[var(--color-accent)]/20 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <BrainCircuit size={20} className="text-[var(--color-accent)]" />
+                      <p className="text-[11px] font-bold text-[var(--color-text)] uppercase">AI Assistant Profile</p>
+                    </div>
+                    <div className="bg-[var(--color-bg)]/60 p-5 rounded-lg border border-[var(--color-border)] font-mono text-[10px] leading-relaxed text-[var(--color-text-dim)]">
+                      <div className="grid grid-cols-3 gap-2">
+                        <span className="text-[var(--color-text-faint)]">ROLE:</span>
+                        <span className="col-span-2">System Analyst</span>
+                        <span className="text-[var(--color-text-faint)]">MODEL:</span>
+                        <span className="col-span-2">Private / Local</span>
+                        <span className="text-[var(--color-text-faint)]">NAME:</span>
+                        <span className="col-span-2 text-[var(--color-accent)]">{config.companionName}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    <button
+                      onClick={handleAISetup}
+                      className="w-full py-4 min-h-[48px] rounded-xl bg-[var(--color-accent)] text-white font-bold uppercase tracking-[0.1em] text-xs shadow-lg hover:brightness-110 active:scale-[0.99] transition-all"
+                    >
+                      Initialize Assistant
+                    </button>
+                    <button
+                      onClick={nextStep}
+                      className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-all text-center py-2"
+                    >
+                      Skip AI Setup
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
           )}
 
+          {/* ── FINISHED ── */}
           {step === 'finished' && (
-            <div className="max-w-2xl mx-auto flex flex-col items-center text-center space-y-12 animate-in zoom-in-95 duration-1000">
-              <div className="relative">
-                <div className="absolute inset-0 bg-success blur-[80px] opacity-20 animate-pulse" />
-                <div className="w-40 h-40 rounded-full bg-success flex items-center justify-center text-white relative z-10 shadow-[0_0_60px_rgba(var(--color-success-rgb),0.4)]">
-                  <CheckCircle2 size={80} />
-                </div>
+            <div
+              className="max-w-xl mx-auto h-full flex flex-col items-center text-center justify-center space-y-8"
+              style={{ animation: 'onb-enter 0.6s cubic-bezier(0.32,0.72,0,1) both' }}
+            >
+              <div
+                className="w-24 h-24 rounded-full bg-[var(--color-success)] flex items-center justify-center text-white shadow-lg"
+                style={{ animation: 'onb-scale-in 0.5s cubic-bezier(0.32,0.72,0,1) 0.2s both' }}
+              >
+                <CheckCircle2 size={48} />
               </div>
-
-              <div className="space-y-4">
-                <h3 className="text-5xl font-black text-white uppercase tracking-tighter">System Locked.</h3>
-                <p className="text-text-dim text-xl font-medium max-w-md mx-auto">
-                  Workstation successfully initialized. {pendingConfig.companionName} is now standing by.
+              <div className="space-y-3">
+                <h3 className="text-3xl sm:text-4xl font-black text-[var(--color-text)]">
+                  Setup Complete
+                </h3>
+                <p className="text-[var(--color-text-dim)] text-base">
+                  Platform initialization is finished. Your environment is ready.
                 </p>
               </div>
-
-              <div className="grid grid-cols-2 gap-4 w-full pt-4">
-                <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-left">
-                  <p className="text-[10px] font-black text-text-faint uppercase tracking-widest">Sovereignty</p>
-                  <p className="text-xs font-bold text-white mt-1">Local Mode Active</p>
+              <div className="grid grid-cols-2 gap-3 w-full">
+                <div className="p-5 rounded-xl bg-[var(--color-panel-3)] border border-[var(--color-border)] text-left">
+                  <p className="text-[10px] font-bold text-[var(--color-text-faint)] uppercase mb-1">Status</p>
+                  <p className="text-xs font-bold text-[var(--color-success)] uppercase">Local Mode Active</p>
                 </div>
-                <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-left">
-                  <p className="text-[10px] font-black text-text-faint uppercase tracking-widest">Safety Policy</p>
-                  <p className="text-xs font-bold text-white mt-1 uppercase">{pendingConfig.safetyPolicy}</p>
+                <div className="p-5 rounded-xl bg-[var(--color-panel-3)] border border-[var(--color-border)] text-left">
+                  <p className="text-[10px] font-bold text-[var(--color-text-faint)] uppercase mb-1">Policy</p>
+                  <p className="text-xs font-bold text-[var(--color-accent)] uppercase">{config.safetyPolicy}</p>
                 </div>
               </div>
-
               <button
                 onClick={handleFinalDeploy}
-                className="w-full py-8 rounded-[2rem] bg-success text-white text-2xl font-black shadow-[0_0_50px_rgba(var(--color-success-rgb),0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-6"
+                className="w-full py-5 min-h-[56px] rounded-xl bg-[var(--color-accent)] text-white text-lg font-bold uppercase tracking-[0.08em] shadow-lg hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-3"
               >
-                ENTER OPS CENTER
-                <ChevronRight size={32} />
+                Enter Control Center
+                <ChevronRight size={20} />
               </button>
             </div>
           )}
         </div>
 
-        {/* Footer Navigation */}
-        {step !== 'finished' && (
-          <div className="p-10 bg-panel-2/30 border-t border-white/5 flex justify-between items-center backdrop-blur-3xl">
+        {/* ── Fixed Footer Navigation ── */}
+        {!isLastStep && (
+          <footer className="px-6 sm:px-10 py-5 sm:py-6 bg-[var(--color-panel)] border-t border-[var(--color-border)] flex justify-between items-center shrink-0">
             <button
               onClick={prevStep}
-              className={cn("text-text-faint font-black text-[10px] uppercase tracking-[0.3em] hover:text-white transition-all flex items-center gap-2", step === 'welcome' && "opacity-0 pointer-events-none")}
+              className={cn(
+                'text-[var(--color-text-faint)] font-bold text-[11px] uppercase tracking-[0.1em] hover:text-[var(--color-text)] transition-all min-h-[44px] px-4',
+                step === 'welcome' && 'opacity-0 pointer-events-none'
+              )}
             >
-              <div className="rotate-180"><ChevronRight size={14} /></div> Previous Phase
+              Back
             </button>
-
             <button
+              ref={continueBtnRef}
               onClick={nextStep}
-              className="px-12 py-5 bg-accent text-white text-[10px] font-black uppercase tracking-[0.3em] shadow-[0_0_40px_rgba(var(--color-accent-rgb),0.3)] hover:scale-[1.02] transition-all flex items-center gap-4 group active:scale-95"
+              disabled={!canAdvance()}
+              className={cn(
+                'px-8 py-3 min-h-[44px] text-white text-[11px] font-bold uppercase tracking-[0.1em] rounded-xl transition-all flex items-center gap-3',
+                canAdvance()
+                  ? 'bg-[var(--color-accent)] hover:brightness-110 active:scale-95 shadow-md cursor-pointer'
+                  : 'bg-[var(--color-panel-3)] text-[var(--color-text-faint)] cursor-not-allowed'
+              )}
             >
-              Progress Initialization
-              <ChevronRight size={18} className="group-hover:translate-x-1.5 transition-transform duration-500" />
+              {isCapturing ? 'Processing...' : 'Continue'}
+              {!isCapturing && <ChevronRight size={14} />}
             </button>
-          </div>
+          </footer>
         )}
       </div>
     </div>

@@ -14,8 +14,28 @@ export function ConfirmAction(arg1) {
   return window['go']['app']['App']['ConfirmAction'](arg1);
 }
 
+export function DiscoverEnvironment() {
+  return window['go']['app']['App']['DiscoverEnvironment']();
+}
+
+export function GenerateBaselineSnapshot() {
+  return window['go']['app']['App']['GenerateBaselineSnapshot']();
+}
+
 export function GetAppInfo() {
   return window['go']['app']['App']['GetAppInfo']();
+}
+
+export function GetDataDir() {
+  return window['go']['app']['App']['GetDataDir']();
+}
+
+export function GetLogsDir() {
+  return window['go']['app']['App']['GetLogsDir']();
+}
+
+export function GetPerformanceProfile() {
+  return window['go']['app']['App']['GetPerformanceProfile']();
 }
 
 export function GetSystemCapabilities() {
@@ -38,8 +58,16 @@ export function OpenFileDialog(arg1, arg2) {
   return window['go']['app']['App']['OpenFileDialog'](arg1, arg2);
 }
 
+export function ReadTextFile(arg1) {
+  return window['go']['app']['App']['ReadTextFile'](arg1);
+}
+
 export function SaveFileDialog(arg1, arg2, arg3) {
   return window['go']['app']['App']['SaveFileDialog'](arg1, arg2, arg3);
+}
+
+export function SelectFolderDialog(arg1) {
+  return window['go']['app']['App']['SelectFolderDialog'](arg1);
 }
 
 export function SetCapabilityOverride(arg1, arg2) {
@@ -60,6 +88,10 @@ export function SetLogLevel(arg1) {
 
 export function TriggerCollector(arg1) {
   return window['go']['app']['App']['TriggerCollector'](arg1);
+}
+
+export function UpdateLogsConfig(arg1) {
+  return window['go']['app']['App']['UpdateLogsConfig'](arg1);
 }
 
 export function UpdateStorageConfig(arg1) {

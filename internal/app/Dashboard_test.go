@@ -15,7 +15,7 @@ func TestGetDashboardData(t *testing.T) {
 	// Pre-populate pipeline with a metric to ensure units are set
 	app.pipeline.PushMetric("cpu.percent", "%", 10.0)
 
-	d := NewDashboard(app)
+	d := NewDashboard(app.pipeline, app.alerts, app.SysOps, app.NetOps, app.Timeline, func() string { return "" })
 	data := d.GetDashboardData()
 
 	// Initial data might be empty but shouldn't crash

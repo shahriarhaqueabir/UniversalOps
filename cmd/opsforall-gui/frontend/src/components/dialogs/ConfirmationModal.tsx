@@ -44,7 +44,7 @@ export function ConfirmationModal({ preview, onConfirm, onCancel }: Confirmation
               </ul>
             </div>
 
-            <div className="p-4 rounded-xl bg-panel-3 border border-border">
+            <div className="p-5 rounded-xl bg-panel-3 border border-border">
               <p className="text-[10px] font-black text-text-faint uppercase tracking-widest mb-1">Rollback Policy</p>
               <p className="text-xs font-bold text-text-dim italic">{preview.rollback}</p>
             </div>

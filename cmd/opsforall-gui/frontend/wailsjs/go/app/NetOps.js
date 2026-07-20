@@ -22,6 +22,10 @@ export function PortScan(arg1, arg2) {
   return window['go']['app']['NetOps']['PortScan'](arg1, arg2);
 }
 
+export function RunNetworkHealthCheck() {
+  return window['go']['app']['NetOps']['RunNetworkHealthCheck']();
+}
+
 export function Traceroute(arg1) {
   return window['go']['app']['NetOps']['Traceroute'](arg1);
 }

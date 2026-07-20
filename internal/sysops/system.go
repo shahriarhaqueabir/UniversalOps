@@ -6,7 +6,7 @@ import (
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 	"github.com/shirou/gopsutil/v4/host"
-	"github.com/shirou/gopsutil/v4/process"
+	"github.com/yusufpapurcu/wmi"
 )
 
 // SystemInfo holds general system information.
@@ -29,13 +29,6 @@ func GetSystemInfo() (*SystemInfo, error) {
 		return nil, err
 	}
 
-	// Count processes
-	procs, err := process.Processes()
-	procCount := 0
-	if err == nil {
-		procCount = len(procs)
-	}
-
 	virt := ""
 	if info.VirtualizationSystem != "" {
 		virt = info.VirtualizationSystem + " (" + info.VirtualizationRole + ")"
@@ -49,7 +42,7 @@ func GetSystemInfo() (*SystemInfo, error) {
 		KernelVersion:   info.KernelVersion,
 		KernelArch:      info.KernelArch,
 		UptimeSeconds:   info.Uptime,
-		ProcessCount:    procCount,
+		ProcessCount:    GetProcessCount(),
 		Virtualization:  virt,
 	}, nil
 }
@@ -64,12 +57,18 @@ type LoggedInUser struct {
 
 // GetLoggedInUsers returns all currently logged-in users.
 func GetLoggedInUsers() ([]LoggedInUser, error) {
+	// Priority: WMI (Most reliable on Windows 11 for interactive sessions)
+	if common.IsWindows() {
+		users, err := getLoggedInUsersWMI()
+		if err == nil && len(users) > 0 {
+			return users, nil
+		}
+		// Fallback to query user if WMI fails or returns nothing
+		return getLoggedInUsersWindows()
+	}
+
 	users, err := host.Users()
 	if err != nil {
-		// gopsutil host.Users() is not implemented on Windows; fall back to `query user`
-		if common.IsWindows() {
-			return getLoggedInUsersWindows()
-		}
 		return nil, err
 	}
 
@@ -86,17 +85,13 @@ func GetLoggedInUsers() ([]LoggedInUser, error) {
 }
 
 // getLoggedInUsersWindows uses the Windows `query user` command to list logged-in users.
+// Falls back to WMI if the command is not available (e.g. Windows Home edition).
 func getLoggedInUsersWindows() ([]LoggedInUser, error) {
 	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "query", "user")
 	output, err := cmd.Output()
 	if err != nil {
-		if strings.Contains(err.Error(), "executable file not found") {
-			// command not available (e.g. Windows Home edition)
-			return []LoggedInUser{}, nil
-		}
-		// query user returns exit code 1 if no users are found (other than system)
-		// we treat this as empty result rather than error.
-		return []LoggedInUser{}, nil
+		// `query user` not available (Windows Home, sandboxed, etc.) — use WMI instead
+		return getLoggedInUsersWMI()
 	}
 
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
@@ -150,3 +145,43 @@ func getLoggedInUsersWindows() ([]LoggedInUser, error) {
 	}
 	return result, nil
 }
+
+// win32ComputerSystem holds minimal WMI data for user detection.
+type win32ComputerSystem struct {
+	Name     string
+	UserName string // Format: "DOMAIN\username"
+}
+
+// getLoggedInUsersWMI queries Win32_ComputerSystem.UserName for the active interactive user.
+// This is the reliable fallback when `query user` / `quser` is unavailable.
+func getLoggedInUsersWMI() ([]LoggedInUser, error) {
+	var dst []win32ComputerSystem
+	q := wmi.CreateQuery(&dst, "")
+	if err := wmi.Query(q, &dst); err != nil {
+		return []LoggedInUser{}, nil
+	}
+
+	var result []LoggedInUser
+	for _, cs := range dst {
+		uname := strings.TrimSpace(cs.UserName)
+		if uname == "" {
+			continue
+		}
+		// Strip DOMAIN\ prefix
+		if idx := strings.LastIndex(uname, "\\"); idx >= 0 {
+			uname = uname[idx+1:]
+		}
+		result = append(result, LoggedInUser{
+			User:     uname,
+			Terminal: "console",
+			Host:     cs.Name,
+			Started:  "active",
+		})
+	}
+
+	if result == nil {
+		result = []LoggedInUser{}
+	}
+	return result, nil
+}
+

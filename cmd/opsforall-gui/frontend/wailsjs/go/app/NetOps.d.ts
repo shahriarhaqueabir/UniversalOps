@@ -12,4 +12,6 @@ export function Ping(arg1:string,arg2:number):Promise<app.PingResult>;
 
 export function PortScan(arg1:string,arg2:Array<number>):Promise<Array<app.PortResult>>;
 
+export function RunNetworkHealthCheck():Promise<app.NetworkHealthReport>;
+
 export function Traceroute(arg1:string):Promise<app.TraceResult>;

@@ -21,12 +21,16 @@ import (
 
 // DevOps exposes development operations bindings to the frontend.
 type DevOps struct {
-	app *App
+	ctx      context.Context
+	eventBus *common.EventBus
 }
 
 // NewDevOps creates a new DevOps facade.
-func NewDevOps(app *App) *DevOps {
-	return &DevOps{app: app}
+func NewDevOps(ctx context.Context, eventBus *common.EventBus) *DevOps {
+	return &DevOps{
+		ctx:      ctx,
+		eventBus: eventBus,
+	}
 }
 
 // RunCommand executes a shell command and returns the result.
@@ -65,12 +69,12 @@ func (d *DevOps) RunCommandLive(cmd string, id string) CommandResult {
 	go func() {
 		defer common.RecoverPanic()
 		for line := range lineCh {
-			wailsruntime.EventsEmit(d.app.ctx, EventCmdLine, map[string]string{
+			wailsruntime.EventsEmit(d.ctx, EventCmdLine, map[string]string{
 				"id":   id,
 				"line": line,
 			})
 		}
-		wailsruntime.EventsEmit(d.app.ctx, EventCmdDone, id)
+		wailsruntime.EventsEmit(d.ctx, EventCmdDone, id)
 	}()
 
 	result, err := devops.RunCommandWithLiveOutput(cmd, lineCh)
@@ -156,13 +160,15 @@ func (d *DevOps) ControlService(name, action string) bool {
 		return false
 	}
 
-	d.app.eventBus.Emit(common.NewEvent(
-		common.CatDevOps,
-		common.EventInfo,
-		"devops",
-		"Service state changed",
-		fmt.Sprintf("Service '%s' %s", name, action),
-	))
+	if d.eventBus != nil {
+		d.eventBus.Emit(common.NewEvent(
+			common.CatDevOps,
+			common.EventInfo,
+			"devops",
+			"Service state changed",
+			fmt.Sprintf("Service '%s' %s", name, action),
+		))
+	}
 	return true
 }
 

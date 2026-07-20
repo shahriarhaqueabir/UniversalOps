@@ -127,7 +127,8 @@ func GetFailedLogins() ([]FailedLogin, error) {
 }
 
 func getFailedLoginsWindows() ([]FailedLogin, error) {
-	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-Command",
+	// Use direct exec.Command for event log access.
+	cmd := exec.Command("powershell", "-Command",
 		`Get-WinEvent -FilterHashtable @{Id=4625} -MaxEvents 50 -ErrorAction SilentlyContinue |
 		Select-Object TimeCreated,Message | ConvertTo-Json -As Array -Depth 2`)
 	out, err := cmd.Output()

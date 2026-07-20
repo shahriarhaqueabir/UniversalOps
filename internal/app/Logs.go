@@ -8,13 +8,11 @@ import (
 )
 
 // Logs exposes log management bindings to the frontend.
-type Logs struct {
-	app *App
-}
+type Logs struct{}
 
 // NewLogs creates a new Logs facade.
-func NewLogs(app *App) *Logs {
-	return &Logs{app: app}
+func NewLogs() *Logs {
+	return &Logs{}
 }
 
 // GetLogs returns filtered log entries from the opsforall database.

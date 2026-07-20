@@ -20,7 +20,7 @@ function ActionBanner({ result }: { result: NetworkActionResult }) {
   return (
     <div
       className={cn(
-        'flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-medium',
+        'flex items-center gap-3 px-5 py-3 rounded-xl border text-sm font-medium',
         result.success
           ? 'bg-success/10 border-success/30 text-success'
           : 'bg-danger/10 border-danger/30 text-danger',
