@@ -3,6 +3,7 @@ package secops
 import (
 	"encoding/csv"
 	"fmt"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -22,7 +23,9 @@ type ListeningPort struct {
 // GetListeningPorts retrieves all ports in LISTENING state.
 func GetListeningPorts() ([]ListeningPort, error) {
 	if common.IsWindows() {
-		cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "cmd", "/c", "netstat -ano")
+		// Use direct exec.Command for Windows system tools because netstat
+		// requires access often restricted by sandboxing.
+		cmd := exec.Command("cmd", "/c", "netstat -ano")
 		output, err := cmd.Output()
 		if err == nil {
 			ports := parseListeningPorts(string(output))
@@ -245,9 +248,8 @@ func extractPort(addr string) string {
 
 // resolveProcessNames resolves PID to process name using tasklist.
 func resolveProcessNames(ports []ListeningPort) []ListeningPort {
-	cfg := common.SystemQuerySandbox()
-	cfg.DenyNetworkAccess = false // tasklist communicates with the system process table
-	cmd := common.SandboxedCommandWithConfig(cfg, "cmd", "/c", "tasklist /FO CSV /NH")
+	// Use direct exec.Command.
+	cmd := exec.Command("cmd", "/c", "tasklist /FO CSV /NH")
 	output, err := cmd.Output()
 	if err != nil {
 		for i := range ports {
@@ -298,9 +300,8 @@ func parseTasklistCSV(output string) map[int]string {
 
 // getProcessNameByPID resolves a single PID to a process name.
 func getProcessNameByPID(pid int) string {
-	cfg := common.SystemQuerySandbox()
-	cfg.DenyNetworkAccess = false
-	cmd := common.SandboxedCommandWithConfig(cfg, "cmd", "/c", fmt.Sprintf("tasklist /FI \"PID eq %d\" /FO CSV /NH", pid))
+	// Use direct exec.Command.
+	cmd := exec.Command("cmd", "/c", fmt.Sprintf("tasklist /FI \"PID eq %d\" /FO CSV /NH", pid))
 	output, err := cmd.Output()
 	if err != nil {
 		return fmt.Sprintf("pid:%d", pid)

@@ -69,7 +69,7 @@ export function AuditTab() {
             <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6">Audit Results</h3>
             <div className="space-y-3">
               {auditResult.items.map((item, i) => (
-                <div key={i} className={`flex items-center justify-between bg-panel-2 border rounded-xl px-4 py-3 ${item.passed ? 'border-border' : 'border-danger/30 bg-danger/5'}`}>
+                <div key={i} className={`flex items-center justify-between bg-panel-2 border rounded-xl px-5 py-3 ${item.passed ? 'border-border' : 'border-danger/30 bg-danger/5'}`}>
                   <div className="flex items-center gap-4">
                     {item.passed ? (
                       <CheckCircle2 size={18} className="text-success shrink-0" />

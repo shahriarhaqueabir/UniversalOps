@@ -3,13 +3,16 @@ package sysops
 import (
 	"strings"
 
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 	"github.com/yusufpapurcu/wmi"
 )
 
-// win32VideoController represents a WMI GPU entry.
-type win32VideoController struct {
+// Win32_VideoController represents a WMI GPU entry.
+// NOTE: The struct name must exactly match the WMI class name (including the underscore)
+// because yusufpapurcu/wmi uses the struct name to build the FROM clause.
+type Win32_VideoController struct {
 	Name                 string
-	AdapterRAM           uint64
+	AdapterRAM           int32 // WMI returns VT_I4 (signed 32-bit); cast to uint32 to get correct bytes
 	DriverVersion        string
 	VideoProcessor       string
 	Status               string
@@ -29,22 +32,36 @@ type GPUInfo struct {
 // GetGPUInfo queries WMI for GPU information.
 // Falls back gracefully if no GPU is detected or WMI fails.
 func GetGPUInfo() *GPUInfo {
-	var dst []win32VideoController
-	q := wmi.CreateQuery(&dst, "")
+	var dst []Win32_VideoController
+	// Query only essential fields to improve speed and compatibility
+	q := "SELECT Name, AdapterRAM, DriverVersion, Status FROM Win32_VideoController"
 	if err := wmi.Query(q, &dst); err != nil {
+		common.LogWarn("GPU WMI query failed: %v", err)
 		return &GPUInfo{Detected: false}
 	}
 
-	// Pick the first non-empty GPU entry.
+	// Pick the first non-empty GPU entry that isn't a virtual display driver
 	for _, v := range dst {
 		name := strings.TrimSpace(v.Name)
-		if name == "" {
+		if name == "" || strings.Contains(strings.ToLower(name), "virtual") || strings.Contains(strings.ToLower(name), "mirror") {
 			continue
 		}
+
+		// WMI returns AdapterRAM as a signed 32-bit int (VT_I4).
+		// Cast to uint32 first to interpret the bit pattern correctly,
+		// then widen to uint64 for the GPUInfo field.
+		memBytes := uint64(uint32(v.AdapterRAM))
+
+		// Some drivers report negative AdapterRAM or 0 if not accessible
+		if memBytes == 0 && strings.Contains(strings.ToLower(name), "nvidia") {
+			// Special handling for NVIDIA if RAM is missing from WMI
+			// (Common in some driver versions)
+		}
+
 		return &GPUInfo{
 			Name:     name,
 			Vendor:   extractVendor(name),
-			Memory:   v.AdapterRAM,
+			Memory:   memBytes,
 			Driver:   v.DriverVersion,
 			Status:   v.Status,
 			Detected: true,

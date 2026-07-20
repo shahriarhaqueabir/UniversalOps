@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useMemo } from 'react'
+import { motion } from 'motion/react'
 import { useQuery } from '@tanstack/react-query'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { format } from 'date-fns'
@@ -13,6 +14,7 @@ import {
   Clock,
   Zap,
   Brain,
+  ScrollText,
 } from 'lucide-react'
 import {
   AreaChart,
@@ -137,12 +139,12 @@ function OverviewTab() {
   }
 
   return (
-    <div className="space-y-6 overflow-y-auto flex-1">
+    <div className="space-y-6 overflow-y-auto flex-1 p-10">
       {/* ── Freshness Indicator ── */}
-      <DataFreshnessIndicator lastUpdated={statsUpdatedAt ? new Date(statsUpdatedAt) : null} />
+      <DataFreshnessIndicator lastUpdated={statsUpdatedAt ? new Date(statsUpdatedAt) : null} className="mb-4" />
 
       {/* ── Log Volume Cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {[
           { label: 'Today', value: stats?.totalToday ?? 0, icon: <LayoutList size={20} />, color: 'var(--color-accent)' },
           { label: 'This Hour', value: stats?.totalThisHour ?? 0, icon: <Clock size={20} />, color: 'var(--color-success)' },
@@ -150,14 +152,14 @@ function OverviewTab() {
         ].map((card) => (
           <div
             key={card.label}
-            className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-xl p-5 flex items-center gap-4 hover:border-[var(--color-accent)]/30 transition-colors"
+            className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-2xl p-6 flex items-center gap-5 hover:border-[var(--color-accent)]/30 transition-all shadow-xl group"
           >
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: `color-mix(in srgb, ${card.color} 15%, transparent)`, color: card.color }}>
+            <div className="w-14 h-14 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110" style={{ backgroundColor: `color-mix(in srgb, ${card.color} 15%, transparent)`, color: card.color }}>
               {card.icon}
             </div>
             <div>
-              <p className="text-2xl font-bold text-[var(--color-text)]">{card.value.toLocaleString()}</p>
-              <p className="text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">{card.label}</p>
+              <p className="text-3xl font-black text-[var(--color-text)] tabular-nums">{card.value.toLocaleString()}</p>
+              <p className="text-[10px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.2em]">{card.label}</p>
             </div>
           </div>
         ))}
@@ -541,22 +543,23 @@ export function Logs() {
   const [activeTab, setActiveTab] = useState<TabId>('overview')
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-bg)]">
+    <div className="flex flex-col h-full bg-[var(--color-bg)] animate-in fade-in duration-500">
       {/* ── Header ── */}
-      <div className="py-4 border-b border-[var(--color-border)] bg-[var(--color-panel-2)] flex items-center justify-between">
+      <div className="py-8 border-b border-[var(--color-border)] bg-[var(--color-panel-2)]/50 flex items-center justify-between px-10">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-3">
-            <LayoutList size={24} className="text-[var(--color-accent)]" />
-            Logs &amp; Event Stream
-          </h1>
-          <p className="text-[var(--color-text-dim)] text-sm mt-1">
-            System log overview and real-time audit trail.
-          </p>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
+               <ScrollText size={18} />
+            </div>
+            <h1 className="text-sm font-black text-[var(--color-text)] uppercase tracking-[0.25em] text-wrap-balance">Event Intelligence</h1>
+          </div>
+          <p className="text-3xl font-bold text-[var(--color-text)] tracking-tight">Logs & Event Stream</p>
+          <p className="text-[var(--color-text-dim)] text-xs font-semibold uppercase tracking-widest mt-2 text-wrap-pretty">System log overview and real-time audit trail for all subsystems</p>
         </div>
       </div>
 
       {/* ── Tab Bar ── */}
-      <div className="flex border-b border-[var(--color-border)] bg-[var(--color-panel)] px-4">
+      <div className="flex border-b border-[var(--color-border)] bg-[var(--color-panel)] px-6 overflow-hidden">
         {[
           { id: 'overview' as TabId, label: 'Overview', icon: <LayoutList size={18} /> },
           { id: 'live' as TabId, label: 'Live Stream', icon: <Zap size={18} /> },
@@ -566,14 +569,19 @@ export function Logs() {
             onClick={() => setActiveTab(tab.id)}
             data-automation-id={`logs-tab-${tab.id}`}
             className={cn(
-              'flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition-all',
-              activeTab === tab.id
-                ? 'border-[var(--color-accent)] text-[var(--color-accent)]'
-                : 'border-transparent text-[var(--color-text-faint)] hover:text-[var(--color-text-dim)]'
+              'flex items-center gap-3 px-10 py-5 text-sm font-bold transition-all border-b-2 border-transparent relative',
+              activeTab === tab.id ? 'text-accent' : 'text-text-faint hover:text-text hover:bg-[var(--color-sidebar-hover)]',
             )}
           >
             {tab.icon}
-            {tab.label}
+            <span className="uppercase tracking-widest text-[10px] font-black">{tab.label}</span>
+            {activeTab === tab.id && (
+              <motion.div
+                layoutId="logs-tab-indicator"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent"
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              />
+            )}
           </button>
         ))}
       </div>

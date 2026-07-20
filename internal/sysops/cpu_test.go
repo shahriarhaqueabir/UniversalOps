@@ -48,11 +48,12 @@ func TestGetCPUStatsPerCPUSumMatchesTotal(t *testing.T) {
 		sum += v
 	}
 
-	// Each per-CPU entry is total/coreCount, so total should equal sum.
-	// Use a small epsilon for floating point comparison.
-	diff := stats.Percent - sum
+	// Percent is the average (sum/coreCount), so the average of PerCPU should
+	// match Percent. Use a small epsilon for floating point comparison.
+	avg := sum / float64(len(stats.PerCPU))
+	diff := stats.Percent - avg
 	if diff < -0.01 || diff > 0.01 {
-		t.Errorf("PerCPU sum = %v, want %v (diff=%v)", sum, stats.Percent, diff)
+		t.Errorf("PerCPU avg = %v, want %v (diff=%v)", avg, stats.Percent, diff)
 	}
 }
 

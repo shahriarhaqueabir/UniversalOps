@@ -78,6 +78,10 @@ export function SaveModelfile(arg1) {
   return window['go']['app']['AIOps']['SaveModelfile'](arg1);
 }
 
+export function SetDataDir(arg1) {
+  return window['go']['app']['AIOps']['SetDataDir'](arg1);
+}
+
 export function SetOllamaModel(arg1) {
   return window['go']['app']['AIOps']['SetOllamaModel'](arg1);
 }

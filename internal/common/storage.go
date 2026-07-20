@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -33,18 +34,34 @@ type Storage struct {
 	// mu protects metricsCh and closed flag
 	mu     sync.RWMutex
 	closed bool
+
+	// Instrumentation metrics
+	writeCount        uint64
+	totalWriteDur     time.Duration
+	insertMetricCalls uint64
+	statsMu           sync.Mutex
 }
 
 var (
 	// DefaultDBName is the name of the SQLite database file.
 	DefaultDBName = "allopsfull.db"
-	globalStorage *Storage
+
+	// globalStorageMu serialises access to globalStorage so that
+	// InitStorage (writer) and GetStorage (readers) never race.
+	globalStorageMu sync.RWMutex
+	globalStorage   *Storage
 )
 
 // InitStorage initializes the global SQLite storage.
 func InitStorage(path string) error {
+	LogDebug("SQLITE_METRICS | Initializing storage at %s", path)
 	if path == "" {
 		path = DefaultDBName
+	}
+
+	// Close any previous storage to prevent writerLoop leaks across tests
+	if prev := GetStorage(); prev != nil {
+		prev.Close()
 	}
 
 	// Ensure directory exists
@@ -60,9 +77,12 @@ func InitStorage(path string) error {
 		return fmt.Errorf("open sqlite: %w", err)
 	}
 
-	// Performance settings: single connection since SQLite is file-level locked
-	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
+	// Performance settings: 2 connections to avoid deadlock between the
+	// background writer (writerLoop → insertBatch → Begin) and the log
+	// worker (flush → Begin → tx.Exec). SQLite with WAL mode supports
+	// concurrent reads and one writer.
+	db.SetMaxOpenConns(2)
+	db.SetMaxIdleConns(2)
 
 	// WAL mode and performance pragmas
 	pragmas := []string{
@@ -98,6 +118,9 @@ func InitStorage(path string) error {
 		return fmt.Errorf("prepare insert stmt: %w", err)
 	}
 
+	LogDebug("SQLITE_METRICS | Initializing...")
+	LogDebug("SQLITE_METRICS | starting background loops")
+
 	// Start the background writer goroutine
 	s.writerWg.Add(1)
 	go s.writerLoop()
@@ -106,13 +129,20 @@ func InitStorage(path string) error {
 	s.pruneWg.Add(1)
 	go s.dailyPruneLoop()
 
+	// Phase 2: Start background metrics logger
+	go s.metricsLoggerLoop()
+
+	globalStorageMu.Lock()
 	globalStorage = s
+	globalStorageMu.Unlock()
 	LogInfo("Persistent storage initialized at %s", path)
 	return nil
 }
 
 // GetStorage returns the global storage instance.
 func GetStorage() *Storage {
+	globalStorageMu.RLock()
+	defer globalStorageMu.RUnlock()
 	return globalStorage
 }
 
@@ -271,12 +301,41 @@ func (s *Storage) drainMetrics(batch []MetricWrite) []MetricWrite {
 	}
 }
 
+func (s *Storage) metricsLoggerLoop() {
+	ticker := time.NewTicker(5 * time.Second) // AUDIT: Reduced from 30s to 5s for fast verification
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			// PROBE: Force a test write to see if it registers
+			s.InsertMetric("probe.heartbeat", "bool", 1.0)
+
+			s.statsMu.Lock()
+			count := s.writeCount
+			dur := s.totalWriteDur
+			s.writeCount = 0
+			s.totalWriteDur = 0
+			s.statsMu.Unlock()
+
+			if count > 0 {
+				avg := dur / time.Duration(count)
+				LogDebug("SQLITE_METRICS | batches=%d | total_dur=%v | avg_dur=%v", count, dur, avg)
+			} else {
+				LogDebug("SQLITE_METRICS | heartbeat (no writes)")
+			}
+		case <-s.closeCh:
+			return
+		}
+	}
+}
+
 // insertBatch writes a batch of metrics inside a single transaction.
 func (s *Storage) insertBatch(batch []MetricWrite) {
 	if len(batch) == 0 {
 		return
 	}
 
+	start := time.Now()
 	tx, err := s.db.Begin()
 	if err != nil {
 		LogInfo("Batch insert begin tx: %v", err)
@@ -285,7 +344,7 @@ func (s *Storage) insertBatch(batch []MetricWrite) {
 
 	stmt := tx.Stmt(s.insertStmt)
 	for _, m := range batch {
-		if _, err := stmt.Exec(m.Name, m.Unit, m.Value, m.Time); err != nil {
+		if _, err := stmt.Exec(m.Name, m.Unit, m.Value, m.Time.UTC().Format(time.RFC3339)); err != nil {
 			LogInfo("Batch insert metric: %v", err)
 		}
 	}
@@ -293,7 +352,14 @@ func (s *Storage) insertBatch(batch []MetricWrite) {
 	if err := tx.Commit(); err != nil {
 		LogInfo("Batch insert commit: %v", err)
 		tx.Rollback()
+		return
 	}
+
+	dur := time.Since(start)
+	s.statsMu.Lock()
+	s.writeCount++
+	s.totalWriteDur += dur
+	s.statsMu.Unlock()
 }
 
 // flushMetrics blocks until all pending metric writes are persisted.
@@ -335,6 +401,8 @@ var (
 )
 
 func (s *Storage) InsertMetric(name, unit string, value float64) error {
+	atomic.AddUint64(&s.insertMetricCalls, 1)
+	LogDebug("SQLITE_METRICS | InsertMetric called: %s", name)
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if s.closed {
@@ -343,8 +411,10 @@ func (s *Storage) InsertMetric(name, unit string, value float64) error {
 
 	w := MetricWrite{Name: name, Unit: unit, Value: value, Time: time.Now()}
 
-	// Wait up to 500ms to enqueue the metric.
-	timer := time.NewTimer(500 * time.Millisecond)
+	// PERFORMANCE FIX: Reduced timeout from 500ms to 10ms.
+	// A monitoring app should NEVER block the caller (like the UI or high-freq collector)
+	// if the background persistence layer is backed up. Data freshness > History.
+	timer := time.NewTimer(10 * time.Millisecond)
 	defer timer.Stop()
 
 	select {
@@ -355,10 +425,10 @@ func (s *Storage) InsertMetric(name, unit string, value float64) error {
 		lastDropLogMu.Lock()
 		if time.Since(lastDropLog) > 10*time.Second {
 			lastDropLog = time.Now()
-			LogWarn("InsertMetric: metrics channel full, dropped sample after 500ms (name=%s). SYSTEM UNDER HEAVY DISK LOAD.", name)
+			LogWarn("InsertMetric: metrics queue backed up, dropping sample (name=%s). WORKSTATION DISK I/O IS SATURATED.", name)
 		}
 		lastDropLogMu.Unlock()
-		return nil
+		return fmt.Errorf("queue full")
 	}
 }
 
@@ -406,8 +476,15 @@ func (s *Storage) GetMetricHistoryWithTimestamps(name string, limit int) ([]Metr
 	var points []MetricDataPoint
 	for rows.Next() {
 		var p MetricDataPoint
-		if err := rows.Scan(&p.Timestamp, &p.Value); err != nil {
+		var tsRaw string
+		if err := rows.Scan(&tsRaw, &p.Value); err != nil {
 			return nil, err
+		}
+		// Parse timestamp from SQLite (usually ISO8601 or YYYY-MM-DD HH:MM:SS)
+		if t, err := time.Parse("2006-01-02 15:04:05", tsRaw); err == nil {
+			p.Timestamp = t
+		} else if t, err := time.Parse(time.RFC3339, tsRaw); err == nil {
+			p.Timestamp = t
 		}
 		points = append(points, p)
 	}
@@ -426,14 +503,17 @@ func (s *Storage) GetMetricHistoryWithTimestamps(name string, limit int) ([]Metr
 // ── Logs CRUD ───────────────────────────────────────────────────────────────
 
 // InsertLog persists a log entry.
+// NOTE: mu is NOT held across the db.Exec call to prevent a deadlock
+// between Close() (which needs mu.Lock()) and a blocking db.Exec.
 func (s *Storage) InsertLog(level, module, message string) error {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if s.closed {
+	closed := s.closed
+	s.mu.RUnlock()
+	if closed {
 		return fmt.Errorf("storage closed")
 	}
 	query := `INSERT INTO logs (level, module, message, timestamp) VALUES (?, ?, ?, ?)`
-	_, err := s.db.Exec(query, level, module, message, time.Now())
+	_, err := s.db.Exec(query, level, module, message, time.Now().UTC().Format(time.RFC3339))
 	return err
 }
 
@@ -463,9 +543,19 @@ func (s *Storage) QueryLogs(level, search string, limit int) ([]LogEntryData, er
 	var entries []LogEntryData
 	for rows.Next() {
 		var e LogEntryData
-		var t time.Time
-		if err := rows.Scan(&t, &e.Level, &e.Module, &e.Message); err != nil {
+		var tsRaw string
+		var module sql.NullString
+		if err := rows.Scan(&tsRaw, &e.Level, &module, &e.Message); err != nil {
 			return nil, err
+		}
+		if module.Valid {
+			e.Module = module.String
+		}
+		var t time.Time
+		if parsed, err := time.Parse("2006-01-02 15:04:05", tsRaw); err == nil {
+			t = parsed
+		} else if parsed, err := time.Parse(time.RFC3339, tsRaw); err == nil {
+			t = parsed
 		}
 		e.Timestamp = t.Format("2006/01/02 15:04:05")
 		entries = append(entries, e)
@@ -522,8 +612,12 @@ func (s *Storage) TopLogSources(limit int) ([]SourceCount, error) {
 	var results []SourceCount
 	for rows.Next() {
 		var sc SourceCount
-		if err := rows.Scan(&sc.Source, &sc.Count); err != nil {
+		var source sql.NullString
+		if err := rows.Scan(&source, &sc.Count); err != nil {
 			return nil, err
+		}
+		if source.Valid {
+			sc.Source = source.String
 		}
 		results = append(results, sc)
 	}
@@ -583,15 +677,19 @@ func (s *Storage) QueryLogTimeline(hours int) ([]LogTimelineBucket, error) {
 	var results []LogTimelineBucket
 	for rows.Next() {
 		var b LogTimelineBucket
-		var bucket sql.NullString
-		if err := rows.Scan(&bucket, &b.Total, &b.Errors, &b.Warnings, &b.Info); err != nil {
-			return nil, err
+		var bucket *string
+		var errors, warnings, info sql.NullInt64
+		if err := rows.Scan(&bucket, &b.Total, &errors, &warnings, &info); err != nil {
+			return nil, fmt.Errorf("scan timeline: %w", err)
 		}
-		if bucket.Valid {
-			b.Bucket = bucket.String
+		if bucket != nil {
+			b.Bucket = *bucket
 		} else {
 			continue // skip NULL buckets
 		}
+		b.Errors = int(errors.Int64)
+		b.Warnings = int(warnings.Int64)
+		b.Info = int(info.Int64)
 		results = append(results, b)
 	}
 	if results == nil {
@@ -614,8 +712,14 @@ func (s *Storage) TrendingLogErrors(limit int) ([]TrendingLogError, error) {
 	var results []TrendingLogError
 	for rows.Next() {
 		var te TrendingLogError
-		if err := rows.Scan(&te.Message, &te.Count, &te.LastSeen); err != nil {
+		var tsRaw string
+		if err := rows.Scan(&te.Message, &te.Count, &tsRaw); err != nil {
 			return nil, err
+		}
+		if t, err := time.Parse("2006-01-02 15:04:05", tsRaw); err == nil {
+			te.LastSeen = t
+		} else if t, err := time.Parse(time.RFC3339, tsRaw); err == nil {
+			te.LastSeen = t
 		}
 		results = append(results, te)
 	}
@@ -653,10 +757,12 @@ func (s *Storage) Prune(olderThan time.Duration) {
 // ── Events CRUD ────────────────────────────────────────────────────────────────
 
 // InsertEvent persists a timeline event.
+// NOTE: mu is NOT held across the DB call to prevent deadlock with Close().
 func (s *Storage) InsertEvent(evt TimelineEvent, tx *sql.Tx) error {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if s.closed && tx == nil {
+	closed := s.closed
+	s.mu.RUnlock()
+	if closed && tx == nil {
 		return fmt.Errorf("storage closed")
 	}
 	// Encode related IDs as comma-separated
@@ -678,7 +784,7 @@ func (s *Storage) InsertEvent(evt TimelineEvent, tx *sql.Tx) error {
 
 	_, err := s.getDB(tx).Exec(
 		`INSERT OR IGNORE INTO events (id, timestamp, category, level, title, detail, module, related, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		evt.ID, evt.Timestamp, string(evt.Category), evt.Level.String(), evt.Title, evt.Detail, evt.Module, related, metaJSON,
+		evt.ID, evt.Timestamp.UTC().Format(time.RFC3339), string(evt.Category), evt.Level.String(), evt.Title, evt.Detail, evt.Module, related, metaJSON,
 	)
 	if err != nil {
 		LogWarn("InsertEvent failed: %v", err)
@@ -712,9 +818,14 @@ func (s *Storage) QueryEvents(category string, level string, limit int, offset i
 	var events []TimelineEvent
 	for rows.Next() {
 		var e TimelineEvent
-		var cat, lvl, related, metaJSON string
-		if err := rows.Scan(&e.ID, &e.Timestamp, &cat, &lvl, &e.Title, &e.Detail, &e.Module, &related, &metaJSON); err != nil {
+		var tsRaw, cat, lvl, related, metaJSON string
+		if err := rows.Scan(&e.ID, &tsRaw, &cat, &lvl, &e.Title, &e.Detail, &e.Module, &related, &metaJSON); err != nil {
 			return nil, err
+		}
+		if t, err := time.Parse("2006-01-02 15:04:05", tsRaw); err == nil {
+			e.Timestamp = t
+		} else if t, err := time.Parse(time.RFC3339, tsRaw); err == nil {
+			e.Timestamp = t
 		}
 		e.Category = EventCategory(cat)
 		switch lvl {
@@ -744,12 +855,17 @@ func (s *Storage) GetEventByID(id string) (*TimelineEvent, error) {
 	row := s.db.QueryRow(query, id)
 
 	var e TimelineEvent
-	var cat, lvl, related, metaJSON string
-	if err := row.Scan(&e.ID, &e.Timestamp, &cat, &lvl, &e.Title, &e.Detail, &e.Module, &related, &metaJSON); err != nil {
+	var tsRaw, cat, lvl, related, metaJSON string
+	if err := row.Scan(&e.ID, &tsRaw, &cat, &lvl, &e.Title, &e.Detail, &e.Module, &related, &metaJSON); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err
+	}
+	if t, err := time.Parse("2006-01-02 15:04:05", tsRaw); err == nil {
+		e.Timestamp = t
+	} else if t, err := time.Parse(time.RFC3339, tsRaw); err == nil {
+		e.Timestamp = t
 	}
 	e.Category = EventCategory(cat)
 	switch lvl {
@@ -825,15 +941,23 @@ func (s *Storage) CheckClosed() bool {
 }
 
 // InsertAlert persists a fired alert to SQLite.
+// NOTE: mu is NOT held across the DB call to prevent deadlock with Close().
 func (s *Storage) InsertAlert(a AlertRecord, tx *sql.Tx) error {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if s.closed && tx == nil {
+	closed := s.closed
+	s.mu.RUnlock()
+	if closed && tx == nil {
 		return fmt.Errorf("storage closed")
 	}
+
+	resolvedAt := interface{}(nil)
+	if a.ResolvedAt != nil {
+		resolvedAt = a.ResolvedAt.UTC().Format(time.RFC3339)
+	}
+
 	_, err := s.getDB(tx).Exec(
 		`INSERT OR REPLACE INTO alerts (id, timestamp, level, metric, message, value, threshold, resolved, resolved_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		a.ID, a.Timestamp, a.Level, a.Metric, a.Message, a.Value, a.Threshold, boolToInt(a.Resolved), timePtrToSQL(a.ResolvedAt),
+		a.ID, a.Timestamp.UTC().Format(time.RFC3339), a.Level, a.Metric, a.Message, a.Value, a.Threshold, boolToInt(a.Resolved), resolvedAt,
 	)
 	if err != nil {
 		LogWarn("InsertAlert failed: %v", err)
@@ -842,10 +966,12 @@ func (s *Storage) InsertAlert(a AlertRecord, tx *sql.Tx) error {
 }
 
 // UpdateAlertResolved marks an alert as resolved in SQLite.
+// NOTE: mu is NOT held across the DB call to prevent deadlock with Close().
 func (s *Storage) UpdateAlertResolved(id string, tx *sql.Tx) error {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if s.closed && tx == nil {
+	closed := s.closed
+	s.mu.RUnlock()
+	if closed && tx == nil {
 		return fmt.Errorf("storage closed")
 	}
 	_, err := s.getDB(tx).Exec(
@@ -872,10 +998,16 @@ func (s *Storage) QueryAlertHistory(limit int) ([]AlertRecord, error) {
 	var alerts []AlertRecord
 	for rows.Next() {
 		var a AlertRecord
+		var tsRaw string
 		var resolved int
 		var resolvedAt sql.NullTime
-		if err := rows.Scan(&a.ID, &a.Timestamp, &a.Level, &a.Metric, &a.Message, &a.Value, &a.Threshold, &resolved, &resolvedAt); err != nil {
+		if err := rows.Scan(&a.ID, &tsRaw, &a.Level, &a.Metric, &a.Message, &a.Value, &a.Threshold, &resolved, &resolvedAt); err != nil {
 			return nil, err
+		}
+		if t, err := time.Parse("2006-01-02 15:04:05", tsRaw); err == nil {
+			a.Timestamp = t
+		} else if t, err := time.Parse(time.RFC3339, tsRaw); err == nil {
+			a.Timestamp = t
 		}
 		a.Resolved = resolved != 0
 		if resolvedAt.Valid {
@@ -903,8 +1035,8 @@ type ConversationMessage struct {
 // InsertMessage persists a chat message to the conversations table.
 func (s *Storage) InsertMessage(sessionID, role, content string) error {
 	_, err := s.db.Exec(
-		`INSERT INTO conversations (session_id, role, content) VALUES (?, ?, ?)`,
-		sessionID, role, content,
+		`INSERT INTO conversations (session_id, role, content, timestamp) VALUES (?, ?, ?, ?)`,
+		sessionID, role, content, time.Now().UTC().Format(time.RFC3339),
 	)
 	return err
 }
@@ -923,8 +1055,14 @@ func (s *Storage) GetMessages(sessionID string) ([]ConversationMessage, error) {
 	var msgs []ConversationMessage
 	for rows.Next() {
 		var m ConversationMessage
-		if err := rows.Scan(&m.ID, &m.SessionID, &m.Role, &m.Content, &m.Timestamp); err != nil {
+		var tsRaw string
+		if err := rows.Scan(&m.ID, &m.SessionID, &m.Role, &m.Content, &tsRaw); err != nil {
 			return nil, err
+		}
+		if t, err := time.Parse("2006-01-02 15:04:05", tsRaw); err == nil {
+			m.Timestamp = t
+		} else if t, err := time.Parse(time.RFC3339, tsRaw); err == nil {
+			m.Timestamp = t
 		}
 		msgs = append(msgs, m)
 	}
@@ -948,16 +1086,18 @@ func (s *Storage) ListSessions() ([]map[string]interface{}, error) {
 	var sessions []map[string]interface{}
 	for rows.Next() {
 		var sid string
-		var lastActiveRaw string
+		var lastActiveStr *string
 		var count int
-		if err := rows.Scan(&sid, &lastActiveRaw, &count); err != nil {
-			return nil, err
+		if err := rows.Scan(&sid, &lastActiveStr, &count); err != nil {
+			return nil, fmt.Errorf("scan session: %w", err)
 		}
 		var lastActive time.Time
-		if t, err := time.Parse("2006-01-02 15:04:05", lastActiveRaw); err == nil {
-			lastActive = t
-		} else if t, err := time.Parse(time.RFC3339, lastActiveRaw); err == nil {
-			lastActive = t
+		if lastActiveStr != nil {
+			if t, err := time.Parse("2006-01-02 15:04:05", *lastActiveStr); err == nil {
+				lastActive = t
+			} else if t, err := time.Parse(time.RFC3339, *lastActiveStr); err == nil {
+				lastActive = t
+			}
 		}
 		sessions = append(sessions, map[string]interface{}{
 			"session_id":  sid,

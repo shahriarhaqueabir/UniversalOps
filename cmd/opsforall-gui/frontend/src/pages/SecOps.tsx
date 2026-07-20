@@ -76,32 +76,37 @@ export function SecOps() {
   const responseCategories = categories.filter(c => c.group === 'response')
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-bg)]">
+    <div className="flex flex-col h-full bg-[var(--color-bg)] animate-in fade-in duration-500">
       {/* Header */}
-      <div className="border-b border-[var(--color-border)] bg-[var(--color-panel-2)] py-3 px-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-4">
-              <Shield size={32} className="text-[var(--color-danger)]" /> SECURITY OPERATIONS
-            </h1>
-            <p className="text-[var(--color-text-dim)] text-sm mt-1">Threat surface analysis, access control, and endpoint protection status.</p>
-            <DataFreshnessIndicator lastUpdated={secUpdatedAt ? new Date(secUpdatedAt) : null} className="mt-1" />
+      <div className="py-8 border-b border-[var(--color-border)] bg-[var(--color-panel-2)]/50 flex items-center justify-between px-10">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-danger/10 flex items-center justify-center text-danger border border-danger/20">
+               <Shield size={18} />
+            </div>
+            <h1 className="text-sm font-black text-[var(--color-text)] uppercase tracking-[0.25em]">Threat & Perimeter</h1>
           </div>
+          <p className="text-3xl font-bold text-[var(--color-text)] tracking-tight">Security Operations</p>
+          <p className="text-[var(--color-text-dim)] text-xs font-semibold uppercase tracking-widest mt-2">Threat surface analysis, access control, and endpoint protection status.</p>
+          <DataFreshnessIndicator lastUpdated={secUpdatedAt ? new Date(secUpdatedAt) : null} className="mt-4" />
         </div>
       </div>
 
       {/* Content: Sidebar + Main */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
-        <div className="w-52 border-r border-[var(--color-border)] bg-[var(--color-panel-2)] overflow-y-auto p-2.5">
+        <div className="w-64 border-r border-[var(--color-border)] bg-[var(--color-panel)] overflow-y-auto p-4 scroll-smooth">
           <CategoryGroup label="ASSESSMENT" group="assessment" page="secops" categories={assessmentCategories} active={activeCategory} onSelect={setActiveCategory} />
           <CategoryGroup label="DETECTION" group="detection" page="secops" categories={detectionCategories} active={activeCategory} onSelect={setActiveCategory} />
           <CategoryGroup label="RESPONSE" group="response" page="secops" categories={responseCategories} active={activeCategory} onSelect={setActiveCategory} />
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <Suspense fallback={<div className="flex items-center justify-center h-32 text-[var(--color-text-faint)] text-sm">Loading...</div>}>
+        <div className="flex-1 overflow-y-auto p-10 relative">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-10">
+            <div className="absolute -top-24 -left-24 w-96 h-96 bg-danger rounded-full blur-[120px]" />
+          </div>
+          <Suspense fallback={<div className="flex items-center justify-center h-full text-text-faint text-xs font-black uppercase tracking-widest animate-pulse">Initializing Security Core...</div>}>
             {renderContent()}
           </Suspense>
         </div>

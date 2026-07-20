@@ -45,7 +45,7 @@ export function CapabilityMatrix() {
         queryClient.invalidateQueries({ queryKey: ['system-capabilities'] })
         toast.success(`Updated path for ${id}`)
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to select file')
     }
   }
@@ -62,7 +62,7 @@ export function CapabilityMatrix() {
           <div
             key={cap.id}
             className={cn(
-              'flex items-center gap-3 p-3 rounded-xl border transition-all duration-300 group',
+              'flex items-center gap-3 p-5 rounded-xl border transition-all duration-300 group',
               cap.available
                 ? 'bg-[var(--color-accent)]/5 border-[var(--color-accent)]/20 shadow-sm'
                 : 'bg-[var(--color-panel-3)]/30 border-[var(--color-border)]/50 grayscale opacity-60'

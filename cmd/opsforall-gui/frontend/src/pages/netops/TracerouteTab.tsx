@@ -9,6 +9,8 @@ import {
 import type { TraceResult } from '@/types'
 import { SectionBriefing } from '@/components/ui/SectionBriefing'
 
+import { SearchInput } from '@/components/ui/SearchInput'
+
 export function TracerouteTab() {
   const { call } = useBackend()
   const [traceTarget, setTraceTarget] = useState('8.8.8.8')
@@ -16,13 +18,13 @@ export function TracerouteTab() {
   const [traceRunning, setTraceRunning] = useState(false)
 
   const executeTrace = useCallback(async () => {
-    setTraceRunning(true); setTraceResult(null)
+    setTraceRunning(true)
+    setTraceResult(null)
     try {
       const res = await call('NetOps.Traceroute', traceTarget) as TraceResult
       setTraceResult(res)
-    } catch (err: unknown) {
-      console.error('Traceroute failed:', err)
-      setTraceResult({ target: traceTarget, hops: [], error: String(err) })
+    } catch {
+      setTraceResult({ target: traceTarget, hops: [], error: 'Trace failed' })
     } finally {
       setTraceRunning(false)
     }
@@ -32,30 +34,25 @@ export function TracerouteTab() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <SectionBriefing
         title="Route Trace Analysis"
-        objective="Map the network path to identify routing loops, high-latency hops, or packet loss between the local node and the target."
-        checklist={[
-          "Each hop represents a router along the path.",
-          "High RTT at a single hop may indicate congestion.",
-          "Multiple timeouts in sequence suggests a routing blackhole.",
-          "Consistent latency gradient across hops is expected."
-        ]}
+        objective="Map the network path and measure hop-by-hop latency to a target host."
+        checklist={['Enter target hostname or IP', 'Click trace to begin', 'Review each hop\'s latency and IP']}
       />
 
       {/* Input + Execute */}
       <div className="flex items-center gap-6 bg-panel-2 border border-border p-6 rounded-[var(--radius-lg)] shadow-inner">
-        <div className="relative group flex-1">
-          <Globe size={24} className="absolute left-5 top-1/2 -translate-y-1/2 text-text-faint group-focus-within:text-accent transition-colors" />
-          <input
-            type="text"
+        <div className="flex-1">
+          <SearchInput
+            icon={<Globe size={18} />}
             value={traceTarget}
             onChange={(e) => setTraceTarget(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && executeTrace()}
             placeholder="Target hostname or IP"
-            className="w-full bg-panel border border-border rounded-2xl pl-16 pr-4 py-3 text-sm font-medium text-[var(--color-text)] placeholder-[var(--color-text-faint)] focus:outline-none focus:border-accent shadow-xl"
+            size="lg"
+            className="shadow-xl"
           />
         </div>
-        <button onClick={executeTrace} disabled={traceRunning} className="flex items-center gap-3 px-5 py-2.5 bg-[var(--color-accent)] text-white text-sm font-semibold rounded-xl hover:bg-accent/90 shadow-xl transition-all disabled:opacity-50">
-          {traceRunning ? <RefreshCw size={24} className="animate-spin" /> : <Map size={24} />}
+        <button onClick={executeTrace} disabled={traceRunning} className="flex items-center gap-3 px-8 py-3.5 bg-[var(--color-accent)] text-white text-sm font-black uppercase tracking-widest rounded-xl hover:bg-accent/90 shadow-xl transition-all disabled:opacity-50 active:scale-95 h-12">
+          {traceRunning ? <RefreshCw size={18} className="animate-spin" /> : <Map size={18} />}
           {traceRunning ? 'TRACING...' : 'TRACE ROUTE'}
         </button>
       </div>

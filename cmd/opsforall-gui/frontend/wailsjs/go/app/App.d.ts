@@ -9,7 +9,17 @@ export function ClearOnboarded():Promise<void>;
 
 export function ConfirmAction(arg1:string):Promise<app.SecActionResult>;
 
+export function DiscoverEnvironment():Promise<app.EnvReport>;
+
+export function GenerateBaselineSnapshot():Promise<app.BaselineSnapshot>;
+
 export function GetAppInfo():Promise<app.AppInfo>;
+
+export function GetDataDir():Promise<string>;
+
+export function GetLogsDir():Promise<string>;
+
+export function GetPerformanceProfile():Promise<app.PerformanceProfile>;
 
 export function GetSystemCapabilities():Promise<Array<common.CapabilityInfo>>;
 
@@ -21,7 +31,11 @@ export function MarkOnboarded():Promise<void>;
 
 export function OpenFileDialog(arg1:string,arg2:Array<string>):Promise<string>;
 
+export function ReadTextFile(arg1:string):Promise<string>;
+
 export function SaveFileDialog(arg1:string,arg2:string,arg3:Array<string>):Promise<string>;
+
+export function SelectFolderDialog(arg1:string):Promise<string>;
 
 export function SetCapabilityOverride(arg1:string,arg2:string):Promise<void>;
 
@@ -32,5 +46,7 @@ export function SetCollectorInterval(arg1:string,arg2:number):Promise<void>;
 export function SetLogLevel(arg1:string):Promise<void>;
 
 export function TriggerCollector(arg1:string):Promise<void>;
+
+export function UpdateLogsConfig(arg1:string):Promise<void>;
 
 export function UpdateStorageConfig(arg1:string):Promise<void>;

@@ -111,6 +111,11 @@ func (r *HandshakeRegistry) CreatePreview(action string, params map[string]inter
 		preview.Description = fmt.Sprintf("Restart service %q", name)
 		preview.Risks = []string{"Temporary service downtime during restart"}
 		preview.Rollback = "Systemd will attempt to bring it back up automatically"
+	case "workflow":
+		id := params["workflow_id"].(string)
+		// Try to find workflow in engine if possible (might need a way to access it)
+		// For now, assume engine provides it
+		preview.Description = fmt.Sprintf("Execute operational workflow: %s", id)
 	default:
 		preview.Description = "Perform system action"
 		preview.Risks = []string{"Unknown risks for custom action"}

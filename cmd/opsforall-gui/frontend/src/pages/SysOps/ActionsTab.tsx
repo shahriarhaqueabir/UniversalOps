@@ -75,7 +75,7 @@ export function ActionsTab() {
       </div>
 
       {result && (
-        <div className={cn('p-4 rounded-xl border', result.success ? 'bg-[var(--color-success)]/10 border-[var(--color-success)]/30' : 'bg-[var(--color-danger)]/10 border-[var(--color-danger)]/30')}>
+        <div className={cn('p-5 rounded-xl border', result.success ? 'bg-[var(--color-success)]/10 border-[var(--color-success)]/30' : 'bg-[var(--color-danger)]/10 border-[var(--color-danger)]/30')}>
           <p className={cn('text-sm font-bold', result.success ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]')}>{result.message}</p>
           {result.output && <CommandOutput output={result.output} title="Command Output" />}
         </div>

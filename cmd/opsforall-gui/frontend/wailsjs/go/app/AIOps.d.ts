@@ -42,6 +42,8 @@ export function SaveMessage(arg1:string,arg2:string,arg3:string):Promise<string>
 
 export function SaveModelfile(arg1:string):Promise<void>;
 
+export function SetDataDir(arg1:string):Promise<void>;
+
 export function SetOllamaModel(arg1:string):Promise<void>;
 
 export function WithTimeout(arg1:time.Duration):Promise<context.Context|context.CancelFunc>;

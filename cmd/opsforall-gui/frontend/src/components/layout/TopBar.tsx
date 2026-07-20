@@ -15,6 +15,7 @@ interface TopBarProps {
 const pageLabels: Record<Page, string> = {
   dashboard: 'Dashboard',
   sysops: 'System Operations',
+  workflows: 'Operational Workflows',
   netops: 'Network Operations',
   secops: 'Security Operations',
   devops: 'Development Operations',
@@ -117,7 +118,7 @@ export function TopBar({ currentPage, onToggleHawk }: TopBarProps) {
           {/* Alert dropdown panel */}
           {showAlertPanel && (
             <div className="absolute top-full right-0 mt-2 w-96 bg-[var(--color-panel)] border border-[var(--color-border)] rounded-xl shadow-2xl z-50 overflow-hidden">
-              <div className="p-3 border-b border-[var(--color-border)] flex items-center justify-between">
+              <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
                 <span className="text-sm font-bold text-[var(--color-text)]">
                   Active Alerts
                   <span className="ml-2 text-xs font-normal text-[var(--color-text-faint)]">({activeAlerts.length})</span>

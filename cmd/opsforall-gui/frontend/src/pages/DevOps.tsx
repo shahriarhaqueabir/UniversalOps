@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect, memo } from 'react'
 import { motion } from 'motion/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import {
   Terminal, Server, Play, Trash2,
   PlayCircle, StopCircle, Zap, Activity, Globe,
@@ -122,15 +123,83 @@ export function DevOps() {
 }
 
 function DiagnosticsTab() {
+  const { call } = useBackend()
+  const [isRunning, setIsRunning] = useState(false)
+  const [result, setResult] = useState<DevOpsDiagResult | null>(null)
+
+  const runCheck = async () => {
+    setIsRunning(true)
+    try {
+      const res = await call('DevOps.RunDevOpsDiagnostics') as DevOpsDiagResult
+      setResult(res)
+      toast.success('Health check completed')
+    } catch {
+      toast.error('Health check failed')
+    } finally {
+      setIsRunning(false)
+    }
+  }
+
   return (
-    <div className="flex items-center justify-center h-full">
-      <div className="text-center space-y-4">
-        <Shield size={48} className="mx-auto text-accent opacity-20" />
-        <p className="text-text-faint font-bold uppercase tracking-widest">Health Diagnostics</p>
-        <p className="text-sm text-text-dim max-w-xs mx-auto">This module is currently being optimized for high-density telemetry.</p>
+    <div className="flex flex-col h-full p-10 space-y-8 overflow-y-auto">
+      <div className="flex items-center justify-between bg-panel border border-border p-8 rounded-3xl shadow-xl">
+        <div className="flex items-center gap-6">
+          <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center text-accent border border-accent/20">
+            <Shield size={28} />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-text uppercase tracking-tight">System Node Health</h3>
+            <p className="text-sm text-text-dim font-medium">Verify toolchain integrity and local daemon status</p>
+          </div>
+        </div>
+        <button
+          onClick={runCheck}
+          disabled={isRunning}
+          className="flex items-center gap-3 px-8 py-4 bg-accent text-white rounded-2xl font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-lg active:scale-95 disabled:opacity-50"
+        >
+          {isRunning ? <RefreshCw size={20} className="animate-spin" /> : <Play size={20} fill="currentColor" />}
+          {isRunning ? 'Running Analysis...' : 'Run Health Check'}
+        </button>
       </div>
+
+      {result ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {result.checks.map((check, i) => (
+            <div key={i} className={cn("p-6 rounded-2xl border transition-all hover:scale-[1.02]",
+              check.status === 'pass' ? "bg-success/5 border-success/20 hover:border-success/40" :
+              check.status === 'warn' ? "bg-warning/5 border-warning/20 hover:border-warning/40" :
+              "bg-danger/5 border-danger/20 hover:border-danger/40")}>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-black uppercase tracking-widest text-text-faint">{check.name}</span>
+                <StatusBadge status={check.status} />
+              </div>
+              <p className="text-lg font-bold text-text mb-2 tracking-tight">{check.value}</p>
+              <p className="text-xs text-text-dim font-medium leading-relaxed">{check.message}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col items-center justify-center opacity-30 py-20">
+           <Shield size={80} className="text-accent mb-6" />
+           <p className="text-xl font-black uppercase tracking-[0.3em]">Ready for Analysis</p>
+           <p className="text-sm font-bold text-text-dim mt-2 tracking-widest">Execute check to verify node integrity</p>
+        </div>
+      )}
     </div>
   )
+}
+
+interface DevOpsDiagCheck {
+  name: string
+  status: string
+  message: string
+  value: string
+}
+
+interface DevOpsDiagResult {
+  checks: DevOpsDiagCheck[]
+  score: number
+  timestamp: string
 }
 
 function OverviewTab() {
@@ -189,7 +258,7 @@ function OverviewTab() {
                 { label: 'Stopped', value: dockerData.containers?.stopped ?? 0, cl: 'text-warning' },
                 { label: 'Failed', value: dockerData.containers?.failed ?? 0, cl: 'text-danger' },
                 { label: 'Total', value: dockerData.containers?.total ?? 0, cl: 'text-text' }].map(item => (
-                  <div key={item.label} className="flex flex-col items-center bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-xl p-4 transition-all hover:border-accent/20">
+                  <div key={item.label} className="flex flex-col items-center bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-xl p-5 transition-all hover:border-accent/20">
                     <span className={cn('text-3xl font-black tabular-nums tracking-tighter', item.cl)}>{item.value}</span>
                     <span className="text-[9px] font-black text-text-faint uppercase tracking-widest mt-1">{item.label}</span>
                   </div>
@@ -285,6 +354,21 @@ function TerminalTab() {
     }
   }, [call, isRunning])
 
+  const handleImportScript = async () => {
+    try {
+      const path = await call('App.OpenFileDialog', 'Import Execution Script', ['Scripts|*.ps1;*.sh;*.bat;*.cmd', 'All Files|*.*'])
+      if (path) {
+        const content = await call('App.ReadTextFile', path)
+        if (content) {
+          setInput(content as string)
+          toast.success('Script loaded into buffer')
+        }
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Import failed')
+    }
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault()
@@ -325,6 +409,10 @@ function TerminalTab() {
             className="w-full bg-[var(--color-bg)] border border-[var(--color-border)] rounded-2xl pl-12 pr-6 py-4 text-sm font-mono text-text focus:outline-none focus:border-accent transition-all shadow-inner group-hover:border-accent/30" />
           <span className="absolute left-5 top-1/2 -translate-y-1/2 text-success text-sm font-black font-mono opacity-60 group-focus-within:opacity-100 transition-opacity">$</span>
         </div>
+        <button onClick={handleImportScript} disabled={isRunning}
+          className="p-4 bg-panel-3 border border-border text-text-dim hover:text-white rounded-2xl transition-all active:scale-95" title="Import Script">
+          <Upload size={18} />
+        </button>
         <button onClick={() => { if (input.trim()) runCommand(input) }} disabled={isRunning || !input.trim()}
           className="flex items-center gap-2.5 px-8 py-4 text-xs font-black uppercase tracking-widest bg-accent text-white rounded-2xl hover:bg-accent/90 disabled:opacity-50 transition-all shadow-xl active:scale-95">
           <Play size={16} /> Run Execution
@@ -371,7 +459,7 @@ function PowerShellProTab() {
         <h3 className="text-sm font-bold text-text-dim uppercase tracking-widest mb-3">Diagnostic Workflows</h3>
         {workflows.map(wf => (
           <button key={wf} onClick={() => { setSelectedWorkflow(wf); setConfirmOpen(true) }} disabled={isRunning}
-            className="w-full text-left bg-panel border border-border rounded-xl p-4 transition-all hover:border-accent/50 hover:bg-accent/5 group disabled:opacity-50">
+            className="w-full text-left bg-panel border border-border rounded-xl p-5 transition-all hover:border-accent/50 hover:bg-accent/5 group disabled:opacity-50">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-panel-3 flex items-center justify-center text-text-dim group-hover:text-accent border border-border">
                 <Zap size={16} />
@@ -472,7 +560,7 @@ function GitTabExpanded() {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-panel border border-border rounded-xl p-4">
+        <div className="bg-panel border border-border rounded-xl p-5">
           <h4 className="text-xs font-bold text-text-dim uppercase tracking-widest mb-3">Branches</h4>
           <div className="max-h-40 overflow-y-auto space-y-1">
             {branches.map(b => (
@@ -491,7 +579,7 @@ function GitTabExpanded() {
           </div>
         </div>
 
-        <div className="bg-panel border border-border rounded-xl p-4">
+        <div className="bg-panel border border-border rounded-xl p-5">
           <h4 className="text-xs font-bold text-text-dim uppercase tracking-widest mb-3">Tags & Stash</h4>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -517,7 +605,7 @@ function GitTabExpanded() {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-panel border border-border rounded-xl p-4">
+        <div className="bg-panel border border-border rounded-xl p-5">
           <h4 className="text-xs font-bold text-text-dim uppercase tracking-widest mb-3">Remotes</h4>
           <div className="space-y-1">
             {remotes.map(r => (
@@ -531,7 +619,7 @@ function GitTabExpanded() {
           </div>
         </div>
 
-        <div className="bg-panel border border-border rounded-xl p-4">
+        <div className="bg-panel border border-border rounded-xl p-5">
           <h4 className="text-xs font-bold text-text-dim uppercase tracking-widest mb-3">Actions</h4>
           <div className="flex flex-wrap gap-2">
             <ActionButton icon={<GitMerge size={14} />} label="Merge" variant="warning"
@@ -547,7 +635,7 @@ function GitTabExpanded() {
         </div>
       </div>
 
-      <div className="bg-[var(--color-terminal-bg)] border border-border rounded-2xl p-4 overflow-y-auto max-h-48">
+      <div className="bg-[var(--color-terminal-bg)] border border-border rounded-2xl p-5 overflow-y-auto max-h-48">
         <pre className="text-xs font-mono text-[var(--color-success)] leading-relaxed whitespace-pre-wrap">{logOutput}</pre>
       </div>
     </div>
@@ -621,7 +709,7 @@ function DockerTabExpanded() {
       {subTab === 'containers' && (
         <div className="flex-1 overflow-y-auto space-y-2">
           {(containers?.containers ?? []).map(c => (
-            <div key={c.id} className="bg-panel border border-border rounded-xl p-4 flex items-center justify-between">
+            <div key={c.id} className="bg-panel border border-border rounded-xl p-5 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <span className={cn('w-2 h-2 rounded-full', c.state === 'running' ? 'bg-success' : 'bg-text-faint')} />
                 <div>
@@ -668,7 +756,7 @@ function DockerTabExpanded() {
       {subTab === 'compose' && (
         <div className="flex-1 overflow-y-auto space-y-3">
           {(compose ?? []).map(p => (
-            <div key={p.project} className="bg-panel border border-border rounded-xl p-4">
+            <div key={p.project} className="bg-panel border border-border rounded-xl p-5">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="font-bold text-sm">{p.project}</h4>
                 <StatusBadge status={p.status} />
@@ -692,7 +780,7 @@ function DockerTabExpanded() {
       {subTab === 'networks' && (
         <div className="flex-1 overflow-y-auto space-y-2">
           {(networks ?? []).map(n => (
-            <div key={n.id} className="bg-panel border border-border rounded-xl p-4 flex items-center justify-between">
+            <div key={n.id} className="bg-panel border border-border rounded-xl p-5 flex items-center justify-between">
               <div>
                 <p className="font-bold text-sm font-mono">{n.name}</p>
                 <p className="text-xs text-text-dim">Driver: {n.driver} | Scope: {n.scope} | Subnet: {n.subnet || 'N/A'}</p>
@@ -706,7 +794,7 @@ function DockerTabExpanded() {
       {subTab === 'volumes' && (
         <div className="flex-1 overflow-y-auto space-y-2">
           {(volumes ?? []).map(v => (
-            <div key={v.name} className="bg-panel border border-border rounded-xl p-4 flex items-center justify-between">
+            <div key={v.name} className="bg-panel border border-border rounded-xl p-5 flex items-center justify-between">
               <div>
                 <p className="font-bold text-sm font-mono">{v.name}</p>
                 <p className="text-xs text-text-dim">Driver: {v.driver} | Size: {v.size || 'N/A'}</p>
@@ -785,7 +873,7 @@ function KubernetesTab() {
 
       <div className="flex-1 overflow-y-auto space-y-2">
         {subTab === 'deployments' && deployments.map(d => (
-          <div key={d.name + d.namespace} className="bg-panel border border-border rounded-xl p-4 flex items-center justify-between">
+          <div key={d.name + d.namespace} className="bg-panel border border-border rounded-xl p-5 flex items-center justify-between">
             <div>
               <p className="font-bold text-sm tracking-tight">{d.name}</p>
               <p className="text-[10px] text-text-dim font-mono font-medium mt-1 uppercase tracking-tighter">{d.namespace} \u2022 {d.details}</p>
@@ -798,7 +886,7 @@ function KubernetesTab() {
           </div>
         ))}
         {subTab === 'services' && services.map(s => (
-          <div key={s.name + s.namespace} className="bg-panel border border-border rounded-xl p-4 flex items-center justify-between">
+          <div key={s.name + s.namespace} className="bg-panel border border-border rounded-xl p-5 flex items-center justify-between">
             <div>
               <p className="font-bold text-sm tracking-tight">{s.name}</p>
               <p className="text-[10px] text-text-dim font-mono font-medium mt-1 uppercase tracking-tighter">{s.namespace} \u2022 {s.details}</p>
@@ -807,7 +895,7 @@ function KubernetesTab() {
           </div>
         ))}
         {subTab === 'pods' && pods.map(p => (
-          <div key={p.name + p.namespace} className="bg-panel border border-border rounded-xl p-4 flex items-center justify-between">
+          <div key={p.name + p.namespace} className="bg-panel border border-border rounded-xl p-5 flex items-center justify-between">
             <div>
               <p className="font-bold text-sm">{p.name}</p>
               <p className="text-xs text-text-dim font-mono">{p.namespace}</p>
@@ -816,7 +904,7 @@ function KubernetesTab() {
           </div>
         ))}
         {subTab === 'rollouts' && rollouts.map(r => (
-          <div key={r.name} className="bg-panel border border-border rounded-xl p-4 flex items-center justify-between">
+          <div key={r.name} className="bg-panel border border-border rounded-xl p-5 flex items-center justify-between">
             <div>
               <p className="font-bold text-sm">{r.name} ({r.kind})</p>
               <p className="text-xs text-text-dim">Replicas: {r.replicas} | Updated: {r.updated} | Available: {r.available}</p>
@@ -914,7 +1002,7 @@ function ToolboxTab() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto h-full p-6">
       {tools.map(t => (
-        <div key={t.name} className="p-4 rounded-xl border border-border bg-panel flex justify-between items-center">
+        <div key={t.name} className="p-5 rounded-xl border border-border bg-panel flex justify-between items-center">
           <div><p className="font-bold">{t.name}</p><p className="text-xs font-mono text-text-faint">{t.version || 'not found'}</p></div>
           <StatusBadge status={t.status} />
         </div>
@@ -932,7 +1020,7 @@ function ServersTab() {
   return (
     <div className="p-6 space-y-3 overflow-y-auto h-full">
       {servers.map(s => (
-        <div key={`${s.port}-${s.pid}`} className="p-4 rounded-xl border border-border bg-panel flex justify-between items-center">
+        <div key={`${s.port}-${s.pid}`} className="p-5 rounded-xl border border-border bg-panel flex justify-between items-center">
           <div><p className="font-bold text-lg">:{s.port}</p><p className="text-xs font-mono text-text-faint">{s.process}</p></div>
           <span className="text-xs px-2 py-1 bg-accent/20 text-accent rounded uppercase font-bold">{s.framework}</span>
         </div>

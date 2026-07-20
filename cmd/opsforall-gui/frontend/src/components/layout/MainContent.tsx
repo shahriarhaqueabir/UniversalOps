@@ -6,6 +6,7 @@ import { ErrorBoundary } from '../ui/ErrorBoundary'
 // Lazy load pages for code splitting
 const Dashboard = lazy(() => import('../../pages/Dashboard').then(m => ({ default: m.Dashboard })))
 const SysOps = lazy(() => import('../../pages/SysOps').then(m => ({ default: m.SysOps })))
+const WorkflowCenter = lazy(() => import('../../pages/WorkflowCenter').then(m => ({ default: m.WorkflowCenter })))
 const NetOps = lazy(() => import('../../pages/NetOps').then(m => ({ default: m.NetOps })))
 const SecOps = lazy(() => import('../../pages/SecOps').then(m => ({ default: m.SecOps })))
 const DevOps = lazy(() => import('../../pages/DevOps').then(m => ({ default: m.DevOps })))
@@ -61,6 +62,7 @@ export function MainContent({ currentPage, onNavigate }: MainContentProps) {
     switch (currentPage) {
       case 'dashboard': return <Dashboard onNavigate={onNavigate} />
       case 'sysops': return <SysOps />
+      case 'workflows': return <WorkflowCenter />
       case 'netops': return <NetOps />
       case 'secops': return <SecOps />
       case 'devops': return <DevOps />
@@ -72,7 +74,7 @@ export function MainContent({ currentPage, onNavigate }: MainContentProps) {
   }
 
   return (
-    <main className="flex-1 overflow-y-auto bg-[var(--color-bg)] p-6">
+    <main className="flex-1 overflow-y-auto bg-[var(--color-bg)]">
       <ErrorBoundary>
         <Suspense fallback={<PageSkeleton />}>
           <AnimatePresence mode="wait">

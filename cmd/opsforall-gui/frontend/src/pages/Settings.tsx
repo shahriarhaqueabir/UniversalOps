@@ -19,6 +19,7 @@ import {
   ScrollText,
   Zap,
   Database,
+  HardDrive,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import * as Slider from '@radix-ui/react-slider'
@@ -94,7 +95,7 @@ function CollectorList({ call }: { call: ReturnType<typeof useBackend>['call'] }
       {collectors.map((c) => (
         <div
           key={c.id}
-          className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]/50"
+          className="flex items-center justify-between gap-3 p-5 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]/50"
         >
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
@@ -262,6 +263,56 @@ export function Settings() {
     staleTime: 60000,
   })
 
+  const { data: dataDir = 'data' } = useQuery({
+    queryKey: ['data-dir'],
+    queryFn: async () => (await call('App.GetDataDir')) as string,
+  })
+
+  const { data: logsDir = 'logs' } = useQuery({
+    queryKey: ['logs-dir'],
+    queryFn: async () => (await call('App.GetLogsDir')) as string,
+  })
+
+  const handleRelocateData = async () => {
+    try {
+      const path = await call('App.SelectFolderDialog', 'Select New Data Folder')
+      if (path) {
+        const id = toast.loading(`Relocating telemetry to ${path}...`)
+        await call('App.UpdateStorageConfig', path)
+        queryClient.invalidateQueries({ queryKey: ['data-dir'] })
+        toast.success('Telemetry relocated successfully', { id })
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Relocation failed')
+    }
+  }
+
+  const handleRelocateLogs = async () => {
+    try {
+      const path = await call('App.SelectFolderDialog', 'Select New Logs Folder')
+      if (path) {
+        const id = toast.loading(`Relocating logs to ${path}...`)
+        await call('App.UpdateLogsConfig', path)
+        queryClient.invalidateQueries({ queryKey: ['logs-dir'] })
+        toast.success('Logs relocated successfully', { id })
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Relocation failed')
+    }
+  }
+
+  const handlePickModelfile = async () => {
+    try {
+      const path = await call('App.OpenFileDialog', 'Select Persona Modelfile', ['Modelfile|*.modelfile', 'All Files|*.*'])
+      if (path) {
+        // Implementation for changing active modelfile path can go here
+        toast.info(`Selected modelfile: ${path}`)
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Selection failed')
+    }
+  }
+
   const isDark = theme === 'dark'
 
   return (
@@ -375,6 +426,28 @@ export function Settings() {
 
             <Panel category="ai">
               <PanelHeader
+                icon={<HardDrive size={20} />}
+                title="AI Identity Location"
+                subtitle="Manage where your companion's persona is stored"
+              />
+              <div className="mt-6">
+                <div className="flex items-center justify-between p-5 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-[var(--color-text)]">Active Modelfile</p>
+                    <p className="text-xs text-accent mt-1 font-mono truncate">{dataDir}/allopsfull.modelfile</p>
+                  </div>
+                  <button
+                    onClick={handlePickModelfile}
+                    className="ml-4 px-3 py-1.5 bg-[var(--color-accent)]/10 hover:bg-[var(--color-accent)]/20 text-[var(--color-accent)] text-[10px] font-black uppercase rounded-lg border border-[var(--color-accent)]/30 transition-all"
+                  >
+                    CHOOSE FILE
+                  </button>
+                </div>
+              </div>
+            </Panel>
+
+            <Panel category="ai">
+              <PanelHeader
                 icon={<Database size={20} />}
                 title="Model Inventory"
                 subtitle="Manage local AI artifacts and pull new intelligence"
@@ -436,7 +509,7 @@ export function Settings() {
                 subtitle="Optimize and verify the underlying data structures"
               />
               <div className="mt-6 flex flex-col gap-3">
-                <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]">
+                <div className="flex items-center justify-between p-5 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]">
                   <div>
                     <p className="text-sm font-bold text-[var(--color-text)]">SQLite Optimization</p>
                     <p className="text-xs text-[var(--color-text-dim)]">Rebuild database to reclaim space and improve performance.</p>
@@ -455,7 +528,7 @@ export function Settings() {
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]">
+                <div className="flex items-center justify-between p-5 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]">
                   <div>
                     <p className="text-sm font-bold text-[var(--color-text)]">Integrity Check</p>
                     <p className="text-xs text-[var(--color-text-dim)]">Verify table structures and update query statistics.</p>
@@ -603,6 +676,41 @@ export function Settings() {
                     <option value="error">Error</option>
                   </select>
                 </SettingRow>
+              </div>
+            </Panel>
+
+            <Panel category="none">
+              <PanelHeader
+                icon={<Database size={20} />}
+                title="Sovereignty & Storage"
+                subtitle="Manage portable data and log locations"
+              />
+              <div className="mt-6 space-y-6">
+                <div className="flex items-center justify-between p-5 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-[var(--color-text)]">Telemetry Core</p>
+                    <p className="text-xs text-accent mt-1 font-mono truncate">{dataDir}/allopsfull.db</p>
+                  </div>
+                  <button
+                    onClick={handleRelocateData}
+                    className="ml-4 px-3 py-1.5 bg-[var(--color-accent)]/10 hover:bg-[var(--color-accent)]/20 text-[var(--color-accent)] text-[10px] font-black uppercase rounded-lg border border-[var(--color-accent)]/30 transition-all"
+                  >
+                    RELOCATE
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between p-5 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-[var(--color-text)]">Diagnostic Logs</p>
+                    <p className="text-xs text-accent mt-1 font-mono truncate">{logsDir}/allopsfull.log</p>
+                  </div>
+                  <button
+                    onClick={handleRelocateLogs}
+                    className="ml-4 px-3 py-1.5 bg-[var(--color-accent)]/10 hover:bg-[var(--color-accent)]/20 text-[var(--color-accent)] text-[10px] font-black uppercase rounded-lg border border-[var(--color-accent)]/30 transition-all"
+                  >
+                    RELOCATE
+                  </button>
+                </div>
               </div>
             </Panel>
 

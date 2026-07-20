@@ -149,10 +149,6 @@ func DefaultSandbox() SandboxConfig {
 // Suitable for secops, sysops, and diagnostic commands that invoke
 // OS tools (netsh, netstat, powershell) but don't need network access.
 // DenyProcessSpawn is false because these tools are themselves sub-processes.
-// SystemQuerySandbox returns a SandboxConfig for read-only system queries.
-// Suitable for secops, sysops, and diagnostic commands that invoke
-// OS tools (netsh, netstat, powershell) but don't need network access.
-// DenyProcessSpawn is false because these tools are themselves sub-processes.
 func SystemQuerySandbox() SandboxConfig {
 	cfg := SandboxConfig{
 		DenyNetworkAccess: true,
@@ -161,7 +157,11 @@ func SystemQuerySandbox() SandboxConfig {
 		DropPrivileges:    true,
 	}
 	// On Windows, ReadOnlyFS (implemented via Low Integrity Level)
-	// breaks common system tools like ping and netsh.
+	// breaks common system tools like ping and netsh because they
+	// require access to certain registry keys and local pipes that
+	// are restricted at LIL.
+	// TODO: Explore using AppContainer SIDs for finer-grained access
+	// that allows ping/netsh while still restricting general FS writes.
 	if IsWindows() {
 		cfg.ReadOnlyFS = false
 	}

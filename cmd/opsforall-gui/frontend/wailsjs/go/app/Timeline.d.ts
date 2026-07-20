@@ -4,6 +4,8 @@ import {app} from '../models';
 
 export function ExplainEvents(arg1:Array<string>):Promise<string>;
 
+export function GetRecentEvents(arg1:number):Promise<Array<app.TimelineEvent>>;
+
 export function GetRelatedEvents(arg1:string):Promise<Array<app.TimelineEvent>>;
 
 export function GetTimelineCategories():Promise<Array<string>>;

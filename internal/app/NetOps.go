@@ -11,8 +11,8 @@ import (
 
 // NetOps exposes network operations bindings to the frontend.
 type NetOps struct {
-	app   *App
-	model *netOpsModel
+	eventBus *common.EventBus
+	model    *netOpsModel
 }
 
 type netOpsModel struct {
@@ -31,10 +31,10 @@ type BandwidthCounter struct {
 }
 
 // NewNetOps creates a new NetOps facade.
-func NewNetOps(app *App) *NetOps {
+func NewNetOps(eventBus *common.EventBus) *NetOps {
 	return &NetOps{
-		app:   app,
-		model: &netOpsModel{},
+		eventBus: eventBus,
+		model:    &netOpsModel{},
 	}
 }
 
@@ -47,13 +47,15 @@ func (n *NetOps) Ping(host string, count int) PingResult {
 	if err != nil {
 		common.LogWarn("Ping failed: %v", err)
 
-		n.app.eventBus.Emit(common.NewEvent(
-			common.CatNetwork,
-			common.EventWarning,
-			"netops",
-			"Ping failed",
-			fmt.Sprintf("Ping to %s failed: %s", host, err.Error()),
-		))
+		if n.eventBus != nil {
+			n.eventBus.Emit(common.NewEvent(
+				common.CatNetwork,
+				common.EventWarning,
+				"netops",
+				"Ping failed",
+				fmt.Sprintf("Ping to %s failed: %s", host, err.Error()),
+			))
+		}
 
 		return PingResult{Target: host, Error: err.Error()}
 	}
@@ -64,14 +66,16 @@ func (n *NetOps) Ping(host string, count int) PingResult {
 		if float64(result.Lost)/float64(result.Sent) > 0.5 {
 			level = common.EventWarning
 		}
-		n.app.eventBus.Emit(common.NewEventWithMeta(
-			common.CatNetwork,
-			level,
-			"netops",
-			"Ping packet loss",
-			fmt.Sprintf("Ping to %s: %d/%d packets lost (avg RTT %dms)", host, result.Lost, result.Sent, result.Avg.Milliseconds()),
-			map[string]string{"host": host, "lost": fmt.Sprintf("%d", result.Lost), "sent": fmt.Sprintf("%d", result.Sent)},
-		))
+		if n.eventBus != nil {
+			n.eventBus.Emit(common.NewEventWithMeta(
+				common.CatNetwork,
+				level,
+				"netops",
+				"Ping packet loss",
+				fmt.Sprintf("Ping to %s: %d/%d packets lost (avg RTT %dms)", host, result.Lost, result.Sent, result.Avg.Milliseconds()),
+				map[string]string{"host": host, "lost": fmt.Sprintf("%d", result.Lost), "sent": fmt.Sprintf("%d", result.Sent)},
+			))
+		}
 	}
 
 	return PingResult{
@@ -105,13 +109,15 @@ func (n *NetOps) DNSLookup(hostname string, server string, timeoutMs int) DNSRes
 	if err != nil {
 		common.LogWarn("DNSLookup failed: %v", err)
 
-		n.app.eventBus.Emit(common.NewEvent(
-			common.CatNetwork,
-			common.EventWarning,
-			"netops",
-			"DNS resolution failed",
-			fmt.Sprintf("DNS lookup for %s failed: %s", hostname, err.Error()),
-		))
+		if n.eventBus != nil {
+			n.eventBus.Emit(common.NewEvent(
+				common.CatNetwork,
+				common.EventWarning,
+				"netops",
+				"DNS resolution failed",
+				fmt.Sprintf("DNS lookup for %s failed: %s", hostname, err.Error()),
+			))
+		}
 
 		return DNSResult{Hostname: hostname, Error: err.Error()}
 	}
@@ -247,3 +253,27 @@ func (n *NetOps) collectInterfaces() ([]InterfaceInfo, error) {
 	n.model.lastIfaces = out
 	return out, nil
 }
+
+// RunNetworkHealthCheck runs a comprehensive network health check and returns the report.
+// This exposes the domain-level netops.RunNetworkHealthCheck via Wails IPC.
+func (n *NetOps) RunNetworkHealthCheck() NetworkHealthReport {
+	report := netops.RunNetworkHealthCheck()
+
+	checks := make([]NetworkHealthCheck, 0, len(report.Checks))
+	for _, c := range report.Checks {
+		checks = append(checks, NetworkHealthCheck{
+			Name:   c.Name,
+			Status: c.Status,
+			Detail: c.Detail,
+			Score:  c.Score,
+		})
+	}
+
+	return NetworkHealthReport{
+		Score:    report.Score,
+		Checks:   checks,
+		Summary:  report.Summary,
+		Duration: report.Duration,
+	}
+}
+

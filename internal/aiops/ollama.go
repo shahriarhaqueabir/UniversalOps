@@ -29,14 +29,14 @@ type OllamaStatus struct {
 }
 
 const (
-	defaultOllamaURL   = "http://localhost:11434"
+	defaultOllamaURL   = "http://127.0.0.1:11434"
 	defaultOllamaModel = "opsforall"
 	defaultHttpTimeout = 60 * time.Second
 )
 
 func getOllamaURL() string {
-	if url := os.Getenv("OLLAMA_HOST"); url != "" {
-		return url
+	if host := os.Getenv("OLLAMA_HOST"); host != "" {
+		return host
 	}
 	return defaultOllamaURL
 }
@@ -52,7 +52,7 @@ func newClient() *api.Client {
 	baseURL := getOllamaURL()
 	u, err := url.Parse(baseURL)
 	if err != nil {
-		u = &url.URL{Scheme: "http", Host: "localhost:11434"}
+		u = &url.URL{Scheme: "http", Host: "127.0.0.1:11434"}
 	}
 	return api.NewClient(u, &http.Client{Timeout: defaultHttpTimeout})
 }
@@ -60,14 +60,14 @@ func newClient() *api.Client {
 // ── Global Compatibility Wrappers ───────────────────────────────────────────
 
 var (
-	defaultClientOnce sync.Once
+	defaultClientMu   sync.Mutex
 	defaultClient     *OllamaClient
 )
 
 func getDefaultClient() *OllamaClient {
-	// Note: We don't use sync.Once here because we want to allow tests to
-	// potentially re-initialize if environment variables change.
-	// For production, the first call will lock in the URL.
+	defaultClientMu.Lock()
+	defer defaultClientMu.Unlock()
+
 	if defaultClient == nil {
 		defaultClient = NewOllamaClient()
 	}
@@ -77,6 +77,8 @@ func getDefaultClient() *OllamaClient {
 // ResetDefaultClient forces the global client to be re-initialized from environment.
 // Primarily used for testing.
 func ResetDefaultClient() {
+	defaultClientMu.Lock()
+	defer defaultClientMu.Unlock()
 	defaultClient = nil
 }
 
@@ -174,7 +176,7 @@ func (c *OllamaClient) CreateModel(name string, from string, system string, para
 func (c *OllamaClient) CheckStatus() (*OllamaStatus, error) {
 	listResp, err := c.api.List(context.Background())
 	if err != nil {
-		return &OllamaStatus{Available: false}, nil
+		return &OllamaStatus{Available: false}, fmt.Errorf("ollama list failed: %w", err)
 	}
 
 	currentModel := c.GetModel()

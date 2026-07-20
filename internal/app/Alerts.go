@@ -6,17 +6,17 @@ import (
 
 // AlertAPI exposes alert management bindings to the frontend.
 type AlertAPI struct {
-	app *App
+	alerts *common.AlertEngine
 }
 
 // NewAlertAPI creates a new AlertAPI facade.
-func NewAlertAPI(app *App) *AlertAPI {
-	return &AlertAPI{app: app}
+func NewAlertAPI(alerts *common.AlertEngine) *AlertAPI {
+	return &AlertAPI{alerts: alerts}
 }
 
 // GetActiveAlerts returns all currently unresolved alerts.
 func (a *AlertAPI) GetActiveAlerts() []AlertInfo {
-	alerts := a.app.alerts.ActiveAlerts()
+	alerts := a.alerts.ActiveAlerts()
 	out := make([]AlertInfo, 0, len(alerts))
 	for _, alert := range alerts {
 		out = append(out, convertAlert(alert))
@@ -26,7 +26,7 @@ func (a *AlertAPI) GetActiveAlerts() []AlertInfo {
 
 // GetAlertHistory returns all alerts that have ever fired.
 func (a *AlertAPI) GetAlertHistory() []AlertInfo {
-	alerts := a.app.alerts.AllAlerts()
+	alerts := a.alerts.AllAlerts()
 	out := make([]AlertInfo, 0, len(alerts))
 	for _, alert := range alerts {
 		out = append(out, convertAlert(alert))
@@ -36,7 +36,7 @@ func (a *AlertAPI) GetAlertHistory() []AlertInfo {
 
 // GetRules returns all currently active alert rules.
 func (a *AlertAPI) GetRules() []AlertRuleInfo {
-	rules := a.app.alerts.GetRules()
+	rules := a.alerts.GetRules()
 	out := make([]AlertRuleInfo, 0, len(rules))
 	for _, r := range rules {
 		out = append(out, AlertRuleInfo{
@@ -53,7 +53,7 @@ func (a *AlertAPI) GetRules() []AlertRuleInfo {
 
 // ResolveAlert marks a specific alert as resolved by its ID.
 func (a *AlertAPI) ResolveAlert(id string) {
-	a.app.alerts.ResolveAlert(id)
+	a.alerts.ResolveAlert(id)
 }
 
 // AddRule adds a new alert rule.
@@ -80,22 +80,22 @@ func (a *AlertAPI) AddRule(metric string, threshold float64, severity string, co
 		FlapCount: 2,
 		Severity:  level,
 	}
-	a.app.alerts.AddRule(rule)
+	a.alerts.AddRule(rule)
 }
 
 // RemoveRule removes an alert rule by metric and threshold.
 func (a *AlertAPI) RemoveRule(metric string, threshold float64) {
-	a.app.alerts.RemoveRule(metric, threshold)
+	a.alerts.RemoveRule(metric, threshold)
 }
 
 // GetAlertCount returns the number of unresolved alerts.
 func (a *AlertAPI) GetAlertCount() int {
-	return a.app.alerts.AlertCount()
+	return a.alerts.AlertCount()
 }
 
 // EvaluateNow forces an immediate alert evaluation.
 func (a *AlertAPI) EvaluateNow() []AlertInfo {
-	fired := a.app.alerts.Evaluate()
+	fired := a.alerts.Evaluate()
 	out := make([]AlertInfo, 0, len(fired))
 	for _, alert := range fired {
 		out = append(out, convertAlert(alert))

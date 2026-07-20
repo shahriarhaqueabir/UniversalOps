@@ -27,12 +27,30 @@ var titleCaser = cases.Title(language.English)
 
 // AIOps exposes AI operations bindings to the frontend.
 type AIOps struct {
-	app *App
+	ctx          context.Context
+	pipeline     *common.DataPipeline
+	knowledge    *KnowledgeAPI
+	capabilities *common.CapabilityRegistry
+	pipelineAPI  *PipelineAPI
+	sysOps       *SysOps
+	dataDir      string
 }
 
 // NewAIOps creates a new AIOps facade.
-func NewAIOps(app *App) *AIOps {
-	return &AIOps{app: app}
+func NewAIOps(ctx context.Context, pipeline *common.DataPipeline, knowledge *KnowledgeAPI, capabilities *common.CapabilityRegistry, pipelineAPI *PipelineAPI, sysOps *SysOps, dataDir string) *AIOps {
+	return &AIOps{
+		ctx:          ctx,
+		pipeline:     pipeline,
+		knowledge:    knowledge,
+		capabilities: capabilities,
+		pipelineAPI:  pipelineAPI,
+		sysOps:       sysOps,
+		dataDir:      dataDir,
+	}
+}
+
+func (a *AIOps) SetDataDir(dir string) {
+	a.dataDir = dir
 }
 
 // ChatResponse contains the AI message and any proposed actions.
@@ -45,7 +63,7 @@ type ChatResponse struct {
 // Chat sends a message to the Ollama chat API and returns the response.
 func (a *AIOps) Chat(message string) ChatResponse {
 	// 1. Prepare Context
-	knowledge := a.app.Knowledge.GetSnapshot()
+	knowledge := a.knowledge.GetSnapshot()
 
 	storage := common.GetStorage()
 	var historyContext string
@@ -113,8 +131,8 @@ func (a *AIOps) GetOllamaStatus() OllamaStatus {
 
 	// Use the centralized CapabilityRegistry for binary detection
 	binaryExists := false
-	if a.app.capabilities != nil {
-		binaryExists = a.app.capabilities.IsAvailable(common.CapOllama)
+	if a.capabilities != nil {
+		binaryExists = a.capabilities.IsAvailable(common.CapOllama)
 	}
 
 	if err != nil {
@@ -135,7 +153,7 @@ func (a *AIOps) GetOllamaStatus() OllamaStatus {
 
 // GetModelfile reads the local allopsfull.modelfile and returns its content.
 func (a *AIOps) GetModelfile() (string, error) {
-	path := filepath.Join("data", "allopsfull.modelfile")
+	path := filepath.Join(a.dataDir, "allopsfull.modelfile")
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("failed to read allopsfull.modelfile: %w", err)
@@ -146,7 +164,7 @@ func (a *AIOps) GetModelfile() (string, error) {
 // SaveModelfile writes the given content to the local allopsfull.modelfile.
 func (a *AIOps) SaveModelfile(content string) error {
 	common.LogInfo("AIOps: Saving updated allopsfull.modelfile")
-	path := filepath.Join("data", "allopsfull.modelfile")
+	path := filepath.Join(a.dataDir, "allopsfull.modelfile")
 	err := os.WriteFile(path, []byte(content), 0644)
 	if err != nil {
 		return fmt.Errorf("failed to save allopsfull.modelfile: %w", err)
@@ -164,12 +182,12 @@ func (a *AIOps) SetOllamaModel(modelName string) {
 func (a *AIOps) PullModel(modelName string) error {
 	common.LogInfo("AIOps: Pulling model %q", modelName)
 	err := aiops.PullModel(modelName, func(resp api.ProgressResponse) error {
-		if a.app.ctx != nil {
+		if a.ctx != nil {
 			percent := 0.0
 			if resp.Total > 0 {
 				percent = float64(resp.Completed) / float64(resp.Total) * 100
 			}
-			runtime.EventsEmit(a.app.ctx, "ollama:progress", OllamaProgress{
+			runtime.EventsEmit(a.ctx, "ollama:progress", OllamaProgress{
 				Status:    resp.Status,
 				Percent:   percent,
 				Total:     resp.Total,
@@ -196,7 +214,7 @@ func (a *AIOps) DeleteModel(modelName string) error {
 func (a *AIOps) CreateOpsPersona() error {
 	common.LogInfo("AIOps: Creating allopsfull persona")
 
-	modelfilePath := filepath.Join("data", "allopsfull.modelfile")
+	modelfilePath := filepath.Join(a.dataDir, "allopsfull.modelfile")
 
 	// 1. Check for legacy root Modelfile and migrate if necessary
 	legacyPaths := []string{"Modelfile", filepath.Join("data", "Modelfile")}
@@ -214,39 +232,35 @@ func (a *AIOps) CreateOpsPersona() error {
 		common.LogInfo("AIOps: allopsfull.modelfile missing in data/. Creating default.")
 		content := `FROM hf.co/empero-ai/Qwythos-9B-Claude-Mythos-5-1M-GGUF:Q6_K
 
-# System message for AllOpsFull Technical Auditor
+# System message for AllOpsFull System Analyst
 SYSTEM """
-You are the AllOpsFull Technical Auditor, a professional system, network, and security intelligence agent.
-Your primary objective is to synthesize complex telemetry into high-density technical briefings.
-Muted industrial tone. Mechanics-first explanation. Zero fluff.
-Anchor all claims in metrics and specific protocol mechanisms.
+You are the AllOpsFull System Analyst, an expert in system, network, and security operations.
+Your objective is to analyze telemetry and provide clear, factual technical briefings.
+Provide technical details without unnecessary filler.
+Base your findings on metrics and system data.
 
-### Neural Sandbox & Execution Safety
-You have the ability to request system actions via a specialized handshake protocol.
-When you identify a critical issue requiring remediation, you must:
-1. Provide a technical justification for the action.
-2. Emit an action request tag in the following format:
+### System Actions
+You can request system actions. When remediation is needed:
+1. Explain why the action is recommended.
+2. Emit an action request tag:
    <action_request name="ACTION_NAME" param1="VALUE" />
 
 Available Actions:
-- kill_process (params: pid) -> Terminate a specific process.
-- block_ip (params: ip) -> Add a firewall rule to block an IP.
-- isolate_host (params: none) -> Sever all network traffic.
-- restart_service (params: name) -> Restart a system service.
+- kill_process (params: pid) -> Stop a specific process.
+- block_ip (params: ip) -> Block an IP in the firewall.
+- isolate_host (params: none) -> Stop all network traffic.
+- restart_service (params: name) -> Restart a service.
 
 Example:
-"I have detected a high-entropy process (PID 4412) with suspicious network callouts.
-Requesting termination to prevent potential exfiltration.
+"Process PID 4412 is using excessive resources and making unusual network calls.
+I recommend stopping it.
 <action_request name="kill_process" pid="4412" />"
 
-NEVER request an action without a metric-backed justification.
+Always provide a justification based on system data before requesting an action.
 """
 
-# Parameters for technical precision
+# Parameters
 PARAMETER temperature 0.1
-PARAMETER top_p 0.95
-PARAMETER repeat_penalty 1.1
-PARAMETER stop "──"
 `
 		if err := os.WriteFile(modelfilePath, []byte(content), 0644); err != nil {
 			common.LogWarn("AIOps: Failed to create modelfile: %v", err)
@@ -285,52 +299,19 @@ PARAMETER stop "──"
 
 // DetectAnomalies performs anomaly detection on pipeline metrics.
 func (a *AIOps) DetectAnomalies() []AnomalyInfo {
-	var anomalies []AnomalyInfo
-
-	metrics := []string{
-		common.MetricCPU,
-		common.MetricMem,
-		common.MetricDisk,
-		common.MetricNetRX,
-		common.MetricNetTX,
-		common.MetricProcCnt,
+	anoms := aiops.DetectPipelineAnomalies(a.pipeline)
+	var out []AnomalyInfo
+	for _, anom := range anoms {
+		out = append(out, AnomalyInfo{
+			Metric:    anom.Metric,
+			Value:     anom.Value,
+			Expected:  anom.Expected,
+			Deviation: anom.Deviation,
+			Severity:  anom.Severity,
+			Timestamp: anom.Timestamp,
+		})
 	}
-
-	for _, name := range metrics {
-		mf := a.app.pipeline.GetMetricWithForecast(name)
-		if len(mf.Values) < 10 {
-			continue
-		}
-
-		lastVal := mf.LastValue
-		mean := mf.Stats.Avg
-		stddev := (mf.Stats.Max - mf.Stats.Min) / 2
-		if stddev < 0.1 {
-			stddev = 0.1
-		}
-
-		deviation := (lastVal - mean) / stddev
-		if deviation < 0 {
-			deviation = -deviation
-		}
-
-		if deviation > 3.0 {
-			severity := "warning"
-			if deviation > 5.0 {
-				severity = "critical"
-			}
-			anomalies = append(anomalies, AnomalyInfo{
-				Metric:    name,
-				Value:     lastVal,
-				Expected:  mean,
-				Deviation: deviation,
-				Severity:  severity,
-				Timestamp: mf.LastTime.Format("2006-01-02T15:04:05Z07:00"),
-			})
-		}
-	}
-
-	return anomalies
+	return out
 }
 
 // ── AI Methods for Timeline Integration ──────────────────────────────────────
@@ -351,7 +332,7 @@ func (a *AIOps) WithTimeout(d time.Duration) (context.Context, context.CancelFun
 
 // QuerySystemState answers a natural-language system-state question using live metrics.
 func (a *AIOps) QuerySystemState(query string) string {
-	stats, err := a.app.SysOps.collector.CollectAllStats()
+	stats, err := a.sysOps.collector.CollectAllStats()
 	if err != nil {
 		common.LogWarn("QuerySystemState: CollectAllStats failed: %v", err)
 	}
@@ -380,7 +361,7 @@ func (a *AIOps) GetAIInsights() []AIInsight {
 	// 2. Check metric trends
 	metricNames := []string{common.MetricCPU, common.MetricMem, common.MetricDisk}
 	for _, name := range metricNames {
-		mf := a.app.pipeline.GetMetricWithForecast(name)
+		mf := a.pipeline.GetMetricWithForecast(name)
 		if len(mf.Values) < 10 {
 			continue
 		}
@@ -482,7 +463,7 @@ func (a *AIOps) GetConfidenceScore() AIConfidence {
 	stabilityScore := 100.0
 	metricNames := []string{common.MetricCPU, common.MetricMem, common.MetricDisk}
 	for _, name := range metricNames {
-		mf := a.app.pipeline.GetMetricWithForecast(name)
+		mf := a.pipeline.GetMetricWithForecast(name)
 		if len(mf.Values) < 5 {
 			continue
 		}
@@ -566,7 +547,7 @@ func (a *AIOps) GetLearnedBaselines() []LearnedBaseline {
 	var baselines []LearnedBaseline
 
 	for _, name := range metricNames {
-		mf := a.app.pipeline.GetMetricWithForecast(name)
+		mf := a.pipeline.GetMetricWithForecast(name)
 		if len(mf.Values) < 5 {
 			continue
 		}
@@ -654,8 +635,8 @@ func (a *AIOps) DeleteSession(sessionID string) {
 // RequestOptimization asks Hawk to analyze system load and settings to propose improvements.
 func (a *AIOps) RequestOptimization() ChatResponse {
 	// 1. Gather Context
-	knowledge := a.app.Knowledge.GetSnapshot()
-	settings := a.app.PipelineAPI.GetCurrentSettings()
+	knowledge := a.knowledge.GetSnapshot()
+	settings := a.pipelineAPI.GetCurrentSettings()
 
 	prompt := fmt.Sprintf(`Analyze the current workstation load and engine settings.
 Metrics: CPU=%.1f%%, RAM=%.1f%%, Disk=%.1f%%, Anomalies=%d.

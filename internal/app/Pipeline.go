@@ -8,17 +8,17 @@ import (
 
 // PipelineAPI exposes data pipeline bindings to the frontend.
 type PipelineAPI struct {
-	app *App
+	pipeline *common.DataPipeline
 }
 
 // NewPipelineAPI creates a new PipelineAPI facade.
-func NewPipelineAPI(app *App) *PipelineAPI {
-	return &PipelineAPI{app: app}
+func NewPipelineAPI(pipeline *common.DataPipeline) *PipelineAPI {
+	return &PipelineAPI{pipeline: pipeline}
 }
 
 // GetMetricHistory returns the last n values for a named metric.
 func (p *PipelineAPI) GetMetricHistory(name string, n int) []float64 {
-	ts := p.app.pipeline.GetTimeSeries(name)
+	ts := p.pipeline.GetTimeSeries(name)
 	if ts == nil {
 		return []float64{}
 	}
@@ -31,7 +31,7 @@ func (p *PipelineAPI) GetMetricHistory(name string, n int) []float64 {
 
 // GetMetricHistoryWithTimestamps returns the last n values with timestamps for a named metric.
 func (p *PipelineAPI) GetMetricHistoryWithTimestamps(name string, n int) []DataPoint {
-	ts := p.app.pipeline.GetTimeSeries(name)
+	ts := p.pipeline.GetTimeSeries(name)
 	if ts == nil {
 		return []DataPoint{}
 	}
@@ -51,12 +51,12 @@ func (p *PipelineAPI) GetMetricHistoryWithTimestamps(name string, n int) []DataP
 
 // GetForecast returns predicted values for a named metric.
 func (p *PipelineAPI) GetForecast(name string, steps int) []float64 {
-	return p.app.pipeline.GetForecast(name, steps)
+	return p.pipeline.GetForecast(name, steps)
 }
 
 // GetTrend returns the current trend for a named metric.
 func (p *PipelineAPI) GetTrend(name string) TrendInfo {
-	trend := p.app.pipeline.GetTrend(name)
+	trend := p.pipeline.GetTrend(name)
 	return TrendInfo{
 		Direction:   trendDirectionString(trend.Direction),
 		ChangePct:   trend.ChangePct,
@@ -67,7 +67,7 @@ func (p *PipelineAPI) GetTrend(name string) TrendInfo {
 
 // GetWindowStats returns rolling statistics for a named metric.
 func (p *PipelineAPI) GetWindowStats(name string) StatsInfo {
-	stats := p.app.pipeline.GetWindowStats(name)
+	stats := p.pipeline.GetWindowStats(name)
 	return StatsInfo{
 		Min:   stats.Min,
 		Max:   stats.Max,
@@ -82,7 +82,7 @@ func (p *PipelineAPI) GetWindowStats(name string) StatsInfo {
 
 // GetMetricWithForecast returns a complete metric snapshot with forecast.
 func (p *PipelineAPI) GetMetricWithForecast(name string) MetricHistory {
-	mf := p.app.pipeline.GetMetricWithForecast(name)
+	mf := p.pipeline.GetMetricWithForecast(name)
 	return MetricHistory{
 		Name:      mf.Name,
 		Unit:      mf.Unit,
@@ -106,12 +106,12 @@ func (p *PipelineAPI) AllMetricNames() []MetricDef {
 
 // ClearPipeline resets all stored data and forecasts.
 func (p *PipelineAPI) ClearPipeline() {
-	p.app.pipeline.Clear()
+	p.pipeline.Clear()
 }
 
 // UpdateSettings updates the pipeline configuration and network defaults.
 func (p *PipelineAPI) UpdateSettings(intervalMs int, capacity int, pingCount int, dnsTimeout int) {
-	cfg := p.app.pipeline.Config()
+	cfg := p.pipeline.Config()
 
 	if intervalMs > 0 {
 		cfg.TickInterval = time.Duration(intervalMs) * time.Millisecond
@@ -129,12 +129,12 @@ func (p *PipelineAPI) UpdateSettings(intervalMs int, capacity int, pingCount int
 		cfg.DNSTimeout = dnsTimeout
 	}
 
-	p.app.pipeline.UpdateConfig(cfg)
+	p.pipeline.UpdateConfig(cfg)
 }
 
 // GetCurrentSettings returns the current operational settings of the data pipeline.
 func (p *PipelineAPI) GetCurrentSettings() map[string]interface{} {
-	cfg := p.app.pipeline.Config()
+	cfg := p.pipeline.Config()
 	return map[string]interface{}{
 		"refreshInterval": int(cfg.TickInterval.Milliseconds()),
 		"pingCount":       cfg.PingCount,

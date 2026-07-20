@@ -40,12 +40,15 @@ const (
 
 // ActionPreview represents a proposed system change.
 type ActionPreview struct {
-	HandshakeID string   `json:"handshake_id"`
-	Action      string   `json:"action"`
-	Description string   `json:"description"`
-	Risks       []string `json:"risks"`
-	Rollback    string   `json:"rollback"`
+	HandshakeID string         `json:"handshake_id"`
+	Action      string         `json:"action"`
+	Description string         `json:"description"`
+	Risks       []string       `json:"risks"`
+	Rollback    string         `json:"rollback"`
+	TypicalVals string         `json:"typical_values"`
+	Steps       []WorkflowStep `json:"steps,omitempty"`
 }
+
 
 // SystemKnowledge represents the unified "Current Truth" of the system.
 type SystemKnowledge struct {

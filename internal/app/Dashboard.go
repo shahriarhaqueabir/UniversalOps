@@ -2,23 +2,36 @@ package app
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
 // Dashboard exposes dashboard-related bindings to the frontend.
 type Dashboard struct {
-	app *App
+	pipeline     *common.DataPipeline
+	alerts       *common.AlertEngine
+	sysOps       *SysOps
+	netOps       *NetOps
+	timeline     *Timeline
+	uptimeGetter func() string
 }
 
 // NewDashboard creates a new Dashboard facade.
-func NewDashboard(app *App) *Dashboard {
-	return &Dashboard{app: app}
+func NewDashboard(pipeline *common.DataPipeline, alerts *common.AlertEngine, sysOps *SysOps, netOps *NetOps, timeline *Timeline, uptimeGetter func() string) *Dashboard {
+	return &Dashboard{
+		pipeline:     pipeline,
+		alerts:       alerts,
+		sysOps:       sysOps,
+		netOps:       netOps,
+		timeline:     timeline,
+		uptimeGetter: uptimeGetter,
+	}
 }
 
 // RunQuickDiag performs a quick system diagnostic and returns categorized results.
 func (d *Dashboard) RunQuickDiag() []DiagnosticResult {
-	p := d.app.pipeline
+	p := d.pipeline
 
 	cpuMF := p.GetMetricWithForecast(common.MetricCPU)
 	memMF := p.GetMetricWithForecast(common.MetricMem)
@@ -33,7 +46,7 @@ func (d *Dashboard) RunQuickDiag() []DiagnosticResult {
 	}
 
 	// Add alert count
-	alertCount := d.app.alerts.AlertCount()
+	alertCount := d.alerts.AlertCount()
 	alertStatus := "pass"
 	if alertCount > 0 {
 		alertStatus = "warn"
@@ -50,7 +63,7 @@ func (d *Dashboard) RunQuickDiag() []DiagnosticResult {
 
 // GenerateDashboardBriefing generates a full operations briefing from pipeline data.
 func (d *Dashboard) GenerateDashboardBriefing() []BriefingSection {
-	p := d.app.pipeline
+	p := d.pipeline
 
 	cpuMF := p.GetMetricWithForecast(common.MetricCPU)
 	memMF := p.GetMetricWithForecast(common.MetricMem)
@@ -81,9 +94,9 @@ func (d *Dashboard) GenerateDashboardBriefing() []BriefingSection {
 	}
 
 	// Add alert section if alerts exist
-	alertCount := d.app.alerts.AlertCount()
+	alertCount := d.alerts.AlertCount()
 	if alertCount > 0 {
-		alerts := d.app.alerts.ActiveAlerts()
+		alerts := d.alerts.ActiveAlerts()
 		alertText := ""
 		for _, a := range alerts {
 			if !a.Resolved {
@@ -106,7 +119,7 @@ func (d *Dashboard) GenerateDashboardBriefing() []BriefingSection {
 
 // GetDashboardData returns a snapshot of all key metrics for the dashboard view.
 func (d *Dashboard) GetDashboardData() DashboardData {
-	p := d.app.pipeline
+	p := d.pipeline
 
 	cpuMF := p.GetMetricWithForecast(common.MetricCPU)
 	memMF := p.GetMetricWithForecast(common.MetricMem)
@@ -115,8 +128,13 @@ func (d *Dashboard) GetDashboardData() DashboardData {
 	netTXMF := p.GetMetricWithForecast(common.MetricNetTX)
 	procMF := p.GetMetricWithForecast(common.MetricProcCnt)
 
-	gpuInfo := d.app.SysOps.GetGPUInfo()
-	battInfo := d.app.SysOps.GetBatteryInfo()
+	gpuInfo := d.sysOps.GetGPUInfo()
+	battInfo := d.sysOps.GetBatteryInfo()
+
+	uptime := ""
+	if d.uptimeGetter != nil {
+		uptime = d.uptimeGetter()
+	}
 
 	return DashboardData{
 		CPU: GaugeMetric{
@@ -160,9 +178,34 @@ func (d *Dashboard) GetDashboardData() DashboardData {
 			Unit:   "bps",
 		},
 		Processes:   int(procMF.LastValue),
-		Connections: len(d.app.NetOps.GetConnections()),
-		Alerts:      d.app.alerts.AlertCount(),
-		Uptime:      d.app.GetAppInfo().Uptime,
+		Connections: len(d.netOps.GetConnections()),
+		Alerts:      d.alerts.AlertCount(),
+		Uptime:      uptime,
+	}
+}
+
+// GetSystemSnapshot returns a full state snapshot for efficient Batch IPC.
+func (d *Dashboard) GetSystemSnapshot() SystemSnapshot {
+	metrics := d.GetDashboardData()
+
+	// Fetch last 10 alerts
+	alerts := d.alerts.ActiveAlerts()
+	var alertInfos []AlertInfo
+	for _, a := range alerts {
+		alertInfos = append(alertInfos, convertAlert(a))
+	}
+	if len(alertInfos) > 10 {
+		alertInfos = alertInfos[:10]
+	}
+
+	// Fetch last 20 events
+	timeline := d.timeline.GetRecentEvents(20)
+
+	return SystemSnapshot{
+		Metrics:   metrics,
+		Alerts:    alertInfos,
+		Timeline:  timeline,
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}
 }
 

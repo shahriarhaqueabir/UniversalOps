@@ -2,7 +2,7 @@ package app
 
 import (
 	"context"
-	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
@@ -14,9 +14,11 @@ import (
 
 	goruntime "runtime"
 
+	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	sysopsPkg "github.com/shahriarhaqueabir/AllOpsFull/internal/sysops"
 )
 
 // App is the main application struct bound to the Wails frontend.
@@ -41,6 +43,10 @@ type App struct {
 	Logs        *Logs
 	Timeline    *Timeline
 	Knowledge   *KnowledgeAPI
+	Workflows   *WorkflowAPI
+
+	// Workflow engine
+	workflowEngine *common.WorkflowEngine
 
 	// Collector architecture
 	collectorRegistry *common.CollectorRegistry
@@ -60,8 +66,15 @@ type App struct {
 	lastMu                     sync.Mutex
 	lastCPU, lastMem, lastDisk float64
 
-	// storageMu protects storage relocation
-	storageMu sync.Mutex
+	// storageLock protects storage relocation and prevents races with evaluation
+	storageLock sync.RWMutex
+
+	// lastSecurityScore is the cached security score to prevent ticker bloat
+	lastSecurityScore   string
+	lastSecurityScoreAt time.Time
+
+	currentDataDir string
+	currentLogsDir string
 }
 
 // NewApp creates a new App with initialized subsystems.
@@ -71,27 +84,37 @@ func NewApp() *App {
 	alertEngine := common.NewAlertEngine(pipeline)
 	alertEngine.AddDefaultRules()
 
+	eventBus := common.NewEventBus(1000)
+
 	a := &App{
-		pipeline:     pipeline,
-		alerts:       alertEngine,
-		eventBus:     common.NewEventBus(1000),
-		startedAt:    time.Now(),
-		alertQuit:    make(chan struct{}),
-		capabilities: common.NewCapabilityRegistry(),
+		pipeline:       pipeline,
+		alerts:         alertEngine,
+		eventBus:       eventBus,
+		startedAt:      time.Now(),
+		alertQuit:      make(chan struct{}),
+		capabilities:   common.NewCapabilityRegistry(),
+		workflowEngine: common.NewWorkflowEngine(),
+		currentDataDir: "data",
+		currentLogsDir: "logs",
 	}
 
-	// Initialize subsystem facades
-	a.SysOps = NewSysOps(a)
-	a.NetOps = NewNetOps(a)
-	a.SecOps = NewSecOps(a)
-	a.DevOps = NewDevOps(a)
-	a.AIOps = NewAIOps(a)
-	a.Dash = NewDashboard(a)
-	a.PipelineAPI = NewPipelineAPI(a)
-	a.AlertAPI = NewAlertAPI(a)
-	a.Logs = NewLogs(a)
-	a.Timeline = NewTimeline(a)
-	a.Knowledge = NewKnowledgeAPI(a)
+	// Initialize subsystems that don't need context yet
+	a.SysOps = NewSysOps()
+	a.NetOps = NewNetOps(a.eventBus)
+	a.SecOps = NewSecOps(a.eventBus)
+	a.PipelineAPI = NewPipelineAPI(a.pipeline)
+	a.AlertAPI = NewAlertAPI(a.alerts)
+	a.Logs = NewLogs()
+	a.Knowledge = NewKnowledgeAPI()
+	a.Workflows = NewWorkflowAPI(a.workflowEngine, a.SysOps, a.SecOps, a.DevOps, a.AlertAPI)
+
+	// Initialize subsystems that might need context later
+	a.AIOps = NewAIOps(nil, a.pipeline, a.Knowledge, a.capabilities, a.PipelineAPI, a.SysOps, a.currentDataDir)
+	a.DevOps = NewDevOps(nil, a.eventBus)
+	a.Timeline = NewTimeline(a.eventBus, a.AIOps)
+	a.Dash = NewDashboard(a.pipeline, a.alerts, a.SysOps, a.NetOps, a.Timeline, func() string {
+		return a.GetAppInfo().Uptime
+	})
 
 	// Subscribe the event bus to persist events and emit to frontend
 	a.eventBus.Subscribe(func(evt common.TimelineEvent) {
@@ -114,16 +137,24 @@ func NewApp() *App {
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 
-	// Root-local portable directory structure
-	dataDir := "data"
-	logsDir := "logs"
+	// Standard OS directory structure (with portable fallback)
+	dataDir, _ := common.ConfigDir()
+	logsDir, _ := common.LogsDir()
 
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		common.LogWarn("Failed to create local data directory: %v", err)
+		common.LogWarn("Failed to create data directory: %v", err)
 	}
 	if err := os.MkdirAll(logsDir, 0755); err != nil {
-		common.LogWarn("Failed to create local logs directory: %v", err)
+		common.LogWarn("Failed to create logs directory: %v", err)
 	}
+
+	a.currentDataDir = dataDir
+	a.currentLogsDir = logsDir
+
+	// Update subsystems with config-driven paths
+	a.AIOps.SetDataDir(dataDir)
+	a.AIOps.ctx = ctx
+	a.DevOps.ctx = ctx
 
 	// Initialize persistent storage locally
 	dbPath := filepath.Join(dataDir, "allopsfull.db")
@@ -139,8 +170,8 @@ func (a *App) Startup(ctx context.Context) {
 
 	common.LogInfo("AllOpsFull initialized in self-contained mode (portable)")
 
-	// Initialize System Knowledge Layer
-	common.InitKnowledge()
+	// Initialize System Knowledge Layer (linked to Pipeline for consistency)
+	common.InitKnowledge(a.pipeline)
 
 	// Validate Ollama environment variables
 	validateOllamaEnv()
@@ -156,6 +187,7 @@ func (a *App) Startup(ctx context.Context) {
 
 	// Start the alert and dashboard evaluation loop
 	a.startAlertLoop()
+	a.startProcessWorker()
 }
 
 // Shutdown is called by Wails when the application shuts down.
@@ -198,6 +230,93 @@ func (a *App) GetAppInfo() AppInfo {
 	}
 }
 
+type PerformanceProfile struct {
+	Category      string  `json:"category"` // "laptop", "workstation", "high-end"
+	Parallelism   int     `json:"parallelism"`
+	ScanIntensity string  `json:"scan_intensity"` // "low", "medium", "high"
+	CPUThreads    int     `json:"cpu_threads"`
+	MemoryGB      float64 `json:"memory_gb"`
+}
+
+func (a *App) GetPerformanceProfile() PerformanceProfile {
+	v, err := mem.VirtualMemory()
+	cores := goruntime.NumCPU()
+
+	totalMem := uint64(0)
+	if err == nil && v != nil {
+		totalMem = v.Total
+	} else {
+		common.LogWarn("GetPerformanceProfile: failed to get virtual memory: %v", err)
+	}
+
+	memGB := float64(totalMem) / 1024 / 1024 / 1024
+
+	profile := PerformanceProfile{
+		CPUThreads: cores,
+		MemoryGB:   memGB,
+	}
+
+	if cores <= 4 || memGB <= 8 {
+		profile.Category = "laptop"
+		profile.Parallelism = 2
+		profile.ScanIntensity = "low"
+	} else if cores <= 12 || memGB <= 32 {
+		profile.Category = "workstation"
+		profile.Parallelism = 8
+		profile.ScanIntensity = "medium"
+	} else {
+		profile.Category = "high-end"
+		profile.Parallelism = 32
+		profile.ScanIntensity = "high"
+	}
+
+	return profile
+}
+
+type BaselineSnapshot struct {
+	Timestamp time.Time `json:"timestamp"`
+	Hardware  any       `json:"hardware"`
+	Software  any       `json:"software"`
+	Network   any       `json:"network"`
+	Security  any       `json:"security"`
+	Health    any       `json:"health"`
+}
+
+func (a *App) GenerateBaselineSnapshot() (*BaselineSnapshot, error) {
+	// Snapshot using current state of facades
+	cpuInfo := a.SysOps.GetCPUInfo()
+	memInfo := a.SysOps.GetMemoryInfo()
+	diskInfo := a.SysOps.GetDiskInfo()
+
+	caps := a.GetSystemCapabilities()
+
+	netInfo := a.NetOps.GetInterfaces()
+	secStatus := a.SecOps.GetFirewallStatus()
+
+	snapshot := &BaselineSnapshot{
+		Timestamp: time.Now(),
+		Hardware: map[string]any{
+			"cpu":  cpuInfo,
+			"mem":  memInfo,
+			"disk": diskInfo,
+		},
+		Software: caps,
+		Network:  netInfo,
+		Security: secStatus,
+		Health: map[string]any{
+			"uptime": a.GetAppInfo().Uptime,
+		},
+	}
+
+	// Save to data/baseline.json for future comparison
+	path := filepath.Join(a.GetDataDir(), "baseline.json")
+	if b, err := json.MarshalIndent(snapshot, "", "  "); err == nil {
+		os.WriteFile(path, b, 0644)
+	}
+
+	return snapshot, nil
+}
+
 // IsOnboarded returns true if the user has completed the onboarding flow.
 func (a *App) IsOnboarded() bool {
 	return common.IsOnboarded()
@@ -220,14 +339,13 @@ func (a *App) ClearOnboarded() {
 // ApplyOperationalProfile adjusts engine parameters based on a selected profile (eco, standard, burst).
 func (a *App) ApplyOperationalProfile(profile string) {
 	interval := 3000
-	level := "info"
+	level := "debug" // AUDIT: Force debug level for Phase 0 telemetry
 
 	switch profile {
 	case "eco":
 		interval = 10000
 	case "burst":
 		interval = 1000
-		level = "debug"
 	}
 
 	common.LogInfo("App: Applying operational profile %q (interval: %vms, log: %s)", profile, interval, level)
@@ -242,8 +360,18 @@ func (a *App) SetLogLevel(level string) {
 
 // UpdateStorageConfig moves the internal database and log files to a new location.
 func (a *App) UpdateStorageConfig(dbDir string) error {
-	a.storageMu.Lock()
-	defer a.storageMu.Unlock()
+	a.storageLock.Lock()
+	defer a.storageLock.Unlock()
+
+	// Safety Check: Ensure directory is writable
+	testFile := filepath.Join(dbDir, ".write_test")
+	if err := os.MkdirAll(dbDir, 0755); err != nil {
+		return fmt.Errorf("cannot create directory: %w", err)
+	}
+	if err := os.WriteFile(testFile, []byte("ok"), 0644); err != nil {
+		return fmt.Errorf("directory is not writable: %w", err)
+	}
+	os.Remove(testFile)
 
 	dbPath := filepath.Join(dbDir, "allopsfull.db")
 
@@ -265,6 +393,8 @@ func (a *App) UpdateStorageConfig(dbDir string) error {
 		return fmt.Errorf("failed to re-init storage: %w", err)
 	}
 
+	a.currentDataDir = dbDir
+
 	// 4. Restart the scheduler
 	if a.scheduler != nil {
 		a.scheduler = common.NewCollectorScheduler(a.collectorRegistry, a.pipeline)
@@ -272,6 +402,39 @@ func (a *App) UpdateStorageConfig(dbDir string) error {
 	}
 
 	common.LogInfo("App: Storage successfully relocated and operations resumed.")
+	return nil
+}
+
+func (a *App) GetDataDir() string {
+	if a.currentDataDir == "" {
+		return "data"
+	}
+	return a.currentDataDir
+}
+
+func (a *App) GetLogsDir() string {
+	if a.currentLogsDir == "" {
+		return "logs"
+	}
+	return a.currentLogsDir
+}
+
+// UpdateLogsConfig relocates the active log file.
+func (a *App) UpdateLogsConfig(logDir string) error {
+	logPath := filepath.Join(logDir, "allopsfull.log")
+	common.LogInfo("App: Relocating log file to %s", logPath)
+
+	common.CloseLogger()
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		return fmt.Errorf("failed to create log dir: %w", err)
+	}
+
+	if err := common.InitLogger(logPath); err != nil {
+		return fmt.Errorf("failed to re-init logger: %w", err)
+	}
+
+	a.currentLogsDir = logDir
+	common.LogInfo("App: Logs successfully relocated.")
 	return nil
 }
 
@@ -313,6 +476,22 @@ func (a *App) OpenFileDialog(title string, filters []string) (string, error) {
 	})
 }
 
+// ReadTextFile reads the content of a text file and returns it as a string.
+func (a *App) ReadTextFile(path string) (string, error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
+}
+
+// SelectFolderDialog shows a directory selection dialog and returns the selected path.
+func (a *App) SelectFolderDialog(title string) (string, error) {
+	return runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: title,
+	})
+}
+
 // SaveFileDialog shows a file save dialog and returns the selected path.
 func (a *App) SaveFileDialog(title string, filename string, filters []string) (string, error) {
 	var wailsFilters []runtime.FileFilter
@@ -336,15 +515,24 @@ func (a *App) SaveFileDialog(title string, filename string, filters []string) (s
 // ── Internal helpers ─────────────────────────────────────────────────────────
 
 // startAlertLoop begins the periodic alert evaluation and dashboard event
-// emission goroutine. It does NOT collect data — collectors run independently
-// via the CollectorScheduler.
+// emission goroutine. It is highly optimized to minimize impact on the host.
 func (a *App) startAlertLoop() {
 	a.alertWg.Add(1)
 	go func() {
 		defer common.RecoverPanic()
 		defer a.alertWg.Done()
+
+		// Metrics/Alerts: 2s (Fast)
 		ticker := time.NewTicker(2 * time.Second)
 		defer ticker.Stop()
+
+		// Background Scans (Security): 5m (Slow/Expensive)
+		// Decoupled from main ticker to prevent workstation slowdown.
+		secTicker := time.NewTicker(5 * time.Minute)
+		defer secTicker.Stop()
+
+		// Immediate first run for security
+		go a.refreshSecurityScore()
 
 		for {
 			select {
@@ -352,80 +540,120 @@ func (a *App) startAlertLoop() {
 				return
 			case <-ticker.C:
 				a.evaluateAndEmit()
+			case <-secTicker.C:
+				go a.refreshSecurityScore()
 			}
 		}
 	}()
 }
 
-// evaluateAndEmit reads metrics from the pipeline, evaluates alert rules,
-// and emits dashboard + alert events to the frontend.
-// Data collection is handled separately by the CollectorScheduler.
+// startProcessWorker performs periodic heavy process scans in the background.
+// This decouples the per-tick collectors from the multi-millisecond cost
+// of a full system process enumeration.
+func (a *App) startProcessWorker() {
+	a.alertWg.Add(1)
+	go func() {
+		defer common.RecoverPanic()
+		defer a.alertWg.Done()
+
+		// Full process scan every 5 seconds
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+
+		// Run immediate first scan
+		_ = sysopsPkg.UpdateProcessSnapshot()
+
+		for {
+			select {
+			case <-a.alertQuit:
+				return
+			case <-ticker.C:
+				if err := sysopsPkg.UpdateProcessSnapshot(); err != nil {
+					common.LogWarn("Process snapshot failed: %v", err)
+				}
+			}
+		}
+	}()
+}
+
+// refreshSecurityScore executes heavy OS scans for security posture.
+// Decoupled into its own worker to prevent ticker-blocking.
+func (a *App) refreshSecurityScore() {
+	score := a.SecOps.GetSecurityScore()
+	a.lastMu.Lock()
+	a.lastSecurityScore = score.Grade
+	a.lastMu.Unlock()
+}
+
+// evaluateAndEmit reads metrics from the pipeline and notifies the UI.
 func (a *App) evaluateAndEmit() {
+	defer common.RecoverPanic()
+
 	if a.ctx == nil || a.ctx.Err() != nil {
 		return
 	}
 
-	storage := common.GetStorage()
-	var tx *sql.Tx
-	var err error
-	if storage != nil {
-		tx, err = storage.Begin()
-		if err != nil {
-			common.LogWarn("evaluateAndEmit: failed to begin transaction: %v", err)
-		}
-	}
+	// ── 0. Lock Operations (Prevention of Relocation Race) ──
+	a.storageLock.RLock()
 
-	// Ensure transaction is handled
-	defer func() {
-		if tx != nil {
-			if r := recover(); r != nil {
-				tx.Rollback()
-				panic(r)
-			}
-			if err := tx.Commit(); err != nil {
-				common.LogWarn("evaluateAndEmit: failed to commit transaction: %v", err)
-			}
-		}
-	}()
-
-	// Snapshot active alert IDs before evaluation (for resolve detection)
-	prevActive := make(map[string]bool)
-	for _, al := range a.alerts.ActiveAlerts() {
-		prevActive[al.ID] = true
-	}
-
-	// Evaluate alerts
+	// ── 1. Evaluate Alerts (In-Memory) ──
 	newAlerts := a.alerts.Evaluate()
 
-	// Persist fired alerts to SQLite (Within Transaction)
-	if storage != nil && tx != nil {
-		for _, alert := range newAlerts {
-			storage.InsertAlert(common.AlertRecord{
-				ID:        alert.ID,
-				Timestamp: alert.Timestamp,
-				Level:     alert.Level.String(),
-				Metric:    alert.Metric,
-				Message:   alert.Message,
-				Value:     alert.Value,
-				Threshold: alert.Threshold,
-			}, tx)
-		}
+	// ── 2. Metrics Snapshot (Fast) ──
+	metricsEvent := a.buildMetricsEvent()
 
-		for id := range prevActive {
-			found := false
-			for _, al := range a.alerts.ActiveAlerts() {
-				if al.ID == id {
-					found = true
-					break
-				}
-			}
-			if !found {
-				_ = storage.UpdateAlertResolved(id, tx)
-			}
-		}
+	// ── 3. Persist Alerts (Async, Outside Lock) ──
+	// NOTE: persistAlertsAsync must run outside storageLock to prevent
+	// goroutine stacking when a Lock() write-waiter blocks new RLock acquisitions.
+	if len(newAlerts) > 0 {
+		go a.persistAlertsAsync(newAlerts)
 	}
 
-	// Get current values for the dashboard event
+	// Release lock before UI emission to prevent RLock→Lock→RLock contention
+	a.storageLock.RUnlock()
+
+	// ── 4. Detection & Knowledge ──
+	a.detectAndEmitSpikes(metricsEvent)
+	a.updateExternalState(metricsEvent)
+
+	// ── 5. UI Emission (Delta Optimized) ──
+	runtime.EventsEmit(a.ctx, EventMetrics, metricsEvent)
+	a.emitAlertEvents(newAlerts)
+}
+
+// persistAlertsAsync handles DB writes without blocking the metrics stream.
+// Runs as a goroutine — MUST have its own RecoverPanic guard.
+func (a *App) persistAlertsAsync(newAlerts []common.Alert) {
+	defer common.RecoverPanic()
+
+	storage := common.GetStorage()
+	if storage == nil {
+		return
+	}
+
+	tx, err := storage.Begin()
+	if err != nil {
+		return
+	}
+
+	for _, alert := range newAlerts {
+		storage.InsertAlert(common.AlertRecord{
+			ID:        alert.ID,
+			Timestamp: alert.Timestamp,
+			Level:     alert.Level.String(),
+			Metric:    alert.Metric,
+			Message:   alert.Message,
+			Value:     alert.Value,
+			Threshold: alert.Threshold,
+		}, tx)
+	}
+	_ = tx.Commit()
+}
+
+// buildMetricsEvent gathers the latest snapshot from the pipeline.
+// IPC-OPTIMIZED: We only send history if requested or on first load.
+// Regular ticks should be lightweight deltas.
+func (a *App) buildMetricsEvent() MetricsEvent {
 	cpuMF := a.pipeline.GetMetricWithForecast(common.MetricCPU)
 	memMF := a.pipeline.GetMetricWithForecast(common.MetricMem)
 	diskMF := a.pipeline.GetMetricWithForecast(common.MetricDisk)
@@ -433,25 +661,22 @@ func (a *App) evaluateAndEmit() {
 	netTXMF := a.pipeline.GetMetricWithForecast(common.MetricNetTX)
 	procMF := a.pipeline.GetMetricWithForecast(common.MetricProcCnt)
 
-	metricsEvent := MetricsEvent{
+	return MetricsEvent{
 		CPU: GaugeMetric{
 			Value:    cpuMF.LastValue,
 			Unit:     cpuMF.Unit,
-			History:  safeLastN(cpuMF.Values, 60),
 			Forecast: cpuMF.Forecast,
 			Trend:    trendDirectionString(cpuMF.Trend.Direction),
 		},
 		Memory: GaugeMetric{
 			Value:    memMF.LastValue,
 			Unit:     memMF.Unit,
-			History:  safeLastN(memMF.Values, 60),
 			Forecast: memMF.Forecast,
 			Trend:    trendDirectionString(memMF.Trend.Direction),
 		},
 		Disk: GaugeMetric{
 			Value:    diskMF.LastValue,
 			Unit:     diskMF.Unit,
-			History:  safeLastN(diskMF.Values, 60),
 			Forecast: diskMF.Forecast,
 			Trend:    trendDirectionString(diskMF.Trend.Direction),
 		},
@@ -461,16 +686,15 @@ func (a *App) evaluateAndEmit() {
 			Unit:   "bps",
 		},
 		Processes:   int(procMF.LastValue),
-		Connections: 0, // fetched on-demand
+		Connections: 0,
 	}
+}
 
-	// Detect significant changes and emit timeline events.
-	// lastCPU/lastMem/lastDisk are shared with concurrent callers (the
-	// alert-loop ticker and TriggerCollector), so the read-compare-write
-	// sequence is done under lastMu to avoid a data race (IPC-3).
-	currCPU := cpuMF.LastValue
-	currMem := memMF.LastValue
-	currDisk := diskMF.LastValue
+// detectAndEmitSpikes checks for significant changes and emits timeline events.
+func (a *App) detectAndEmitSpikes(m MetricsEvent) {
+	currCPU := m.CPU.Value
+	currMem := m.Memory.Value
+	currDisk := m.Disk.Value
 
 	a.lastMu.Lock()
 	prevCPU, prevMem, prevDisk := a.lastCPU, a.lastMem, a.lastDisk
@@ -503,31 +727,35 @@ func (a *App) evaluateAndEmit() {
 			map[string]string{"from": fmt.Sprintf("%.1f", prevDisk), "to": fmt.Sprintf("%.1f", currDisk)},
 		))
 	}
+}
 
-	// Update Prometheus metrics
-	common.SetCPUMetric(cpuMF.LastValue)
-	common.SetMemoryMetric(memMF.LastValue)
-	common.SetDiskMetric(diskMF.LastValue)
-	common.SetProcessCountMetric(procMF.LastValue)
+// updateExternalState updates Prometheus and the Knowledge Layer.
+func (a *App) updateExternalState(m MetricsEvent) {
+	// 1. Update Prometheus metrics (Global Registry)
+	common.SetCPUMetric(m.CPU.Value)
+	common.SetMemoryMetric(m.Memory.Value)
+	common.SetDiskMetric(m.Disk.Value)
+	common.SetProcessCountMetric(float64(m.Processes))
 	common.SetAlertCountMetric(float64(a.alerts.AlertCount()))
 	common.IncPipelineTick()
 
-	// Emit metrics event
-	runtime.EventsEmit(a.ctx, EventMetrics, metricsEvent)
+	// 2. Refresh Security Grade (Throttled background worker updates lastSecurityScore)
+	a.lastMu.Lock()
+	grade := a.lastSecurityScore
+	a.lastMu.Unlock()
 
-	// Update System Knowledge Layer
-	common.GetKnowledge().Update(func(sk *common.SystemKnowledge) {
-		sk.CPUUsage = cpuMF.LastValue
-		sk.MemoryUsage = memMF.LastValue
-		sk.DiskUsage = diskMF.LastValue
-		sk.ActiveConns = metricsEvent.Connections
-		sk.Anomalies = a.alerts.AlertCount()
-		sk.Uptime = a.GetAppInfo().Uptime
-		sk.SecurityGrade = a.SecOps.GetSecurityScore().Grade
-	})
+	// 3. Sync Truth to Knowledge Layer (AI context)
+	common.GetKnowledge().UpdateSecurityState(
+		grade,
+		a.alerts.AlertCount(),
+		m.Connections,
+		a.GetAppInfo().Uptime,
+	)
+}
 
-	// Emit alert events for newly fired alerts
-	for _, alert := range newAlerts {
+// emitAlertEvents sends fired alerts to the frontend.
+func (a *App) emitAlertEvents(alerts []common.Alert) {
+	for _, alert := range alerts {
 		runtime.EventsEmit(a.ctx, EventAlert, AlertEvent{
 			Action:     "fired",
 			Alert:      convertAlert(alert),

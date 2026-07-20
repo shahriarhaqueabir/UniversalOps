@@ -7,7 +7,7 @@ export interface PanelProps {
   /** Category tint — adds a subtle colored left border and icon glow */
   category?: 'network' | 'security' | 'system' | 'devops' | 'ai' | 'none'
   /** Padding size */
-  padding?: 'none' | 'sm' | 'md' | 'lg'
+  padding?: 'none' | 'sm' | 'md' | 'lg' | 'xl'
   /** Additional class names */
   className?: string
   /** Optional click handler */
@@ -59,13 +59,13 @@ const paddingStyles = {
   sm: 'p-4',
   md: 'p-6',
   lg: 'p-8',
+  xl: 'p-12', // Generous padding for high-radius corners
 }
 
 /**
  * Panel — consistent card/frame wrapper used across the application.
  *
- * Standardizes radius (`var(--radius-lg)`), border, shadow, and provides
- * optional category tinting for colored left-border accents.
+ * Re-aligned to new high-radius industrial design standards.
  */
 export function Panel({
   children,
@@ -81,11 +81,11 @@ export function Panel({
     <div
       onClick={onClick}
       className={cn(
-        'rounded-[var(--radius-lg)] transition-all duration-200',
+        'rounded-[2rem] transition-all duration-300', // Standardized to 2rem
         variantStyles[variant],
         paddingStyles[padding],
-        category !== 'none' && ['border-l-2', cat.border, cat.bg],
-        onClick && 'cursor-pointer hover:scale-[1.005] active:scale-[0.995]',
+        category !== 'none' && ['border-l-4', cat.border, cat.bg],
+        onClick && 'cursor-pointer hover:scale-[1.01] active:scale-[0.99] hover:border-accent/30',
         className,
       )}
     >
@@ -115,19 +115,19 @@ export function PanelHeader({
   const cat = categoryColors[category]
 
   return (
-    <div className={cn('flex items-center justify-between', className)}>
-      <div className="flex items-center gap-3">
+    <div className={cn('flex items-center justify-between mb-6', className)}>
+      <div className="flex items-center gap-4">
         {icon && (
           <div className={cn(
-            'w-9 h-9 rounded-lg flex items-center justify-center border border-[var(--color-border)] bg-[var(--color-panel-3)] shrink-0',
+            'w-11 h-11 rounded-xl flex items-center justify-center border border-[var(--color-border)] bg-[var(--color-panel-3)] shrink-0 shadow-inner',
             category !== 'none' && cat.icon,
           )}>
             {icon}
           </div>
         )}
         <div>
-          <h3 className="text-sm font-bold text-[var(--color-text)] uppercase tracking-widest">{title}</h3>
-          {subtitle && <p className="text-xs text-[var(--color-text-dim)] mt-0.5">{subtitle}</p>}
+          <h3 className="text-sm font-black text-[var(--color-text)] uppercase tracking-[0.25em]">{title}</h3>
+          {subtitle && <p className="text-[10px] text-[var(--color-text-dim)] mt-1 font-bold uppercase tracking-widest">{subtitle}</p>}
         </div>
       </div>
       {action}

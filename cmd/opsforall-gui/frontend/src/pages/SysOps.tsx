@@ -2,7 +2,7 @@ import { useState, Suspense, lazy } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Cpu, Server, MemoryStick, Disc, Activity, Settings, FileText,
-  HardDrive, Users, Stethoscope,
+  Users, Stethoscope,
   Zap, Monitor,
 } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
@@ -40,7 +40,6 @@ const categories: CategoryDef[] = [
   { id: 'processes', label: 'Processes', icon: <Activity size={18} />, group: 'inspection' },
   { id: 'services', label: 'Services', icon: <Settings size={18} />, group: 'inspection' },
   { id: 'logs', label: 'Logs', icon: <FileText size={18} />, group: 'inspection' },
-  { id: 'storage', label: 'Storage', icon: <HardDrive size={18} />, group: 'inspection' },
   { id: 'users', label: 'Users', icon: <Users size={18} />, group: 'inspection' },
   { id: 'diagnostics', label: 'Diagnostics', icon: <Stethoscope size={18} />, group: 'diagnosis' },
   { id: 'actions', label: 'Actions', icon: <Zap size={18} />, group: 'action' },

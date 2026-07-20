@@ -158,10 +158,12 @@ func (fe *ForecastEngine) DetectTrend() TrendInfo {
 // Predict estimates the value at a future step using the linear trend.
 func (fe *ForecastEngine) Predict(stepsAhead int) float64 {
 	trend := fe.DetectTrend()
+	fe.mu.RLock()
 	size := fe.head
 	if fe.full {
 		size = fe.capacity
 	}
+	fe.mu.RUnlock()
 	nextX := float64(size + stepsAhead - 1)
 	return trend.Slope*nextX + trend.Intercept
 }
@@ -169,10 +171,12 @@ func (fe *ForecastEngine) Predict(stepsAhead int) float64 {
 // PredictSeries generates a forecast series for the given number of steps.
 func (fe *ForecastEngine) PredictSeries(steps int) []float64 {
 	trend := fe.DetectTrend()
+	fe.mu.RLock()
 	size := fe.head
 	if fe.full {
 		size = fe.capacity
 	}
+	fe.mu.RUnlock()
 	out := make([]float64, steps)
 	for i := 0; i < steps; i++ {
 		x := float64(size + i)

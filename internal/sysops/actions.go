@@ -4,20 +4,22 @@ import (
 	"fmt"
 	"os/exec"
 	"runtime"
+
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
 // SystemAction represents a system action type.
 type SystemAction string
 
 const (
-	ActionReboot        SystemAction = "reboot"
-	ActionShutdown      SystemAction = "shutdown"
-	ActionSleep         SystemAction = "sleep"
-	ActionHibernate     SystemAction = "hibernate"
-	ActionFlushDNS      SystemAction = "flush_dns"
-	ActionClearTemp     SystemAction = "clear_temp"
-	ActionCleanPkgCache SystemAction = "clean_pkg_cache"
-	ActionSystemUpdate  SystemAction = "system_update"
+	ActionReboot         SystemAction = "reboot"
+	ActionShutdown       SystemAction = "shutdown"
+	ActionSleep          SystemAction = "sleep"
+	ActionHibernate      SystemAction = "hibernate"
+	ActionFlushDNS       SystemAction = "flush_dns"
+	ActionClearTemp      SystemAction = "clear_temp"
+	ActionCleanPkgCache  SystemAction = "clean_pkg_cache"
+	ActionSystemUpdate   SystemAction = "system_update"
 	ActionRestartService SystemAction = "restart_service"
 )
 
@@ -104,6 +106,12 @@ func RunSystemAction(action SystemAction) (*ActionResult, error) {
 // RestartService restarts a system service by name.
 func RestartService(name string) (*ActionResult, error) {
 	result := &ActionResult{Action: "restart_service"}
+
+	// Validate service name to prevent command injection (SEC-1).
+	if !common.ValidServiceName(name) {
+		return nil, fmt.Errorf("invalid service name: %q", name)
+	}
+
 	var cmd *exec.Cmd
 
 	if runtime.GOOS == "windows" {
