@@ -26,6 +26,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { DependencyChecklist } from '../onboarding/DependencyChecklist'
 import type {
   EnvironmentReport,
   PerformanceProfile,
@@ -40,9 +41,9 @@ import { ONBOARDING_STEPS } from '@/types/onboarding'
 
 const MAX_NAME_LENGTH = 32
 const NAME_PATTERN = /^[a-zA-Z0-9\s_-]+$/
-const AI_MODEL_BASE = 'hf.co/empero-ai/Qwythos-9B-Claude-Mythos-5-1M-GGUF:Q6_K'
+const AI_MODEL_BASE = 'hf.co/GnLOLot/MiniCPM5-1B-Claude-Opus-Fable5-V2-Thinking-GGUF:Q8_0'
 const DEFAULT_CONFIG: OnboardingConfig = {
-  companionName: 'Assistant',
+  companionName: 'Hawk',
   storagePath: 'data',
   logsPath: 'logs',
   modelPath: '',
@@ -165,7 +166,9 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
     setDepError(false)
     try {
       const res = await call('App.GetSystemCapabilities')
-      setDependencies(res as SystemCapability[])
+      // Map Go response to internal frontend types if necessary,
+      // though DependencyChecklist handles the Go CapabilityInfo format now.
+      setDependencies(res as any[])
     } catch {
       setDepError(true)
     }
@@ -619,34 +622,10 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
                     <p className="text-[11px] font-bold uppercase tracking-[0.12em]">Scanning tools...</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {dependencies.map((dep) => (
-                      <div
-                        key={dep.id}
-                        className={cn(
-                          'p-5 rounded-xl border flex flex-col items-center gap-3 transition-all',
-                          dep.available
-                            ? 'bg-[var(--color-panel-2)] border-[var(--color-success)]/20'
-                            : 'bg-[var(--color-panel-3)] border-[var(--color-border)] opacity-50'
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            'w-10 h-10 rounded-lg flex items-center justify-center',
-                            dep.available ? 'bg-[var(--color-success)]/10 text-[var(--color-success)]' : 'bg-[var(--color-panel-2)] text-[var(--color-text-faint)]'
-                          )}
-                        >
-                          {dep.available ? <CheckCircle2 size={20} /> : <XCircle size={20} />}
-                        </div>
-                        <div className="text-center">
-                          <p className="font-bold text-[var(--color-text)] uppercase text-[10px] tracking-[0.1em]">{dep.id}</p>
-                          <p className="text-[8px] text-[var(--color-text-faint)] mt-0.5 uppercase font-bold">
-                            {dep.available ? 'Found' : 'Not Found'}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <DependencyChecklist
+                    dependencies={dependencies as any}
+                    onRefresh={fetchDependencies}
+                  />
                 )}
 
                 <div className="p-4 rounded-xl bg-[var(--color-panel-3)] border border-[var(--color-border)] flex items-center gap-3 max-w-2xl">
