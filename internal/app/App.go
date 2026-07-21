@@ -18,6 +18,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/secops"
 	sysopsPkg "github.com/shahriarhaqueabir/AllOpsFull/internal/sysops"
 )
 
@@ -44,6 +45,7 @@ type App struct {
 	Timeline    *Timeline
 	Knowledge   *KnowledgeAPI
 	Workflows   *WorkflowAPI
+	Reports     *ReportsAPI
 
 	// Workflow engine
 	workflowEngine *common.WorkflowEngine
@@ -55,14 +57,10 @@ type App struct {
 	// Capability discovery
 	capabilities *common.CapabilityRegistry
 
-	// Alert and dashboard evaluation loop
-	alertQuit chan struct{}
-	alertWg   sync.WaitGroup
+	// Unified engine evaluation loop
+	engineLoop *common.EngineLoop
 
 	// Previous metric values for significant-change detection.
-	// Guarded by lastMu since evaluateAndEmit() can run concurrently from
-	// both the periodic alert-loop ticker and TriggerCollector() (a Wails
-	// binding invoked directly from the frontend goroutine). See IPC-3.
 	lastMu                     sync.Mutex
 	lastCPU, lastMem, lastDisk float64
 
@@ -91,12 +89,14 @@ func NewApp() *App {
 		alerts:         alertEngine,
 		eventBus:       eventBus,
 		startedAt:      time.Now(),
-		alertQuit:      make(chan struct{}),
 		capabilities:   common.NewCapabilityRegistry(),
 		workflowEngine: common.NewWorkflowEngine(),
 		currentDataDir: "data",
 		currentLogsDir: "logs",
 	}
+
+	// Initialize the decoupled engine loop with App as WorkflowInvoker
+	a.engineLoop = common.NewEngineLoop(pipeline, alertEngine, eventBus, &a.storageLock, a)
 
 	// Initialize subsystems that don't need context yet
 	a.SysOps = NewSysOps()
@@ -106,6 +106,7 @@ func NewApp() *App {
 	a.AlertAPI = NewAlertAPI(a.alerts)
 	a.Logs = NewLogs()
 	a.Knowledge = NewKnowledgeAPI()
+	a.Reports = NewReportsAPI()
 	a.Workflows = NewWorkflowAPI(a.workflowEngine, a.SysOps, a.SecOps, a.DevOps, a.AlertAPI)
 
 	// Initialize subsystems that might need context later
@@ -115,6 +116,61 @@ func NewApp() *App {
 	a.Dash = NewDashboard(a.pipeline, a.alerts, a.SysOps, a.NetOps, a.Timeline, func() string {
 		return a.GetAppInfo().Uptime
 	})
+
+	// Configure engine loop callbacks for UI integration
+	a.engineLoop.OnMetricsEmit = func(s common.MetricSnapshot) {
+		if a.ctx == nil {
+			return
+		}
+		// Convert common snapshot to UI event format
+		event := MetricsEvent{
+			CPU: GaugeMetric{
+				Value: s.CPU,
+				Unit:  "%",
+				Trend: a.getTrendString(common.MetricCPU),
+			},
+			Memory: GaugeMetric{
+				Value: s.Memory,
+				Unit:  "%",
+				Trend: a.getTrendString(common.MetricMem),
+			},
+			Disk: GaugeMetric{
+				Value: s.Disk,
+				Unit:  "%",
+				Trend: a.getTrendString(common.MetricDisk),
+			},
+			Network: NetworkMetric{
+				RXRate: s.RXRate,
+				TXRate: s.TXRate,
+				Unit:   "bps",
+			},
+			Processes:   s.Processes,
+			Connections: len(a.NetOps.GetConnections()),
+		}
+		runtime.EventsEmit(a.ctx, EventMetrics, event)
+
+		// Sync Truth to Knowledge Layer (AI context)
+		grade := ""
+		a.lastMu.Lock()
+		grade = a.lastSecurityScore
+		a.lastMu.Unlock()
+
+		common.GetKnowledge().UpdateSecurityState(
+			grade,
+			a.alerts.AlertCount(),
+			event.Connections,
+			a.GetAppInfo().Uptime,
+		)
+	}
+
+	a.engineLoop.OnAlertsEmit = func(alerts []common.Alert) {
+		if a.ctx == nil {
+			return
+		}
+		a.emitAlertEvents(alerts)
+		// Async persistence
+		go a.persistAlertsAsync(alerts)
+	}
 
 	// Subscribe the event bus to persist events and emit to frontend
 	a.eventBus.Subscribe(func(evt common.TimelineEvent) {
@@ -131,6 +187,36 @@ func NewApp() *App {
 	})
 
 	return a
+}
+
+func (a *App) getTrendString(metric string) string {
+	t := a.pipeline.GetTrend(metric)
+	return trendDirectionString(t.Direction)
+}
+
+// TriggerWorkflow implements common.WorkflowInvoker.
+// It executes a workflow and persists the result, returning the report ID.
+func (a *App) TriggerWorkflow(id string) (string, error) {
+	wf, err := a.Workflows.ExecuteWorkflow(id)
+	if err != nil {
+		return "", err
+	}
+
+	// Persist to reports table
+	storage := common.GetStorage()
+	if storage != nil {
+		data, _ := json.Marshal(wf)
+		reportID := fmt.Sprintf("auto-%s-%d", id, time.Now().Unix())
+		err = storage.InsertReport(common.ReportRecord{
+			ID:        reportID,
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			Type:      "auto_diag",
+			Score:     0, // Score logic could be added to workflows later
+			DataJSON:  string(data),
+		})
+		return reportID, err
+	}
+	return "", fmt.Errorf("storage unavailable")
 }
 
 // Startup is called by Wails when the application starts.
@@ -168,6 +254,10 @@ func (a *App) Startup(ctx context.Context) {
 		common.LogWarn("Failed to init local logger: %v", err)
 	}
 
+	// Load persisted settings into the pipeline before starting loops
+	a.PipelineAPI.LoadSettings()
+	a.AIOps.LoadModels()
+
 	common.LogInfo("AllOpsFull initialized in self-contained mode (portable)")
 
 	// Initialize System Knowledge Layer (linked to Pipeline for consistency)
@@ -185,8 +275,9 @@ func (a *App) Startup(ctx context.Context) {
 	a.scheduler = common.NewCollectorScheduler(a.collectorRegistry, a.pipeline)
 	a.scheduler.Start()
 
-	// Start the alert and dashboard evaluation loop
-	a.startAlertLoop()
+	// Start the modular engine evaluation loop
+	a.engineLoop.Start(2 * time.Second)
+
 	a.startProcessWorker()
 }
 
@@ -199,17 +290,9 @@ func (a *App) Shutdown(ctx context.Context) {
 		a.scheduler.Stop(5 * time.Second)
 	}
 
-	// Stop the alert evaluation loop
-	close(a.alertQuit)
-	alertDone := make(chan struct{})
-	go func() {
-		a.alertWg.Wait()
-		close(alertDone)
-	}()
-	select {
-	case <-alertDone:
-	case <-time.After(5 * time.Second):
-		common.LogWarn("Alert loop did not shut down within 5s")
+	// Stop the engine loop
+	if a.engineLoop != nil {
+		a.engineLoop.Stop()
 	}
 
 	// Close persistent storage
@@ -446,12 +529,52 @@ func (a *App) GetSystemCapabilities() []common.CapabilityInfo {
 	return a.capabilities.List()
 }
 
+// VerifyCapability triggers a focused re-scan of a specific tool and returns its new state.
+func (a *App) VerifyCapability(id string) (common.CapabilityInfo, error) {
+	if a.capabilities == nil {
+		return common.CapabilityInfo{}, fmt.Errorf("capability registry unavailable")
+	}
+
+	capID := common.CapabilityID(id)
+	a.capabilities.RefreshBatch([]common.CapabilityID{capID})
+
+	list := a.capabilities.List()
+	for _, info := range list {
+		if info.ID == capID {
+			return info, nil
+		}
+	}
+
+	return common.CapabilityInfo{}, fmt.Errorf("capability %s not found after verification", id)
+}
+
 // SetCapabilityOverride allows the frontend to manually set a path for a tool.
 func (a *App) SetCapabilityOverride(id string, path string) {
 	if a.capabilities != nil {
 		a.capabilities.SetOverride(common.CapabilityID(id), path)
 		common.LogInfo("App: Capability override set for %s -> %s", id, path)
 	}
+}
+
+// ── Database Maintenance ───────────────────────────────────────────────────
+
+// VacuumDatabase rebuilds the database to reclaim space.
+func (a *App) VacuumDatabase() error {
+	s := common.GetStorage()
+	if s == nil {
+		return fmt.Errorf("storage unavailable")
+	}
+	return s.Vacuum()
+}
+
+// AnalyzeDatabase verifies integrity and updates statistics.
+func (a *App) AnalyzeDatabase() error {
+	s := common.GetStorage()
+	if s == nil {
+		return fmt.Errorf("storage unavailable")
+	}
+	// Integrity check is a separate pragma, Analyze is for query planning
+	return s.Analyze()
 }
 
 // ── Dialogs ─────────────────────────────────────────────────────────────────
@@ -514,63 +637,42 @@ func (a *App) SaveFileDialog(title string, filename string, filters []string) (s
 
 // ── Internal helpers ─────────────────────────────────────────────────────────
 
-// startAlertLoop begins the periodic alert evaluation and dashboard event
-// emission goroutine. It is highly optimized to minimize impact on the host.
-func (a *App) startAlertLoop() {
-	a.alertWg.Add(1)
-	go func() {
-		defer common.RecoverPanic()
-		defer a.alertWg.Done()
-
-		// Metrics/Alerts: 2s (Fast)
-		ticker := time.NewTicker(2 * time.Second)
-		defer ticker.Stop()
-
-		// Background Scans (Security): 5m (Slow/Expensive)
-		// Decoupled from main ticker to prevent workstation slowdown.
-		secTicker := time.NewTicker(5 * time.Minute)
-		defer secTicker.Stop()
-
-		// Immediate first run for security
-		go a.refreshSecurityScore()
-
-		for {
-			select {
-			case <-a.alertQuit:
-				return
-			case <-ticker.C:
-				a.evaluateAndEmit()
-			case <-secTicker.C:
-				go a.refreshSecurityScore()
-			}
-		}
-	}()
-}
-
 // startProcessWorker performs periodic heavy process scans in the background.
 // This decouples the per-tick collectors from the multi-millisecond cost
 // of a full system process enumeration.
 func (a *App) startProcessWorker() {
-	a.alertWg.Add(1)
+	// Process worker doesn't use WaitGroup directly for loop but we can use background task
 	go func() {
 		defer common.RecoverPanic()
-		defer a.alertWg.Done()
 
 		// Full process scan every 5 seconds
 		ticker := time.NewTicker(5 * time.Second)
 		defer ticker.Stop()
 
+		// Memory reporting ticker (60s)
+		memTicker := time.NewTicker(60 * time.Second)
+		defer memTicker.Stop()
+
 		// Run immediate first scan
 		_ = sysopsPkg.UpdateProcessSnapshot()
 
+		tickCount := 0
+
 		for {
 			select {
-			case <-a.alertQuit:
-				return
 			case <-ticker.C:
 				if err := sysopsPkg.UpdateProcessSnapshot(); err != nil {
 					common.LogWarn("Process snapshot failed: %v", err)
 				}
+				tickCount++
+				if tickCount%12 == 0 { // Every 60s
+					goruntime.GC()
+				}
+			case <-memTicker.C:
+				var m goruntime.MemStats
+				goruntime.ReadMemStats(&m)
+				common.LogInfo("Engine Memory: Alloc=%vMB, TotalAlloc=%vMB, Sys=%vMB, NumGC=%v",
+					m.Alloc/1024/1024, m.TotalAlloc/1024/1024, m.Sys/1024/1024, m.NumGC)
 			}
 		}
 	}()
@@ -583,42 +685,28 @@ func (a *App) refreshSecurityScore() {
 	a.lastMu.Lock()
 	a.lastSecurityScore = score.Grade
 	a.lastMu.Unlock()
-}
 
-// evaluateAndEmit reads metrics from the pipeline and notifies the UI.
-func (a *App) evaluateAndEmit() {
-	defer common.RecoverPanic()
-
-	if a.ctx == nil || a.ctx.Err() != nil {
-		return
+	// INTEGRATION: Emit recent security events to the global event bus
+	events, err := secops.GetSecurityEvents()
+	if err == nil {
+		importantCount := 0
+		for _, e := range events {
+			if e.Important {
+				importantCount++
+				a.eventBus.Emit(common.NewEventWithMeta(
+					common.CatSecurity, common.EventWarning, "secops",
+					fmt.Sprintf("Security Event %d", e.ID),
+					e.Message,
+					map[string]string{"provider": e.Provider, "id": fmt.Sprintf("%d", e.ID)},
+				))
+			}
+		}
+		if importantCount > 0 {
+			common.LogWarn("Security Audit: Detected %d important system security events", importantCount)
+		} else {
+			common.LogInfo("Security Audit: System posture %s (No critical events)", score.Grade)
+		}
 	}
-
-	// ── 0. Lock Operations (Prevention of Relocation Race) ──
-	a.storageLock.RLock()
-
-	// ── 1. Evaluate Alerts (In-Memory) ──
-	newAlerts := a.alerts.Evaluate()
-
-	// ── 2. Metrics Snapshot (Fast) ──
-	metricsEvent := a.buildMetricsEvent()
-
-	// ── 3. Persist Alerts (Async, Outside Lock) ──
-	// NOTE: persistAlertsAsync must run outside storageLock to prevent
-	// goroutine stacking when a Lock() write-waiter blocks new RLock acquisitions.
-	if len(newAlerts) > 0 {
-		go a.persistAlertsAsync(newAlerts)
-	}
-
-	// Release lock before UI emission to prevent RLock→Lock→RLock contention
-	a.storageLock.RUnlock()
-
-	// ── 4. Detection & Knowledge ──
-	a.detectAndEmitSpikes(metricsEvent)
-	a.updateExternalState(metricsEvent)
-
-	// ── 5. UI Emission (Delta Optimized) ──
-	runtime.EventsEmit(a.ctx, EventMetrics, metricsEvent)
-	a.emitAlertEvents(newAlerts)
 }
 
 // persistAlertsAsync handles DB writes without blocking the metrics stream.
@@ -688,69 +776,6 @@ func (a *App) buildMetricsEvent() MetricsEvent {
 		Processes:   int(procMF.LastValue),
 		Connections: 0,
 	}
-}
-
-// detectAndEmitSpikes checks for significant changes and emits timeline events.
-func (a *App) detectAndEmitSpikes(m MetricsEvent) {
-	currCPU := m.CPU.Value
-	currMem := m.Memory.Value
-	currDisk := m.Disk.Value
-
-	a.lastMu.Lock()
-	prevCPU, prevMem, prevDisk := a.lastCPU, a.lastMem, a.lastDisk
-	a.lastCPU = currCPU
-	a.lastMem = currMem
-	a.lastDisk = currDisk
-	a.lastMu.Unlock()
-
-	if currCPU > prevCPU+15 && prevCPU > 0 {
-		a.eventBus.Emit(common.NewEventWithMeta(
-			common.CatSystem, common.EventWarning, "sysops",
-			"CPU spiked",
-			fmt.Sprintf("CPU usage jumped from %.0f%% to %.0f%%", prevCPU, currCPU),
-			map[string]string{"from": fmt.Sprintf("%.1f", prevCPU), "to": fmt.Sprintf("%.1f", currCPU)},
-		))
-	}
-	if currMem > prevMem+10 && prevMem > 0 {
-		a.eventBus.Emit(common.NewEventWithMeta(
-			common.CatSystem, common.EventWarning, "sysops",
-			"Memory pressure increasing",
-			fmt.Sprintf("Memory usage increased from %.0f%% to %.0f%%", prevMem, currMem),
-			map[string]string{"from": fmt.Sprintf("%.1f", prevMem), "to": fmt.Sprintf("%.1f", currMem)},
-		))
-	}
-	if currDisk > prevDisk+10 && prevDisk > 0 {
-		a.eventBus.Emit(common.NewEventWithMeta(
-			common.CatSystem, common.EventWarning, "sysops",
-			"Disk usage increasing",
-			fmt.Sprintf("Disk usage increased from %.0f%% to %.0f%%", prevDisk, currDisk),
-			map[string]string{"from": fmt.Sprintf("%.1f", prevDisk), "to": fmt.Sprintf("%.1f", currDisk)},
-		))
-	}
-}
-
-// updateExternalState updates Prometheus and the Knowledge Layer.
-func (a *App) updateExternalState(m MetricsEvent) {
-	// 1. Update Prometheus metrics (Global Registry)
-	common.SetCPUMetric(m.CPU.Value)
-	common.SetMemoryMetric(m.Memory.Value)
-	common.SetDiskMetric(m.Disk.Value)
-	common.SetProcessCountMetric(float64(m.Processes))
-	common.SetAlertCountMetric(float64(a.alerts.AlertCount()))
-	common.IncPipelineTick()
-
-	// 2. Refresh Security Grade (Throttled background worker updates lastSecurityScore)
-	a.lastMu.Lock()
-	grade := a.lastSecurityScore
-	a.lastMu.Unlock()
-
-	// 3. Sync Truth to Knowledge Layer (AI context)
-	common.GetKnowledge().UpdateSecurityState(
-		grade,
-		a.alerts.AlertCount(),
-		m.Connections,
-		a.GetAppInfo().Uptime,
-	)
 }
 
 // emitAlertEvents sends fired alerts to the frontend.
@@ -829,16 +854,28 @@ func (a *App) TriggerCollector(id string) error {
 
 	// Trigger immediate alert evaluation in a separate goroutine to avoid
 	// blocking the Wails binding return.
-	go a.evaluateAndEmit()
+	if a.engineLoop != nil {
+		go a.engineLoop.Step()
+	}
 
 	return nil
 }
 
 // ConfirmAction executes a previously registered pending action via safety handshake.
-func (a *App) ConfirmAction(handshakeID string) SecActionResult {
+func (a *App) ConfirmAction(handshakeID string) common.SecActionResult {
 	pending, err := common.GetHandshakeRegistry().Consume(handshakeID)
 	if err != nil {
-		return SecActionResult{Success: false, Error: err.Error()}
+		return common.SecActionResult{Success: false, Error: err.Error()}
+	}
+
+	// Helper to safely extract string params
+	getStringParam := func(m map[string]interface{}, key string) string {
+		if val, ok := m[key]; ok {
+			if s, ok := val.(string); ok {
+				return s
+			}
+		}
+		return ""
 	}
 
 	switch pending.Action {
@@ -850,14 +887,42 @@ func (a *App) ConfirmAction(handshakeID string) SecActionResult {
 			pid = v
 		case string:
 			fmt.Sscanf(v, "%d", &pid)
+		case float64:
+			pid = int(v)
 		}
 		if pid == 0 {
-			return SecActionResult{Success: false, Error: "Invalid PID"}
+			return common.SecActionResult{Success: false, Error: "Invalid PID (0 or missing)"}
 		}
 		return a.SecOps.executeKillProcess(pid)
 
+	case "kill_process_tree", "KillProcessTree":
+		pidRaw := pending.Params["pid"]
+		var pid int
+		switch v := pidRaw.(type) {
+		case int:
+			pid = v
+		case string:
+			fmt.Sscanf(v, "%d", &pid)
+		case float64:
+			pid = int(v)
+		}
+		if pid == 0 {
+			return common.SecActionResult{Success: false, Error: "Invalid PID (0 or missing)"}
+		}
+		return a.SecOps.executeKillProcessTree(pid)
+
+	case "ApplyHardening":
+		check := getStringParam(pending.Params, "check")
+		if check == "" {
+			return common.SecActionResult{Success: false, Error: "Missing 'check' parameter"}
+		}
+		return a.SecOps.executeApplyHardening(check)
+
 	case "block_ip", "BlockIP":
-		ip := pending.Params["ip"].(string)
+		ip := getStringParam(pending.Params, "ip")
+		if ip == "" {
+			return common.SecActionResult{Success: false, Error: "Missing 'ip' parameter"}
+		}
 		return a.SecOps.executeBlockIP(ip)
 
 	case "isolate_host", "IsolateHost":
@@ -869,11 +934,36 @@ func (a *App) ConfirmAction(handshakeID string) SecActionResult {
 		return a.SecOps.executeIsolateHost(confirm, 3600) // Default 1hr isolation
 
 	case "restart_service", "RestartService":
-		name := pending.Params["name"].(string)
-		return a.SysOps.executeRestartService(name)
+		// Try both 'name' and 'service' (AI sometimes confuses these)
+		name := getStringParam(pending.Params, "name")
+		if name == "" {
+			name = getStringParam(pending.Params, "service")
+		}
+
+		if name == "" {
+			return common.SecActionResult{Success: false, Error: "Missing service name parameter"}
+		}
+
+		common.LogInfo("ConfirmAction: Restarting service %q", name)
+		res := a.SysOps.executeRestartService(name)
+		return common.SecActionResult{Success: res.Success, Message: res.Message}
+
+	case "workflow":
+		workflowID := getStringParam(pending.Params, "workflow_id")
+		if workflowID == "" {
+			return common.SecActionResult{Success: false, Error: "Missing 'workflow_id' parameter"}
+		}
+		reportID, err := a.TriggerWorkflow(workflowID)
+		if err != nil {
+			return common.SecActionResult{Success: false, Error: "Workflow execution failed: " + err.Error()}
+		}
+		return common.SecActionResult{Success: true, Message: "Workflow executed successfully", Detail: "Report ID: " + reportID}
+
+	case "flush_dns", "clear_arp", "disk_cleanup", "defrag", "reboot", "shutdown", "sleep", "hibernate", "clean_pkg_cache", "system_update":
+		return a.SysOps.executeSystemAction(pending.Action)
 
 	default:
-		return SecActionResult{Success: false, Error: "Unknown or unimplemented action type: " + pending.Action}
+		return common.SecActionResult{Success: false, Error: "Unknown or unimplemented action type: " + pending.Action}
 	}
 }
 
