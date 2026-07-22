@@ -5,11 +5,8 @@ import { TopBar } from './components/layout/TopBar'
 import { MainContent } from './components/layout/MainContent'
 import { HawkSidebar } from './components/layout/HawkSidebar'
 import { OnboardingModal } from './components/dialogs/OnboardingModal'
-import { useThemeStore, useAlertStore, useSettingsStore, useNavigationStore } from './stores'
+import { useThemeStore, useAlertStore, useSettingsStore, useNavigationStore, type Page } from './stores'
 import type { AlertInfo } from './types'
-
-// Page type moved to store
-export type { Page } from './stores/useSettingsStore'
 
 
 interface WailsRuntime {
@@ -159,7 +156,7 @@ function App() {
       <div className="flex-1 flex flex-col overflow-hidden relative">
         <TopBar currentPage={currentPage} onToggleHawk={() => setShowHawk(!showHawk)} />
         <div className="flex-1 flex overflow-hidden">
-          <MainContent currentPage={currentPage} onNavigate={navigate} />
+          <MainContent currentPage={currentPage} />
           <HawkSidebar isOpen={showHawk} onClose={() => setShowHawk(false)} />
         </div>
       </div>

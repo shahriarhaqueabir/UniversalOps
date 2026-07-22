@@ -16,11 +16,6 @@ const AlertsDashboard = lazy(() => import('../../pages/AlertsDashboard').then(m 
 const Logs = lazy(() => import('../../pages/Logs').then(m => ({ default: m.Logs })))
 const Settings = lazy(() => import('../../pages/Settings').then(m => ({ default: m.Settings })))
 
-interface MainContentProps {
-  currentPage: Page
-  onNavigate?: (page: Page, tab?: string | null) => void
-}
-
 const pageVariants = {
   initial: { opacity: 0, y: 8 },
   animate: { opacity: 1, y: 0 },
@@ -50,7 +45,7 @@ function PageSkeleton() {
   )
 }
 
-export function MainContent({ currentPage, onNavigate }: MainContentProps) {
+export function MainContent({ currentPage }: { currentPage: Page }) {
   const [prefersReduced, setPrefersReduced] = useState(false)
 
   useEffect(() => {
@@ -62,7 +57,7 @@ export function MainContent({ currentPage, onNavigate }: MainContentProps) {
   }, [])
   const renderPage = () => {
     switch (currentPage) {
-      case 'dashboard': return <Dashboard onNavigate={onNavigate} />
+      case 'dashboard': return <Dashboard />
       case 'sysops': return <SysOps />
       case 'workflows': return <WorkflowCenter />
       case 'netops': return <NetOps />

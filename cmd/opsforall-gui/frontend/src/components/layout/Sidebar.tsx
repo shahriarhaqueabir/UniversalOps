@@ -15,7 +15,7 @@ import {
   ChevronRight,
   Library,
 } from 'lucide-react'
-import type { Page } from '../../App'
+import { type Page } from '../../stores'
 import { cn } from '../../lib/utils'
 
 interface NavItem {

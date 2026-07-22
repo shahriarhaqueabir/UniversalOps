@@ -28,11 +28,13 @@ Universal-Ops replaces fragmented CLI tools with a unified, high-performance das
 ---
 
 ## 🚀 Quick Start
-Ready to build your observation command center?
+Ready to build your observation command center? 
 
-1.  **Download**: Get the latest `.exe` from [Releases](https://github.com/shahriarhaqueabir/AllOpsFull/releases).
-2.  **Initialize**: Follow the **Interactive Onboarding Wizard** to link local tools.
-3.  **Optimize**: Connect [Ollama](https://ollama.com) for local AI briefings.
+### One-Line Setup (For Developers)
+Run this in your terminal to clone, install, and build the entire project:
+```powershell
+git clone https://github.com/shahriarhaqueabir/AllOpsFull.git UniversalOps; cd UniversalOps; New-Item -ItemType Directory -Path data,logs,bin -Force; cd cmd/opsforall-gui/frontend; npm install; cd ../../../; go mod tidy; wails build
+```
 
 **Detailed Installation Guide**: [Read the Manual](./docs/INSTALL.md)
 

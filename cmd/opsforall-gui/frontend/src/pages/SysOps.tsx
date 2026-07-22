@@ -1,4 +1,4 @@
-import { useState, Suspense, lazy } from 'react'
+import { useState, useEffect, Suspense, lazy } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Cpu, Server, MemoryStick, Disc, Activity, Settings, FileText,
