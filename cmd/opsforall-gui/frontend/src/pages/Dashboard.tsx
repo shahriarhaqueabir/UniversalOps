@@ -40,7 +40,6 @@ import { cn } from '@/lib/utils'
 import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 import { Panel } from '@/components/ui/Panel'
 import type { DashboardData } from '@/types'
-import type { Page } from '@/App'
 
 /* ── Dashboard Backend Types ── */
 
@@ -382,7 +381,7 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeInOut' as const } }
 }
 
-export function Dashboard({ onNavigate }: { onNavigate?: (page: Page, tab?: string | null) => void }) {
+export function Dashboard() {
   const { call } = useBackend()
   const { refreshInterval } = useSettingsStore()
   const { navigate } = useNavigationStore()

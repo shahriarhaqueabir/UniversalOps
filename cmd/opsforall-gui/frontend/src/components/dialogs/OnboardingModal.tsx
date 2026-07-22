@@ -14,7 +14,6 @@ import {
   Zap,
   BrainCircuit,
   HardDrive,
-  XCircle,
   Cpu,
   MemoryStick,
   Server,

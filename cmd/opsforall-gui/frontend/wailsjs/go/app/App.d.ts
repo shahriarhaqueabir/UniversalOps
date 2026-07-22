@@ -56,3 +56,5 @@ export function UpdateLogsConfig(arg1:string):Promise<void>;
 export function UpdateStorageConfig(arg1:string):Promise<void>;
 
 export function VacuumDatabase():Promise<void>;
+
+export function VerifyCapability(arg1:string):Promise<common.CapabilityInfo>;

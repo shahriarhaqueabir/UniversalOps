@@ -109,3 +109,7 @@ export function UpdateStorageConfig(arg1) {
 export function VacuumDatabase() {
   return window['go']['app']['App']['VacuumDatabase']();
 }
+
+export function VerifyCapability(arg1) {
+  return window['go']['app']['App']['VerifyCapability'](arg1);
+}
