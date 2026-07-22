@@ -1,6 +1,6 @@
 module github.com/shahriarhaqueabir/AllOpsFull
 
-go 1.26.5
+go 1.23.5
 
 require (
 	github.com/miekg/dns v1.1.63
