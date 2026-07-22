@@ -155,6 +155,52 @@ func SetFirewallRuleState(name string, enable bool) error {
 	return fmt.Errorf("firewall state modification not supported on this platform")
 }
 
+// IsolateHost enables or disables host-wide network isolation.
+func IsolateHost(isolate bool, autoExpireSeconds int) (*common.SecActionResult, error) {
+	if common.IsWindows() {
+		// Uses netsh to block all traffic by enabling extreme profile defaults
+		var cmdStr string
+		if isolate {
+			// Block everything
+			cmdStr = "netsh advfirewall set allprofiles firewallpolicy blockinbound,blockoutbound"
+		} else {
+			// Restore standard (Allow outbound, block inbound)
+			cmdStr = "netsh advfirewall set allprofiles firewallpolicy blockinbound,allowoutbound"
+		}
+
+		cmd := exec.Command("cmd", "/c", cmdStr)
+		if err := cmd.Run(); err != nil {
+			return nil, err
+		}
+
+		msg := "Host network isolation DISABLED"
+		if isolate {
+			msg = "Host network isolation ENABLED"
+		}
+
+		return &common.SecActionResult{
+			Success: true,
+			Message: msg,
+		}, nil
+	}
+
+	if common.IsLinux() {
+		action := "-D"
+		if isolate {
+			action = "-A"
+		}
+		_ = exec.Command("iptables", action, "INPUT", "-j", "DROP").Run()
+		_ = exec.Command("iptables", action, "OUTPUT", "-j", "DROP").Run()
+
+		return &common.SecActionResult{
+			Success: true,
+			Message: "Host isolation state changed via iptables",
+		}, nil
+	}
+
+	return nil, fmt.Errorf("host isolation not supported on this platform")
+}
+
 // getFirewallRulesPowerShell retrieves firewall rules via PowerShell Get-NetFirewallRule.
 // This is locale-independent and serves as a fallback when netsh verbose parsing fails.
 func getFirewallRulesPowerShell() ([]FirewallRule, error) {

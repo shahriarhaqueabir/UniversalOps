@@ -20,4 +20,8 @@ export function GetTrend(arg1:string):Promise<app.TrendInfo>;
 
 export function GetWindowStats(arg1:string):Promise<app.StatsInfo>;
 
+export function LoadSettings():Promise<void>;
+
+export function PersistSettings():Promise<void>;
+
 export function UpdateSettings(arg1:number,arg2:number,arg3:number,arg4:number):Promise<void>;

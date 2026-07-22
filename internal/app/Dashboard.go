@@ -158,14 +158,14 @@ func (d *Dashboard) GetDashboardData() DashboardData {
 			Forecast: diskMF.Forecast,
 			Trend:    trendDirectionString(diskMF.Trend.Direction),
 		},
-		GPU: GPUData{
+		GPU: GPUInfo{
 			Name:     gpuInfo.Name,
 			Vendor:   gpuInfo.Vendor,
 			MemoryGB: gpuInfo.MemoryGB,
 			Driver:   gpuInfo.Driver,
 			Detected: gpuInfo.Detected,
 		},
-		Battery: BatteryData{
+		Battery: BatteryInfo{
 			Percent:     battInfo.Percent,
 			Charging:    battInfo.Charging,
 			TimeLeftSec: battInfo.TimeLeftSec,

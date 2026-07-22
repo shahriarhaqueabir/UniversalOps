@@ -13,8 +13,8 @@ func TestRegisterCollectors(t *testing.T) {
 	RegisterCollectors(registry, a)
 
 	snapshot := registry.Snapshot()
-	if len(snapshot) != 11 {
-		t.Fatalf("expected 11 registered collectors, got %d", len(snapshot))
+	if len(snapshot) != 12 {
+		t.Fatalf("expected 12 registered collectors, got %d", len(snapshot))
 	}
 
 	// Verify all expected IDs are present
@@ -30,6 +30,7 @@ func TestRegisterCollectors(t *testing.T) {
 		common.CollectorSwap:   false,
 		common.CollectorDiskIO: false,
 		common.CollectorOpenFD: false,
+		"gpu":                  false,
 	}
 
 	for _, s := range snapshot {

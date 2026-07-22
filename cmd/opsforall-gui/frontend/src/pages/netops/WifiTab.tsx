@@ -14,7 +14,7 @@ import {
   Activity,
   Zap,
 } from 'lucide-react'
-import { SectionHeader } from '@/components/ui/SectionHeader'
+import { Panel, PanelHeader } from '@/components/ui/Panel'
 import type { WiFiInfoData, WiFiNetworkData } from '@/types'
 
 function SignalBar({ percent }: { percent: number }) {
@@ -40,17 +40,17 @@ function SignalBar({ percent }: { percent: number }) {
 
 function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string; color: string }) {
   return (
-    <div className="bg-panel-2 border border-border rounded-xl p-4 hover:border-accent/30 transition-colors">
-      <div className="flex items-center gap-3 mb-2">
-        <div
-          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-          style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`, color }}
-        >
-          {icon}
-        </div>
-        <p className="text-[10px] font-bold text-text-faint uppercase tracking-wider">{label}</p>
+    <div className="bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-2xl p-5 flex items-center gap-4 transition-all hover:scale-105 active:scale-95 shadow-sm group">
+      <div
+        className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border shadow-inner group-hover:scale-110 transition-transform"
+        style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`, color, borderColor: `color-mix(in srgb, ${color} 30%, transparent)` }}
+      >
+        {icon}
       </div>
-      <p className="text-sm font-bold text-text truncate">{value}</p>
+      <div>
+        <p className="text-[10px] font-black text-text-faint uppercase tracking-[0.2em] mb-0.5">{label}</p>
+        <p className="text-sm font-black text-text truncate uppercase tracking-tight">{value}</p>
+      </div>
     </div>
   )
 }
@@ -92,54 +92,51 @@ export function WifiTab() {
     <div className="space-y-6 animate-in fade-in duration-500">
 
       {/* ── Briefing ── */}
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-xl">
-        <div className="flex items-start gap-3">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-panel-3 border border-border shrink-0 mt-0.5">
+      <Panel variant="default" padding="md">
+        <div className="flex items-start gap-4">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-[var(--color-panel-3)] border border-[var(--color-border)] shrink-0 shadow-inner">
             <Info size={18} className="text-accent" />
           </div>
-          <p className="text-sm text-text-dim leading-relaxed">
-            WiFi Scanner — Scan for nearby wireless networks and view current connection details. Use to assess signal strength, channel congestion, and security.
-          </p>
+          <div className="pt-1">
+            <p className="text-xs font-black text-[var(--color-text)] uppercase tracking-[0.2em] mb-1">Knowledge Node</p>
+            <p className="text-sm text-text-dim leading-relaxed font-medium">
+              WiFi Scanner — Scan for nearby wireless networks and view current connection details. Use to assess signal strength, channel congestion, and security.
+            </p>
+          </div>
         </div>
-      </div>
+      </Panel>
 
       {/* ── Checklist ── */}
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-xl">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-panel-3 border border-border">
-            <ListChecks size={18} className="text-accent" />
-          </div>
-          <h3 className="text-sm font-bold text-text uppercase tracking-widest">What to Look For</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <Panel variant="elevated" padding="md">
+        <PanelHeader icon={<ListChecks size={20} />} title="Signal Integrity Checklist" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
             'Signal strength (dBm) determines connection quality',
             'Channel overlap causes interference',
             'Security type should be WPA2/WPA3',
             'BSSID identifies the access point',
           ].map(item => (
-            <div key={item} className="flex items-center gap-2.5 bg-panel-2 border border-border rounded-xl px-4 py-2.5">
+            <div key={item} className="flex items-center gap-3 bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-2xl px-5 py-3 shadow-sm">
               <HelpCircle size={14} className="text-accent shrink-0" />
-              <span className="text-xs font-medium text-text-dim">{item}</span>
+              <span className="text-[11px] font-bold text-text-dim uppercase tracking-wider">{item}</span>
             </div>
           ))}
         </div>
-      </div>
+      </Panel>
 
       {/* ── Current Connection ── */}
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-xl">
-        <SectionHeader icon={<Wifi size={18} className="text-accent" />} title="Current Connection" />
+      <Panel variant="default" padding="md" category="network">
+        <PanelHeader icon={<Wifi size={20} />} title="Active Handshake" category="network" />
         {infoLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-24 bg-panel-2 border border-border rounded-xl animate-pulse" />
+              <div key={i} className="h-24 bg-panel-2 border border-border rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : !wifiInfo?.ssid ? (
-          <div className="flex flex-col items-center justify-center py-8">
-            <Wifi size={28} className="text-text-faint mb-3" />
-            <p className="text-sm font-medium text-text-faint">Not connected to a WiFi network.</p>
-            <p className="text-xs text-text-faint mt-1">WiFi info is unavailable on wired connections.</p>
+          <div className="flex flex-col items-center justify-center py-12 opacity-30">
+            <Wifi size={40} className="text-text-faint mb-4" />
+            <p className="text-xs font-black uppercase tracking-widest text-text-faint">No Wireless Uplink Detected</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -163,7 +160,7 @@ export function WifiTab() {
             />
             <StatCard
               icon={<Zap size={18} />}
-              label="Speed"
+              label="Rate"
               value={wifiInfo.speed || 'N/A'}
               color="var(--color-success)"
             />
@@ -175,98 +172,99 @@ export function WifiTab() {
             />
           </div>
         )}
-      </div>
+      </Panel>
 
       {/* ── Available Networks ── */}
-      <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-xl">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-panel-3 border border-border">
-            <Radio size={18} className="text-accent" />
-          </div>
-          <h3 className="text-sm font-bold text-text uppercase tracking-widest">Available Networks</h3>
-          <span className="ml-auto px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-accent/15 text-accent border border-accent/30">
-            {networks.length}
-          </span>
-          <button
-            onClick={() => scanMutation.mutate()}
-            disabled={scanMutation.isPending}
-            className={cn(
-              'flex items-center gap-2 px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all',
-              scanMutation.isPending
-                ? 'bg-panel-3 text-text-faint border border-border cursor-not-allowed'
-                : 'bg-accent text-white hover:bg-accent/90',
-            )}
-          >
-            {scanMutation.isPending ? (
-              <RefreshCw size={12} className="animate-spin" />
-            ) : (
-              <Scan size={12} />
-            )}
-            {scanMutation.isPending ? 'Scanning...' : 'Scan'}
-          </button>
-        </div>
+      <Panel variant="default" padding="none" category="network" className="overflow-hidden">
+        <div className="p-8">
+          <PanelHeader
+            icon={<Radio size={20} />}
+            title="Available Spectrums"
+            category="network"
+            action={
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-black px-4 py-1.5 rounded-full bg-panel-3 text-accent border border-border tabular-nums shadow-inner">
+                  {networks.length} SSIDs
+                </span>
+                <button
+                  onClick={() => scanMutation.mutate()}
+                  disabled={scanMutation.isPending}
+                  className={cn(
+                    'flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg',
+                    scanMutation.isPending
+                      ? 'bg-panel-3 text-text-faint border border-border cursor-not-allowed'
+                      : 'bg-accent text-white hover:opacity-90 active:scale-95',
+                  )}
+                >
+                  {scanMutation.isPending ? (
+                    <RefreshCw size={12} className="animate-spin" />
+                  ) : (
+                    <Scan size={12} />
+                  )}
+                  {scanMutation.isPending ? 'Probing...' : 'Initiate Scan'}
+                </button>
+              </div>
+            }
+          />
 
-        {networksLoading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-12 bg-panel-2 border border-border rounded-xl animate-pulse" />
-            ))}
-          </div>
-        ) : networks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8">
-            <Radio size={28} className="text-text-faint mb-3" />
-            <p className="text-sm font-medium text-text-faint">No networks found.</p>
-            <p className="text-xs text-text-faint mt-1">Click Scan to search for nearby networks.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-border">
-                  {['SSID', 'Signal', 'Channel', 'Security', 'BSSID'].map(h => (
-                    <th key={h} className="px-4 py-2.5 text-[10px] font-bold text-text-faint uppercase tracking-widest">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {networks.map((net, idx) => (
-                  <tr
-                    key={`${net.ssid}-${idx}`}
-                    className={cn(
-                      'border-b border-border last:border-0 hover:bg-panel-2 transition-colors',
-                      idx % 2 === 0 ? 'bg-panel-2/30' : 'bg-transparent',
-                    )}
-                  >
-                    <td className="px-4 py-3 text-xs font-bold text-text">{net.ssid || '<Hidden>'}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <SignalBar percent={net.signal} />
-                        <span className="text-xs font-bold text-text-dim tabular-nums">{net.signal}%</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-xs font-bold text-text-dim tabular-nums">{net.channel}</td>
-                    <td className="px-4 py-3">
-                      <span className={cn(
-                        'text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider',
-                        /wpa3/i.test(net.security)
-                          ? 'bg-success/15 text-success border-success/30'
-                          : /wpa2/i.test(net.security)
-                            ? 'bg-accent/15 text-accent border-accent/30'
-                            : /wep|open/i.test(net.security)
-                              ? 'bg-danger/15 text-danger border-danger/30'
-                              : 'bg-warning/15 text-warning border-warning/30',
-                      )}>
-                        {net.security}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-[10px] font-mono text-text-faint">{net.bssid}</td>
+          {networksLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-14 bg-panel-2 border border-border rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : networks.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 opacity-30">
+              <Radio size={40} className="text-text-faint mb-4" />
+              <p className="text-xs font-black uppercase tracking-widest text-text-faint">No Spectrums Discovered</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto -mx-8">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-[var(--color-panel-2)] border-y border-[var(--color-border)]/50">
+                  <tr>
+                    {['SSID', 'Signal', 'Channel', 'Security', 'BSSID'].map(h => (
+                      <th key={h} className="px-8 py-4 text-[10px] font-black text-text-faint uppercase tracking-[0.2em]">{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-border)]/30">
+                  {networks.map((net, idx) => (
+                    <tr
+                      key={`${net.ssid}-${idx}`}
+                      className="hover:bg-[var(--color-sidebar-hover)] transition-colors group"
+                    >
+                      <td className="px-8 py-4 text-xs font-black text-text uppercase tracking-tight">{net.ssid || '<HIDDEN>'}</td>
+                      <td className="px-8 py-4">
+                        <div className="flex items-center gap-3">
+                          <SignalBar percent={net.signal} />
+                          <span className="text-[10px] font-black text-text-dim tabular-nums tracking-widest">{net.signal}%</span>
+                        </div>
+                      </td>
+                      <td className="px-8 py-4 text-xs font-black text-accent tabular-nums uppercase">{net.channel}</td>
+                      <td className="px-8 py-4">
+                        <span className={cn(
+                          'text-[9px] font-black px-3 py-1 rounded-lg border uppercase tracking-widest',
+                          /wpa3/i.test(net.security)
+                            ? 'bg-success/15 text-success border-success/30'
+                            : /wpa2/i.test(net.security)
+                              ? 'bg-accent/15 text-accent border-accent/30'
+                              : /wep|open/i.test(net.security)
+                                ? 'bg-danger/15 text-danger border-danger/30'
+                                : 'bg-warning/15 text-warning border-warning/30',
+                        )}>
+                          {net.security}
+                        </span>
+                      </td>
+                      <td className="px-8 py-4 text-[10px] font-mono font-bold text-text-faint">{net.bssid}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </Panel>
     </div>
   )
 }

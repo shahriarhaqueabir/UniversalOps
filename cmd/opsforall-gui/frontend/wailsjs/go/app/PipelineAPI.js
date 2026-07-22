@@ -38,6 +38,14 @@ export function GetWindowStats(arg1) {
   return window['go']['app']['PipelineAPI']['GetWindowStats'](arg1);
 }
 
+export function LoadSettings() {
+  return window['go']['app']['PipelineAPI']['LoadSettings']();
+}
+
+export function PersistSettings() {
+  return window['go']['app']['PipelineAPI']['PersistSettings']();
+}
+
 export function UpdateSettings(arg1, arg2, arg3, arg4) {
   return window['go']['app']['PipelineAPI']['UpdateSettings'](arg1, arg2, arg3, arg4);
 }

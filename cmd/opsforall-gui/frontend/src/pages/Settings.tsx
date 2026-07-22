@@ -36,6 +36,7 @@ import { DeploymentBar } from '@/components/settings/DeploymentBar'
 import { CapabilityMatrix } from '@/components/settings/CapabilityMatrix'
 import { ModelfileEditor } from '@/components/settings/ModelfileEditor'
 import { ModelManager } from '@/components/settings/ModelManager'
+import { ContextPreview } from '@/components/settings/ContextPreview'
 
 // ── Setting Row ──
 
@@ -183,7 +184,7 @@ interface AppInfo {
 }
 
 const DEFAULT_APP_INFO: AppInfo = {
-  name: 'OpsForAll',
+  name: 'Universal-Ops',
   version: '1.3.0',
   go_version: 'go1.26.5',
   uptime: '--',
@@ -209,11 +210,31 @@ export function Settings() {
     setCompanionName,
   } = useSettingsStore()
 
-  const { stagedChanges, stageChange } = useConfigStore()
+  const { stagedChanges, stageChange, stageBatch } = useConfigStore()
 
   // Helper to determine active value (staged or original)
   const getVal = (key: string, original: any) => {
     return stagedChanges.has(key) ? stagedChanges.get(key) : original
+  }
+
+  const [optimizing, setOptimizing] = useState(false)
+  const handleHawkOptimize = async () => {
+    if (optimizing) return
+    setOptimizing(true)
+    const tid = toast.loading('Hawk is analyzing system load and pipeline efficiency...')
+    try {
+      const response = await call('AIOps.RequestOptimization') as { payload?: Record<string, any>, content: string }
+      if (response.payload) {
+        stageBatch(response.payload)
+        toast.success('Hawk has staged optimization proposals', { id: tid, description: response.content })
+      } else {
+        toast.error('Hawk could not determine optimal settings', { id: tid })
+      }
+    } catch (err: any) {
+      toast.error(`Optimization failed: ${err.message}`, { id: tid })
+    } finally {
+      setOptimizing(false)
+    }
   }
 
   // Rules — via react-query
@@ -319,8 +340,8 @@ export function Settings() {
     <div className="h-full flex overflow-hidden bg-[var(--color-bg)]/50 relative">
       <SettingsSidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <main className="flex-1 overflow-y-auto p-8 pb-32 space-y-8 max-w-4xl">
-        <div className="mb-2">
+      <main className="flex-1 overflow-y-auto p-8 pb-32 space-y-8 scroll-smooth">
+        <div className="mb-2 max-w-4xl">
           <h1 className="text-2xl font-black text-[var(--color-text)] uppercase tracking-tight">
             Control Plane
           </h1>
@@ -331,7 +352,7 @@ export function Settings() {
 
         {/* ── General ── */}
         {activeTab === 'general' && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl">
             <Panel category="none">
               <PanelHeader
                 icon={<Monitor size={20} />}
@@ -412,7 +433,7 @@ export function Settings() {
 
         {/* ── Intelligence ── */}
         {activeTab === 'intelligence' && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl">
             <Panel category="ai">
               <PanelHeader
                 icon={<BrainCircuit size={20} />}
@@ -461,7 +482,29 @@ export function Settings() {
 
         {/* ── Engine ── */}
         {activeTab === 'engine' && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl">
+            <Panel category="system" variant="elevated" className="border-accent/20">
+              <div className="flex items-center justify-between p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent shadow-sm">
+                    <BrainCircuit size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-text uppercase tracking-widest">Neural Optimization</h3>
+                    <p className="text-xs text-text-dim mt-0.5">Let Hawk analyze your workload and propose ideal engine settings.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleHawkOptimize}
+                  disabled={optimizing}
+                  className="px-6 py-3 bg-accent text-white rounded-xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all active:scale-95 shadow-lg flex items-center gap-3 disabled:opacity-50"
+                >
+                  {optimizing ? <RefreshCw size={14} className="animate-spin" /> : <Zap size={14} />}
+                  Ask Hawk to Optimize
+                </button>
+              </div>
+            </Panel>
+
             <Panel category="system">
               <PanelHeader
                 icon={<Activity size={20} />}
@@ -592,7 +635,7 @@ export function Settings() {
 
         {/* ── Security ── */}
         {activeTab === 'security' && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl">
             <Panel category="security">
               <PanelHeader
                 icon={<Bell size={20} />}
@@ -652,7 +695,7 @@ export function Settings() {
 
         {/* ── Journal ── */}
         {activeTab === 'journal' && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl">
             <Panel category="none">
               <PanelHeader
                 icon={<ScrollText size={20} />}
@@ -768,6 +811,7 @@ export function Settings() {
         )}
       </main>
 
+      <ContextPreview />
       <DeploymentBar />
 
       {/* Alert Rule Dialog (Legacy) */}

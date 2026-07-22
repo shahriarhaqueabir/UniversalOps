@@ -3,7 +3,6 @@ package common
 import (
 	"math"
 	"sync"
-	"time"
 )
 
 // DriftInfo describes a detected deviation from the learned baseline.
@@ -67,11 +66,17 @@ func (e *BaselinesEngine) DetectDrift(metric string) (*DriftInfo, bool) {
 	}
 
 	currentAvg := mf.Stats.Avg
+	return e.checkDrift(*baseline, currentAvg)
+}
+
+func (e *BaselinesEngine) checkDrift(baseline BaselineEntry, currentAvg float64) (*DriftInfo, bool) {
 	diff := math.Abs(currentAvg - baseline.Avg)
 
 	// σ (Sigma) check: How many standard deviations is the current average away from the baseline?
 	sigma := baseline.StdDev
-	if sigma < 0.1 { sigma = 0.1 } // Prevent div by zero
+	if sigma < 0.1 {
+		sigma = 0.1
+	} // Prevent div by zero
 
 	deviation := diff / sigma
 
@@ -85,7 +90,7 @@ func (e *BaselinesEngine) DetectDrift(metric string) (*DriftInfo, bool) {
 		}
 
 		return &DriftInfo{
-			Metric:    metric,
+			Metric:    baseline.Metric,
 			Baseline:  baseline.Avg,
 			Current:   currentAvg,
 			Deviation: deviation,
@@ -106,8 +111,8 @@ func (e *BaselinesEngine) RecalculateBaselines() {
 
 	metrics := []string{MetricCPU, MetricMem, MetricDisk, MetricNetRX, MetricNetTX}
 	for _, m := range metrics {
-		// Retrieve longer window (e.g., 500 samples)
-		history, err := s.GetMetricHistory(m, 500)
+		// Retrieve longer window (e.g., 2000 samples)
+		history, err := s.GetMetricHistory(m, 2000)
 		if err != nil || len(history) < 100 {
 			continue
 		}

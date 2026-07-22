@@ -6,7 +6,7 @@ import {time} from '../models';
 
 export function AskAI(arg1:context.Context,arg2:string):Promise<string>;
 
-export function Chat(arg1:string):Promise<app.ChatResponse>;
+export function Chat(arg1:string,arg2:string):Promise<app.ChatResponse>;
 
 export function CreateOpsPersona():Promise<void>;
 
@@ -16,9 +16,13 @@ export function DeleteSession(arg1:string):Promise<void>;
 
 export function DetectAnomalies():Promise<Array<app.AnomalyInfo>>;
 
+export function ExportReportAsPDF(arg1:string,arg2:string):Promise<string>;
+
 export function GenerateReport(arg1:Array<string>):Promise<string>;
 
 export function GetAIInsights():Promise<Array<app.AIInsight>>;
+
+export function GetCompanionName():Promise<string>;
 
 export function GetConfidenceScore():Promise<app.AIConfidence>;
 
@@ -32,6 +36,12 @@ export function GetOllamaStatus():Promise<app.OllamaStatus>;
 
 export function ListSessions():Promise<Array<Record<string, any>>>;
 
+export function LoadModels():Promise<void>;
+
+export function NotifyActionResult(arg1:string,arg2:string,arg3:string,arg4:string):Promise<app.ChatResponse>;
+
+export function PlanWorkflow(arg1:string,arg2:string):Promise<app.ChatResponse>;
+
 export function PullModel(arg1:string):Promise<void>;
 
 export function QuerySystemState(arg1:string):Promise<string>;
@@ -42,8 +52,14 @@ export function SaveMessage(arg1:string,arg2:string,arg3:string):Promise<string>
 
 export function SaveModelfile(arg1:string):Promise<void>;
 
+export function SetCompanionName(arg1:string):Promise<void>;
+
 export function SetDataDir(arg1:string):Promise<void>;
 
+export function SetModelForCapability(arg1:string,arg2:string):Promise<void>;
+
 export function SetOllamaModel(arg1:string):Promise<void>;
+
+export function VerifyRemediation(arg1:string,arg2:string,arg3:Record<string, number>):Promise<app.ChatResponse>;
 
 export function WithTimeout(arg1:time.Duration):Promise<context.Context|context.CancelFunc>;

@@ -1,10 +1,10 @@
-import { Cpu, Monitor, Battery, Thermometer, Wind, Database } from 'lucide-react'
+import { Monitor, Thermometer, Wind, Database } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { Panel, PanelHeader } from '@/components/ui/Panel'
 import { StatCard } from '@/components/ui/StatCard'
-import type { HardwareInfo } from '@/types'
+import type { HardwareInfo, SensorData } from '@/types'
 import { cn } from '@/lib/utils'
 
 export function HardwareTab() {
@@ -40,7 +40,13 @@ export function HardwareTab() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <StatCard label="Video RAM" value={`${hw.gpu.memory_gb.toFixed(1)} GB`} />
-                <StatCard label="Driver" value={hw.gpu.driver} valueClassName="text-[10px] font-mono" />
+                <StatCard label="Utilization" value={`${hw.gpu.utilization.toFixed(0)}%`} valueClassName="text-[var(--color-accent)]" />
+                <StatCard label="Temperature" value={`${hw.gpu.temperature.toFixed(0)}°C`} valueClassName={cn(hw.gpu.temperature > 80 ? "text-danger" : "text-[var(--color-text)]")} />
+                <StatCard label="Fan Speed" value={`${hw.gpu.fan_speed.toFixed(0)} RPM`} />
+              </div>
+              <div className="pt-4 border-t border-[var(--color-border)]/50">
+                <p className="text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-widest mb-1">Driver Version</p>
+                <p className="text-xs font-mono text-[var(--color-text-dim)] truncate">{hw.gpu.driver}</p>
               </div>
             </div>
           ) : (
@@ -87,7 +93,7 @@ export function HardwareTab() {
               <p className="text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-widest">Active Hardware Sensors</p>
               {hw.sensors.length > 0 ? (
                 <div className="grid grid-cols-2 gap-4">
-                  {hw.sensors.map((s, i) => (
+                  {hw.sensors.map((s: SensorData, i: number) => (
                     <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]">
                       <div className="flex items-center gap-2">
                         {s.type === 'Fan' ? <Wind size={14} className="text-accent" /> : <Thermometer size={14} className="text-accent" />}

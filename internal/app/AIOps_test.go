@@ -10,7 +10,7 @@ import (
 func TestAIOps_Chat_NoOllama(t *testing.T) {
 	a := NewApp()
 	ai := NewAIOps(a.ctx, a.pipeline, a.Knowledge, a.capabilities, a.PipelineAPI, a.SysOps, a.currentDataDir)
-	response := ai.Chat("say hello")
+	response := ai.Chat("test-session", "say hello")
 	if response.Content != "" {
 		t.Logf("Chat returned: %s", response.Content)
 	}
@@ -164,6 +164,8 @@ func TestAIOps_QuerySystemState(t *testing.T) {
 }
 
 func TestAIOps_metricCategory(t *testing.T) {
+	a := NewApp()
+	ai := NewAIOps(a.ctx, a.pipeline, a.Knowledge, a.capabilities, a.PipelineAPI, a.SysOps, a.currentDataDir)
 	tests := []struct {
 		name string
 		want string
@@ -175,7 +177,7 @@ func TestAIOps_metricCategory(t *testing.T) {
 		{"unknown", "general"},
 	}
 	for _, tt := range tests {
-		got := metricCategory(tt.name)
+		got := ai.metricCategory(tt.name)
 		if got != tt.want {
 			t.Errorf("metricCategory(%q) = %q, want %q", tt.name, got, tt.want)
 		}

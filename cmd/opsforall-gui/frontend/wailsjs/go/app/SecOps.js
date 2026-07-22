@@ -10,12 +10,16 @@ export function CaptureEvidence() {
   return window['go']['app']['SecOps']['CaptureEvidence']();
 }
 
+export function DiffForensics(arg1, arg2) {
+  return window['go']['app']['SecOps']['DiffForensics'](arg1, arg2);
+}
+
 export function DisableAccount(arg1) {
   return window['go']['app']['SecOps']['DisableAccount'](arg1);
 }
 
-export function ExportForensicBundle() {
-  return window['go']['app']['SecOps']['ExportForensicBundle']();
+export function ExportForensicBundle(arg1) {
+  return window['go']['app']['SecOps']['ExportForensicBundle'](arg1);
 }
 
 export function GetAccountLockouts() {
@@ -46,8 +50,16 @@ export function GetFirewallStatus() {
   return window['go']['app']['SecOps']['GetFirewallStatus']();
 }
 
+export function GetForensic(arg1) {
+  return window['go']['app']['SecOps']['GetForensic'](arg1);
+}
+
 export function GetHardeningChecks() {
   return window['go']['app']['SecOps']['GetHardeningChecks']();
+}
+
+export function GetHistoricalSecurityReport(arg1) {
+  return window['go']['app']['SecOps']['GetHistoricalSecurityReport'](arg1);
 }
 
 export function GetListeningPorts() {
@@ -112,6 +124,18 @@ export function IsolateHost(arg1, arg2) {
 
 export function KillProcess(arg1) {
   return window['go']['app']['SecOps']['KillProcess'](arg1);
+}
+
+export function KillProcessTree(arg1) {
+  return window['go']['app']['SecOps']['KillProcessTree'](arg1);
+}
+
+export function ListForensics() {
+  return window['go']['app']['SecOps']['ListForensics']();
+}
+
+export function ListHistoricalSecurityReports() {
+  return window['go']['app']['SecOps']['ListHistoricalSecurityReports']();
 }
 
 export function RunSecurityAuditChecklist() {

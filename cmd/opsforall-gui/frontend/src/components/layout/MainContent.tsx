@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import type { Page } from '../../App'
+import type { Page } from '../../stores/useSettingsStore'
 import { ErrorBoundary } from '../ui/ErrorBoundary'
 
 // Lazy load pages for code splitting
@@ -11,12 +11,14 @@ const NetOps = lazy(() => import('../../pages/NetOps').then(m => ({ default: m.N
 const SecOps = lazy(() => import('../../pages/SecOps').then(m => ({ default: m.SecOps })))
 const DevOps = lazy(() => import('../../pages/DevOps').then(m => ({ default: m.DevOps })))
 const AIOps = lazy(() => import('../../pages/AIOps').then(m => ({ default: m.AIOps })))
+const ReportsCenter = lazy(() => import('../../pages/ReportsCenter').then(m => ({ default: m.ReportsCenter })))
+const AlertsDashboard = lazy(() => import('../../pages/AlertsDashboard').then(m => ({ default: m.AlertsDashboard })))
 const Logs = lazy(() => import('../../pages/Logs').then(m => ({ default: m.Logs })))
 const Settings = lazy(() => import('../../pages/Settings').then(m => ({ default: m.Settings })))
 
 interface MainContentProps {
   currentPage: Page
-  onNavigate?: (page: Page) => void
+  onNavigate?: (page: Page, tab?: string | null) => void
 }
 
 const pageVariants = {
@@ -67,6 +69,8 @@ export function MainContent({ currentPage, onNavigate }: MainContentProps) {
       case 'secops': return <SecOps />
       case 'devops': return <DevOps />
       case 'aiops': return <AIOps />
+      case 'reports': return <ReportsCenter />
+      case 'alerts': return <AlertsDashboard />
       case 'logs': return <Logs />
       case 'settings': return <Settings />
       default: return <Dashboard />

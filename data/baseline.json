@@ -1,25 +1,25 @@
 {
-  "timestamp": "2026-07-20T12:54:02.9522668+02:00",
+  "timestamp": "2026-07-22T00:34:39.2674996+02:00",
   "hardware": {
     "cpu": {
-      "percent": 25.10553845584323,
+      "percent": 33.349647460664706,
       "per_cpu": [
-        38.51851851851852,
-        16.030534351145036,
-        39.55223880597015,
-        33.33333333333333,
-        35.11450381679389,
-        22.137404580152673,
-        29.545454545454547,
-        25.190839694656486,
-        27.480916030534353,
-        21.374045801526716,
-        25,
-        21.374045801526716,
-        18.181818181818183,
-        11.450381679389313,
-        18.3206106870229,
-        19.083969465648856
+        33.734939759036145,
+        27.160493827160494,
+        44.44444444444444,
+        35.80246913580247,
+        39.50617283950617,
+        27.160493827160494,
+        28.39506172839506,
+        32.098765432098766,
+        45.1219512195122,
+        51.80722891566265,
+        32.098765432098766,
+        23.456790123456788,
+        22.22222222222222,
+        11.11111111111111,
+        48.148148148148145,
+        31.32530120481928
       ],
       "model_name": "11th Gen Intel(R) Core(TM) i7-11700 @ 2.50GHz",
       "logical_cores": 16,
@@ -34,18 +34,18 @@
         {
           "mountpoint": "C:",
           "total_bytes": 419435638784,
-          "free_bytes": 91072626688,
-          "used_bytes": 328363012096,
-          "used_percent": 78.28686495214576,
+          "free_bytes": 93248774144,
+          "used_bytes": 326186864640,
+          "used_percent": 77.76803744804789,
           "fs_type": "NTFS",
           "device": "C:"
         },
         {
           "mountpoint": "E:",
           "total_bytes": 369478332416,
-          "free_bytes": 150451597312,
-          "used_bytes": 219026735104,
-          "used_percent": 59.2799944916378,
+          "free_bytes": 150374322176,
+          "used_bytes": 219104010240,
+          "used_percent": 59.30090915136756,
           "fs_type": "NTFS",
           "device": "E:"
         },
@@ -61,9 +61,9 @@
         {
           "mountpoint": "G:",
           "total_bytes": 109521666048,
-          "free_bytes": 23471849472,
-          "used_bytes": 86049816576,
-          "used_percent": 78.56876148897058,
+          "free_bytes": 23459778560,
+          "used_bytes": 86061887488,
+          "used_percent": 78.57978297214882,
           "fs_type": "FAT32",
           "device": "G:"
         },
@@ -80,71 +80,23 @@
     },
     "mem": {
       "total_bytes": 17026428928,
-      "available_bytes": 1229856768,
-      "used_bytes": 15796572160,
-      "used_percent": 92,
+      "available_bytes": 1969201152,
+      "used_bytes": 15057227776,
+      "used_percent": 88,
       "cached_bytes": 0,
       "total_gb": 15.857097625732422,
-      "used_gb": 14.71170425415039,
+      "used_gb": 14.023136138916016,
       "swap_total": 28991029248,
-      "swap_used": 1670848512,
-      "swap_percent": 5.8
+      "swap_used": 1973833728,
+      "swap_percent": 6.8
     }
   },
   "software": [
     {
-      "id": "docker-compose",
-      "available": true,
-      "path": "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker-compose.exe",
-      "version": "Docker Compose version v5.1.3",
-      "is_custom": false,
-      "is_supported": true
-    },
-    {
-      "id": "ssh",
-      "available": true,
-      "path": "C:\\Windows\\System32\\OpenSSH\\ssh.exe",
-      "version": "unknown",
-      "is_custom": false,
-      "is_supported": true
-    },
-    {
-      "id": "nmap",
-      "available": true,
-      "path": "C:\\Program Files (x86)\\Nmap\\nmap.exe",
-      "version": "Nmap version 7.99 ( https://nmap.org )",
-      "is_custom": false,
-      "is_supported": true
-    },
-    {
-      "id": "docker",
-      "available": true,
-      "path": "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe",
-      "version": "Docker version 29.4.3, build 055a478",
-      "is_custom": false,
-      "is_supported": true
-    },
-    {
-      "id": "terraform",
+      "id": "tofu",
       "available": false,
       "path": "",
       "version": "",
-      "is_custom": false,
-      "is_supported": true
-    },
-    {
-      "id": "git",
-      "available": true,
-      "path": "C:\\Program Files\\Git\\cmd\\git.exe",
-      "version": "git version 2.55.0.windows.2",
-      "is_custom": false,
-      "is_supported": true
-    },
-    {
-      "id": "pwsh",
-      "available": true,
-      "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
-      "version": "unknown",
       "is_custom": false,
       "is_supported": true
     },
@@ -165,15 +117,71 @@
       "is_supported": true
     },
     {
-      "id": "kubectl",
+      "id": "ssh",
       "available": true,
-      "path": "C:\\Program Files\\Docker\\Docker\\resources\\bin\\kubectl.exe",
+      "path": "C:\\Windows\\System32\\OpenSSH\\ssh.exe",
       "version": "unknown",
       "is_custom": false,
       "is_supported": true
     },
     {
-      "id": "tofu",
+      "id": "docker",
+      "available": true,
+      "path": "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe",
+      "version": "Docker version 29.4.3, build 055a478",
+      "is_custom": false,
+      "is_supported": true
+    },
+    {
+      "id": "docker-compose",
+      "available": true,
+      "path": "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker-compose.exe",
+      "version": "Docker Compose version v5.1.3",
+      "is_custom": false,
+      "is_supported": true
+    },
+    {
+      "id": "terraform",
+      "available": false,
+      "path": "",
+      "version": "",
+      "is_custom": false,
+      "is_supported": true
+    },
+    {
+      "id": "node",
+      "available": true,
+      "path": "C:\\Program Files\\nodejs\\node.exe",
+      "version": "v25.9.0",
+      "is_custom": false,
+      "is_supported": true
+    },
+    {
+      "id": "git",
+      "available": true,
+      "path": "C:\\Program Files\\Git\\cmd\\git.exe",
+      "version": "git version 2.55.0.windows.2",
+      "is_custom": false,
+      "is_supported": true
+    },
+    {
+      "id": "nmap",
+      "available": true,
+      "path": "C:\\Program Files (x86)\\Nmap\\nmap.exe",
+      "version": "Nmap version 7.99 ( https://nmap.org )",
+      "is_custom": false,
+      "is_supported": true
+    },
+    {
+      "id": "podman",
+      "available": false,
+      "path": "",
+      "version": "",
+      "is_custom": false,
+      "is_supported": true
+    },
+    {
+      "id": "helm",
       "available": false,
       "path": "",
       "version": "",
@@ -189,26 +197,18 @@
       "is_supported": true
     },
     {
+      "id": "pwsh",
+      "available": true,
+      "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "version": "unknown",
+      "is_custom": false,
+      "is_supported": true
+    },
+    {
       "id": "go",
       "available": true,
       "path": "E:\\Program Files\\Go\\bin\\go.exe",
       "version": "go version go1.26.5 windows/amd64",
-      "is_custom": false,
-      "is_supported": true
-    },
-    {
-      "id": "node",
-      "available": true,
-      "path": "C:\\Program Files\\nodejs\\node.exe",
-      "version": "v25.9.0",
-      "is_custom": false,
-      "is_supported": true
-    },
-    {
-      "id": "podman",
-      "available": false,
-      "path": "",
-      "version": "",
       "is_custom": false,
       "is_supported": true
     },
@@ -221,10 +221,10 @@
       "is_supported": true
     },
     {
-      "id": "helm",
-      "available": false,
-      "path": "",
-      "version": "",
+      "id": "kubectl",
+      "available": true,
+      "path": "C:\\Program Files\\Docker\\Docker\\resources\\bin\\kubectl.exe",
+      "version": "unknown",
       "is_custom": false,
       "is_supported": true
     }
@@ -277,10 +277,10 @@
       "speed": "unknown",
       "mtu": 1492,
       "flags": "up|broadcast|multicast|running",
-      "rx_bytes": 1702933043,
-      "tx_bytes": 1137978321,
-      "rx_rate_bps": 12409.402297506987,
-      "tx_rate_bps": 84861.22811856505,
+      "rx_bytes": 2728236057,
+      "tx_bytes": 640731113,
+      "rx_rate_bps": 0,
+      "tx_rate_bps": 893.9664059934569,
       "rx_history": null,
       "tx_history": null
     },
@@ -299,6 +299,42 @@
       "tx_bytes": 0,
       "rx_rate_bps": 0,
       "tx_rate_bps": 0,
+      "rx_history": null,
+      "tx_history": null
+    },
+    {
+      "name": "Teredo Tunneling Pseudo-Interface",
+      "mac": "00:00:00:00:00:00:00:e0",
+      "ips": [
+        "2001:0:14c9:d804:471:3c04:ab75:3426/64",
+        "fe80::471:3c04:ab75:3426/64"
+      ],
+      "is_up": true,
+      "speed": "unknown",
+      "mtu": 1280,
+      "flags": "up|pointtopoint|multicast|running",
+      "rx_bytes": 6706,
+      "tx_bytes": 19916,
+      "rx_rate_bps": 0,
+      "tx_rate_bps": 0,
+      "rx_history": null,
+      "tx_history": null
+    },
+    {
+      "name": "[Wired] vEthernet (WSL (Hyper-V firewall))",
+      "mac": "00:15:5d:88:ea:67",
+      "ips": [
+        "fe80::efb0:a825:f099:e31a/64",
+        "172.29.96.1/20"
+      ],
+      "is_up": true,
+      "speed": "unknown",
+      "mtu": 1500,
+      "flags": "up|broadcast|multicast|running",
+      "rx_bytes": 275203,
+      "tx_bytes": 6407866,
+      "rx_rate_bps": 0,
+      "tx_rate_bps": 76.95118378111508,
       "rx_history": null,
       "tx_history": null
     }
@@ -321,6 +357,6 @@
     ]
   },
   "health": {
-    "uptime": "0m"
+    "uptime": "2m"
   }
 }

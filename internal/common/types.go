@@ -42,10 +42,12 @@ const (
 type ActionPreview struct {
 	HandshakeID string         `json:"handshake_id"`
 	Action      string         `json:"action"`
+	Command     string         `json:"command,omitempty"`
 	Description string         `json:"description"`
 	Risks       []string       `json:"risks"`
 	Rollback    string         `json:"rollback"`
 	TypicalVals string         `json:"typical_values"`
+	WorkflowID  string         `json:"workflow_id,omitempty"`
 	Steps       []WorkflowStep `json:"steps,omitempty"`
 }
 
@@ -60,6 +62,15 @@ type SystemKnowledge struct {
 	Uptime        string  `json:"uptime"`
 	SecurityGrade string  `json:"security_grade"`
 }
+
+// SecActionResult holds the result of a security action.
+type SecActionResult struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Detail  string `json:"detail,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
+
 // These prevent excessive output in terminal views where space is constrained.
 const (
 	MaxFirewallRules        = 100 // cap for firewall rule lists in Markdown reports

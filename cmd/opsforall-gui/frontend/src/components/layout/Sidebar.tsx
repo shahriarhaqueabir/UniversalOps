@@ -7,6 +7,8 @@ import {
   Shield,
   Terminal,
   Bot,
+  FileText,
+  Bell,
   ScrollText,
   Settings,
   ChevronLeft,
@@ -34,8 +36,10 @@ const opsItems: NavItem[] = [
 ]
 
 const toolsItems: NavItem[] = [
-  { id: 'logs', label: 'Logs', icon: <ScrollText size={20} />, shortcut: 8 },
-  { id: 'settings', label: 'Settings', icon: <Settings size={20} />, shortcut: 9 },
+  { id: 'reports', label: 'Reports', icon: <FileText size={20} />, shortcut: 8 },
+  { id: 'alerts', label: 'Alerts', icon: <Bell size={20} />, shortcut: 9 },
+  { id: 'logs', label: 'Logs', icon: <ScrollText size={20} />, shortcut: 10 },
+  { id: 'settings', label: 'Settings', icon: <Settings size={20} />, shortcut: 11 },
 ]
 
 interface SidebarProps {
@@ -77,10 +81,10 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         {!collapsed && (
           <div className="flex flex-col min-w-0 flex-1 wails-no-drag">
             <span className="font-bold text-lg tracking-wider text-[var(--color-text)] truncate">
-              ALLOPSFULL
+              UNIVERSAL-OPS
             </span>
             <span className="text-xs text-[var(--color-text-faint)] truncate leading-tight uppercase font-medium">
-              UNIVERSAL OPS
+              The all-in-one Operations dashboard
             </span>
           </div>
         )}
@@ -191,7 +195,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
 
       {/* Footer */}
       <div className="px-3 pb-4 pt-1 wails-no-drag">
-        <p className="text-[11px] text-[var(--color-text-faint)]">AllOpsFull v1.3.1</p>
+        <p className="text-[11px] text-[var(--color-text-faint)]">Universal-Ops v1.3.1</p>
       </div>
     </aside>
   )

@@ -38,24 +38,6 @@ export namespace app {
 	        this.timestamp = source["timestamp"];
 	    }
 	}
-	export class ActionResult {
-	    action: string;
-	    success: boolean;
-	    message: string;
-	    output: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new ActionResult(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.action = source["action"];
-	        this.success = source["success"];
-	        this.message = source["message"];
-	        this.output = source["output"];
-	    }
-	}
 	export class AlertInfo {
 	    id: string;
 	    level: string;
@@ -164,6 +146,24 @@ export namespace app {
 	        this.remediation = source["remediation"];
 	    }
 	}
+	export class BaseboardInfo {
+	    manufacturer: string;
+	    product: string;
+	    version: string;
+	    serial_number: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new BaseboardInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.manufacturer = source["manufacturer"];
+	        this.product = source["product"];
+	        this.version = source["version"];
+	        this.serial_number = source["serial_number"];
+	    }
+	}
 	export class BaselineSnapshot {
 	    // Go type: time
 	    timestamp: any;
@@ -204,26 +204,6 @@ export namespace app {
 		    }
 		    return a;
 		}
-	}
-	export class BatteryData {
-	    percent: number;
-	    charging: boolean;
-	    time_left_sec: number;
-	    status: string;
-	    detected: boolean;
-	
-	    static createFrom(source: any = {}) {
-	        return new BatteryData(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.percent = source["percent"];
-	        this.charging = source["charging"];
-	        this.time_left_sec = source["time_left_sec"];
-	        this.status = source["status"];
-	        this.detected = source["detected"];
-	    }
 	}
 	export class BatteryInfo {
 	    percent: number;
@@ -567,15 +547,18 @@ export namespace app {
 	        this.unit = source["unit"];
 	    }
 	}
-	export class GPUData {
+	export class GPUInfo {
 	    name: string;
 	    vendor: string;
 	    memory_gb: number;
 	    driver: string;
 	    detected: boolean;
+	    temperature: number;
+	    utilization: number;
+	    fan_speed: number;
 	
 	    static createFrom(source: any = {}) {
-	        return new GPUData(source);
+	        return new GPUInfo(source);
 	    }
 	
 	    constructor(source: any = {}) {
@@ -585,6 +568,9 @@ export namespace app {
 	        this.memory_gb = source["memory_gb"];
 	        this.driver = source["driver"];
 	        this.detected = source["detected"];
+	        this.temperature = source["temperature"];
+	        this.utilization = source["utilization"];
+	        this.fan_speed = source["fan_speed"];
 	    }
 	}
 	export class GaugeMetric {
@@ -611,8 +597,8 @@ export namespace app {
 	    cpu: GaugeMetric;
 	    memory: GaugeMetric;
 	    disk: GaugeMetric;
-	    gpu: GPUData;
-	    battery: BatteryData;
+	    gpu: GPUInfo;
+	    battery: BatteryInfo;
 	    network: NetworkMetric;
 	    processes: number;
 	    connections: number;
@@ -628,8 +614,8 @@ export namespace app {
 	        this.cpu = this.convertValues(source["cpu"], GaugeMetric);
 	        this.memory = this.convertValues(source["memory"], GaugeMetric);
 	        this.disk = this.convertValues(source["disk"], GaugeMetric);
-	        this.gpu = this.convertValues(source["gpu"], GPUData);
-	        this.battery = this.convertValues(source["battery"], BatteryData);
+	        this.gpu = this.convertValues(source["gpu"], GPUInfo);
+	        this.battery = this.convertValues(source["battery"], BatteryInfo);
 	        this.network = this.convertValues(source["network"], NetworkMetric);
 	        this.processes = source["processes"];
 	        this.connections = source["connections"];
@@ -1195,27 +1181,25 @@ export namespace app {
 		    return a;
 		}
 	}
-	
-	export class GPUInfo {
-	    name: string;
-	    vendor: string;
-	    memory_gb: number;
-	    driver: string;
-	    detected: boolean;
+	export class ForensicDiff {
+	    new_processes: string[];
+	    gone_processes: string[];
+	    snapshot_a: string;
+	    snapshot_b: string;
 	
 	    static createFrom(source: any = {}) {
-	        return new GPUInfo(source);
+	        return new ForensicDiff(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.vendor = source["vendor"];
-	        this.memory_gb = source["memory_gb"];
-	        this.driver = source["driver"];
-	        this.detected = source["detected"];
+	        this.new_processes = source["new_processes"];
+	        this.gone_processes = source["gone_processes"];
+	        this.snapshot_a = source["snapshot_a"];
+	        this.snapshot_b = source["snapshot_b"];
 	    }
 	}
+	
 	
 	export class HardeningCheck {
 	    category: string;
@@ -1236,6 +1220,64 @@ export namespace app {
 	        this.severity = source["severity"];
 	        this.remediation = source["remediation"];
 	    }
+	}
+	export class SensorData {
+	    name: string;
+	    type: string;
+	    value: number;
+	    unit: string;
+	    category: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SensorData(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	        this.value = source["value"];
+	        this.unit = source["unit"];
+	        this.category = source["category"];
+	    }
+	}
+	export class HardwareInfo {
+	    cpu: CPUExtendedInfo;
+	    gpu: GPUInfo;
+	    battery: BatteryInfo;
+	    sensors: SensorData[];
+	    baseboard: BaseboardInfo;
+	
+	    static createFrom(source: any = {}) {
+	        return new HardwareInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.cpu = this.convertValues(source["cpu"], CPUExtendedInfo);
+	        this.gpu = this.convertValues(source["gpu"], GPUInfo);
+	        this.battery = this.convertValues(source["battery"], BatteryInfo);
+	        this.sensors = this.convertValues(source["sensors"], SensorData);
+	        this.baseboard = this.convertValues(source["baseboard"], BaseboardInfo);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class InterfaceInfo {
 	    name: string;
@@ -1900,6 +1942,8 @@ export namespace app {
 	    mem_pct: number;
 	    status: string;
 	    num_fds: number;
+	    is_signed: boolean;
+	    publisher: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ProcessInfo(source);
@@ -1915,7 +1959,59 @@ export namespace app {
 	        this.mem_pct = source["mem_pct"];
 	        this.status = source["status"];
 	        this.num_fds = source["num_fds"];
+	        this.is_signed = source["is_signed"];
+	        this.publisher = source["publisher"];
 	    }
+	}
+	export class ProcessNode {
+	    pid: number;
+	    ppid: number;
+	    name: string;
+	    cpu: number;
+	    memory: number;
+	    mem_pct: number;
+	    status: string;
+	    num_fds: number;
+	    is_signed: boolean;
+	    publisher: string;
+	    children?: ProcessNode[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ProcessNode(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.pid = source["pid"];
+	        this.ppid = source["ppid"];
+	        this.name = source["name"];
+	        this.cpu = source["cpu"];
+	        this.memory = source["memory"];
+	        this.mem_pct = source["mem_pct"];
+	        this.status = source["status"];
+	        this.num_fds = source["num_fds"];
+	        this.is_signed = source["is_signed"];
+	        this.publisher = source["publisher"];
+	        this.children = this.convertValues(source["children"], ProcessNode);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class PublicExposure {
 	    port: number;
@@ -2015,22 +2111,6 @@ export namespace app {
 	        this.command = source["command"];
 	        this.enabled = source["enabled"];
 	        this.next_run = source["next_run"];
-	    }
-	}
-	export class SecActionResult {
-	    success: boolean;
-	    message: string;
-	    error?: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new SecActionResult(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.success = source["success"];
-	        this.message = source["message"];
-	        this.error = source["error"];
 	    }
 	}
 	export class SecTimelineEvent {
@@ -2165,6 +2245,7 @@ export namespace app {
 	        this.analyzedAt = source["analyzedAt"];
 	    }
 	}
+	
 	export class ServiceInfo {
 	    name: string;
 	    status: string;
@@ -2591,10 +2672,12 @@ export namespace common {
 	export class ActionPreview {
 	    handshake_id: string;
 	    action: string;
+	    command?: string;
 	    description: string;
 	    risks: string[];
 	    rollback: string;
 	    typical_values: string;
+	    workflow_id?: string;
 	    steps?: WorkflowStep[];
 	
 	    static createFrom(source: any = {}) {
@@ -2605,10 +2688,12 @@ export namespace common {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.handshake_id = source["handshake_id"];
 	        this.action = source["action"];
+	        this.command = source["command"];
 	        this.description = source["description"];
 	        this.risks = source["risks"];
 	        this.rollback = source["rollback"];
 	        this.typical_values = source["typical_values"];
+	        this.workflow_id = source["workflow_id"];
 	        this.steps = this.convertValues(source["steps"], WorkflowStep);
 	    }
 	
@@ -2674,6 +2759,66 @@ export namespace common {
 	        this.interval_ms = source["interval_ms"];
 	        this.default_interval_ms = source["default_interval_ms"];
 	        this.last_run = source["last_run"];
+	    }
+	}
+	export class ForensicRecord {
+	    id: string;
+	    timestamp: string;
+	    type: string;
+	    title: string;
+	    data_json: string;
+	    metadata: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ForensicRecord(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.timestamp = source["timestamp"];
+	        this.type = source["type"];
+	        this.title = source["title"];
+	        this.data_json = source["data_json"];
+	        this.metadata = source["metadata"];
+	    }
+	}
+	export class ReportRecord {
+	    id: string;
+	    timestamp: string;
+	    type: string;
+	    score: number;
+	    data_json: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ReportRecord(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.timestamp = source["timestamp"];
+	        this.type = source["type"];
+	        this.score = source["score"];
+	        this.data_json = source["data_json"];
+	    }
+	}
+	export class SecActionResult {
+	    success: boolean;
+	    message: string;
+	    detail?: string;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SecActionResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.success = source["success"];
+	        this.message = source["message"];
+	        this.detail = source["detail"];
+	        this.error = source["error"];
 	    }
 	}
 	export class WorkflowDefinition {

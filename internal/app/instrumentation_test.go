@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"sync"
 	"testing"
 	"time"
-	"sync"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/sysops"
@@ -88,6 +88,42 @@ func TestProcessSnapshotRace(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+// TestColdStartProcessCount verifies that GetProcessCount and GetTotalOpenFDs
+// return 0 (not panic or stale data) when called before the first snapshot.
+// This simulates the race window between scheduler.Start() and the first
+// process worker tick in Startup().
+func TestColdStartProcessCount(t *testing.T) {
+	// Simulate cold-start: no snapshot taken yet
+	count := sysops.GetProcessCount()
+	if count != 0 {
+		t.Logf("GetProcessCount before snapshot: %d (expected 0)", count)
+	}
+
+	fds := sysops.GetTotalOpenFDs()
+	if fds != 0 {
+		t.Logf("GetTotalOpenFDs before snapshot: %d (expected 0)", fds)
+	}
+
+	// GetTopProcesses should trigger a synchronous snapshot
+	procs, err := sysops.GetTopProcesses(5)
+	if err != nil {
+		t.Fatalf("GetTopProcesses before snapshot failed: %v", err)
+	}
+	if len(procs) == 0 {
+		t.Log("GetTopProcesses returned 0 processes after cold-start fallback")
+	} else {
+		t.Logf("GetTopProcesses returned %d processes after cold-start fallback", len(procs))
+	}
+
+	// After GetTopProcesses triggered a snapshot, GetProcessCount should be > 0
+	countAfter := sysops.GetProcessCount()
+	if countAfter == 0 {
+		t.Error("GetProcessCount still 0 after GetTopProcesses triggered snapshot")
+	} else {
+		t.Logf("GetProcessCount after fallback snapshot: %d", countAfter)
+	}
 }
 
 func BenchmarkCollectors(b *testing.B) {

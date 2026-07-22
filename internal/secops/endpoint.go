@@ -1,6 +1,7 @@
 package secops
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -48,9 +49,59 @@ func getDiskEncryptionWindows() ([]DiskEncryption, error) {
 	return parseBitLockerJSON(string(out)), nil
 }
 
+type bitLockerVolume struct {
+	MountPoint          string `json:"MountPoint"`
+	ProtectionStatus    *int   `json:"ProtectionStatus"`
+	EncryptionMethod    string `json:"EncryptionMethod"`
+	ConversionStatus    *int   `json:"ConversionStatus"`
+	PercentageEncrypted *int   `json:"PercentageEncrypted"`
+}
+
+// bitLockerProtection maps BitLocker ProtectionStatus values to boolean.
+func bitLockerProtection(status *int) bool {
+	return status != nil && *status == 1
+}
+
+// bitLockerMethod normalises the encryption method string.
+func bitLockerMethod(method string) string {
+	if method == "" || method == "None" {
+		return "None"
+	}
+	return method
+}
+
 func parseBitLockerJSON(jsonStr string) []DiskEncryption {
-	// Simplified: return basic result
-	return []DiskEncryption{{Volume: "C:", Encrypted: false, Method: "Unknown", Status: "Parsed"}}
+	// PowerShell may return a single object or an array.
+	// Try array first, then single object.
+	var volumes []bitLockerVolume
+	if err := json.Unmarshal([]byte(jsonStr), &volumes); err != nil {
+		var single bitLockerVolume
+		if err2 := json.Unmarshal([]byte(jsonStr), &single); err2 != nil {
+			return []DiskEncryption{{Volume: "C:", Encrypted: false, Method: "Unknown", Status: "ParseError"}}
+		}
+		volumes = []bitLockerVolume{single}
+	}
+
+	var disks []DiskEncryption
+	for _, v := range volumes {
+		if v.MountPoint == "" {
+			continue
+		}
+		status := "Active"
+		if v.ProtectionStatus == nil || *v.ProtectionStatus == 0 {
+			status = "Disabled"
+		}
+		disks = append(disks, DiskEncryption{
+			Volume:    v.MountPoint,
+			Encrypted: bitLockerProtection(v.ProtectionStatus),
+			Method:    bitLockerMethod(v.EncryptionMethod),
+			Status:    status,
+		})
+	}
+	if len(disks) == 0 {
+		disks = append(disks, DiskEncryption{Volume: "C:", Encrypted: false, Method: "Unknown", Status: "No BitLocker volumes found"})
+	}
+	return disks
 }
 
 func getDiskEncryptionLinux() ([]DiskEncryption, error) {

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 	"github.com/shirou/gopsutil/v4/net"
 )
 
@@ -22,6 +23,93 @@ type HealthReport struct {
 	Checks   []HealthCheck `json:"checks"`
 	Summary  string        `json:"summary"`
 	Duration string        `json:"duration"`
+}
+
+// NetworkTopology represents the high-level mapping of the local network segment.
+type NetworkTopology struct {
+	Gateway   GatewayInfo `json:"gateway"`
+	DNS       []string    `json:"dns"`
+	Neighbors []ARPEntry  `json:"neighbors"`
+	IsVPN     bool        `json:"is_vpn"`
+	PublicIP  string      `json:"public_ip"`
+}
+
+// GetTopologyContext gathers a high-fidelity map of the immediate network environment.
+func GetTopologyContext() *NetworkTopology {
+	topo := &NetworkTopology{
+		Gateway: GetDefaultGateway(),
+	}
+
+	// 1. Get Neighbors
+	if arp, err := GetARPTable(); err == nil {
+		topo.Neighbors = arp
+	}
+
+	// 2. Get VPN status
+	topo.IsVPN = IsVPNActive()
+
+	// 3. Discover system DNS servers
+	if sysDNS := GetSystemDNSServers(); len(sysDNS) > 0 {
+		topo.DNS = sysDNS
+	} else {
+		// Fallback to well-known public DNS when discovery fails
+		topo.DNS = []string{"8.8.8.8", "1.1.1.1"}
+	}
+
+	return topo
+}
+
+// NetworkForecast holds long-term bandwidth predictions.
+type NetworkForecast struct {
+	CurrentRX      float64 `json:"current_rx"`
+	CurrentTX      float64 `json:"current_tx"`
+	PredictedMax   float64 `json:"predicted_max_24h"`
+	SaturationRisk string  `json:"saturation_risk"` // "low", "med", "high"
+}
+
+// GetLongTermForecast analyzes historical bandwidth to predict 24h trends.
+func GetLongTermForecast() *NetworkForecast {
+	s := common.GetStorage()
+	if s == nil {
+		return nil
+	}
+
+	// Analyze last 24h of throughput (approx 17k points at 5s intervals, but we take 1000 samples)
+	rxHistory, _ := s.GetMetricHistory(common.MetricNetRX, 1000)
+	txHistory, _ := s.GetMetricHistory(common.MetricNetTX, 1000)
+
+	if len(rxHistory) < 100 {
+		return nil
+	}
+
+	engine := common.NewForecastEngine(len(rxHistory))
+	for _, v := range rxHistory {
+		engine.Push(v)
+	}
+
+	lastRX := rxHistory[len(rxHistory)-1]
+	lastTX := float64(0)
+	if len(txHistory) > 0 {
+		lastTX = txHistory[len(txHistory)-1]
+	}
+
+	// Predict 24h ahead (assuming 1 tick = 5s, 24h = 17280 ticks)
+	prediction := engine.Predict(17280)
+
+	risk := "low"
+	if prediction > lastRX*2 && prediction > 1e7 { // 2x growth and > 10Mbps
+		risk = "med"
+	}
+	if prediction > lastRX*5 {
+		risk = "high"
+	}
+
+	return &NetworkForecast{
+		CurrentRX:      lastRX,
+		CurrentTX:      lastTX,
+		PredictedMax:   prediction,
+		SaturationRisk: risk,
+	}
 }
 
 // RunNetworkHealthCheck runs a comprehensive set of network health checks.
@@ -82,10 +170,10 @@ func RunNetworkHealthCheck() HealthReport {
 	}
 
 	// 7. VPN
-	vpnStatus := GetVPNStatus()
+	active := IsVPNActive()
 	vpnCheck := HealthCheck{Name: "VPN Status", Status: "pass", Score: 100}
-	if vpnStatus.Active {
-		vpnCheck.Detail = fmt.Sprintf("VPN active: %s", vpnStatus.Type)
+	if active {
+		vpnCheck.Detail = "VPN/Secure tunnel active"
 	} else {
 		vpnCheck.Detail = "No active VPN"
 	}

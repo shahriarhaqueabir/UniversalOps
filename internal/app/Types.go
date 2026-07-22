@@ -1,5 +1,9 @@
 package app
 
+import (
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+)
+
 // ── AppInfo ──────────────────────────────────────────────────────────────────
 
 // AppInfo holds metadata about the application.
@@ -41,13 +45,19 @@ type BriefingSection struct {
 	Level   string `json:"level"` // "info", "warning", "critical"
 }
 
+// GPUData is a compatibility alias for GPUInfo.
+type GPUData = GPUInfo
+
+// BatteryData is a compatibility alias for BatteryInfo.
+type BatteryData = BatteryInfo
+
 // DashboardData is the top-level dashboard snapshot.
 type DashboardData struct {
 	CPU         GaugeMetric   `json:"cpu"`
 	Memory      GaugeMetric   `json:"memory"`
 	Disk        GaugeMetric   `json:"disk"`
-	GPU         GPUData       `json:"gpu"`
-	Battery     BatteryData   `json:"battery"`
+	GPU         GPUInfo       `json:"gpu"`
+	Battery     BatteryInfo   `json:"battery"`
 	Network     NetworkMetric `json:"network"`
 	Processes   int           `json:"processes"`
 	Connections int           `json:"connections"`
@@ -93,6 +103,32 @@ type MetricDef struct {
 }
 
 // ── SysOps Types ─────────────────────────────────────────────────────────────
+
+// HardwareInfo holds full workstation telemetry.
+type HardwareInfo struct {
+	CPU       CPUExtendedInfo `json:"cpu"`
+	GPU       GPUInfo         `json:"gpu"`
+	Battery   BatteryInfo     `json:"battery"`
+	Sensors   []SensorData    `json:"sensors"`
+	Baseboard BaseboardInfo   `json:"baseboard"`
+}
+
+// SensorData holds a single hardware sensor reading.
+type SensorData struct {
+	Name     string  `json:"name"`
+	Type     string  `json:"type"` // Temperature, Fan, Voltage
+	Value    float64 `json:"value"`
+	Unit     string  `json:"unit"`
+	Category string  `json:"category"` // CPU, GPU, Board
+}
+
+// BaseboardInfo holds motherboard information.
+type BaseboardInfo struct {
+	Manufacturer string `json:"manufacturer"`
+	Product      string `json:"product"`
+	Version      string `json:"version"`
+	SerialNumber string `json:"serial_number"`
+}
 
 // CPUInfo holds CPU details and usage.
 type CPUInfo struct {
@@ -171,14 +207,16 @@ type DiskIOData struct {
 
 // ProcessInfo holds a single process snapshot.
 type ProcessInfo struct {
-	PID    int32   `json:"pid"`
-	PPID   int32   `json:"ppid"`
-	Name   string  `json:"name"`
-	CPU    float64 `json:"cpu"`
-	Memory float32 `json:"memory"`
-	MemPct float32 `json:"mem_pct"`
-	Status string  `json:"status"`
-	NumFDs int32   `json:"num_fds"`
+	PID       int32   `json:"pid"`
+	PPID      int32   `json:"ppid"`
+	Name      string  `json:"name"`
+	CPU       float64 `json:"cpu"`
+	Memory    float32 `json:"memory"`
+	MemPct    float32 `json:"mem_pct"`
+	Status    string  `json:"status"`
+	NumFDs    int32   `json:"num_fds"`
+	IsSigned  bool    `json:"is_signed"`
+	Publisher string  `json:"publisher"`
 }
 
 // SystemInfo holds general system info.
@@ -192,6 +230,27 @@ type SystemInfo struct {
 	Uptime          string `json:"uptime"`
 	ProcessCount    int    `json:"process_count"`
 	Virtualization  string `json:"virtualization"`
+}
+
+// GPUInfo holds detailed GPU information.
+type GPUInfo struct {
+	Name        string  `json:"name"`
+	Vendor      string  `json:"vendor"`
+	MemoryGB    float64 `json:"memory_gb"`
+	Driver      string  `json:"driver"`
+	Detected    bool    `json:"detected"`
+	Temperature float64 `json:"temperature"`
+	Utilization float64 `json:"utilization"`
+	FanSpeed    float64 `json:"fan_speed"`
+}
+
+// BatteryInfo holds detailed battery information.
+type BatteryInfo struct {
+	Percent     float64 `json:"percent"`
+	Charging    bool    `json:"charging"`
+	TimeLeftSec int64   `json:"time_left_sec"`
+	Status      string  `json:"status"`
+	Detected    bool    `json:"detected"`
 }
 
 // LoggedInUserData holds logged-in user info for frontend.
@@ -249,7 +308,7 @@ type SystemLogsResultData struct {
 	Total   int              `json:"total"`
 }
 
-// ScheduledTaskData holds a scheduled task for frontend.
+// ScheduledTaskData holds a scheduled task for frontend (SysOps).
 type ScheduledTaskData struct {
 	Name     string `json:"name"`
 	Schedule string `json:"schedule"`
@@ -271,6 +330,19 @@ type ExtendedDiagnosticResult struct {
 	Checks    []DiagnosticCheckData `json:"checks"`
 	Score     int                   `json:"score"`
 	Timestamp string                `json:"timestamp"`
+}
+
+// PackageManagerData holds info about a package manager and its installed packages.
+type PackageManagerData struct {
+	Name     string        `json:"name"`
+	Found    bool          `json:"found"`
+	Packages []PackageInfo `json:"packages"`
+}
+
+// PackageInfo holds info about a single installed package.
+type PackageInfo struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
 }
 
 // ── NetOps Types ─────────────────────────────────────────────────────────────
@@ -370,6 +442,26 @@ type InterfaceInfo struct {
 	TXHistory []float64 `json:"tx_history"`
 }
 
+// NetworkChangeType enumerates the kinds of interface state changes.
+type NetworkChangeType string
+
+const (
+	ChangeUp          NetworkChangeType = "up"
+	ChangeDown        NetworkChangeType = "down"
+	ChangeIPAdded     NetworkChangeType = "ip_added"
+	ChangeIPRemoved   NetworkChangeType = "ip_removed"
+	ChangeAppeared    NetworkChangeType = "appeared"
+	ChangeDisappeared NetworkChangeType = "disappeared"
+)
+
+// NetworkChange records a single detected interface state change.
+type NetworkChange struct {
+	Type      NetworkChangeType `json:"type"` // up, down, ip_added, ip_removed, appeared, disappeared
+	Interface string            `json:"interface"`
+	Detail    string            `json:"detail"`    // e.g. new IP address
+	Timestamp string            `json:"timestamp"` // RFC3339
+}
+
 // ── SecOps Types ─────────────────────────────────────────────────────────────
 
 // SecurityScore holds a computed security posture score.
@@ -416,6 +508,16 @@ type ListeningPort struct {
 	IsExternal  bool   `json:"is_external"`
 }
 
+// ScheduledTask holds a scheduled task entry for SecOps.
+type ScheduledTask struct {
+	Name    string `json:"name"`
+	Status  string `json:"status"`
+	NextRun string `json:"next_run"`
+	LastRun string `json:"last_run"`
+	Author  string `json:"author"`
+	Trigger string `json:"trigger"`
+}
+
 // DefenderStatus holds Windows Defender status.
 type DefenderStatus struct {
 	Enabled            bool   `json:"enabled"`
@@ -430,16 +532,6 @@ type DefenderStatus struct {
 	QuickScanAge       int    `json:"quick_scan_age"`
 	FullScanAge        int    `json:"full_scan_age"`
 	ThreatsDetected    int    `json:"threats_detected"`
-}
-
-// ScheduledTask holds a scheduled task entry.
-type ScheduledTask struct {
-	Name    string `json:"name"`
-	Status  string `json:"status"`
-	NextRun string `json:"next_run"`
-	LastRun string `json:"last_run"`
-	Author  string `json:"author"`
-	Trigger string `json:"trigger"`
 }
 
 // SecurityEvent holds a security event log entry.
@@ -481,8 +573,6 @@ type SecuritySummary struct {
 	Recommendations []string `json:"recommendations"`
 	AnalyzedAt      string   `json:"analyzedAt"`
 }
-
-// ── SecOps Phase 2 Types ─────────────────────────────────────────────────────
 
 // PasswordPolicy holds password policy configuration.
 type PasswordPolicy struct {
@@ -600,14 +690,25 @@ type PublicExposure struct {
 	Severity    string `json:"severity"`
 }
 
-// SecActionResult holds the result of a security incident response action.
-type SecActionResult struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-	Error   string `json:"error,omitempty"`
-}
+// SecActionResult aliases common.SecActionResult for Wails bindings.
+type SecActionResult = common.SecActionResult
 
 // ── DevOps Types ─────────────────────────────────────────────────────────────
+
+// DevOpsDiagCheck holds a single DevOps diagnostic check result for the frontend.
+type DevOpsDiagCheck struct {
+	Name    string `json:"name"`
+	Status  string `json:"status"`
+	Message string `json:"message"`
+	Value   string `json:"value"`
+}
+
+// DevOpsDiagResult holds the complete DevOps diagnostic result for the frontend.
+type DevOpsDiagResult struct {
+	Checks    []DevOpsDiagCheck `json:"checks"`
+	Score     int               `json:"score"`
+	Timestamp string            `json:"timestamp"`
+}
 
 // CommandResult holds the result of a shell command.
 type CommandResult struct {
@@ -762,6 +863,8 @@ type ServiceGroupSummary struct {
 	Stopped       int `json:"stopped"`
 }
 
+// ── Pipeline Types ───────────────────────────────────────────────────────────
+
 // ── AIOps Types ──────────────────────────────────────────────────────────────
 
 // ChatMessage holds a chat message.
@@ -899,9 +1002,6 @@ type LogTimelinePoint struct {
 }
 
 // LogSummary holds a deterministic summary of recent log activity.
-// json tag renamed errorTrend -> trend to match the frontend LogSummary
-// type (IPC-1 / H15); without this, the AI Summary trend line was always
-// undefined on the frontend.
 type LogSummary struct {
 	TopSource   string `json:"topSource"`
 	TopMessage  string `json:"topMessage"`
@@ -916,264 +1016,12 @@ type SystemRecommendation struct {
 	Message  string `json:"message"`
 }
 
-// NetworkChangeType enumerates the kinds of interface state changes.
-type NetworkChangeType string
-
-const (
-	ChangeUp          NetworkChangeType = "up"
-	ChangeDown        NetworkChangeType = "down"
-	ChangeIPAdded     NetworkChangeType = "ip_added"
-	ChangeIPRemoved   NetworkChangeType = "ip_removed"
-	ChangeAppeared    NetworkChangeType = "appeared"
-	ChangeDisappeared NetworkChangeType = "disappeared"
-)
-
-// NetworkChange records a single detected interface state change.
-type NetworkChange struct {
-	Type      NetworkChangeType `json:"type"` // up, down, ip_added, ip_removed, appeared, disappeared
-	Interface string            `json:"interface"`
-	Detail    string            `json:"detail"`    // e.g. new IP address
-	Timestamp string            `json:"timestamp"` // RFC3339
-}
-
-// GPUData holds GPU information for the dashboard.
-type GPUData struct {
-	Name     string  `json:"name"`
-	Vendor   string  `json:"vendor"`
-	MemoryGB float64 `json:"memory_gb"`
-	Driver   string  `json:"driver"`
-	Detected bool    `json:"detected"`
-}
-
-// BatteryData holds battery information for the dashboard.
-type BatteryData struct {
-	Percent     float64 `json:"percent"`
-	Charging    bool    `json:"charging"`
-	TimeLeftSec int64   `json:"time_left_sec"`
-	Status      string  `json:"status"`
-	Detected    bool    `json:"detected"`
-}
-
-// GPUInfo holds detailed GPU information.
-type GPUInfo struct {
-	Name     string  `json:"name"`
-	Vendor   string  `json:"vendor"`
-	MemoryGB float64 `json:"memory_gb"`
-	Driver   string  `json:"driver"`
-	Detected bool    `json:"detected"`
-}
-
-// BatteryInfo holds detailed battery information.
-type BatteryInfo struct {
-	Percent     float64 `json:"percent"`
-	Charging    bool    `json:"charging"`
-	TimeLeftSec int64   `json:"time_left_sec"`
-	Status      string  `json:"status"`
-	Detected    bool    `json:"detected"`
-}
-
 // DevOpsSuggestion is an actionable suggestion derived from DevOps data.
 type DevOpsSuggestion struct {
 	Category string `json:"category"` // "docker", "git", "node", "general"
 	Severity string `json:"severity"` // "info", "warning", "critical"
 	Message  string `json:"message"`
 	Action   string `json:"action"` // suggested action
-}
-
-// ── DevOps Extended Types ─────────────────────────────────────────────────────
-
-// GitBranchInfo holds branch details for the frontend.
-type GitBranchInfo struct {
-	Name       string `json:"name"`
-	Current    bool   `json:"current"`
-	Upstream   string `json:"upstream"`
-	Ahead      int    `json:"ahead"`
-	Behind     int    `json:"behind"`
-	LastCommit string `json:"last_commit"`
-}
-
-// GitTagInfo holds tag details for the frontend.
-type GitTagInfo struct {
-	Name   string `json:"name"`
-	Commit string `json:"commit"`
-	Date   string `json:"date"`
-	Msg    string `json:"msg"`
-}
-
-// GitStashEntry holds stash entry details for the frontend.
-type GitStashEntry struct {
-	Index   int    `json:"index"`
-	Branch  string `json:"branch"`
-	Message string `json:"message"`
-}
-
-// GitRemoteInfo holds remote details for the frontend.
-type GitRemoteInfo struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
-	Type string `json:"type"`
-}
-
-// GitBlameEntry holds blame line entry for the frontend.
-type GitBlameEntry struct {
-	Commit  string `json:"commit"`
-	Author  string `json:"author"`
-	Date    string `json:"date"`
-	LineNum int    `json:"line_num"`
-	Content string `json:"content"`
-}
-
-// GitExtendedData holds all extended git information.
-type GitExtendedData struct {
-	Branches []GitBranchInfo `json:"branches"`
-	Tags     []GitTagInfo    `json:"tags"`
-	Stash    []GitStashEntry `json:"stash"`
-	Remotes  []GitRemoteInfo `json:"remotes"`
-}
-
-// DockerStatsEntry holds container stats for the frontend.
-type DockerStatsEntry struct {
-	ContainerID   string `json:"container_id"`
-	Name          string `json:"name"`
-	CPUPercent    string `json:"cpu_percent"`
-	MemoryUsage   string `json:"memory_usage"`
-	MemoryLimit   string `json:"memory_limit"`
-	MemoryPercent string `json:"memory_percent"`
-	NetIO         string `json:"net_io"`
-	BlockIO       string `json:"block_io"`
-	PIDCount      string `json:"pid_count"`
-}
-
-// DockerComposeService holds compose service details for the frontend.
-type DockerComposeService struct {
-	Name  string `json:"name"`
-	State string `json:"state"`
-	Ports string `json:"ports"`
-}
-
-// DockerComposeProject holds compose project details for the frontend.
-type DockerComposeProject struct {
-	Project  string                 `json:"project"`
-	Status   string                 `json:"status"`
-	WorkDir  string                 `json:"work_dir"`
-	Services []DockerComposeService `json:"services"`
-}
-
-// DockerNetworkInfo holds network details for the frontend.
-type DockerNetworkInfo struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Driver     string `json:"driver"`
-	Scope      string `json:"scope"`
-	Subnet     string `json:"subnet"`
-	Gateway    string `json:"gateway"`
-	Containers int    `json:"containers"`
-}
-
-// DockerVolumeInfo holds volume details for the frontend.
-type DockerVolumeInfo struct {
-	Driver     string `json:"driver"`
-	Name       string `json:"name"`
-	Mountpoint string `json:"mountpoint"`
-	Size       string `json:"size"`
-}
-
-// DockerExtendedData holds all extended Docker information.
-type DockerExtendedData struct {
-	Stats    []DockerStatsEntry     `json:"stats"`
-	Compose  []DockerComposeProject `json:"compose"`
-	Networks []DockerNetworkInfo    `json:"networks"`
-	Volumes  []DockerVolumeInfo     `json:"volumes"`
-}
-
-// K8sResourceItem holds a single K8s resource entry for the frontend.
-type K8sResourceItem struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace"`
-	Status    string `json:"status"`
-	Age       string `json:"age"`
-	Details   string `json:"details"`
-}
-
-// K8sRolloutStatus holds rollout status for the frontend.
-type K8sRolloutStatus struct {
-	Name      string `json:"name"`
-	Kind      string `json:"kind"`
-	Ready     bool   `json:"ready"`
-	Replicas  string `json:"replicas"`
-	Updated   string `json:"updated"`
-	Available string `json:"available"`
-}
-
-// K8sEvent holds cluster events for the frontend.
-type K8sEvent struct {
-	LastSeen string `json:"last_seen"`
-	Type     string `json:"type"`
-	Reason   string `json:"reason"`
-	Object   string `json:"object"`
-	Message  string `json:"message"`
-}
-
-// K8sNamespaceInfo holds namespace details for the frontend.
-type K8sNamespaceInfo struct {
-	Name   string `json:"name"`
-	Status string `json:"status"`
-	Age    string `json:"age"`
-}
-
-// K8sScalingResult holds scaling operation result for the frontend.
-type K8sScalingResult struct {
-	Current int    `json:"current"`
-	Desired int    `json:"desired"`
-	Success bool   `json:"success"`
-	Output  string `json:"output"`
-}
-
-// K8sExtendedData holds all extended Kubernetes information.
-type K8sExtendedData struct {
-	Namespaces  []K8sNamespaceInfo `json:"namespaces"`
-	Deployments []K8sResourceItem  `json:"deployments"`
-	Services    []K8sResourceItem  `json:"services"`
-	Pods        []K8sResourceItem  `json:"pods"`
-	Rollouts    []K8sRolloutStatus `json:"rollouts"`
-	Events      []K8sEvent         `json:"events"`
-	ConfigMaps  []K8sResourceItem  `json:"config_maps"`
-	Secrets     []K8sResourceItem  `json:"secrets"`
-	Ingresses   []K8sResourceItem  `json:"ingresses"`
-	Jobs        []K8sResourceItem  `json:"jobs"`
-	Nodes       []K8sResourceItem  `json:"nodes"`
-}
-
-// DevOpsDiagCheck holds a single DevOps diagnostic check result for the frontend.
-type DevOpsDiagCheck struct {
-	Name    string `json:"name"`
-	Status  string `json:"status"`
-	Message string `json:"message"`
-	Value   string `json:"value"`
-}
-
-// DevOpsDiagResult holds the complete DevOps diagnostic result for the frontend.
-type DevOpsDiagResult struct {
-	Checks    []DevOpsDiagCheck `json:"checks"`
-	Score     int               `json:"score"`
-	Timestamp string            `json:"timestamp"`
-}
-
-// DevOpsEnvEntry holds an environment comparison entry for the frontend.
-type DevOpsEnvEntry struct {
-	Key       string `json:"key"`
-	FromValue string `json:"from_value"`
-	ToValue   string `json:"to_value"`
-}
-
-// DevOpsEnvironment holds environment comparison data for the frontend.
-type DevOpsEnvironment struct {
-	Name    string            `json:"name"`
-	URL     string            `json:"url"`
-	Version string            `json:"version"`
-	Status  string            `json:"status"`
-	EnvVars map[string]string `json:"env_vars"`
-	Diff    []DevOpsEnvEntry  `json:"diff"`
 }
 
 // AIInsight is a synthesized observation from the AIOps engine.

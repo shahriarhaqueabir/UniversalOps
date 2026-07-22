@@ -9,6 +9,7 @@ import { Panel } from '@/components/ui/Panel'
 import type { ProcessInfo, ActionPreview } from '@/types'
 import { cn } from '@/lib/utils'
 import { useVirtualizer } from '@tanstack/react-virtual'
+import { toast } from 'sonner'
 
 export function ProcessesTab() {
   const { call } = useBackend()
@@ -33,7 +34,12 @@ export function ProcessesTab() {
     if (!preview) return
     const handshakeID = preview.handshake_id
     setPreview(null)
-    await call('App.ConfirmAction', handshakeID)
+    const res = await call('App.ConfirmAction', handshakeID) as { success: boolean; error?: string }
+    if (res.success) {
+      toast.success('Process terminated')
+    } else {
+      toast.error(res.error || 'Failed to kill process')
+    }
     queryClient.invalidateQueries({ queryKey: ['sysops-processes'] })
   }
 
@@ -44,7 +50,7 @@ export function ProcessesTab() {
   const rowVirtualizer = useVirtualizer({
     count: filtered.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 49,
+    estimateSize: () => 60,
     overscan: 10,
   })
 
@@ -69,64 +75,63 @@ export function ProcessesTab() {
         <span className="text-sm text-[var(--color-text-faint)]">{filtered.length} active</span>
       </div>
 
-      <Panel variant="default" padding="none" category="system">
-        {/* Sticky header */}
-        <table className="w-full text-left">
-          <thead className="bg-[var(--color-panel-2)] border-b border-[var(--color-border)]">
-            <tr>
-              <th className="px-4 py-3 text-xs font-bold text-[var(--color-text-faint)] uppercase">Process</th>
-              <th className="px-4 py-3 text-xs font-bold text-[var(--color-text-faint)] uppercase text-right">CPU %</th>
-              <th className="px-4 py-3 text-xs font-bold text-[var(--color-text-faint)] uppercase text-right">RAM (MB)</th>
-              <th className="px-4 py-3 text-xs font-bold text-[var(--color-text-faint)] uppercase text-right">FDs</th>
-              <th className="px-4 py-3 w-12" />
-            </tr>
-          </thead>
-        </table>
-        {/* Virtualised body */}
-        <div ref={parentRef} className="max-h-[600px] overflow-y-auto">
-          <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
-            <table className="w-full text-left" style={{ tableLayout: 'fixed' }}>
-              <colgroup>
-                <col />
-                <col style={{ width: '80px' }} />
-                <col style={{ width: '90px' }} />
-                <col style={{ width: '70px' }} />
-                <col style={{ width: '48px' }} />
-              </colgroup>
-              <tbody>
-                {rowVirtualizer.getVirtualItems().map(virtualRow => {
-                  const p = filtered[virtualRow.index]
-                  return (
-                    <tr
-                      key={virtualRow.key}
-                      data-index={virtualRow.index}
-                      ref={rowVirtualizer.measureElement}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        transform: `translateY(${virtualRow.start}px)`,
-                      }}
-                      className="border-b border-[var(--color-border)]/20 hover:bg-[var(--color-sidebar-hover)] group"
-                    >
-                      <td className="px-4 py-3">
-                        <span className="text-sm font-medium text-[var(--color-text)]">{p.name}</span>
-                        <span className="text-xs text-[var(--color-text-faint)] ml-2">PID {p.pid}</span>
-                      </td>
-                      <td className="px-4 py-3 text-right text-sm font-bold text-[var(--color-accent)] tabular-nums">{p.cpu.toFixed(1)}%</td>
-                      <td className="px-4 py-3 text-right text-sm text-[var(--color-text-dim)] tabular-nums">{p.memory.toFixed(0)}</td>
-                      <td className="px-4 py-3 text-right text-sm text-[var(--color-text-faint)] tabular-nums">{p.num_fds}</td>
-                      <td className="px-4 py-3">
-                        <button onClick={() => requestKill(p.pid)} className="opacity-0 group-hover:opacity-100 p-1.5 text-[var(--color-text-faint)] hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 rounded-lg transition-all active:scale-95">
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+      <Panel variant="default" padding="none" category="system" className="flex flex-col overflow-hidden border border-[var(--color-border)]">
+        {/* Header */}
+        <div className="flex items-center bg-[var(--color-panel-2)] border-b border-[var(--color-border)] px-4 py-3 sticky top-0 z-20">
+          <div className="flex-[3] text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-widest">Process</div>
+          <div className="flex-1 text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-widest text-right">CPU %</div>
+          <div className="flex-1 text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-widest text-right">RAM (MB)</div>
+          <div className="flex-1 text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-widest text-right">Status</div>
+          <div className="w-12" />
+        </div>
+
+        {/* Virtualised List */}
+        <div ref={parentRef} className="max-h-[650px] overflow-y-auto">
+          <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative', width: '100%' }}>
+            {rowVirtualizer.getVirtualItems().map(virtualRow => {
+              const p = filtered[virtualRow.index]
+              if (!p) return null
+              return (
+                <div
+                  key={virtualRow.key}
+                  data-index={virtualRow.index}
+                  ref={rowVirtualizer.measureElement}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                  className="flex items-center px-4 py-3 border-b border-[var(--color-border)]/10 hover:bg-[var(--color-sidebar-hover)] group transition-colors"
+                >
+                  <div className="flex-[3] min-w-0 flex items-center gap-3">
+                    <div className="flex flex-col min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-[var(--color-text)] truncate">{p.name}</span>
+                        {p.is_signed && <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" title={`Signed by ${p.publisher}`} />}
+                      </div>
+                      <span className="text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-tighter">PID {p.pid}</span>
+                    </div>
+                  </div>
+                  <div className="flex-1 text-right text-sm font-black text-[var(--color-accent)] tabular-nums">{p.cpu.toFixed(1)}%</div>
+                  <div className="flex-1 text-right text-sm font-bold text-[var(--color-text-dim)] tabular-nums">{p.memory.toFixed(0)}</div>
+                  <div className="flex-1 text-right">
+                    <span className={cn(
+                      "text-[9px] font-black uppercase px-2 py-0.5 rounded border tracking-tighter",
+                      p.status === 'running' ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-warning/10 text-warning border-warning/20"
+                    )}>
+                      {p.status}
+                    </span>
+                  </div>
+                  <div className="w-12 text-right">
+                    <button onClick={() => requestKill(p.pid)} className="opacity-0 group-hover:opacity-100 p-1.5 text-[var(--color-text-faint)] hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 rounded-lg transition-all active:scale-95">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       </Panel>

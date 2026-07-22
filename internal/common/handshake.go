@@ -9,9 +9,10 @@ import (
 )
 
 type PendingAction struct {
-	Action string
-	Params map[string]interface{}
-	Expiry time.Time
+	Action  string
+	Command string
+	Params  map[string]interface{}
+	Expiry  time.Time
 }
 
 type HandshakeRegistry struct {
@@ -51,16 +52,17 @@ func (r *HandshakeRegistry) Cleanup() {
 	}
 }
 
-func (r *HandshakeRegistry) Register(action string, params map[string]interface{}) string {
+func (r *HandshakeRegistry) Register(action string, command string, params map[string]interface{}) string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
 	id := hex.EncodeToString(b)
 
 	r.mu.Lock()
 	r.pending[id] = PendingAction{
-		Action: action,
-		Params: params,
-		Expiry: time.Now().Add(5 * time.Minute),
+		Action:  action,
+		Command: command,
+		Params:  params,
+		Expiry:  time.Now().Add(5 * time.Minute),
 	}
 	r.mu.Unlock()
 	return id
@@ -84,11 +86,27 @@ func (r *HandshakeRegistry) Consume(id string) (PendingAction, error) {
 
 // CreatePreview generates an ActionPreview for an action and registers it.
 func (r *HandshakeRegistry) CreatePreview(action string, params map[string]interface{}) ActionPreview {
-	id := r.Register(action, params)
+	command := ""
+	switch action {
+	case "kill_process":
+		command = fmt.Sprintf("taskkill /F /PID %v", params["pid"])
+	case "block_ip":
+		command = fmt.Sprintf("netsh advfirewall firewall add rule name=\"Block %v\" dir=in action=block remoteip=%v", params["ip"], params["ip"])
+	case "isolate_host":
+		command = "netsh advfirewall set allprofiles firewallpolicy blockinbound,blockoutbound"
+	case "restart_service":
+		// Use PowerShell for consistent service management on Windows
+		command = fmt.Sprintf("powershell -Command \"Restart-Service -Name '%v' -Force\"", params["name"])
+	case "kill_process_tree":
+		command = fmt.Sprintf("Get-Process -Id %v | Stop-Process -Force -ErrorAction SilentlyContinue", params["pid"])
+	}
+
+	id := r.Register(action, command, params)
 
 	preview := ActionPreview{
 		HandshakeID: id,
 		Action:      action,
+		Command:     command,
 	}
 
 	switch action {
@@ -112,10 +130,17 @@ func (r *HandshakeRegistry) CreatePreview(action string, params map[string]inter
 		preview.Risks = []string{"Temporary service downtime during restart"}
 		preview.Rollback = "Systemd will attempt to bring it back up automatically"
 	case "workflow":
-		id := params["workflow_id"].(string)
-		// Try to find workflow in engine if possible (might need a way to access it)
-		// For now, assume engine provides it
-		preview.Description = fmt.Sprintf("Execute operational workflow: %s", id)
+		if wid, ok := params["workflow_id"].(string); ok {
+			preview.WorkflowID = wid
+			preview.Description = fmt.Sprintf("Execute operational workflow: %s", wid)
+			preview.Risks = []string{"Step-specific risks apply (see workflow definition)", "Potential for multi-resource impact during sequential execution"}
+		}
+	case "kill_process_tree":
+		pid := params["pid"]
+		preview.Description = fmt.Sprintf("Terminate process tree starting at PID %v", pid)
+		preview.Risks = []string{"Unsaved data in the application and all its sub-processes may be lost", "System instability if critical services are terminated"}
+		rollback := "Applications must be restarted manually"
+		preview.Rollback = rollback
 	default:
 		preview.Description = "Perform system action"
 		preview.Risks = []string{"Unknown risks for custom action"}

@@ -7,9 +7,11 @@ export function BlockIP(arg1:string):Promise<common.ActionPreview>;
 
 export function CaptureEvidence():Promise<common.ActionPreview>;
 
+export function DiffForensics(arg1:string,arg2:string):Promise<app.ForensicDiff>;
+
 export function DisableAccount(arg1:string):Promise<common.ActionPreview>;
 
-export function ExportForensicBundle():Promise<common.ActionPreview>;
+export function ExportForensicBundle(arg1:string):Promise<common.ActionPreview>;
 
 export function GetAccountLockouts():Promise<Array<app.LockedAccount>>;
 
@@ -25,7 +27,11 @@ export function GetFirewallRules():Promise<Array<app.FirewallRule>>;
 
 export function GetFirewallStatus():Promise<app.FirewallStatus>;
 
+export function GetForensic(arg1:string):Promise<common.ForensicRecord>;
+
 export function GetHardeningChecks():Promise<Array<app.HardeningCheck>>;
+
+export function GetHistoricalSecurityReport(arg1:string):Promise<app.SecurityAuditResult>;
 
 export function GetListeningPorts():Promise<Array<app.ListeningPort>>;
 
@@ -58,6 +64,12 @@ export function GetUsers():Promise<Array<app.UserInfo>>;
 export function IsolateHost(arg1:boolean,arg2:number):Promise<common.ActionPreview>;
 
 export function KillProcess(arg1:number):Promise<common.ActionPreview>;
+
+export function KillProcessTree(arg1:number):Promise<common.ActionPreview>;
+
+export function ListForensics():Promise<Array<common.ForensicRecord>>;
+
+export function ListHistoricalSecurityReports():Promise<Array<common.ReportRecord>>;
 
 export function RunSecurityAuditChecklist():Promise<app.SecurityAuditResult>;
 

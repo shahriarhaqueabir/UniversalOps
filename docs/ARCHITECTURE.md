@@ -1,81 +1,61 @@
-# OpsForAll — Architecture Document
+# Universal-Ops — Architecture Document
 
-> A native desktop operations platform built with Go and Wails v2, featuring a React + Tailwind GUI. Inspired by heroic "One For All" principles.
-
----
-
-## Table of Contents
-
-1. [Overview](#overview)
-2. [Layer Model](#layer-model)
-3. [Tech Stack](#tech-stack)
-4. [Component Tree](#component-tree)
-5. [Data Flow](#data-flow)
-6. [Directory Layout](#directory-layout)
-7. [Architecture Patterns](#architecture-patterns)
-8. [Key Decisions](#key-decisions)
+> A high-performance native desktop operations platform built with Go and Wails v2.
 
 ---
 
-## Overview
-
-OpsForAll
- is a premium native desktop application that provides system administrators, developers, and security professionals with a unified operations dashboard. It leverages the Wails framework to combine Go's performance and system access with the flexibility of a modern React frontend.
+## 1. Overview
+Universal-Ops provides a unified command center for system administrators, security professionals, and SREs. It bridges the gap between low-level kernel telemetry and actionable operational intelligence.
 
 ### Goals
-
-- **Single binary** — Embedded frontend assets; no external runtime dependencies.
-- **Native GUI** — Smooth, high-performance interface with real-time data visualization.
-- **Layered operations** — SysOps (system info), NetOps (network diagnostics), SecOps (security auditing), DevOps (CI/process orchestration), AI Ops (local LLM integration).
-- **Live dashboards** — Event-driven updates for system health, network monitoring, and security status.
-- **Professional reporting** — Rich, exportable reports generated via local AI analysis.
-- **Accessible Design** — Squib-inspired dark theme using Tailwind v4 and Radix UI primitives.
-
-### Non-Goals
-
-- Not a cloud-hosted SaaS (all data stays local).
-- Not a replacement for professional deep-packet inspection (e.g., Wireshark).
+- **100% Local**: Zero telemetry, zero cloud sync.
+- **Native Efficiency**: Low-footprint Go backend with React frontend.
+- **Hardened Execution**: Concurrent engine loop with sandboxed system queries.
+- **AI-Augmented**: Integrated local LLM (Ollama) for automated analysis.
 
 ---
 
-## Layer Model
+## 2. Core Components
 
-The application is organized into specialized domain packages (Go) bound to a unified React frontend via Wails:
+### 🔄 The Engine Loop (`internal/common/engine.go`)
+The heartbeat of the platform.
+- **Parallelized Evaluation**: Executes alert rules and metric snapshots in concurrent lanes via `sync.WaitGroup`.
+- **Drift Detection**: Continuously compares live data against `baseline.json`.
+- **Spike Triggering**: Automatically executes diagnostic workflows (Autonomous Ops) when metric deviations are detected.
+
+### 🧩 Capability Registry (`internal/common/capability.go`)
+A multi-tiered discovery engine.
+- **Detection Chain**: Probes `PATH`, standard application directories, and WMI namespaces.
+- **External Bridge**: Seamlessly links with **Ollama** (AI) and **LibreHardwareMonitor** (Sensors).
+- **Manual Verification**: Allows users to re-scan for newly installed dependencies without restarting the app.
+
+---
+
+## 3. Data Flow
 
 ```mermaid
 graph TD
-    FE[Frontend - React + Tailwind]
-    APP[App Layer - Wails Bindings]
-    SYS[SysOps - System Operations]
-    NET[NetOps - Network Operations]
-    SEC[SecOps - Security Operations]
-    DEV[DevOps - Development Operations]
-    AI[AI Ops - Local LLM Integration]
-    PIPE[DataPipeline - Metric Aggregator]
-    DB[Storage - SQLite WAL]
-    COMMON[Common - Shared Utilities]
-    
-    FE <--> APP
-    APP --> SYS
-    APP --> NET
-    APP --> SEC
-    APP --> DEV
-    APP --> AI
-    
-    SYS --> PIPE
-    NET --> PIPE
-    SEC --> PIPE
-    DEV --> PIPE
-    
-    PIPE --> DB
-    PIPE --> APP
-    
-    SYS & NET & SEC & DEV & AI --> COMMON
+    UI[Frontend - React] <--> W[Wails IPC Bridge]
+    W <--> APP[Go Application Layer]
+    APP --> EL[Engine Loop]
+    EL --> DP[Data Pipeline]
+    DP --> DB[(SQLite WAL)]
+    EL --> AE[Alert Engine]
+    EL --> AI[AI Ops - Ollama]
 ```
+
+### Storage Philosophy (SQLite WAL)
+We use **Write-Ahead Logging (WAL)** mode to handle high-frequency metric ingestion from the `DataPipeline` without blocking read queries from the UI. Retention defaults to 7 days to maintain a balance between historical context and disk footprint.
 
 ### 1. SysOps (System Operations)
 - CPU, RAM, disk, process monitoring.
 - Real-time KPI cards with sparklines and per-core breakdown.
+- **Hardware Forensics**: GPU temperature/utilization, fan speeds, and baseboard metadata.
+- **Collection Strategy**:
+    - **Primary**: `gopsutil/v4` for cross-platform metrics.
+    - **Windows Native**: Direct WMI queries via `yusufpapurcu/wmi` for detailed hardware (GPU, Motherboard, Battery).
+    - **Fallback**: PowerShell CIM instances if WMI namespaces are restricted.
+    - **External**: `nvidia-smi` (NVIDIA) and `LibreHardwareMonitor` (AMD/Intel) for real-time sensor data.
 
 ### 2. NetOps (Network Operations)
 - Continuous ICMP ping, DNS lookup (A/MX/TXT/etc.), port scanning.
@@ -203,17 +183,26 @@ AllOpsFull/
 ### 1. Wails Bindings
 Backend logic is exposed to the frontend via structs in `internal/app/`. Wails automatically generates TypeScript definitions for these methods, ensuring type safety across the IPC boundary.
 
-### 2. The Data Pipeline
-A centralized Go ticker (`Pipeline`) collects system metrics.
+### 2. The Data Pipeline & Engine Loop
+A centralized Go ticker (`EngineLoop`) handles periodic evaluation, decoupled from the UI.
+- **Engine Loop**: Located in `internal/common/engine.go`, it manages alert evaluation, metric snapshots, and spike detection independently of the Wails runtime.
+- **Batched Async Persistence**: A unified `writerLoop` in `internal/common/storage.go` handles both metrics and logs in batched transactions to minimize SQLite lock contention.
 - **Memoized Analysis**: Statistical math (linear regression, Pearson R) is memoized and only recalculated when new data is pushed.
 - **Sharded Concurrency**: To avoid global lock contention, the pipeline is sharded; metrics and forecast engines manage their own local locks.
 
-### 3. Event-Driven UI & Backpressure
-The frontend uses a custom `useEvents` hook to listen for backend ticks. 
-- **Backpressure Aware**: Wails events are emitted without delivery confirmation. The UI uses debounced rendering for high-frequency logs to prevent goroutine bloat.
+### 3. Persistent Storage (SQLite WAL)
+All telemetry and configuration are stored in `ops_core.db` using Write-Ahead Logging.
+- **Metrics**: High-frequency time-series data.
+- **Settings**: Atomic backend-led configuration persistence.
+- **Forensics**: Structured JSON snapshots of system state (Process trees, Network maps).
+- **Reports**: Historical diagnostic and security audit logs with scorecard results.
+- **Retention**: Automated background pruning based on a configurable duration (default 7 days).
 
-### 4. Settings Persistence
-Settings (refresh intervals, themes, etc.) are managed in a Zustand store and synchronized with the backend via a dedicated `UpdateSettings` binding.
+### 4. Local-First AI Integration
+OpsForAll integrates with **Ollama** locally.
+- **Consultative Partner**: Uses **MiniCPM5-1B-Thinking** for Chain-of-Thought (CoT) reasoning and Root Cause Analysis (RCA).
+- **Expanded Context**: A consistent **32k context window** allows for long-horizon analysis of system events and anomalies.
+- **Contextual Grounding**: Hawk is grounded via the Knowledge Layer, which receives real-time updates (last 100 samples) from the Engine Loop.
 
 ---
 
@@ -237,4 +226,4 @@ OpsForAll integrates with **Ollama** locally.
 
 ---
 
-*Last updated: 2026-07-12*
+*Last updated: 2026-07-21*

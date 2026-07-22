@@ -26,6 +26,14 @@ export function GetGPUInfo() {
   return window['go']['app']['SysOps']['GetGPUInfo']();
 }
 
+export function GetHardwareInfo() {
+  return window['go']['app']['SysOps']['GetHardwareInfo']();
+}
+
+export function GetHistoricalHealthReport(arg1) {
+  return window['go']['app']['SysOps']['GetHistoricalHealthReport'](arg1);
+}
+
 export function GetLoggedInUsers() {
   return window['go']['app']['SysOps']['GetLoggedInUsers']();
 }
@@ -40,6 +48,10 @@ export function GetPerformanceStats() {
 
 export function GetProcessTree() {
   return window['go']['app']['SysOps']['GetProcessTree']();
+}
+
+export function GetProcessTreeGraph() {
+  return window['go']['app']['SysOps']['GetProcessTreeGraph']();
 }
 
 export function GetRecommendations() {
@@ -64,6 +76,10 @@ export function GetTopProcesses(arg1) {
 
 export function ListAllProcesses(arg1) {
   return window['go']['app']['SysOps']['ListAllProcesses'](arg1);
+}
+
+export function ListHistoricalHealthReports() {
+  return window['go']['app']['SysOps']['ListHistoricalHealthReports']();
 }
 
 export function RunExtendedDiagnostics() {

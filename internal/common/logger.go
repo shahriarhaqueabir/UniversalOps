@@ -4,75 +4,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
 )
 
-const logChanCap = 1024
-
-type logEntry struct {
-	level string
-	msg   string
-}
-
 var (
 	logFile *os.File
 	zlog    zerolog.Logger
-	logWg   sync.WaitGroup
-	logChan chan logEntry
-	logOnce sync.Once
 )
-
-func startLogWorker() {
-	logChan = make(chan logEntry, logChanCap)
-	logWg.Add(1)
-	go func() {
-		defer logWg.Done()
-
-		var batch []logEntry
-		ticker := time.NewTicker(3 * time.Second)
-		defer ticker.Stop()
-
-		flush := func() {
-			if len(batch) == 0 {
-				return
-			}
-			s := GetStorage()
-			if s != nil && !s.CheckClosed() {
-				tx, err := s.Begin()
-				if err != nil {
-					return
-				}
-				query := `INSERT INTO logs (level, module, message, timestamp) VALUES (?, ?, ?, ?)`
-				for _, entry := range batch {
-					if _, err := tx.Exec(query, entry.level, "SYSTEM", entry.msg, time.Now().UTC().Format(time.RFC3339)); err != nil {
-						continue
-					}
-				}
-				_ = tx.Commit()
-			}
-			batch = nil
-		}
-
-		for {
-			select {
-			case entry, ok := <-logChan:
-				if !ok {
-					flush()
-					return
-				}
-				batch = append(batch, entry)
-				if len(batch) >= 50 {
-					flush()
-				}
-			case <-ticker.C:
-				flush()
-			}
-		}
-	}()
-}
 
 // InitLogger initializes the session logger locally.
 func InitLogger(filename string) error {
@@ -106,32 +46,23 @@ func InitLogger(filename string) error {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
-	logOnce.Do(startLogWorker)
-
 	LogInfo("Session started")
 	return nil
 }
 
-// CloseLogger closes the log file and drains pending log writes.
+// CloseLogger closes the log file.
 func CloseLogger() {
 	if logFile != nil {
 		LogInfo("Session ended")
-		// Close channel to signal worker, then wait for drain
-		if logChan != nil {
-			close(logChan)
-		}
-		logWg.Wait()
 		logFile.Close()
 	}
 }
 
-// enqueueLog sends a log entry to the worker channel, dropping if full.
+// enqueueLog sends a log entry to the persistent storage.
 func enqueueLog(level, msg string) {
-	logOnce.Do(startLogWorker)
-	select {
-	case logChan <- logEntry{level: level, msg: msg}:
-	default:
-		// Channel full — drop to avoid blocking callers
+	s := GetStorage()
+	if s != nil {
+		_ = s.InsertLog(level, "SYSTEM", msg)
 	}
 }
 

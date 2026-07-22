@@ -1,11 +1,13 @@
 package secops
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
@@ -27,17 +29,22 @@ type SecurityEvent struct {
 // GetSecurityEvents retrieves recent security events from the current platform.
 func GetSecurityEvents() ([]SecurityEvent, error) {
 	if common.IsWindows() {
-		// Try Security log first (requires Admin). Using direct exec.Command instead of Sandboxed
-		// because Event Log access often requires privileges that are stripped in the sandbox.
-		cmd := exec.Command("powershell", "-Command",
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		// Try Security log first (requires Admin).
+		cmd := exec.CommandContext(ctx, "powershell", "-Command",
 			"Get-WinEvent -LogName Security -MaxEvents 25 -ErrorAction Stop | Select-Object Id,LevelDisplayName,ProviderName,TimeCreated,Message | ConvertTo-Json -As Array -Depth 2")
 		output, err := cmd.Output()
 		if err != nil {
-			// Fallback: Try System log (usually accessible by non-admins)
+			// Fallback: Try System log
 			securityLogWarnOnce.Do(func() {
 				common.LogInfo("Security log inaccessible, falling back to System log: %v", err)
 			})
-			cmd = exec.Command("powershell", "-Command",
+
+			ctx2, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel2()
+			cmd = exec.CommandContext(ctx2, "powershell", "-Command",
 				"Get-WinEvent -LogName System -MaxEvents 25 -ErrorAction SilentlyContinue | Select-Object Id,LevelDisplayName,ProviderName,TimeCreated,Message | ConvertTo-Json -As Array -Depth 2")
 			output, err = cmd.Output()
 			if err != nil {

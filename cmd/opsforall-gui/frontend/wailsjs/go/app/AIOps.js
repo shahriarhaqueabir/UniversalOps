@@ -6,8 +6,8 @@ export function AskAI(arg1, arg2) {
   return window['go']['app']['AIOps']['AskAI'](arg1, arg2);
 }
 
-export function Chat(arg1) {
-  return window['go']['app']['AIOps']['Chat'](arg1);
+export function Chat(arg1, arg2) {
+  return window['go']['app']['AIOps']['Chat'](arg1, arg2);
 }
 
 export function CreateOpsPersona() {
@@ -26,12 +26,20 @@ export function DetectAnomalies() {
   return window['go']['app']['AIOps']['DetectAnomalies']();
 }
 
+export function ExportReportAsPDF(arg1, arg2) {
+  return window['go']['app']['AIOps']['ExportReportAsPDF'](arg1, arg2);
+}
+
 export function GenerateReport(arg1) {
   return window['go']['app']['AIOps']['GenerateReport'](arg1);
 }
 
 export function GetAIInsights() {
   return window['go']['app']['AIOps']['GetAIInsights']();
+}
+
+export function GetCompanionName() {
+  return window['go']['app']['AIOps']['GetCompanionName']();
 }
 
 export function GetConfidenceScore() {
@@ -58,6 +66,18 @@ export function ListSessions() {
   return window['go']['app']['AIOps']['ListSessions']();
 }
 
+export function LoadModels() {
+  return window['go']['app']['AIOps']['LoadModels']();
+}
+
+export function NotifyActionResult(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['AIOps']['NotifyActionResult'](arg1, arg2, arg3, arg4);
+}
+
+export function PlanWorkflow(arg1, arg2) {
+  return window['go']['app']['AIOps']['PlanWorkflow'](arg1, arg2);
+}
+
 export function PullModel(arg1) {
   return window['go']['app']['AIOps']['PullModel'](arg1);
 }
@@ -78,12 +98,24 @@ export function SaveModelfile(arg1) {
   return window['go']['app']['AIOps']['SaveModelfile'](arg1);
 }
 
+export function SetCompanionName(arg1) {
+  return window['go']['app']['AIOps']['SetCompanionName'](arg1);
+}
+
 export function SetDataDir(arg1) {
   return window['go']['app']['AIOps']['SetDataDir'](arg1);
 }
 
+export function SetModelForCapability(arg1, arg2) {
+  return window['go']['app']['AIOps']['SetModelForCapability'](arg1, arg2);
+}
+
 export function SetOllamaModel(arg1) {
   return window['go']['app']['AIOps']['SetOllamaModel'](arg1);
+}
+
+export function VerifyRemediation(arg1, arg2, arg3) {
+  return window['go']['app']['AIOps']['VerifyRemediation'](arg1, arg2, arg3);
 }
 
 export function WithTimeout(arg1) {

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/csv"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -14,14 +15,60 @@ import (
 
 // ConnectionInfo holds information about a network connection.
 type ConnectionInfo struct {
-	LocalAddr   string
-	RemoteAddr  string
-	LocalPort   int
-	RemotePort  int
-	Protocol    string
-	State       string
-	ProcessName string
-	PID         int
+	LocalAddr   string `json:"local_addr"`
+	RemoteAddr  string `json:"remote_addr"`
+	LocalPort   int    `json:"local_port"`
+	RemotePort  int    `json:"remote_port"`
+	Protocol    string `json:"protocol"`
+	State       string `json:"state"`
+	ProcessName string `json:"process_name"`
+	PID         int    `json:"pid"`
+	IsLocal     bool   `json:"is_local"`
+	IsExternal  bool   `json:"is_external"`
+}
+
+// SubnetTraffic aggregates connection counts by remote subnet.
+type SubnetTraffic struct {
+	Subnet  string `json:"subnet"`
+	Conns   int    `json:"connections"`
+	IsLocal bool   `json:"is_local"`
+}
+
+// GetSubnetTraffic groups active connections by remote subnet.
+func GetSubnetTraffic() []SubnetTraffic {
+	conns, _ := GetConnections()
+	counts := make(map[string]int)
+
+	localSubnet := GetLocalSubnet()
+	_, localNet, _ := net.ParseCIDR(localSubnet)
+
+	for _, c := range conns {
+		if c.State == "LISTEN" { continue }
+		host, _, _ := net.SplitHostPort(c.RemoteAddr)
+		ip := net.ParseIP(host)
+		if ip == nil { continue }
+
+		subnet := "external"
+		if localNet != nil && localNet.Contains(ip) {
+			subnet = localSubnet
+		} else if ip.IsLoopback() {
+			subnet = "localhost"
+		} else if ip.IsPrivate() {
+			subnet = "private_other"
+		}
+
+		counts[subnet]++
+	}
+
+	var res []SubnetTraffic
+	for s, count := range counts {
+		res = append(res, SubnetTraffic{
+			Subnet: s,
+			Conns: count,
+			IsLocal: s == localSubnet || s == "localhost",
+		})
+	}
+	return res
 }
 
 // GetConnections returns network connection information.

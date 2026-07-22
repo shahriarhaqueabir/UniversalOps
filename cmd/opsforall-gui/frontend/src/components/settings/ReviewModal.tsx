@@ -1,6 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { X, CheckCircle2, RotateCcw, Zap, ShieldAlert, Sparkles, AlertTriangle, FileCode } from 'lucide-react'
 import { useConfigStore } from '@/stores/useConfigStore'
+import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useBackend } from '@/hooks/useBackend'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -16,6 +17,7 @@ interface ReviewModalProps {
  */
 export function ReviewModal({ isOpen, onOpenChange }: ReviewModalProps) {
   const { stagedChanges, discardAll, getOriginalValue, getRiskLevel } = useConfigStore()
+  const { setBatch } = useSettingsStore()
   const { call } = useBackend()
 
   const changes = Array.from(stagedChanges.entries())
@@ -33,17 +35,18 @@ export function ReviewModal({ isOpen, onOpenChange }: ReviewModalProps) {
     try {
       const id = toast.loading('Initiating system deployment...')
 
-      // 1. Handle standard settings
-      if (stagedChanges.has('refreshInterval') || stagedChanges.has('pingCount') || stagedChanges.has('dnsTimeout')) {
-        await call('PipelineAPI.UpdateSettings',
-          stagedChanges.get('refreshInterval') || getOriginalValue('refreshInterval'),
-          0,
-          stagedChanges.get('pingCount') || getOriginalValue('pingCount'),
-          stagedChanges.get('dnsTimeout') || getOriginalValue('dnsTimeout')
-        )
+      // 1. Handle standard settings via batch update (triggers App.tsx sync)
+      const standardParams = ['refreshInterval', 'pingCount', 'dnsTimeout', 'companionName']
+      const toBatch: Record<string, any> = {}
+      standardParams.forEach(p => {
+        if (stagedChanges.has(p)) toBatch[p] = stagedChanges.get(p)
+      })
+
+      if (Object.keys(toBatch).length > 0) {
+        setBatch(toBatch)
       }
 
-      // 2. Handle Modelfile rebuild
+      // 2. Handle Modelfile rebuild (Explicit call as it's heavy)
       if (modelfileChange) {
         toast.loading('Rebuilding Neural Core... (may take a moment)', { id })
         await call('AIOps.SaveModelfile', modelfileChange)

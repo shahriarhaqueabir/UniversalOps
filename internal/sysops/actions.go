@@ -21,6 +21,8 @@ const (
 	ActionCleanPkgCache  SystemAction = "clean_pkg_cache"
 	ActionSystemUpdate   SystemAction = "system_update"
 	ActionRestartService SystemAction = "restart_service"
+	ActionDiskCleanup    SystemAction = "disk_cleanup"
+	ActionDefrag         SystemAction = "defrag"
 )
 
 // ActionResult holds the result of a system action.
@@ -85,6 +87,18 @@ func RunSystemAction(action SystemAction) (*ActionResult, error) {
 			cmd = exec.Command("powershell", "-Command", "winget upgrade --all --accept-package-agreements --accept-source-agreements")
 		} else {
 			cmd = exec.Command("sudo", "apt-get", "update", "&&", "sudo", "apt-get", "upgrade", "-y")
+		}
+	case ActionDiskCleanup:
+		if runtime.GOOS == "windows" {
+			cmd = exec.Command("cleanmgr", "/sagerun:1")
+		} else {
+			cmd = exec.Command("sudo", "apt-get", "autoremove", "-y")
+		}
+	case ActionDefrag:
+		if runtime.GOOS == "windows" {
+			cmd = exec.Command("defrag", "C:", "/O")
+		} else {
+			cmd = exec.Command("sudo", "fstrim", "-av")
 		}
 	default:
 		return nil, fmt.Errorf("unknown action: %s", action)

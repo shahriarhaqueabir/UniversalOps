@@ -6,6 +6,7 @@ import (
 
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/load"
+	"github.com/yusufpapurcu/wmi"
 )
 
 var (
@@ -75,7 +76,8 @@ func GetCPUExtended() (*CPUExtendedStats, error) {
 		result.CacheSizeKB = info[0].CacheSize
 	}
 
-	// Temperature not available in gopsutil v4 — leave as 0
+	// PROBE: Query LibreHardwareMonitor for Temperature
+	result.Temperature = getTemperatureLibre()
 
 	// Per-CPU info
 	perCPU, _ := cpu.Percent(0, true)
@@ -88,6 +90,30 @@ func GetCPUExtended() (*CPUExtendedStats, error) {
 	}
 
 	return result, nil
+}
+
+func getTemperatureLibre() float64 {
+	type Sensor struct {
+		Value float64
+	}
+	var dst []Sensor
+	// 1. Try LibreHardwareMonitor
+	q := "SELECT Value FROM Sensor WHERE SensorType='Temperature' AND (Name LIKE '%Package%' OR Name LIKE '%Core%')"
+	if err := wmi.QueryNamespace(q, &dst, "root\\LibreHardwareMonitor"); err == nil && len(dst) > 0 {
+		return dst[0].Value
+	}
+
+	// 2. Try MSAcpi_ThermalZoneTemperature (Windows Native, often requires Admin)
+	type MSAcpi_ThermalZoneTemperature struct {
+		CurrentTemperature uint32
+	}
+	var acpi []MSAcpi_ThermalZoneTemperature
+	if err := wmi.QueryNamespace("SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature", &acpi, "root\\wmi"); err == nil && len(acpi) > 0 {
+		// Value is in 10ths of degrees Kelvin
+		return (float64(acpi[0].CurrentTemperature) / 10.0) - 273.15
+	}
+
+	return 0
 }
 
 // GetCPUStats returns current CPU usage and info.

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -21,11 +23,20 @@ type MetricWrite struct {
 	Time  time.Time
 }
 
+// LogWrite represents a single log entry enqueued for asynchronous write.
+type LogWrite struct {
+	Level   string
+	Module  string
+	Message string
+	Time    time.Time
+}
+
 // Storage manages the persistent SQLite database.
 type Storage struct {
 	db         *sql.DB
 	insertStmt *sql.Stmt
 	metricsCh  chan MetricWrite
+	logsCh     chan LogWrite
 	closeCh    chan struct{}
 	writerWg   sync.WaitGroup
 	pruneWg    sync.WaitGroup
@@ -101,6 +112,7 @@ func InitStorage(path string) error {
 	s := &Storage{
 		db:        db,
 		metricsCh: make(chan MetricWrite, 2048), // Increased from 256 to handle spikes
+		logsCh:    make(chan LogWrite, 1024),
 		closeCh:   make(chan struct{}),
 		flushCh:   make(chan chan struct{}),
 	}
@@ -234,6 +246,53 @@ func (s *Storage) migrate() error {
 			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_conv_session ON conversations(session_id, timestamp)`,
+		`CREATE TABLE IF NOT EXISTS settings (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS forensics (
+			id TEXT PRIMARY KEY,
+			timestamp DATETIME NOT NULL,
+			type TEXT NOT NULL,
+			title TEXT NOT NULL,
+			data_json TEXT NOT NULL,
+			metadata TEXT
+		)`,
+		`CREATE TABLE IF NOT EXISTS reports (
+			id TEXT PRIMARY KEY,
+			timestamp DATETIME NOT NULL,
+			type TEXT NOT NULL,
+			score INTEGER NOT NULL,
+			data_json TEXT NOT NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_reports_type_time ON reports(type, timestamp)`,
+		`CREATE TABLE IF NOT EXISTS baselines (
+			metric TEXT PRIMARY KEY,
+			avg REAL NOT NULL,
+			stddev REAL NOT NULL,
+			last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS health_scores (
+			day DATE PRIMARY KEY,
+			score INTEGER NOT NULL,
+			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS custom_workflows (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			description TEXT NOT NULL,
+			definition_json TEXT NOT NULL,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS incidents (
+			id TEXT PRIMARY KEY,
+			timestamp DATETIME NOT NULL,
+			title TEXT NOT NULL,
+			details TEXT NOT NULL,
+			report_ids TEXT,
+			severity TEXT NOT NULL
+		)`,
 	}
 
 	for _, q := range queries {
@@ -246,40 +305,61 @@ func (s *Storage) migrate() error {
 
 // ── Background Writer ───────────────────────────────────────────────────────
 
-// writerLoop drains the metrics channel and inserts batches on a ticker.
+// writerLoop drains the metrics and logs channels and inserts batches on a ticker.
 func (s *Storage) writerLoop() {
 	defer RecoverPanic()
 	defer s.writerWg.Done()
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
-	var batch []MetricWrite
+	var metricsBatch []MetricWrite
+	var logsBatch []LogWrite
 
 	for {
 		select {
 		case w, ok := <-s.metricsCh:
 			if !ok {
-				// Channel closed — flush remaining and exit
-				s.insertBatch(batch)
+				s.insertMetricsBatch(metricsBatch)
+				s.insertLogsBatch(logsBatch)
 				return
 			}
-			batch = append(batch, w)
-			if len(batch) >= 32 {
-				s.insertBatch(batch)
-				batch = nil
+			metricsBatch = append(metricsBatch, w)
+			if len(metricsBatch) >= 32 {
+				s.insertMetricsBatch(metricsBatch)
+				metricsBatch = nil
+			}
+
+		case l, ok := <-s.logsCh:
+			if !ok {
+				// Handled by metricsCh close usually, but for safety:
+				s.insertMetricsBatch(metricsBatch)
+				s.insertLogsBatch(logsBatch)
+				return
+			}
+			logsBatch = append(logsBatch, l)
+			if len(logsBatch) >= 50 {
+				s.insertLogsBatch(logsBatch)
+				logsBatch = nil
 			}
 
 		case f := <-s.flushCh:
 			// Internal flush signal — drain all pending writes then flush
-			batch = s.drainMetrics(batch)
-			s.insertBatch(batch)
-			batch = nil
+			metricsBatch = s.drainMetrics(metricsBatch)
+			logsBatch = s.drainLogs(logsBatch)
+			s.insertMetricsBatch(metricsBatch)
+			s.insertLogsBatch(logsBatch)
+			metricsBatch = nil
+			logsBatch = nil
 			close(f)
 
 		case <-ticker.C:
-			if len(batch) > 0 {
-				s.insertBatch(batch)
-				batch = nil
+			if len(metricsBatch) > 0 {
+				s.insertMetricsBatch(metricsBatch)
+				metricsBatch = nil
+			}
+			if len(logsBatch) > 0 {
+				s.insertLogsBatch(logsBatch)
+				logsBatch = nil
 			}
 		}
 	}
@@ -295,6 +375,22 @@ func (s *Storage) drainMetrics(batch []MetricWrite) []MetricWrite {
 				return batch
 			}
 			batch = append(batch, w)
+		default:
+			return batch
+		}
+	}
+}
+
+// drainLogs reads all currently available items from logsCh
+// into the provided batch and returns the accumulated batch.
+func (s *Storage) drainLogs(batch []LogWrite) []LogWrite {
+	for {
+		select {
+		case l, ok := <-s.logsCh:
+			if !ok {
+				return batch
+			}
+			batch = append(batch, l)
 		default:
 			return batch
 		}
@@ -329,8 +425,8 @@ func (s *Storage) metricsLoggerLoop() {
 	}
 }
 
-// insertBatch writes a batch of metrics inside a single transaction.
-func (s *Storage) insertBatch(batch []MetricWrite) {
+// insertMetricsBatch writes a batch of metrics inside a single transaction.
+func (s *Storage) insertMetricsBatch(batch []MetricWrite) {
 	if len(batch) == 0 {
 		return
 	}
@@ -338,7 +434,7 @@ func (s *Storage) insertBatch(batch []MetricWrite) {
 	start := time.Now()
 	tx, err := s.db.Begin()
 	if err != nil {
-		LogInfo("Batch insert begin tx: %v", err)
+		LogInfo("Batch insert metrics begin tx: %v", err)
 		return
 	}
 
@@ -350,7 +446,7 @@ func (s *Storage) insertBatch(batch []MetricWrite) {
 	}
 
 	if err := tx.Commit(); err != nil {
-		LogInfo("Batch insert commit: %v", err)
+		LogInfo("Batch insert metrics commit: %v", err)
 		tx.Rollback()
 		return
 	}
@@ -360,6 +456,32 @@ func (s *Storage) insertBatch(batch []MetricWrite) {
 	s.writeCount++
 	s.totalWriteDur += dur
 	s.statsMu.Unlock()
+}
+
+// insertLogsBatch writes a batch of logs inside a single transaction.
+func (s *Storage) insertLogsBatch(batch []LogWrite) {
+	if len(batch) == 0 {
+		return
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		LogInfo("Batch insert logs begin tx: %v", err)
+		return
+	}
+
+	query := `INSERT INTO logs (level, module, message, timestamp) VALUES (?, ?, ?, ?)`
+	for _, l := range batch {
+		if _, err := tx.Exec(query, l.Level, l.Module, l.Message, l.Time.UTC().Format(time.RFC3339)); err != nil {
+			LogInfo("Batch insert log: %v", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		LogInfo("Batch insert logs commit: %v", err)
+		tx.Rollback()
+		return
+	}
 }
 
 // flushMetrics blocks until all pending metric writes are persisted.
@@ -379,14 +501,57 @@ func (s *Storage) dailyPruneLoop() {
 	defer s.pruneWg.Done()
 	ticker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
+
+	// Weekly maintenance ticker for Vacuum
+	maintTicker := time.NewTicker(7 * 24 * time.Hour)
+	defer maintTicker.Stop()
+
 	for {
 		select {
 		case <-ticker.C:
-			s.Prune(7 * 24 * time.Hour)
+			// Configurable retention (default 7 days)
+			retentionDays := 7
+			if val, err := s.GetSetting("retention_days"); err == nil && val != "" {
+				if d, err := strconv.Atoi(val); err == nil && d > 0 {
+					retentionDays = d
+				}
+			}
+			s.Prune(time.Duration(retentionDays) * 24 * time.Hour)
+
+		case <-maintTicker.C:
+			// Automated maintenance: Vacuum if fragmented > 25%
+			if frag := s.GetFragmentation(); frag > 25 {
+				LogInfo("Storage: High fragmentation detected (%.1f%%). Running Vacuum.", frag)
+				_ = s.Vacuum()
+			}
+
 		case <-s.closeCh:
 			return
 		}
 	}
+}
+
+// Vacuum rebuilds the database to reclaim space.
+func (s *Storage) Vacuum() error {
+	_, err := s.db.Exec(`VACUUM`)
+	return err
+}
+
+// Analyze updates query statistics.
+func (s *Storage) Analyze() error {
+	_, err := s.db.Exec(`ANALYZE`)
+	return err
+}
+
+// GetFragmentation calculates the percentage of free pages in the database.
+func (s *Storage) GetFragmentation() float64 {
+	var freeCount, pageCount int
+	_ = s.db.QueryRow(`PRAGMA freelist_count`).Scan(&freeCount)
+	_ = s.db.QueryRow(`PRAGMA page_count`).Scan(&pageCount)
+	if pageCount == 0 {
+		return 0
+	}
+	return (float64(freeCount) / float64(pageCount)) * 100
 }
 
 // ── Metrics CRUD ────────────────────────────────────────────────────────────
@@ -502,19 +667,28 @@ func (s *Storage) GetMetricHistoryWithTimestamps(name string, limit int) ([]Metr
 
 // ── Logs CRUD ───────────────────────────────────────────────────────────────
 
-// InsertLog persists a log entry.
-// NOTE: mu is NOT held across the db.Exec call to prevent a deadlock
-// between Close() (which needs mu.Lock()) and a blocking db.Exec.
+// InsertLog enqueues a log entry for asynchronous batch write.
 func (s *Storage) InsertLog(level, module, message string) error {
 	s.mu.RLock()
-	closed := s.closed
-	s.mu.RUnlock()
-	if closed {
+	defer s.mu.RUnlock()
+	if s.closed {
 		return fmt.Errorf("storage closed")
 	}
-	query := `INSERT INTO logs (level, module, message, timestamp) VALUES (?, ?, ?, ?)`
-	_, err := s.db.Exec(query, level, module, message, time.Now().UTC().Format(time.RFC3339))
-	return err
+
+	l := LogWrite{
+		Level:   level,
+		Module:  module,
+		Message: message,
+		Time:    time.Now(),
+	}
+
+	select {
+	case s.logsCh <- l:
+		return nil
+	default:
+		// Channel full — drop log to avoid blocking
+		return fmt.Errorf("logs queue full")
+	}
 }
 
 // QueryLogs retrieves filtered logs from the database.
@@ -1115,6 +1289,315 @@ func (s *Storage) ListSessions() ([]map[string]interface{}, error) {
 func (s *Storage) DeleteSession(sessionID string) error {
 	_, err := s.db.Exec(`DELETE FROM conversations WHERE session_id = ?`, sessionID)
 	return err
+}
+
+// ── Settings Persistence ───────────────────────────────────────────────────
+
+// UpsertSetting inserts or updates a key-value setting.
+func (s *Storage) UpsertSetting(key, value string) error {
+	_, err := s.db.Exec(
+		`INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+		 ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`,
+		key, value,
+	)
+	return err
+}
+
+// ── Forensics Persistence ──────────────────────────────────────────────────
+
+// ForensicRecord holds a structured forensic snapshot.
+type ForensicRecord struct {
+	ID        string `json:"id"`
+	Timestamp string `json:"timestamp"`
+	Type      string `json:"type"`
+	Title     string `json:"title"`
+	DataJSON  string `json:"data_json"`
+	Metadata  string `json:"metadata"`
+}
+
+// InsertForensic stores a new forensic snapshot.
+func (s *Storage) InsertForensic(r ForensicRecord) error {
+	_, err := s.db.Exec(
+		`INSERT INTO forensics (id, timestamp, type, title, data_json, metadata) VALUES (?, ?, ?, ?, ?, ?)`,
+		r.ID, r.Timestamp, r.Type, r.Title, r.DataJSON, r.Metadata,
+	)
+	return err
+}
+
+// ListForensics returns a summary list of all snapshots.
+func (s *Storage) ListForensics() ([]ForensicRecord, error) {
+	rows, err := s.db.Query(`SELECT id, timestamp, type, title FROM forensics ORDER BY timestamp DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var res []ForensicRecord
+	for rows.Next() {
+		var r ForensicRecord
+		if err := rows.Scan(&r.ID, &r.Timestamp, &r.Type, &r.Title); err != nil {
+			return nil, err
+		}
+		res = append(res, r)
+	}
+	return res, nil
+}
+
+// GetForensic retrieves a full snapshot by ID.
+func (s *Storage) GetForensic(id string) (*ForensicRecord, error) {
+	var r ForensicRecord
+	err := s.db.QueryRow(`SELECT id, timestamp, type, title, data_json, metadata FROM forensics WHERE id = ?`, id).
+		Scan(&r.ID, &r.Timestamp, &r.Type, &r.Title, &r.DataJSON, &r.Metadata)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &r, err
+}
+
+// ── Reports Persistence ────────────────────────────────────────────────────
+
+// ReportRecord holds a persisted diagnostic or security report.
+type ReportRecord struct {
+	ID        string `json:"id"`
+	Timestamp string `json:"timestamp"`
+	Type      string `json:"type"` // "health", "security"
+	Score     int    `json:"score"`
+	DataJSON  string `json:"data_json"`
+}
+
+// InsertReport stores a new diagnostic report.
+func (s *Storage) InsertReport(r ReportRecord) error {
+	_, err := s.db.Exec(
+		`INSERT INTO reports (id, timestamp, type, score, data_json) VALUES (?, ?, ?, ?, ?)`,
+		r.ID, r.Timestamp, r.Type, r.Score, r.DataJSON,
+	)
+	return err
+}
+
+// ListReportsByType returns all reports of a specific type.
+func (s *Storage) ListReportsByType(reportType string) ([]ReportRecord, error) {
+	rows, err := s.db.Query(`SELECT id, timestamp, type, score FROM reports WHERE type = ? ORDER BY timestamp DESC`, reportType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var res []ReportRecord
+	for rows.Next() {
+		var r ReportRecord
+		if err := rows.Scan(&r.ID, &r.Timestamp, &r.Type, &r.Score); err != nil {
+			return nil, err
+		}
+		res = append(res, r)
+	}
+	return res, nil
+}
+
+// ListAllReports returns all reports across all types, newest first.
+func (s *Storage) ListAllReports() ([]ReportRecord, error) {
+	rows, err := s.db.Query(`SELECT id, timestamp, type, score FROM reports ORDER BY timestamp DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var res []ReportRecord
+	for rows.Next() {
+		var r ReportRecord
+		if err := rows.Scan(&r.ID, &r.Timestamp, &r.Type, &r.Score); err != nil {
+			return nil, err
+		}
+		res = append(res, r)
+	}
+	return res, nil
+}
+
+// GetReport retrieves a full report by ID.
+func (s *Storage) GetReport(id string) (*ReportRecord, error) {
+	var r ReportRecord
+	err := s.db.QueryRow(`SELECT id, timestamp, type, score, data_json FROM reports WHERE id = ?`, id).
+		Scan(&r.ID, &r.Timestamp, &r.Type, &r.Score, &r.DataJSON)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &r, err
+}
+
+// DeleteReport removes a report by ID.
+func (s *Storage) DeleteReport(id string) error {
+	_, err := s.db.Exec(`DELETE FROM reports WHERE id = ?`, id)
+	return err
+}
+
+// ── Baselines Persistence ──────────────────────────────────────────────────
+
+// BaselineEntry holds the statistical ground truth for a metric.
+type BaselineEntry struct {
+	Metric      string    `json:"metric"`
+	Avg         float64   `json:"avg"`
+	StdDev      float64   `json:"stddev"`
+	LastUpdated time.Time `json:"last_updated"`
+}
+
+// UpsertBaseline updates or inserts a baseline record.
+func (s *Storage) UpsertBaseline(b BaselineEntry) error {
+	_, err := s.db.Exec(
+		`INSERT INTO baselines (metric, avg, stddev, last_updated) VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+		 ON CONFLICT(metric) DO UPDATE SET avg = excluded.avg, stddev = excluded.stddev, last_updated = CURRENT_TIMESTAMP`,
+		b.Metric, b.Avg, b.StdDev,
+	)
+	return err
+}
+
+// GetBaseline retrieves the baseline for a metric.
+func (s *Storage) GetBaseline(metric string) (*BaselineEntry, error) {
+	var b BaselineEntry
+	err := s.db.QueryRow(`SELECT metric, avg, stddev, last_updated FROM baselines WHERE metric = ?`, metric).
+		Scan(&b.Metric, &b.Avg, &b.StdDev, &b.LastUpdated)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &b, err
+}
+
+// ── Health Scorecard Persistence ──────────────────────────────────────────
+
+// UpsertHealthScore stores the health score for the current day.
+func (s *Storage) UpsertHealthScore(score int) error {
+	day := time.Now().Format("2006-01-02")
+	_, err := s.db.Exec(
+		`INSERT INTO health_scores (day, score, timestamp) VALUES (?, ?, CURRENT_TIMESTAMP)
+		 ON CONFLICT(day) DO UPDATE SET score = excluded.score, timestamp = CURRENT_TIMESTAMP`,
+		day, score,
+	)
+	return err
+}
+
+// GetHealthScoreTrend returns scores for the last N days.
+func (s *Storage) GetHealthScoreTrend(days int) (map[string]int, error) {
+	rows, err := s.db.Query(`SELECT day, score FROM health_scores ORDER BY day DESC LIMIT ?`, days)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	res := make(map[string]int)
+	for rows.Next() {
+		var day string
+		var score int
+		if err := rows.Scan(&day, &score); err != nil {
+			return nil, err
+		}
+		res[day] = score
+	}
+	return res, nil
+}
+
+// ── Custom Workflows Persistence ──────────────────────────────────────────
+
+// UpsertCustomWorkflow saves or updates a user-defined workflow.
+func (s *Storage) UpsertCustomWorkflow(id, name, desc, jsonDef string) error {
+	_, err := s.db.Exec(
+		`INSERT INTO custom_workflows (id, name, description, definition_json, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+		 ON CONFLICT(id) DO UPDATE SET name=excluded.name, description=excluded.description, definition_json=excluded.definition_json, updated_at=CURRENT_TIMESTAMP`,
+		id, name, desc, jsonDef,
+	)
+	return err
+}
+
+// ListCustomWorkflows returns all user-defined workflows.
+func (s *Storage) ListCustomWorkflows() ([]map[string]string, error) {
+	rows, err := s.db.Query(`SELECT id, name, description, definition_json FROM custom_workflows ORDER BY updated_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var res []map[string]string
+	for rows.Next() {
+		var id, name, desc, def string
+		if err := rows.Scan(&id, &name, &desc, &def); err != nil {
+			return nil, err
+		}
+		res = append(res, map[string]string{"id": id, "name": name, "description": desc, "definition": def})
+	}
+	return res, nil
+}
+
+// DeleteCustomWorkflow removes a workflow from the database.
+func (s *Storage) DeleteCustomWorkflow(id string) error {
+	_, err := s.db.Exec(`DELETE FROM custom_workflows WHERE id = ?`, id)
+	return err
+}
+
+// ── Incidents Persistence ──────────────────────────────────────────────────
+
+// IncidentRecord holds a consolidated record of correlated alerts and diagnostics.
+type IncidentRecord struct {
+	ID        string   `json:"id"`
+	Timestamp string   `json:"timestamp"`
+	Title     string   `json:"title"`
+	Details   string   `json:"details"`
+	ReportIDs []string `json:"report_ids"`
+	Severity  string   `json:"severity"`
+}
+
+// InsertIncident stores a new incident record.
+func (s *Storage) InsertIncident(r IncidentRecord) error {
+	reports := strings.Join(r.ReportIDs, ",")
+	_, err := s.db.Exec(
+		`INSERT INTO incidents (id, timestamp, title, details, report_ids, severity) VALUES (?, ?, ?, ?, ?, ?)`,
+		r.ID, r.Timestamp, r.Title, r.Details, reports, r.Severity,
+	)
+	return err
+}
+
+// ListIncidents returns a summary of all incidents.
+func (s *Storage) ListIncidents() ([]IncidentRecord, error) {
+	rows, err := s.db.Query(`SELECT id, timestamp, title, severity FROM incidents ORDER BY timestamp DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var res []IncidentRecord
+	for rows.Next() {
+		var r IncidentRecord
+		if err := rows.Scan(&r.ID, &r.Timestamp, &r.Title, &r.Severity); err != nil {
+			return nil, err
+		}
+		res = append(res, r)
+	}
+	return res, nil
+}
+
+// GetSetting retrieves a setting value by key.
+func (s *Storage) GetSetting(key string) (string, error) {
+	var value string
+	err := s.db.QueryRow(`SELECT value FROM settings WHERE key = ?`, key).Scan(&value)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	return value, err
+}
+
+// ListSettings returns all persisted settings.
+func (s *Storage) ListSettings() (map[string]string, error) {
+	rows, err := s.db.Query(`SELECT key, value FROM settings`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	res := make(map[string]string)
+	for rows.Next() {
+		var k, v string
+		if err := rows.Scan(&k, &v); err != nil {
+			return nil, err
+		}
+		res[k] = v
+	}
+	return res, nil
 }
 
 func boolToInt(b bool) int {

@@ -71,11 +71,12 @@ describe('Logs Page', () => {
     })
   })
 
-  it('shows Overview and Live Stream tabs', async () => {
+  it('shows Overview, Live Stream, and Audit tabs', async () => {
     render(<Logs />)
     await waitFor(() => {
       expect(screen.getByText('Overview')).toBeInTheDocument()
       expect(screen.getByText('Live Stream')).toBeInTheDocument()
+      expect(screen.getByText('Audit')).toBeInTheDocument()
     })
   })
 })

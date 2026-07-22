@@ -1,8 +1,12 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
+	"time"
+
+	"github.com/yusufpapurcu/wmi"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/sysops"
@@ -134,13 +138,24 @@ func (s *SysOps) GetGPUInfo() GPUInfo {
 	if gpu == nil || !gpu.Detected {
 		return GPUInfo{Detected: false}
 	}
-	return GPUInfo{
+
+	stats := sysops.GetGPUStats()
+
+	out := GPUInfo{
 		Name:     gpu.Name,
 		Vendor:   gpu.Vendor,
 		MemoryGB: float64(gpu.Memory) / (1024 * 1024 * 1024),
 		Driver:   gpu.Driver,
 		Detected: true,
 	}
+
+	if stats != nil {
+		out.Temperature = stats.Temperature
+		out.Utilization = stats.Utilization
+		out.FanSpeed = stats.FanSpeed
+	}
+
+	return out
 }
 
 // GetBatteryInfo returns battery status information.
@@ -170,6 +185,61 @@ func (f *sysopsFacade) CollectAllStats() (*common.SystemStats, error) {
 // ListAllProcesses returns all processes by CPU usage.
 func (s *SysOps) ListAllProcesses(limit int) []ProcessInfo {
 	return s.GetTopProcesses(limit)
+}
+
+// ProcessNode represents a process in a tree structure for visualization.
+type ProcessNode struct {
+	ProcessInfo
+	Children []ProcessNode `json:"children,omitempty"`
+}
+
+// GetProcessTreeGraph returns a recursive hierarchical structure of processes.
+func (s *SysOps) GetProcessTreeGraph() ProcessNode {
+	procs, err := sysops.GetTopProcesses(0) // Get all for full mapping
+	if err != nil {
+		return ProcessNode{}
+	}
+
+	// 1. Create lookup map
+	nodes := make(map[int32]*ProcessNode)
+	for _, p := range procs {
+		nodes[p.PID] = &ProcessNode{
+			ProcessInfo: ProcessInfo{
+				PID:    p.PID,
+				PPID:   p.PPID,
+				Name:   p.Name,
+				CPU:    p.CPU,
+				Memory: p.Memory,
+				MemPct: p.MemPct,
+				Status: p.Status,
+				NumFDs: p.NumFDs,
+			},
+		}
+	}
+
+	// 2. Build tree and identify root (System Idle or first available)
+	var root *ProcessNode
+	for _, n := range nodes {
+		if parent, ok := nodes[n.PPID]; ok && n.PID != n.PPID {
+			parent.Children = append(parent.Children, *n)
+		} else if root == nil || n.PID == 0 || n.PID == 4 {
+			// PID 0 (Idle) or 4 (System) are common roots on Windows
+			root = n
+		}
+	}
+
+	if root == nil && len(nodes) > 0 {
+		// Fallback to first node if no clear root found
+		for _, n := range nodes {
+			root = n
+			break
+		}
+	}
+
+	if root == nil {
+		return ProcessNode{}
+	}
+	return *root
 }
 
 // GetProcessTree returns processes grouped/sorted by CPU.
@@ -261,30 +331,6 @@ func (s *SysOps) GetRecommendations() []SystemRecommendation {
 	return recs
 }
 
-// GetCPUExtended returns extended CPU information.
-func (s *SysOps) GetCPUExtended() CPUExtendedInfo {
-	stats, err := sysops.GetCPUExtended()
-	if err != nil {
-		common.LogWarn("GetCPUExtended failed: %v", err)
-		return CPUExtendedInfo{}
-	}
-	perCPU := make([]PerCPUInfoData, 0, len(stats.PerCPUInfo))
-	for _, p := range stats.PerCPUInfo {
-		perCPU = append(perCPU, PerCPUInfoData{
-			Core:      p.Core,
-			Frequency: p.Frequency,
-			Usage:     p.Usage,
-		})
-	}
-	return CPUExtendedInfo{
-		ModelName:    stats.ModelName,
-		FrequencyMHz: stats.FrequencyMHz,
-		CacheSizeKB:  stats.CacheSizeKB,
-		Temperature:  stats.Temperature,
-		PerCPUInfo:   perCPU,
-	}
-}
-
 // GetDiskIO returns disk I/O throughput statistics.
 func (s *SysOps) GetDiskIO() DiskIOData {
 	stats, err := sysops.GetDiskIO()
@@ -353,21 +399,130 @@ func (s *SysOps) GetPerformanceStats() PerformanceData {
 	}
 }
 
-// RunSystemAction executes a system action.
-func (s *SysOps) RunSystemAction(action string) ActionResult {
+// RunSystemAction requests a safety handshake for a system-level action.
+func (s *SysOps) RunSystemAction(action string) common.ActionPreview {
+	command := ""
+	description := ""
+	risks := []string{"Potential temporary service disruption"}
+	rollback := "N/A"
+
+	switch action {
+	case "flush_dns":
+		command = "ipconfig /flushdns"
+		description = "Flush the system DNS resolver cache"
+	case "clear_arp":
+		command = "arp -d *"
+		description = "Clear the system ARP table"
+	case "disk_cleanup":
+		command = "cleanmgr /sagerun:1"
+		description = "Run Windows Disk Cleanup utility"
+		risks = []string{"Removal of temporary system and update files"}
+	case "defrag":
+		command = "defrag C: /O"
+		description = "Optimize and defragment primary drive"
+		risks = []string{"Significant disk I/O load during operation"}
+	case "reboot":
+		command = "shutdown /r /t 0"
+		description = "Restart the workstation immediately"
+		risks = []string{"Unsaved data will be lost", "All active sessions will terminate"}
+		rollback = "Manual physical restart if it fails to boot"
+	case "shutdown":
+		command = "shutdown /s /t 0"
+		description = "Shutdown the workstation immediately"
+		risks = []string{"Unsaved data will be lost", "Remote access will be terminated"}
+	default:
+		command = fmt.Sprintf("Action: %s", action)
+		description = fmt.Sprintf("Execute system action: %s", action)
+	}
+
+	id := common.GetHandshakeRegistry().Register(action, command, map[string]interface{}{"action": action})
+	return common.ActionPreview{
+		HandshakeID: id,
+		Action:      action,
+		Command:     command,
+		Description: description,
+		Risks:       risks,
+		Rollback:    rollback,
+	}
+}
+
+// executeSystemAction executes the actual system action.
+func (s *SysOps) executeSystemAction(action string) common.SecActionResult {
 	result, err := sysops.RunSystemAction(sysops.SystemAction(action))
 	if err != nil {
-		return ActionResult{
-			Action:  action,
-			Success: false,
-			Message: err.Error(),
+		return common.SecActionResult{Success: false, Error: err.Error()}
+	}
+	return common.SecActionResult{Success: result.Success, Message: result.Message}
+}
+
+// GetHardwareInfo returns comprehensive workstation telemetry.
+func (s *SysOps) GetHardwareInfo() HardwareInfo {
+	cpu := s.GetCPUExtended()
+	gpu := s.GetGPUInfo()
+	battery := s.GetBatteryInfo()
+
+	// Baseboard info
+	var board BaseboardInfo
+	if b := sysops.GetBaseboardInfo(); b != nil {
+		board = BaseboardInfo{
+			Manufacturer: b.Manufacturer,
+			Product:      b.Product,
+			Version:      b.Version,
+			SerialNumber: b.SerialNumber,
 		}
 	}
-	return ActionResult{
-		Action:  result.Action,
-		Success: result.Success,
-		Message: result.Message,
-		Output:  result.Output,
+
+	// Sensors
+	var sensors []SensorData
+	if common.IsWindows() {
+		// Attempt to get Fan speeds from Libre
+		type Sensor struct {
+			Name  string
+			Value float64
+			Unit  string
+		}
+		var dst []Sensor
+		_ = wmi.QueryNamespace("SELECT Name, Value FROM Sensor WHERE SensorType='Fan' OR SensorType='Temperature'", &dst, "root\\LibreHardwareMonitor")
+		for _, s := range dst {
+			sensors = append(sensors, SensorData{
+				Name:  s.Name,
+				Type:  "Sensor",
+				Value: s.Value,
+				Unit:  "RPM", // Fans are usually RPM, temp handled separately in UI but we can generalize
+			})
+		}
+	}
+
+	return HardwareInfo{
+		CPU:       cpu,
+		GPU:       gpu,
+		Battery:   battery,
+		Baseboard: board,
+		Sensors:   sensors,
+	}
+}
+
+// GetCPUExtended returns extended CPU details.
+func (s *SysOps) GetCPUExtended() CPUExtendedInfo {
+	stats, err := sysops.GetCPUExtended()
+	if err != nil {
+		common.LogWarn("GetCPUExtended failed: %v", err)
+		return CPUExtendedInfo{}
+	}
+	perCPU := make([]PerCPUInfoData, 0, len(stats.PerCPUInfo))
+	for _, p := range stats.PerCPUInfo {
+		perCPU = append(perCPU, PerCPUInfoData{
+			Core:      p.Core,
+			Frequency: p.Frequency,
+			Usage:     p.Usage,
+		})
+	}
+	return CPUExtendedInfo{
+		ModelName:    stats.ModelName,
+		FrequencyMHz: stats.FrequencyMHz,
+		CacheSizeKB:  stats.CacheSizeKB,
+		Temperature:  stats.Temperature,
+		PerCPUInfo:   perCPU,
 	}
 }
 
@@ -430,18 +585,60 @@ func (s *SysOps) RunExtendedDiagnostics() ExtendedDiagnosticResult {
 			Value:   c.Value,
 		})
 	}
-	return ExtendedDiagnosticResult{
+
+	out := ExtendedDiagnosticResult{
 		Checks:    checks,
 		Score:     result.Score,
 		Timestamp: result.Timestamp,
 	}
+
+	// PERSIST: Save to reports table
+	storage := common.GetStorage()
+	if storage != nil {
+		data, _ := json.Marshal(out)
+		id := fmt.Sprintf("health-%d", time.Now().Unix())
+		_ = storage.InsertReport(common.ReportRecord{
+			ID:        id,
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			Type:      "health",
+			Score:     out.Score,
+			DataJSON:  string(data),
+		})
+	}
+
+	return out
+}
+
+// ListHistoricalHealthReports returns summary of all persisted health diagnostics.
+func (s *SysOps) ListHistoricalHealthReports() []common.ReportRecord {
+	storage := common.GetStorage()
+	if storage == nil {
+		return []common.ReportRecord{}
+	}
+	reports, _ := storage.ListReportsByType("health")
+	return reports
+}
+
+// GetHistoricalHealthReport retrieves a specific health diagnostic by ID.
+func (s *SysOps) GetHistoricalHealthReport(id string) (ExtendedDiagnosticResult, error) {
+	storage := common.GetStorage()
+	if storage == nil {
+		return ExtendedDiagnosticResult{}, fmt.Errorf("storage unavailable")
+	}
+	r, err := storage.GetReport(id)
+	if err != nil || r == nil {
+		return ExtendedDiagnosticResult{}, fmt.Errorf("report not found")
+	}
+	var res ExtendedDiagnosticResult
+	err = json.Unmarshal([]byte(r.DataJSON), &res)
+	return res, err
 }
 
 // executeRestartService restarts a system service (internal use for handshake).
-func (s *SysOps) executeRestartService(name string) SecActionResult {
+func (s *SysOps) executeRestartService(name string) common.SecActionResult {
 	result, err := sysops.RestartService(name)
 	if err != nil {
-		return SecActionResult{Success: false, Message: err.Error()}
+		return common.SecActionResult{Success: false, Message: err.Error()}
 	}
-	return SecActionResult{Success: result.Success, Message: result.Message}
+	return common.SecActionResult{Success: result.Success, Message: result.Message}
 }

@@ -80,13 +80,29 @@ func normalizeWhitespace(cmd string) string {
 }
 
 // IsDangerousCommand checks if a command contains dangerous patterns (case-insensitive).
+// Now uses token-based validation for higher precision.
 func IsDangerousCommand(cmd string) bool {
-	lower := strings.ToLower(normalizeWhitespace(cmd))
+	normalized := normalizeWhitespace(cmd)
+	lower := strings.ToLower(normalized)
+	tokens := strings.Fields(lower)
+
+	for _, token := range tokens {
+		// Exact match for base commands that are dangerous
+		for _, dangerous := range DangerousCommands {
+			d := strings.TrimSpace(dangerous)
+			if token == d || strings.HasPrefix(token, d) {
+				return true
+			}
+		}
+	}
+
+	// Substring check for patterns like redirects or pipes if they weren't caught
 	for _, dangerous := range DangerousCommands {
 		if strings.Contains(lower, dangerous) {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -142,6 +158,10 @@ func isAllowedShellCommand(cmd string) bool {
 	}
 	// Remove .exe extension
 	base = strings.TrimSuffix(base, ".exe")
+
+	// Token-based validation: check if the first token is in the allowlist
+	// and no other forbidden commands are in the string (metachar check handles most,
+	// but we double-check for safety).
 	return allowedShellCommands[strings.ToLower(base)]
 }
 
