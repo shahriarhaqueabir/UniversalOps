@@ -1,0 +1,24 @@
+{
+    "chat.agent.maxRequests": 500,
+    "chat.tools.terminal.autoApprove": {
+        "cargo check": true,
+        "go test": true,
+        "go vet": true,
+        "golangci-lint": true,
+        "npm test": true,
+        "npm run lint": true,
+        "npm run build": true,
+        "wails build": true
+    },
+    "chat.tools.terminal.denyList": [
+        "rm -rf",
+        "git push --force",
+        "git reset --hard",
+        "DROP TABLE",
+        "DROP DATABASE",
+        "DELETE FROM",
+        "TRUNCATE",
+        "sudo",
+        "chmod 777"
+    ]
+}
