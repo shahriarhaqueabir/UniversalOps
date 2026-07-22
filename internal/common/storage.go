@@ -920,6 +920,14 @@ func (s *Storage) Prune(olderThan time.Duration) {
 	tx.Exec(`DELETE FROM events WHERE timestamp < ?`, cutoff)
 	tx.Exec(`DELETE FROM alerts WHERE timestamp < ? AND resolved = 1`, cutoff)
 	tx.Exec(`DELETE FROM conversations WHERE timestamp < ?`, cutoff)
+	tx.Exec(`DELETE FROM forensics WHERE timestamp < ?`, cutoff)
+	tx.Exec(`DELETE FROM reports WHERE timestamp < ?`, cutoff)
+	tx.Exec(`DELETE FROM incidents WHERE timestamp < ?`, cutoff)
+	tx.Exec(`DELETE FROM health_scores WHERE timestamp < ?`, cutoff)
+	tx.Exec(`DELETE FROM forensics WHERE timestamp < ?`, cutoff)
+	tx.Exec(`DELETE FROM reports WHERE timestamp < ?`, cutoff)
+	tx.Exec(`DELETE FROM incidents WHERE timestamp < ?`, cutoff)
+	tx.Exec(`DELETE FROM health_scores WHERE timestamp < ?`, cutoff)
 
 	if err := tx.Commit(); err != nil {
 		LogWarn("Prune tx commit failed: %v", err)
