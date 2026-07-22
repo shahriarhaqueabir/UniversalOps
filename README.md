@@ -1,147 +1,70 @@
-# OpsForAll Operations Platform
+# Universal-Ops: High-Performance Native Operations Dashboard for Windows
 
-[![Version](https://img.shields.io/badge/version-v1.3.0-7c6cff)](https://github.com/shahriarhaqueabir/AllOpsFull/releases)
-[![Go](https://img.shields.io/badge/Go-1.26.5-00ADD8)](https://go.dev/)
-[![React](https://img.shields.io/badge/React-19-61DAFB)](https://react.dev/)
+[![Version](https://img.shields.io/badge/version-v1.3.1-7c6cff)](https://github.com/shahriarhaqueabir/AllOpsFull/releases)
 [![License](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20|%20macOS%20|%20Linux-6366f1)](#provisioning)
+[![Local-First](https://img.shields.io/badge/Privacy-100%25%20Local-blue)](docs/ARCHITECTURE.md)
+[![AI-Powered](https://img.shields.io/badge/AI-Ollama%20Integrated-orange)](docs/INSTALL.md)
 
-A high-density operational intelligence suite for systems, network, and security auditing. **100% Private. 100% Local. Zero Cloud.**
+**Universal-Ops** is a native desktop studio designed for SREs, developers, and security enthusiasts who require instant, high-density telemetry without the latency or privacy risks of cloud-based monitoring.
 
-> ⚠️ **Release Access**: Assets are built via CI. Access the latest binaries on the [Releases](https://github.com/shahriarhaqueabir/AllOpsFull/releases) page.
-
-```
-  ── PHILOSOPHY ────────────────────────────────────────────────────────────
-  OpsForAll is a private operations studio built for technical depth. 
-  It provides a dense ecosystem of system, security, and network tools 
-  that run entirely on your local hardware.
-
-  • 100% LOCAL: Your data never leaves your hardware.
-  • TECHNICAL: Deep access to kernel-level metrics.
-  • PRIVATE: Zero telemetry. Zero cloud. Zero accounts.
-  ──────────────────────────────────────────────────────────────────────────
-```
-
-## Why OpsForAll?
-
-OpsForAll replaces fragmented CLI tools with a unified, high-performance native dashboard. It's designed for SREs, SysAdmins, and security enthusiasts who require **instant telemetry** without the latency or privacy risks of cloud-based monitoring.
+> [!IMPORTANT]
+> **100% Private. 100% Local. Zero Cloud.** Your data never leaves your hardware.
 
 ---
 
----
+## 🖥️ The Command Center Experience
+Universal-Ops replaces fragmented CLI tools with a unified, high-performance dashboard. It bridges the gap between raw kernel metrics and actionable intelligence using integrated local AI.
 
-## Technical Substrates
+### 🧩 Core Substrates
 
-| Dashboard | SysOps | NetOps |
-|---|---|---|
-| Real-time health gauges, CPU timeline, alert indicators | Per-core CPU, memory, disk monitoring, process management | Ping, DNS, connections, interfaces, traceroute, bandwidth |
-
----
-
-## Provisioning
-
-### Option 1: Standalone EXE (Quickest)
-
-1. Go to the **[Releases page](https://github.com/shahriarhaqueabir/AllOpsFull/releases)**
-2. Under **"Assets"** for the latest release, click the file named:
-   - **Windows**: `opsforall-v1.3.0-windows-amd64.exe` (~14 MB)
-   - **macOS**: `opsforall-v1.3.0-darwin-universal`
-   - **Linux**: `opsforall-v1.3.0-linux-amd64`
-3. **Double-click** the downloaded file to launch
-
-> ⚠️ **Windows SmartScreen**: The first time you run it, Windows may show "Windows protected your PC". Click **"More info"** → **"Run anyway"**. This happens because the binary is not yet code-signed.
-
-### Option 2: NSIS Installer (Windows only)
-
-If you prefer a proper installer with Start Menu shortcuts:
-
-1. On the Releases page, download `opsforall-v1.3.0-windows-amd64-installer.exe`
-2. Double-click the installer
-3. Follow the setup wizard
+| Layer | Focus | Key Capabilities |
+| :--- | :--- | :--- |
+| **SysOps** | Infrastructure | Per-core CPU, Memory pressure, Disk throughput, Thermal envelopes. |
+| **NetOps** | Connectivity | Real-time ICMP Jitter, DNS Audit, Port Scanning, Traffic Attribution. |
+| **SecOps** | Hardening | Firewall intelligence, Identity Audit, Elevated Privilege tracking. |
+| **DevOps** | Automation | Service orchestration, Sandboxed Terminal, Process Impact analysis. |
+| **AIOps** | Intelligence | Autonomous Root Cause Analysis (RCA) and Technical Briefings via **Ollama**. |
 
 ---
 
-## Quick Reference Manual
+## 🚀 Quick Start
+Ready to build your observation command center?
 
-### 🖥️ SYSTEM SUBSTRATE
-- **Core Health**: Kernel-level audit of CPU, RAM, and processes.
-- **Compute Audit**: Distinction between Physical Cores and Logical Threads.
-- **Load Saturation**: Real-time Saturation Index (Load Avg relative to core count).
-- **Process Management**: Runtime audit with PID tracking and impact assessment.
+1.  **Download**: Get the latest `.exe` from [Releases](https://github.com/shahriarhaqueabir/AllOpsFull/releases).
+2.  **Initialize**: Follow the **Interactive Onboarding Wizard** to link local tools.
+3.  **Optimize**: Connect [Ollama](https://ollama.com) for local AI briefings.
 
-### 🌐 NETWORK MATRIX
-- **ICMP Triage**: Internet reachability, jitter calculation, and latency history.
-- **DNS Audit**: Multi-resolver benchmark and cache poisoning verification.
-- **Port Scan**: Concurrent TCP connection attempts (Optimized ~200ms).
-- **Routing**: Sequential ICMP TTL-incrementing probes (Traceroute).
-- **Bandwidth**: Real-time throughput monitoring with historical sparklines.
-
-### 🛡️ SECURITY MATRIX
-- **Firewall Intelligence**: Cross-reference active rules with open listeners.
-- **Identity Audit**: Enumerate local accounts with elevated privileges.
-- **Listener Audit**: Flag processes listening on external interfaces (0.0.0.0).
-- **Endpoint Intel**: Real-time Windows Defender and security event monitoring.
-
-### 🧠 LOCAL INTELLIGENCE
-- **Ollama Pipeline**: Integrated local-only LLM processing.
-- **Heuristic Synthesis**: Statistical analysis of log data into technical briefings.
-- **Anomaly Triage**: Detection of metric deviations via rolling window history.
-- **Secret Masking**: Automated redaction of sensitive tokens from all reports.
+**Detailed Installation Guide**: [Read the Manual](./docs/INSTALL.md)
 
 ---
 
-## Architecture
-
-```
-┌─────────────────────────────────────────────────┐
-│              Wails v2 Desktop App                │
-│  ┌───────────────────────────────────────────┐  │
-│  │        Go Backend (Wails Bindings)         │  │
-│  │  Dashboard · SysOps · NetOps · SecOps     │  │
-│  │  DevOps · AIOps · Pipeline · Alerts       │  │
-│  │                                           │  │
-│  │  DataPipeline (3s tick) → SQLite (WAL)    │  │
-│  │  AlertEngine → Events → Wails runtime     │  │
-│  └───────────────────────────────────────────┘  │
-│                        │                        │
-│              Wails Bridge (IPC)                 │
-│                        │                        │
-│  ┌───────────────────────────────────────────┐  │
-│  │     React + TypeScript + Vite (Frontend)   │  │
-│  │  Ops Core Design · Recharts · Lucide       │  │
-│  │  Tailwind v4 · Radix UI                    │  │
-│  └───────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────┘
-```
-
-- **Backend**: Go (Wails v2 bindings with gopsutil/v4, miekg/dns, modernc.org/sqlite)
-- **Frontend**: React (TypeScript, Vite, Tailwind v4, Recharts, Lucide React)
-- **Database**: `allopsfull.db` — SQLite with WAL mode and 7-day retention.
+## 🧠 Local Intelligence (Hawk)
+Universal-Ops features **Hawk**, a built-in AI analyst powered by local LLMs.
+- **Statistical Grounding**: No hallucination. Hawk analyzes summarized telemetry data.
+- **Root Cause Analysis**: Jump from a CPU spike anomaly directly to a technical briefing.
+- **Contextual Awareness**: 32k context window for long-horizon system event correlation.
 
 ---
 
-## Development
+## 🛠️ Architecture
+Built for performance and portability.
+- **Backend**: Go (Wails v2 bindings) using `gopsutil/v4`, `yusufpapurcu/wmi`, and `modernc.org/sqlite`.
+- **Frontend**: React 19 + TypeScript + Tailwind v4 + Radix UI.
+- **Storage**: SQLite with WAL (Write-Ahead Logging) for high-frequency time-series data.
 
-### Prerequisites
+**Full Architecture Deep-Dive**: [Documentation](./docs/ARCHITECTURE.md)
 
-- Go 1.26+
-- Node.js & npm
-- Wails CLI (`go install github.com/wailsapp/wails/v2/cmd/wails@latest`)
+---
 
-### Commands
+## 🤝 Contributing
+We welcome contributions to enhance the Command Center.
+- Review our [Contributing Guide](CONTRIBUTING.md).
+- Join the discussion in [Issues](https://github.com/shahriarhaqueabir/AllOpsFull/issues).
 
-```bash
-# Start development mode
-wails dev
+---
 
-# Build production binary
-wails build
+## 📄 License
+Distributed under the MIT License. See `LICENSE` for more information.
 
-# Run tests
-go test ./internal/...
-npm test --prefix cmd/opsforall-gui/frontend
-```
-
-## License
-
-MIT
+---
+*Developed for professionals who value speed, privacy, and technical depth.*

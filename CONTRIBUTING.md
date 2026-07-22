@@ -1,62 +1,47 @@
-# Contributing to OpsForAll
+# Contributing to Universal-Ops
 
-Thank you for considering contributing to OpsForAll! This document outlines the process for contributing to the project.
+Thank you for your interest in making Universal-Ops better! We aim to build the most robust, local-first operations platform for Windows workstation telemetry.
 
-## Code of Conduct
+## Core Philosophy
+1.  **Local-First**: No data leaves the machine. No telemetry to us, no cloud sync.
+2.  **Native-First**: Use built-in system tools (WMI, PowerShell, gopsutil) before adding external dependencies.
+3.  **High Density**: Information-rich, professional UIs. No "padding" or wasted space.
 
-Be respectful, constructive, and inclusive.
-
-## Prerequisites
-
-- **Go** 1.26+
-- **Node.js** 20+ and **npm**
+## Development Environment
+- **Go**: 1.26.5+
+- **Node.js**: 20+ (using npm)
 - **Wails CLI**: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
 
-## Getting Started
-
-1. Fork the repository
-2. Clone your fork: `git clone https://github.com/your-username/opsforall.git`
-3. Create a branch: `git checkout -b feat/your-feature-name`
-
-## Development Workflow
-
-### Quick Start
-
+### Running the App
 ```bash
-wails dev        # development with hot-reload
-wails build      # production binary
+# Frontend dependencies
+cd cmd/opsforall-gui/frontend && npm install
+
+# Start Dev Mode (Hot Reload for Go & React)
+wails dev
 ```
 
-### Testing
+## Contribution Process
+1.  **Fork** the repo and create your branch from `main`.
+2.  **Implement** your changes following the technical style.
+3.  **Test** thoroughly (see Testing section).
+4.  **Submit** a PR with a clear description of the value added.
 
+## Testing Standards
+Every PR must pass existing tests and include new ones for added features.
 ```bash
-go test ./internal/...                                          # backend tests
-npm test --prefix cmd/opsforall-gui/frontend                    # frontend tests
-npx tsc --noEmit --project cmd/opsforall-gui/frontend           # type check
+# Backend
+go test ./...
+
+# Frontend
+cd cmd/opsforall-gui/frontend && npm test
 ```
 
-### Linting
-
-```bash
-golangci-lint run ./...
-npm run lint --prefix cmd/opsforall-gui/frontend
-```
-
-## Pull Request Guidelines
-
-- Follow the existing technical style
-- Write tests for new functionality
-- Update documentation where applicable
-- Use [Conventional Commits](https://www.conventionalcommits.org/) format
-
-### Commit Format
-
-```
-<type>(<scope>): <description>
-```
-
-Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
-Scopes: `sysops`, `netops`, `secops`, `devops`, `aiops`, `common`, `frontend`, `docs`
+## Commit Conventions
+We use [Conventional Commits](https://www.conventionalcommits.org/):
+- `feat(sysops)`: add temperature tracking
+- `fix(ui)`: align grid cards on mobile
+- `docs(readme)`: update installation steps
 
 ## Project Structure
 

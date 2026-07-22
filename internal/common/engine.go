@@ -1,7 +1,6 @@
 package common
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -19,12 +18,22 @@ type MetricSnapshot struct {
 	Timestamp   time.Time
 }
 
+// WorkflowInvoker defines an interface for triggering operational workflows.
+type WorkflowInvoker interface {
+	TriggerWorkflow(id string) (string, error)
+}
+
 // EngineLoop handles the periodic evaluation of system health, alerts, and metrics.
-// It is decoupled from the UI framework (Wails) and can run in headless mode.
 type EngineLoop struct {
 	pipeline *DataPipeline
 	alerts   *AlertEngine
 	eventBus *EventBus
+
+	// New: Baseline drift detection
+	baselines *BaselinesEngine
+
+	// New: Autonomous workflow invocation
+	invoker WorkflowInvoker
 
 	// Callbacks for UI/External notification
 	OnMetricsEmit func(snapshot MetricSnapshot)
@@ -40,12 +49,14 @@ type EngineLoop struct {
 	storageLock *sync.RWMutex
 }
 
-func NewEngineLoop(p *DataPipeline, a *AlertEngine, eb *EventBus, sl *sync.RWMutex) *EngineLoop {
+func NewEngineLoop(p *DataPipeline, a *AlertEngine, eb *EventBus, sl *sync.RWMutex, invoker WorkflowInvoker) *EngineLoop {
 	return &EngineLoop{
 		pipeline:    p,
 		alerts:      a,
 		eventBus:    eb,
 		storageLock: sl,
+		baselines:   NewBaselinesEngine(p),
+		invoker:     invoker,
 		quit:        make(chan struct{}),
 	}
 }
@@ -59,15 +70,46 @@ func (e *EngineLoop) Start(interval time.Duration) {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 
+		// Recalculate baselines every hour
+		baseTicker := time.NewTicker(1 * time.Hour)
+		defer baseTicker.Stop()
+
 		for {
 			select {
 			case <-e.quit:
 				return
 			case <-ticker.C:
 				e.Step()
+			case <-baseTicker.C:
+				e.baselines.RecalculateBaselines()
+				e.DailyAnalysis()
 			}
 		}
 	}()
+}
+
+// DailyAnalysis calculates the persistent health scorecard.
+func (e *EngineLoop) DailyAnalysis() {
+	s := GetStorage()
+	if s == nil {
+		return
+	}
+
+	score := 100
+	metrics := []string{MetricCPU, MetricMem, MetricDisk}
+
+	for _, m := range metrics {
+		if drift, ok := e.baselines.DetectDrift(m); ok {
+			if drift.Severity == "high" {
+				score -= 15
+			} else if drift.Severity == "med" {
+				score -= 5
+			}
+		}
+	}
+
+	if score < 0 { score = 0 }
+	_ = s.UpsertHealthScore(score)
 }
 
 func (e *EngineLoop) Stop() {
@@ -85,24 +127,77 @@ func (e *EngineLoop) Step() {
 		defer e.storageLock.RUnlock()
 	}
 
-	// 2. Evaluate Alerts
-	newAlerts := e.alerts.Evaluate()
+	var newAlerts []Alert
+	var snapshot MetricSnapshot
 
-	// 3. Capture Snapshot
-	snapshot := e.CaptureSnapshot()
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	// 2. Evaluate Alerts (Lane 1)
+	go func() {
+		defer RecoverPanic()
+		defer wg.Done()
+		newAlerts = e.alerts.Evaluate()
+	}()
+
+	// 3. Capture Snapshot (Lane 2)
+	go func() {
+		defer RecoverPanic()
+		defer wg.Done()
+		snapshot = e.CaptureSnapshot()
+	}()
+
+	wg.Wait()
 
 	// 4. Update External State (Prometheus, etc)
 	e.UpdatePrometheus(snapshot)
 
-	// 5. Detect Spikes
+	// 5. Detect Spikes & Drift
 	e.DetectSpikes(snapshot)
+	e.DetectDrift()
 
 	// 6. Notify Callbacks
 	if e.OnMetricsEmit != nil {
 		e.OnMetricsEmit(snapshot)
 	}
-	if len(newAlerts) > 0 && e.OnAlertsEmit != nil {
-		e.OnAlertsEmit(newAlerts)
+	if len(newAlerts) > 0 {
+		// CORRELATION: Check for multi-subsystem incidents
+		if inc := e.alerts.CorrelateAlerts(newAlerts); inc != nil {
+			if e.eventBus != nil {
+				e.eventBus.Emit(NewEventWithMeta(
+					CatAlert, EventCritical, "engine",
+					inc.Title,
+					fmt.Sprintf("Correlated breach detected across %d metrics: %v", len(inc.Metrics), inc.Metrics),
+					map[string]string{"incident_id": inc.ID},
+				))
+			}
+		}
+
+		if e.OnAlertsEmit != nil {
+			e.OnAlertsEmit(newAlerts)
+		}
+	}
+}
+
+func (e *EngineLoop) DetectDrift() {
+	metrics := []string{MetricCPU, MetricMem, MetricDisk}
+	for _, m := range metrics {
+		if drift, ok := e.baselines.DetectDrift(m); ok {
+			if e.eventBus != nil {
+				e.eventBus.Emit(NewEventWithMeta(
+					CatAlert, EventWarning, "engine",
+					fmt.Sprintf("%s baseline drift detected", m),
+					fmt.Sprintf("Current average (%.1f) is %.1fσ away from persistent baseline (%.1f).",
+						drift.Current, drift.Deviation, drift.Baseline),
+					map[string]string{
+						"metric":    drift.Metric,
+						"baseline":  fmt.Sprintf("%.1f", drift.Baseline),
+						"deviation": fmt.Sprintf("%.1f", drift.Deviation),
+						"severity":  drift.Severity,
+					},
+				))
+			}
+		}
 	}
 }
 
@@ -144,13 +239,33 @@ func (e *EngineLoop) DetectSpikes(s MetricSnapshot) {
 
 	if s.CPU > prevCPU+15 && prevCPU > 0 {
 		e.emitSpike("CPU spiked", fmt.Sprintf("CPU usage jumped from %.0f%% to %.0f%%", prevCPU, s.CPU), "cpu")
+		e.autonomousAudit("diag-slow-pc", "CPU Spike")
 	}
 	if s.Memory > prevMem+10 && prevMem > 0 {
 		e.emitSpike("Memory pressure increasing", fmt.Sprintf("Memory usage increased from %.0f%% to %.0f%%", prevMem, s.Memory), "mem")
+		e.autonomousAudit("diag-slow-pc", "Memory Pressure")
 	}
 	if s.Disk > prevDisk+10 && prevDisk > 0 {
 		e.emitSpike("Disk usage increasing", fmt.Sprintf("Disk usage increased from %.0f%% to %.0f%%", prevDisk, s.Disk), "disk")
 	}
+}
+
+func (e *EngineLoop) autonomousAudit(workflowID, reason string) {
+	if e.invoker == nil {
+		return
+	}
+	go func() {
+		defer RecoverPanic()
+		reportID, err := e.invoker.TriggerWorkflow(workflowID)
+		if err == nil && e.eventBus != nil {
+			e.eventBus.Emit(NewEventWithMeta(
+				CatAlert, EventInfo, "engine",
+				"Autonomous Diagnostic Complete",
+				fmt.Sprintf("Hawk automatically executed '%s' due to %s.", workflowID, reason),
+				map[string]string{"report_id": reportID, "workflow_id": workflowID},
+			))
+		}
+	}()
 }
 
 func (e *EngineLoop) emitSpike(title, detail, metric string) {

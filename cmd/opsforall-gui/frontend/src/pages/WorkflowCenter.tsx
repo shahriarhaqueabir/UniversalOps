@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   Library, ChevronRight,
   Zap, Terminal, Search,
-  RefreshCw
+  RefreshCw, CheckCircle2, XCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
@@ -16,6 +16,8 @@ interface WorkflowStep {
   description: string
   command: string
   expected_outcome: string
+  result?: any
+  error?: string
 }
 
 interface Workflow {
@@ -32,6 +34,7 @@ export function WorkflowCenter() {
   const { call } = useBackend()
   const [selectedWf, setSelectedWf] = useState<Workflow | null>(null)
   const [activeStepIdx, setActiveStepIdx] = useState<number | null>(null)
+  const [isLive, setIsLive] = useState(false)
   const [search, setSearch] = useState('')
 
   const { data: workflows = [], isLoading } = useQuery<Workflow[]>({
@@ -45,10 +48,17 @@ export function WorkflowCenter() {
     try {
       const result = await call('WorkflowAPI.ExecuteWorkflow', selectedWf.id) as Workflow
       setSelectedWf(result)
+      setIsLive(true)
       toast.success(`${selectedWf.name} completed`, { id })
     } catch (err: any) {
       toast.error(err?.message || 'Execution failed', { id })
     }
+  }
+
+  const handleClear = () => {
+    setSelectedWf(null)
+    setActiveStepIdx(null)
+    setIsLive(false)
   }
 
   const filtered = workflows.filter(w =>
@@ -134,10 +144,13 @@ export function WorkflowCenter() {
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-text-faint flex items-center gap-2">
-                    <Terminal size={14} /> Execution Pipeline (Dry Run)
+                    <Terminal size={14} /> {isLive ? 'Live Execution Pipeline' : 'Execution Pipeline (Dry Run)'}
                   </h4>
-                  <div className="px-3 py-1 rounded-full bg-success/10 border border-success/30 text-success text-[9px] font-black uppercase tracking-widest">
-                    Safe to Review
+                  <div className={cn(
+                    "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                    isLive ? "bg-accent/10 border-accent/30 text-accent" : "bg-success/10 border-success/30 text-success"
+                  )}>
+                    {isLive ? 'Live Session Active' : 'Safe to Review'}
                   </div>
                 </div>
 
@@ -154,10 +167,18 @@ export function WorkflowCenter() {
                       <div className="flex items-start justify-between gap-6 relative z-10">
                         <div className="flex gap-5 min-w-0">
                           <div className={cn(
-                            "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border transition-colors",
-                            activeStepIdx === idx ? "bg-accent text-white border-white/20 shadow-[0_0_20px_rgba(var(--color-accent-rgb),0.4)]" : "bg-panel-3 text-text-faint border-white/5"
+                            "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border transition-colors relative",
+                            activeStepIdx === idx ? "bg-accent text-white border-white/20 shadow-[0_0_20px_rgba(var(--color-accent-rgb),0.4)]" : "bg-panel-3 text-text-faint border-white/5",
+                            step.result && "border-success/50",
+                            step.error && "border-danger/50"
                           )}>
-                            <span className="text-sm font-black italic">{idx + 1}</span>
+                            {step.error ? (
+                              <XCircle size={18} className="text-danger animate-in zoom-in" />
+                            ) : step.result ? (
+                              <CheckCircle2 size={18} className="text-success animate-in zoom-in" />
+                            ) : (
+                              <span className="text-sm font-black italic">{idx + 1}</span>
+                            )}
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-black text-white uppercase tracking-widest">{step.label}</p>
@@ -171,13 +192,39 @@ export function WorkflowCenter() {
                       </div>
 
                       {activeStepIdx === idx && (
-                        <div className="mt-6 pt-6 border-t border-white/5 animate-in slide-in-from-top-2 duration-300">
-                           <p className="text-[9px] font-black uppercase text-text-faint tracking-widest mb-2 flex items-center gap-2">
-                             <Zap size={10} className="text-warning" /> Primary Native Command
-                           </p>
-                           <div className="bg-black/40 rounded-xl p-4 font-mono text-xs text-warning border border-warning/20 shadow-inner">
-                             {step.command}
+                        <div className="mt-6 pt-6 border-t border-white/5 animate-in slide-in-from-top-2 duration-300 space-y-4">
+                           <div>
+                             <p className="text-[9px] font-black uppercase text-text-faint tracking-widest mb-2 flex items-center gap-2">
+                               <Zap size={10} className="text-warning" /> Primary Native Command
+                             </p>
+                             <div className="bg-black/40 rounded-xl p-4 font-mono text-xs text-warning border border-warning/20 shadow-inner">
+                               {step.command}
+                             </div>
                            </div>
+
+                           {step.error && (
+                             <div className="animate-in fade-in zoom-in-95 duration-300">
+                               <p className="text-[9px] font-black uppercase text-danger tracking-widest mb-2 flex items-center gap-2">
+                                 Execution Error
+                               </p>
+                               <div className="bg-danger/10 rounded-xl p-4 font-mono text-xs text-danger border border-danger/20">
+                                 {step.error}
+                               </div>
+                             </div>
+                           )}
+
+                           {step.result && (
+                             <div className="animate-in fade-in zoom-in-95 duration-300">
+                               <p className="text-[9px] font-black uppercase text-success tracking-widest mb-2 flex items-center gap-2">
+                                 Execution Result
+                               </p>
+                               <div className="bg-success/5 rounded-xl p-4 font-mono text-[10px] text-success border border-success/20 max-h-60 overflow-y-auto whitespace-pre">
+                                 {typeof step.result === 'string'
+                                   ? step.result
+                                   : JSON.stringify(step.result, null, 2)}
+                               </div>
+                             </div>
+                           )}
                         </div>
                       )}
                     </div>
@@ -192,7 +239,7 @@ export function WorkflowCenter() {
                     Execute Workflow <ChevronRight size={24} className="group-hover:translate-x-2 transition-transform" />
                   </button>
                   <button
-                    onClick={() => setSelectedWf(null)}
+                    onClick={handleClear}
                     className="px-10 py-6 bg-panel-3 border border-border text-text-dim rounded-[2rem] font-black uppercase tracking-[0.2em] hover:text-white transition-all"
                   >
                     Clear

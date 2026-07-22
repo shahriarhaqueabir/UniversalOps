@@ -1,18 +1,32 @@
 import { useQuery } from '@tanstack/react-query'
-import { Activity, CheckCircle, AlertTriangle, XCircle } from 'lucide-react'
+import { Activity, CheckCircle, AlertTriangle, XCircle, Clock, ChevronRight, History } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
-import type { ExtendedDiagnosticResult } from '@/types'
+import type { ExtendedDiagnosticResult, ReportRecord } from '@/types'
 import { cn } from '@/lib/utils'
+import { useState } from 'react'
 
 export function DiagnosticsTab() {
   const { call } = useBackend()
   const { refreshInterval } = useSettingsStore()
+  const [selectedReport, setSelectedReport] = useState<string | null>(null)
 
   const { data: diagnostics, isLoading } = useQuery<ExtendedDiagnosticResult>({
     queryKey: ['sysops-diagnostics'],
     queryFn: async () => { const r = await call('SysOps.RunExtendedDiagnostics'); return r as ExtendedDiagnosticResult },
     refetchInterval: refreshInterval,
+  })
+
+  const { data: history } = useQuery<ReportRecord[]>({
+    queryKey: ['sysops-diagnostics-history'],
+    queryFn: async () => { const r = await call('SysOps.ListHistoricalHealthReports'); return r as ReportRecord[] },
+    refetchInterval: refreshInterval,
+  })
+
+  const { data: detailReport } = useQuery<ExtendedDiagnosticResult>({
+    queryKey: ['sysops-diagnostics-detail', selectedReport],
+    queryFn: async () => { const r = await call('SysOps.GetHistoricalHealthReport', selectedReport!); return r as ExtendedDiagnosticResult },
+    enabled: !!selectedReport,
   })
 
   if (isLoading) {
@@ -84,6 +98,92 @@ export function DiagnosticsTab() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Historical Reports */}
+      <div className="bg-panel border border-border rounded-[2rem] p-10 shadow-2xl">
+        <h3 className="text-lg font-black text-text uppercase tracking-[0.2em] mb-8 flex items-center gap-3">
+          <div className="w-1.5 h-6 bg-accent rounded-full" />
+          <History size={20} className="text-accent" />
+          Diagnostic History
+        </h3>
+
+        {selectedReport && detailReport ? (
+          /* Detail View */
+          <div className="space-y-6">
+            <button
+              onClick={() => setSelectedReport(null)}
+              className="text-xs font-black text-accent uppercase tracking-widest hover:opacity-70 transition-opacity"
+            >
+              &larr; Back to History
+            </button>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-panel-2 rounded-2xl p-5 border border-border">
+                <p className="text-[10px] font-black text-text-faint uppercase tracking-widest mb-1">Score</p>
+                <p className={cn('text-3xl font-black tabular-nums', detailReport.score >= 80 ? 'text-success' : detailReport.score >= 60 ? 'text-warning' : 'text-danger')}>
+                  {detailReport.score}
+                </p>
+              </div>
+              <div className="bg-panel-2 rounded-2xl p-5 border border-border">
+                <p className="text-[10px] font-black text-text-faint uppercase tracking-widest mb-1">Timestamp</p>
+                <p className="text-sm font-bold text-text tabular-nums">{new Date(detailReport.timestamp).toLocaleString()}</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {detailReport.checks.map((check, i) => {
+                const Icon = check.status === 'pass' ? CheckCircle : check.status === 'warn' ? AlertTriangle : XCircle
+                const color = check.status === 'pass' ? 'text-success' : check.status === 'warn' ? 'text-warning' : 'text-danger'
+                return (
+                  <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-panel-2 border border-border">
+                    <div className="flex items-center gap-3">
+                      <Icon size={16} className={color} />
+                      <span className="text-xs font-black text-text uppercase tracking-wider">{check.name}</span>
+                    </div>
+                    <span className={cn('text-xs font-bold tabular-nums', color)}>{check.value}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ) : (
+          /* List View */
+          <div className="space-y-3">
+            {history && history.length > 0 ? (
+              history.map((report) => {
+                const hColor = report.score >= 80 ? 'text-success' : report.score >= 60 ? 'text-warning' : 'text-danger'
+                const hBg = report.score >= 80 ? 'bg-success/5' : report.score >= 60 ? 'bg-warning/5' : 'bg-danger/5'
+                const hBorder = report.score >= 80 ? 'border-success/20' : report.score >= 60 ? 'border-warning/20' : 'border-danger/20'
+                return (
+                  <button
+                    key={report.id}
+                    onClick={() => setSelectedReport(report.id)}
+                    className={cn('w-full flex items-center justify-between p-5 rounded-2xl border transition-all hover:translate-x-1 duration-300 group', hBg, hBorder)}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={cn('p-2.5 rounded-xl border bg-panel', hBorder)}>
+                        <Clock size={18} className={hColor} />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-xs font-black text-text uppercase tracking-wider">{new Date(report.timestamp).toLocaleDateString()}</p>
+                        <p className="text-[10px] font-bold text-text-faint uppercase tracking-widest mt-0.5">{new Date(report.timestamp).toLocaleTimeString()}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className={cn('text-2xl font-black tabular-nums tracking-tight', hColor)}>{report.score}</span>
+                      <ChevronRight size={18} className="text-text-faint transition-transform duration-300 group-hover:translate-x-1" />
+                    </div>
+                  </button>
+                )
+              })
+            ) : (
+              <div className="text-center py-12">
+                <Clock size={32} className="text-text-faint mx-auto mb-4" />
+                <p className="text-sm font-black text-text-faint uppercase tracking-widest">No historical reports yet</p>
+                <p className="text-[10px] font-bold text-text-faint/60 uppercase tracking-widest mt-2">Run diagnostics to populate history</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

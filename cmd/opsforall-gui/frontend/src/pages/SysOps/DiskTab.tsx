@@ -1,13 +1,17 @@
-import { Disc, HardDrive } from 'lucide-react'
+import { Disc, HardDrive, Trash2, Zap } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { Panel } from '@/components/ui/Panel'
-import type { DiskInfo, DiskIOData } from '@/types'
+import type { DiskInfo, DiskIOData, ActionPreview } from '@/types'
+import { ConfirmationModal } from '@/components/dialogs/ConfirmationModal'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
 export function DiskTab({ diskInfo }: { diskInfo: DiskInfo }) {
   const { call } = useBackend()
   const { refreshInterval } = useSettingsStore()
+  const [preview, setPreview] = useState<ActionPreview | null>(null)
 
   const { data: diskIO } = useQuery<DiskIOData>({
     queryKey: ['sysops-disk-io'],
@@ -15,8 +19,40 @@ export function DiskTab({ diskInfo }: { diskInfo: DiskInfo }) {
     refetchInterval: refreshInterval,
   })
 
+  const requestAction = async (action: string) => {
+    const p = await call('SysOps.RunSystemAction', action) as ActionPreview
+    setPreview(p)
+  }
+
+  const handleConfirm = async () => {
+    if (!preview) return
+    const handshakeID = preview.handshake_id
+    setPreview(null)
+    const res = await call('App.ConfirmAction', handshakeID) as { success: boolean; error?: string }
+    if (res.success) {
+      toast.success('Action initiated successfully')
+    } else {
+      toast.error(res.error || 'Action failed')
+    }
+  }
+
   return (
     <div className="space-y-8">
+      <ConfirmationModal
+        preview={preview}
+        onConfirm={handleConfirm}
+        onCancel={() => setPreview(null)}
+      />
+
+      <div className="flex gap-4">
+        <button onClick={() => requestAction('disk_cleanup')} className="flex-1 flex items-center justify-center gap-3 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-500 hover:bg-orange-500/20 transition-all font-bold text-xs uppercase tracking-widest">
+          <Trash2 size={16} /> Run Disk Cleanup
+        </button>
+        <button onClick={() => requestAction('defrag')} className="flex-1 flex items-center justify-center gap-3 p-4 rounded-xl bg-accent/10 border border-accent/20 text-accent hover:bg-accent/20 transition-all font-bold text-xs uppercase tracking-widest">
+          <Zap size={16} /> Defragment Drive
+        </button>
+      </div>
+
       {/* Partition Usage */}
       <Panel variant="elevated" padding="lg" category="system">
         <div className="flex items-center gap-3 mb-6">

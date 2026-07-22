@@ -35,7 +35,7 @@ import {
   CartesianGrid,
 } from 'recharts'
 import { useBackend } from '@/hooks/useBackend'
-import { useSettingsStore, useMetricsStore } from '@/stores'
+import { useSettingsStore, useMetricsStore, useNavigationStore } from '@/stores'
 import { cn } from '@/lib/utils'
 import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 import { Panel } from '@/components/ui/Panel'
@@ -168,6 +168,7 @@ const HeroSection = memo(function HeroSection() {
   const stats = useMetricsStore(s => s.latest)
   const alerts = useMetricsStore(s => s.alerts)
   const cpuHistory = useMetricsStore(s => s.history.cpu)
+  const { navigate } = useNavigationStore()
 
   const cpuHistoryBars = useMemo(() => {
     if (cpuHistory.length === 0) return []
@@ -194,7 +195,10 @@ const HeroSection = memo(function HeroSection() {
   }
 
   return (
-    <div className="bg-panel border-2 border-accent/20 rounded-[var(--radius-xl)] p-6 flex flex-row items-center gap-6 shadow-2xl relative overflow-hidden group animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div
+      onClick={() => navigate('alerts')}
+      className="bg-panel border-2 border-accent/20 rounded-[var(--radius-xl)] p-6 flex flex-row items-center gap-6 shadow-2xl relative overflow-hidden group animate-in fade-in slide-in-from-bottom-4 duration-700 cursor-pointer hover:border-accent/40 transition-all active:scale-[0.99]"
+    >
       <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--color-accent)]/5 rounded-bl-full pointer-events-none transition-all group-hover:bg-[var(--color-accent)]/10" />
 
       <div className="relative shrink-0">
@@ -378,9 +382,10 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeInOut' as const } }
 }
 
-export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void }) {
+export function Dashboard({ onNavigate }: { onNavigate?: (page: Page, tab?: string | null) => void }) {
   const { call } = useBackend()
   const { refreshInterval } = useSettingsStore()
+  const { navigate } = useNavigationStore()
   const setSnapshot = useMetricsStore(s => s.setSnapshot)
   const cpuHistory = useMetricsStore(s => s.history.cpu)
   const latest = useMetricsStore(s => s.latest)
@@ -485,12 +490,12 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: Page) => void })
       <motion.div variants={itemVariants} className="space-y-5">
         <div className="flex items-center gap-4"><div className="h-px flex-1 bg-[var(--color-border)]" /><h2 className="text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-widest">Resource Compute Layer</h2><div className="h-px flex-1 bg-[var(--color-border)]" /></div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
-           <KpiCard icon={<Cpu size={24} />} label="Processor" metricKey="cpu" unit="%" onClick={() => onNavigate?.('sysops')} variant="accent" description="Measures aggregate clock-cycle pressure." />
-           <KpiCard icon={<MemoryStick size={24} />} label="Memory" metricKey="memory" unit="%" onClick={() => onNavigate?.('sysops')} variant="success" description="Percentage of volatile allocation." />
-           <KpiCard icon={<HardDrive size={24} />} label="Storage" metricKey="disk" unit="%" onClick={() => onNavigate?.('sysops')} variant="warning" description="Local disk occupancy." />
-           <KpiCard icon={<Gpu size={24} />} label="GPU" metricKey="gpu" onClick={() => onNavigate?.('sysops')} variant="default" description={latest.gpu?.detected ? `${latest.gpu.name}` : 'No GPU detected.'} />
-           <KpiCard icon={<Battery size={24} />} label="Battery" metricKey="battery" unit="%" onClick={() => onNavigate?.('sysops')} variant="default" description={latest.battery?.detected ? `${latest.battery.status}` : 'AC-powered.'} />
-           <KpiCard icon={<Network size={24} />} label="Network" metricKey="network" unit="/s" onClick={() => onNavigate?.('netops')} variant="accent" description="Real-time throughput." />
+           <KpiCard icon={<Cpu size={24} />} label="Processor" metricKey="cpu" unit="%" onClick={() => navigate('sysops', 'cpu')} variant="accent" description="Measures aggregate clock-cycle pressure." />
+           <KpiCard icon={<MemoryStick size={24} />} label="Memory" metricKey="memory" unit="%" onClick={() => navigate('sysops', 'memory')} variant="success" description="Percentage of volatile allocation." />
+           <KpiCard icon={<HardDrive size={24} />} label="Storage" metricKey="disk" unit="%" onClick={() => navigate('sysops', 'disk')} variant="warning" description="Local disk occupancy." />
+           <KpiCard icon={<Gpu size={24} />} label="GPU" metricKey="gpu" onClick={() => navigate('sysops', 'hardware')} variant="default" description={latest.gpu?.detected ? `${latest.gpu.name}` : 'No GPU detected.'} />
+           <KpiCard icon={<Battery size={24} />} label="Battery" metricKey="battery" unit="%" onClick={() => navigate('sysops', 'hardware')} variant="default" description={latest.battery?.detected ? `${latest.battery.status}` : 'AC-powered.'} />
+           <KpiCard icon={<Network size={24} />} label="Network" metricKey="network" unit="/s" onClick={() => navigate('netops', 'overview')} variant="accent" description="Real-time throughput." />
          </div>
       </motion.div>
 

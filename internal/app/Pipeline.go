@@ -1,6 +1,7 @@
 package app
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -127,6 +128,50 @@ func (p *PipelineAPI) UpdateSettings(intervalMs int, capacity int, pingCount int
 
 	if dnsTimeout > 0 {
 		cfg.DNSTimeout = dnsTimeout
+	}
+
+	p.pipeline.UpdateConfig(cfg)
+
+	// PERSIST: Save to SQLite
+	p.PersistSettings()
+}
+
+// PersistSettings saves current pipeline configuration to the database.
+func (p *PipelineAPI) PersistSettings() {
+	s := common.GetStorage()
+	if s == nil {
+		return
+	}
+
+	cfg := p.pipeline.Config()
+	s.UpsertSetting("refreshInterval", strconv.Itoa(int(cfg.TickInterval.Milliseconds())))
+	s.UpsertSetting("pingCount", strconv.Itoa(cfg.PingCount))
+	s.UpsertSetting("dnsTimeout", strconv.Itoa(cfg.DNSTimeout))
+}
+
+// LoadSettings retrieves and applies persisted settings from the database.
+func (p *PipelineAPI) LoadSettings() {
+	s := common.GetStorage()
+	if s == nil {
+		return
+	}
+
+	cfg := p.pipeline.Config()
+
+	if val, err := s.GetSetting("refreshInterval"); err == nil && val != "" {
+		if ms, err := strconv.Atoi(val); err == nil {
+			cfg.TickInterval = time.Duration(ms) * time.Millisecond
+		}
+	}
+	if val, err := s.GetSetting("pingCount"); err == nil && val != "" {
+		if pc, err := strconv.Atoi(val); err == nil {
+			cfg.PingCount = pc
+		}
+	}
+	if val, err := s.GetSetting("dnsTimeout"); err == nil && val != "" {
+		if dt, err := strconv.Atoi(val); err == nil {
+			cfg.DNSTimeout = dt
+		}
 	}
 
 	p.pipeline.UpdateConfig(cfg)

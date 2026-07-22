@@ -1,8 +1,11 @@
 package netops
 
-import "testing"
+import (
+	"testing"
+)
 
-func TestGetVPNStatus(t *testing.T) {
-	status := GetVPNStatus()
-	t.Logf("VPN Active=%v Type=%s Interface=%s LocalIP=%s", status.Active, status.Type, status.Interface, status.LocalIP)
+func TestIsVPNActive(t *testing.T) {
+	// This just verifies it runs without crashing.
+	// Actual VPN detection is environment dependent.
+	_ = IsVPNActive()
 }

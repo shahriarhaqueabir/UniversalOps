@@ -5,10 +5,11 @@ import { TopBar } from './components/layout/TopBar'
 import { MainContent } from './components/layout/MainContent'
 import { HawkSidebar } from './components/layout/HawkSidebar'
 import { OnboardingModal } from './components/dialogs/OnboardingModal'
-import { useThemeStore, useAlertStore, useSettingsStore } from './stores'
+import { useThemeStore, useAlertStore, useSettingsStore, useNavigationStore } from './stores'
 import type { AlertInfo } from './types'
 
-export type Page = 'dashboard' | 'sysops' | 'workflows' | 'netops' | 'secops' | 'devops' | 'aiops' | 'logs' | 'settings'
+// Page type moved to store
+export type { Page } from './stores/useSettingsStore'
 
 
 interface WailsRuntime {
@@ -22,13 +23,14 @@ function getRuntime(): WailsRuntime | null {
 }
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<Page>('dashboard')
+  const { currentPage, navigate } = useNavigationStore()
   const [onboarded, setOnboarded] = useState<boolean | null>(null)
   const [showHawk, setShowHawk] = useState(false)
   const { theme } = useThemeStore()
   const refreshInterval = useSettingsStore((s) => s.refreshInterval)
   const pingCount = useSettingsStore((s) => s.pingCount)
   const dnsTimeout = useSettingsStore((s) => s.dnsTimeout)
+  const companionName = useSettingsStore((s) => s.companionName)
   const addAlert = useAlertStore((s) => s.addAlert)
 
   // Check onboarding status on mount
@@ -69,10 +71,13 @@ function App() {
         if (go?.app?.PipelineAPI?.UpdateSettings) {
           await go.app.PipelineAPI.UpdateSettings(refreshInterval, 0, pingCount, dnsTimeout)
         }
-      } catch { /* ignore — Backend not ready yet; synced on next Settings page visit */ }
+        if (go?.app?.AIOps?.SetCompanionName) {
+          await go.app.AIOps.SetCompanionName(companionName)
+        }
+      } catch { /* ignore — Backend not ready yet */ }
     }
     syncSettings()
-  }, [refreshInterval, pingCount, dnsTimeout])
+  }, [refreshInterval, pingCount, dnsTimeout, companionName])
 
   // Apply theme on mount and when it changes
   useEffect(() => {
@@ -81,13 +86,13 @@ function App() {
 
   // Global keyboard shortcuts
   useEffect(() => {
-    const pages: Page[] = ['dashboard', 'sysops', 'workflows', 'netops', 'secops', 'devops', 'aiops', 'logs', 'settings']
+    const pages: Page[] = ['dashboard', 'sysops', 'workflows', 'netops', 'secops', 'devops', 'aiops', 'reports', 'alerts', 'logs', 'settings']
     const handler = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey) {
         const num = parseInt(e.key)
         if (num >= 1 && num <= pages.length) {
           e.preventDefault()
-          setCurrentPage(pages[num - 1])
+          navigate(pages[num - 1])
         }
       }
     }
@@ -150,11 +155,11 @@ function App() {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[var(--color-bg)] noise-overlay">
       {onboarded === false && <OnboardingModal onComplete={() => setOnboarded(true)} />}
-      <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
+      <Sidebar currentPage={currentPage} onNavigate={navigate} />
       <div className="flex-1 flex flex-col overflow-hidden relative">
         <TopBar currentPage={currentPage} onToggleHawk={() => setShowHawk(!showHawk)} />
         <div className="flex-1 flex overflow-hidden">
-          <MainContent currentPage={currentPage} onNavigate={setCurrentPage} />
+          <MainContent currentPage={currentPage} onNavigate={navigate} />
           <HawkSidebar isOpen={showHawk} onClose={() => setShowHawk(false)} />
         </div>
       </div>

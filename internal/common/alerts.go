@@ -187,6 +187,65 @@ func (ae *AlertEngine) AddDefaultRules() {
 	}
 }
 
+// ── Alert Correlation ──────────────────────────────────────────────────────
+
+// Incident represents a group of correlated alerts occurring within a close time window.
+type Incident struct {
+	ID        string    `json:"id"`
+	Title     string    `json:"title"`
+	Metrics   []string  `json:"metrics"`
+	Timestamp time.Time `json:"timestamp"`
+	Severity  AlertLevel `json:"severity"`
+}
+
+// CorrelateAlerts groups recent alerts into a single incident if they affect related subsystems.
+func (ae *AlertEngine) CorrelateAlerts(newAlerts []Alert) *Incident {
+	if len(newAlerts) < 2 {
+		return nil
+	}
+
+	// Simple correlation: If we have multiple alerts on CPU/Memory/Disk at once, it's a "Resource Contention" incident
+	resourceMetrics := 0
+	metrics := []string{}
+	maxSeverity := AlertInfo
+
+	for _, a := range newAlerts {
+		if a.Metric == MetricCPU || a.Metric == MetricMem || a.Metric == MetricDisk {
+			resourceMetrics++
+		}
+		metrics = append(metrics, a.Metric)
+		if a.Level > maxSeverity {
+			maxSeverity = a.Level
+		}
+	}
+
+	if resourceMetrics >= 2 {
+		incID := fmt.Sprintf("inc-%d", time.Now().Unix())
+		inc := &Incident{
+			ID:        incID,
+			Title:     "Multi-Subsystem Resource Pressure",
+			Metrics:   metrics,
+			Timestamp: time.Now(),
+			Severity:  maxSeverity,
+		}
+
+		// PERSIST: Save to incidents table
+		if s := GetStorage(); s != nil {
+			_ = s.InsertIncident(IncidentRecord{
+				ID:        incID,
+				Timestamp: inc.Timestamp.UTC().Format(time.RFC3339),
+				Title:     inc.Title,
+				Details:   fmt.Sprintf("Correlated breach detected across: %v", metrics),
+				Severity:  inc.Severity.String(),
+			})
+		}
+
+		return inc
+	}
+
+	return nil
+}
+
 // Evaluate checks all rules against the latest pipeline data and returns any
 // newly fired or resolved alerts.
 func (ae *AlertEngine) Evaluate() []Alert {

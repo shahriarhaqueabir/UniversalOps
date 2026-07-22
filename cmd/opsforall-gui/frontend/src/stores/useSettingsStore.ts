@@ -12,6 +12,7 @@ interface SettingsState {
   setPingCount: (val: number) => void
   setDnsTimeout: (val: number) => void
   setCompanionName: (name: string) => void
+  setBatch: (changes: Record<string, any>) => void
 }
 
 function loadSetting<T>(key: string, fallback: T): T {
@@ -47,6 +48,51 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     saveSetting('opsforall_companionName', name)
     set({ companionName: name })
   },
+  setBatch: (changes) => {
+    Object.entries(changes).forEach(([key, value]) => {
+      saveSetting(`opsforall_${key}`, value)
+    })
+    set((state) => ({ ...state, ...changes }))
+  },
+}))
+
+// ── Navigation Store ──
+
+export type Page = 'dashboard' | 'sysops' | 'workflows' | 'netops' | 'secops' | 'devops' | 'aiops' | 'reports' | 'alerts' | 'logs' | 'settings'
+
+interface NavigationState {
+  currentPage: Page
+  targetTab: string | null
+  history: Page[]
+  navigate: (page: Page, tab?: string | null) => void
+  goBack: () => void
+  clearTargetTab: () => void
+}
+
+export const useNavigationStore = create<NavigationState>((set) => ({
+  currentPage: 'dashboard',
+  targetTab: null,
+  history: [],
+  navigate: (page, tab = null) => set((state) => {
+    // Don't push to history if navigating to the same page
+    if (state.currentPage === page) return { targetTab: tab }
+    return {
+      currentPage: page,
+      targetTab: tab,
+      history: [...state.history, state.currentPage].slice(-10), // Keep last 10 steps
+    }
+  }),
+  goBack: () => set((state) => {
+    if (state.history.length === 0) return {}
+    const newHistory = [...state.history]
+    const previousPage = newHistory.pop()
+    return {
+      currentPage: previousPage || 'dashboard',
+      history: newHistory,
+      targetTab: null,
+    }
+  }),
+  clearTargetTab: () => set({ targetTab: null }),
 }))
 
 // ── Alert Store ──

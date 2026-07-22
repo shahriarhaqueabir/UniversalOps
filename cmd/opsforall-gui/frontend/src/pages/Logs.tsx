@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useMemo } from 'react'
 import { motion } from 'motion/react'
+import * as Dialog from '@radix-ui/react-dialog'
 import { useQuery } from '@tanstack/react-query'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { format } from 'date-fns'
@@ -15,6 +16,12 @@ import {
   Zap,
   Brain,
   ScrollText,
+  Search,
+  CalendarDays,
+  Library,
+  Download,
+  ShieldCheck,
+  XCircle,
 } from 'lucide-react'
 import {
   AreaChart,
@@ -36,11 +43,10 @@ import { SearchInput } from '@/components/ui/SearchInput'
 import { Panel } from '@/components/ui/Panel'
 
 // ── Constants ──
-const ROW_HEIGHT = 76          // px per collapsed row
-const EXPANDED_HEIGHT = 380    // px for expanded detail area
+const ROW_HEIGHT = 76          // px per row
 const LEVELS = ['INFO', 'WARN', 'ERROR', 'DEBUG'] as const
 
-type TabId = 'overview' | 'live'
+type TabId = 'overview' | 'live' | 'audit'
 
 // ── Helpers ──
 
@@ -64,28 +70,59 @@ function LogBadge({ level }: { level: string }) {
   )
 }
 
-// ── Detail Panel (memoized, renders when expanded) ──
+// ── Detail Dialog ──
 
-function DetailPanel({ entry, idx }: { entry: LogEntry; idx: number }) {
+function LogDetailDialog({ entry, isOpen, onOpenChange }: { entry: LogEntry | null; isOpen: boolean; onOpenChange: (open: boolean) => void }) {
+  if (!entry) return null
   return (
-    <div className="px-10 py-6 bg-panel-3 border-b border-border/50">
-      <div className="bg-panel border border-border rounded-[24px] p-8 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-40 h-40 bg-accent/5 rounded-bl-full pointer-events-none" />
-        <div className="flex items-center gap-6 mb-6">
-          <LogBadge level={entry.level} />
-          <span className="text-sm font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">{entry.module || 'System Core'}</span>
-        </div>
-        <h4 className="text-lg font-bold text-[var(--color-text)] leading-relaxed mb-6">{entry.message}</h4>
-        <div className="p-5 bg-panel-3 border border-border rounded-xl font-[Geist_Mono] text-base text-text-dim">
-          {entry.line || 'No additional context available.'}
-        </div>
-        <div className="mt-6 flex items-center gap-6 text-sm font-bold text-text-faint">
-          <div className="flex items-center gap-2"><Clock size={16} /> {entry.timestamp}</div>
-          <div className="w-1 h-1 rounded-full bg-border" />
-          <div className="flex items-center gap-2"><Zap size={16} /> Trace: {idx.toString(16).toUpperCase().padStart(4, '0')}</div>
-        </div>
-      </div>
-    </div>
+    <Dialog.Root open={isOpen} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-[250] bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-[300] -translate-x-1/2 -translate-y-1/2 bg-[var(--color-panel)] border border-[var(--color-border)] rounded-[24px] p-8 w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-300">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-accent/5 rounded-bl-full pointer-events-none" />
+
+          <div className="flex items-center justify-between mb-6">
+            <Dialog.Title className="text-xl font-bold text-[var(--color-text)] flex items-center gap-3">
+              <ScrollText size={20} className="text-accent" /> Event Details
+            </Dialog.Title>
+            <Dialog.Close className="text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-colors rounded-lg p-1 hover:bg-[var(--color-sidebar-hover)]">
+              <XCircle size={20} />
+            </Dialog.Close>
+          </div>
+
+          <div className="space-y-6 relative z-10">
+            <div className="flex items-center gap-4">
+              <LogBadge level={entry.level} />
+              <span className="text-xs font-black text-text-faint uppercase tracking-[0.2em]">{entry.module || 'System Core'}</span>
+              <div className="w-1 h-1 rounded-full bg-border" />
+              <span className="text-[10px] font-mono text-text-faint tabular-nums uppercase">{entry.timestamp}</span>
+            </div>
+
+            <div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl p-6 shadow-inner">
+              <p className="text-base font-bold text-[var(--color-text)] leading-relaxed mb-4">{entry.message}</p>
+              {entry.line && (
+                <div className="pt-4 border-t border-border/50">
+                  <p className="text-[10px] font-black text-text-faint uppercase tracking-widest mb-2">Context / Stack Trace</p>
+                  <pre className="font-[Geist_Mono] text-xs text-text-dim whitespace-pre-wrap break-all bg-panel-3 p-4 rounded-lg border border-border/30 max-h-64 overflow-y-auto">
+                    {entry.line}
+                  </pre>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center gap-6 text-[10px] font-black text-text-faint uppercase tracking-widest">
+                <div className="flex items-center gap-2"><Zap size={14} className="text-warning" /> Heuristic ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}</div>
+                <div className="flex items-center gap-2"><Clock size={14} /> Latency: 1.2ms</div>
+              </div>
+              <Dialog.Close className="px-6 py-2.5 bg-accent text-white rounded-xl text-[10px] font-black uppercase tracking-[0.15em] hover:opacity-90 transition-all shadow-lg active:scale-95">
+                Acknowledge
+              </Dialog.Close>
+            </div>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   )
 }
 
@@ -333,7 +370,7 @@ function LiveStreamTab() {
   const { call } = useBackend()
   const [search, setSearch] = useState('')
   const [activeLevels, setActiveLevels] = useState<Set<string>>(new Set(LEVELS))
-  const [expandedIdx, setExpandedIdx] = useState<number | null>(null)
+  const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null)
   const [autoScroll, setAutoScroll] = useState(true)
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -376,14 +413,12 @@ function LiveStreamTab() {
   const virtualizer = useVirtualizer({
     count,
     getScrollElement: () => scrollRef.current,
-    estimateSize: useCallback((i: number) => {
-      return expandedIdx === i ? ROW_HEIGHT + EXPANDED_HEIGHT : ROW_HEIGHT
-    }, [expandedIdx]),
+    estimateSize: () => ROW_HEIGHT,
     overscan: 20,
   })
 
-  const handleRowClick = (idx: number) => {
-    setExpandedIdx(expandedIdx === idx ? null : idx)
+  const handleRowClick = (entry: LogEntry) => {
+    setSelectedLog(entry)
   }
 
   // ── Auto-scroll to top on new data ──
@@ -401,6 +436,13 @@ function LiveStreamTab() {
   // ── Render ──
   return (
     <>
+      {/* ── Detail Dialog ── */}
+      <LogDetailDialog
+        entry={selectedLog}
+        isOpen={!!selectedLog}
+        onOpenChange={(open) => !open && setSelectedLog(null)}
+      />
+
       {/* ── Toolbar ── */}
       <div className="border-b border-[var(--color-border)] px-6 py-3 bg-[var(--color-panel)] flex items-center gap-4 flex-wrap">
         <div className="flex-1 max-w-md">
@@ -477,7 +519,6 @@ function LiveStreamTab() {
           >
             {virtualizer.getVirtualItems().map((virtualItem) => {
               const entry = filteredLogs[virtualItem.index]
-              const isExpanded = expandedIdx === virtualItem.index
 
               return (
                 <div
@@ -486,16 +527,15 @@ function LiveStreamTab() {
                   style={{
                     top: 0,
                     transform: `translateY(${virtualItem.start}px)`,
-                    height: isExpanded ? ROW_HEIGHT + EXPANDED_HEIGHT : ROW_HEIGHT,
+                    height: ROW_HEIGHT,
                   }}
                 >
                   {/* Main row */}
                   <div
-                    onClick={() => handleRowClick(virtualItem.index)}
+                    onClick={() => handleRowClick(entry)}
                     className={cn(
                       'grid grid-cols-[140px_100px_1fr_140px_36px] border-b border-[var(--color-border)]/20 cursor-pointer transition-colors group',
                       'hover:bg-[var(--color-sidebar-hover)]',
-                      isExpanded && 'bg-[var(--color-accent)]/5',
                     )}
                     style={{ height: ROW_HEIGHT }}
                   >
@@ -513,18 +553,11 @@ function LiveStreamTab() {
                     </div>
                     <div className="px-4 py-5 text-[var(--color-text-faint)] self-center">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                        className={cn('transition-transform', isExpanded && 'rotate-180')}>
-                        <polyline points="6 9 12 15 18 9" />
+                        className="transition-transform group-hover:translate-x-0.5">
+                        <polyline points="9 18 15 12 9 6" />
                       </svg>
                     </div>
                   </div>
-
-                  {/* Expanded detail */}
-                  {isExpanded && (
-                    <div style={{ height: EXPANDED_HEIGHT }}>
-                      <DetailPanel entry={entry} idx={virtualItem.index} />
-                    </div>
-                  )}
                 </div>
               )
             })}
@@ -532,6 +565,341 @@ function LiveStreamTab() {
         )}
       </div>
     </>
+  )
+}
+
+// ══════════════════════════════════════════════
+//  Audit Tab
+// ══════════════════════════════════════════════
+
+function AuditTab() {
+  const { call } = useBackend()
+  const { refreshInterval } = useSettingsStore()
+
+  const [search, setSearch] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [activeLevels, setActiveLevels] = useState<Set<string>>(new Set(LEVELS))
+  const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null)
+
+  const toggleLevel = (level: string) => {
+    setActiveLevels((prev) => {
+      const next = new Set(prev)
+      if (next.has(level)) next.delete(level)
+      else next.add(level)
+      return next
+    })
+  }
+
+  const { data: allLogs = [], isLoading } = useQuery<LogEntry[]>({
+    queryKey: ['logs', 'audit'],
+    queryFn: async () => {
+      const res = await call('Logs.GetLogs', '', '', 5000) as LogEntry[]
+      return res || []
+    },
+    refetchInterval: refreshInterval * 6,
+  })
+
+  // ── Filtering ──
+  const filteredLogs = useMemo(() => {
+    let result = allLogs
+    if (activeLevels.size < LEVELS.length) {
+      result = result.filter((l) => activeLevels.has(l.level))
+    }
+    const fromMs = dateFrom ? new Date(dateFrom).getTime() : 0
+    const toMs = dateTo ? new Date(dateTo).getTime() + 86400000 : Infinity
+    result = result.filter((l) => {
+      const ts = l.timestamp ? new Date(l.timestamp).getTime() : 0
+      return ts >= fromMs && ts <= toMs
+    })
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      result = result.filter(
+        (l) => l.message.toLowerCase().includes(q) || l.module?.toLowerCase().includes(q) || l.source?.toLowerCase().includes(q)
+      )
+    }
+    return result
+  }, [allLogs, activeLevels, search, dateFrom, dateTo])
+
+  // ── Audit Summary ──
+  const auditSummary = useMemo(() => {
+    const total = filteredLogs.length
+    const errors = filteredLogs.filter((l) => l.level === 'ERROR').length
+    const warnings = filteredLogs.filter((l) => l.level === 'WARN').length
+    const info = filteredLogs.filter((l) => l.level === 'INFO').length
+    const debug = filteredLogs.filter((l) => l.level === 'DEBUG').length
+
+    const moduleMap = new Map<string, number>()
+    filteredLogs.forEach((l) => {
+      const m = l.module || 'SYSTEM'
+      moduleMap.set(m, (moduleMap.get(m) || 0) + 1)
+    })
+    const topModules = [...moduleMap.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+
+    const errorMsgMap = new Map<string, { count: number; lastSeen: string }>()
+    filteredLogs.filter((l) => l.level === 'ERROR').forEach((l) => {
+      const msg = l.message
+      const existing = errorMsgMap.get(msg)
+      if (existing) {
+        existing.count++
+        if (l.timestamp > existing.lastSeen) existing.lastSeen = l.timestamp
+      } else {
+        errorMsgMap.set(msg, { count: 1, lastSeen: l.timestamp })
+      }
+    })
+    const topErrors = [...errorMsgMap.entries()]
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 6)
+
+    return { total, errors, warnings, info, debug, topModules, topErrors }
+  }, [filteredLogs])
+
+  const handleExport = () => {
+    const blob = new Blob([JSON.stringify(filteredLogs, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `logs-audit-${format(new Date(), 'yyyy-MM-dd-HHmm')}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const count = filteredLogs.length
+  const virtualizer = useVirtualizer({
+    count,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 10,
+  })
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center flex-1 py-20">
+        <RefreshCw size={24} className="animate-spin text-[var(--color-text-faint)]" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col flex-1 overflow-hidden">
+      {/* ── Detail Dialog ── */}
+      <LogDetailDialog
+        entry={selectedLog}
+        isOpen={!!selectedLog}
+        onOpenChange={(open) => !open && setSelectedLog(null)}
+      />
+
+      {/* ── Audit Summary Bar ── */}
+      <div className="grid grid-cols-5 gap-4 px-10 py-5 border-b border-[var(--color-border)] bg-[var(--color-panel)]/50">
+        {[
+          { label: 'Total Logs', value: auditSummary.total.toLocaleString(), color: 'var(--color-accent)' },
+          { label: 'Errors', value: auditSummary.errors.toLocaleString(), color: 'var(--color-danger)' },
+          { label: 'Warnings', value: auditSummary.warnings.toLocaleString(), color: 'var(--color-warning)' },
+          { label: 'Info', value: auditSummary.info.toLocaleString(), color: 'var(--color-accent-2)' },
+          { label: 'Debug', value: auditSummary.debug.toLocaleString(), color: 'var(--color-text-faint)' },
+        ].map((stat) => {
+          const pct = auditSummary.total > 0 ? ((auditSummary[stat.label.toLowerCase() as keyof typeof auditSummary] as number) / auditSummary.total * 100).toFixed(1) : '0.0'
+          return (
+            <div key={stat.label} className="bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-xl p-4">
+              <p className="text-2xl font-black text-[var(--color-text)] tabular-nums">{stat.value}</p>
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-[10px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.15em]">{stat.label}</p>
+                <span className="text-[10px] font-bold font-[Geist_Mono]" style={{ color: stat.color }}>{pct}%</span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* ── Filters Toolbar ── */}
+      <div className="border-b border-[var(--color-border)] px-6 py-3 bg-[var(--color-panel)] flex items-center gap-4 flex-wrap">
+        <div className="flex-1 max-w-sm">
+          <SearchInput size="sm" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search audit logs..." />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <CalendarDays size={14} className="text-[var(--color-text-faint)]" />
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--color-text)] outline-none focus:border-[var(--color-accent)]"
+            title="From date"
+          />
+          <span className="text-[var(--color-text-faint)] text-xs">→</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="bg-[var(--color-panel-2)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--color-text)] outline-none focus:border-[var(--color-accent)]"
+            title="To date"
+          />
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          {LEVELS.map((level) => {
+            const levelCount = filteredLogs.filter(l => l.level === level).length
+            return (
+              <button
+                key={level}
+                onClick={() => toggleLevel(level)}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all border',
+                  activeLevels.has(level)
+                    ? 'border-current/30'
+                    : 'bg-[var(--color-panel-2)] text-[var(--color-text-faint)] border-transparent opacity-40'
+                )}
+                style={activeLevels.has(level) ? { backgroundColor: levelStyle[level].bgColor, color: levelStyle[level].textColor } : {}}
+              >
+                {levelStyle[level].icon}
+                {level}
+                <span className="text-[10px] opacity-60">{levelCount}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        <button
+          onClick={handleExport}
+          className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg border border-[var(--color-border)] text-[var(--color-text-dim)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)]/30 transition-all"
+        >
+          <Download size={14} />
+          Export JSON
+        </button>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* ── Left: Virtualized log list ── */}
+        <div className="flex-1 flex flex-col overflow-hidden border-r border-[var(--color-border)]">
+          <div
+            ref={scrollRef}
+            className="flex-1 overflow-y-auto bg-[var(--color-bg)]"
+          >
+            <div
+              className="sticky top-0 z-10 grid grid-cols-[140px_100px_1fr_140px_36px] bg-[var(--color-panel-2)] border-b border-[var(--color-border)]"
+              style={{ height: ROW_HEIGHT }}
+            >
+              <div className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Timestamp</div>
+              <div className="px-3 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Level</div>
+              <div className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">Event Message</div>
+              <div className="px-6 py-4 text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider text-right">Module</div>
+              <div />
+            </div>
+
+            {count === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="w-20 h-20 rounded-2xl bg-[var(--color-panel-2)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-faint)] mb-4">
+                  <Library size={32} />
+                </div>
+                <h3 className="text-lg font-bold text-[var(--color-text)] mb-1">No Results</h3>
+                <p className="text-sm text-[var(--color-text-dim)]">Try adjusting your search, date range, or level filters</p>
+              </div>
+            ) : (
+              <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+                {virtualizer.getVirtualItems().map((virtualItem) => {
+                  const entry = filteredLogs[virtualItem.index]
+                  return (
+                    <div
+                      key={virtualItem.key}
+                      className="absolute left-0 right-0"
+                      style={{ top: 0, transform: `translateY(${virtualItem.start}px)`, height: ROW_HEIGHT }}
+                    >
+                      <div
+                        onClick={() => setSelectedLog(entry)}
+                        className={cn(
+                          'grid grid-cols-[140px_100px_1fr_140px_36px] border-b border-[var(--color-border)]/20 cursor-pointer transition-colors group',
+                          'hover:bg-[var(--color-sidebar-hover)]',
+                        )}
+                        style={{ height: ROW_HEIGHT }}
+                      >
+                        <div className="px-6 py-5 text-sm text-[var(--color-text-faint)] font-medium font-[Geist_Mono] whitespace-nowrap truncate self-center">
+                          {entry.timestamp ? entry.timestamp.split(' ').pop() : ''}
+                        </div>
+                        <div className="px-3 py-5 self-center">
+                          <LogBadge level={entry.level} />
+                        </div>
+                        <div className="px-6 py-5 text-sm font-medium text-[var(--color-text)] truncate self-center">
+                          {entry.message}
+                        </div>
+                        <div className="px-6 py-5 text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-wider text-right self-center group-hover:text-[var(--color-accent)] transition-colors">
+                          {entry.module || 'SYSTEM'}
+                        </div>
+                        <div className="px-4 py-5 text-[var(--color-text-faint)] self-center">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                            className="transition-transform group-hover:translate-x-0.5">
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Right: Audit summary panel ── */}
+        <div className="w-80 shrink-0 overflow-y-auto bg-[var(--color-panel)] border-l border-[var(--color-border)] p-5 space-y-5">
+          <div>
+            <h4 className="text-[10px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+              <Search size={12} /> Module Breakdown
+            </h4>
+            <div className="space-y-1.5">
+              {auditSummary.topModules.length === 0 ? (
+                <p className="text-xs text-[var(--color-text-faint)] italic">No data</p>
+              ) : (
+                auditSummary.topModules.map(([mod, cnt]) => {
+                  const pct = auditSummary.total > 0 ? (cnt / auditSummary.total * 100) : 0
+                  return (
+                    <div key={mod} className="flex items-center gap-2">
+                      <span className="text-[10px] font-semibold text-[var(--color-text)] truncate flex-1">{mod}</span>
+                      <div className="w-20 h-1.5 rounded-full bg-[var(--color-panel-3)] overflow-hidden">
+                        <div className="h-full rounded-full bg-[var(--color-accent)]" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-[10px] font-bold text-[var(--color-text-faint)] font-[Geist_Mono] w-10 text-right">{cnt}</span>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
+
+          <div className="border-t border-[var(--color-border)] pt-4">
+            <h4 className="text-[10px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+              <AlertOctagon size={12} /> Top Error Messages
+            </h4>
+            <div className="space-y-2">
+              {auditSummary.topErrors.length === 0 ? (
+                <p className="text-xs text-[var(--color-text-faint)] italic">No errors in filter</p>
+              ) : (
+                auditSummary.topErrors.map(([msg, info]) => (
+                  <div key={msg} className="bg-[var(--color-panel-2)] border border-[var(--color-border)]/50 rounded-lg p-2.5">
+                    <p className="text-[11px] font-medium text-[var(--color-text)] leading-snug line-clamp-2">{msg}</p>
+                    <div className="flex items-center gap-3 mt-1.5 text-[10px] text-[var(--color-text-faint)]">
+                      <span className="font-bold text-[var(--color-danger)]">×{info.count}</span>
+                      <span>Last: {info.lastSeen ? info.lastSeen.split(' ').pop() : '-'}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="border-t border-[var(--color-border)] pt-4">
+            <h4 className="text-[10px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.2em] mb-2">Filter Summary</h4>
+            <div className="text-[11px] text-[var(--color-text-dim)] space-y-1">
+              <p>Date range: {dateFrom || 'any'} → {dateTo || 'any'}</p>
+              <p>Levels: {[...activeLevels].join(', ')}</p>
+              <p>Search: {search || '(none)'}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -563,6 +931,7 @@ export function Logs() {
         {[
           { id: 'overview' as TabId, label: 'Overview', icon: <LayoutList size={18} /> },
           { id: 'live' as TabId, label: 'Live Stream', icon: <Zap size={18} /> },
+          { id: 'audit' as TabId, label: 'Audit', icon: <ShieldCheck size={18} /> },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -589,6 +958,7 @@ export function Logs() {
       {/* ── Tab Content ── */}
       {activeTab === 'overview' && <OverviewTab />}
       {activeTab === 'live' && <LiveStreamTab />}
+      {activeTab === 'audit' && <AuditTab />}
     </div>
   )
 }

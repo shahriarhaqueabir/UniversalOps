@@ -6,7 +6,7 @@ import {
   Zap, Monitor,
 } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
-import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useSettingsStore, useNavigationStore } from '@/stores'
 import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 import { CategoryGroup } from '@/components/ui/CategoryGroup'
 import type { CPUInfo, MemoryInfo, SystemInfo, DiskInfo } from '@/types'
@@ -22,8 +22,11 @@ const LogsTab = lazy(() => import('./SysOps/LogsTab').then(m => ({ default: m.Lo
 const UsersTab = lazy(() => import('./SysOps/UsersTab').then(m => ({ default: m.UsersTab })))
 const DiagnosticsTab = lazy(() => import('./SysOps/DiagnosticsTab').then(m => ({ default: m.DiagnosticsTab })))
 const ActionsTab = lazy(() => import('./SysOps/ActionsTab').then(m => ({ default: m.ActionsTab })))
+const HardwareTab = lazy(() => import('./SysOps/HardwareTab').then(m => ({ default: m.HardwareTab })))
+const PackageManagerTab = lazy(() => import('./SysOps/PackageManagerTab').then(m => ({ default: m.PackageManagerTab })))
+const SchedulerTab = lazy(() => import('./SysOps/SchedulerTab').then(m => ({ default: m.SchedulerTab })))
 
-type SysOpsCategory = 'system-info' | 'cpu' | 'memory' | 'disk' | 'processes' | 'services' | 'logs' | 'storage' | 'users' | 'diagnostics' | 'actions'
+type SysOpsCategory = 'system-info' | 'cpu' | 'memory' | 'disk' | 'processes' | 'services' | 'logs' | 'storage' | 'users' | 'diagnostics' | 'actions' | 'hardware' | 'packages' | 'scheduler'
 
 interface CategoryDef {
   id: SysOpsCategory
@@ -34,11 +37,14 @@ interface CategoryDef {
 
 const categories: CategoryDef[] = [
   { id: 'system-info', label: 'System Info', icon: <Server size={18} />, group: 'inspection' },
+  { id: 'hardware', label: 'Hardware', icon: <Monitor size={18} />, group: 'inspection' },
   { id: 'cpu', label: 'CPU', icon: <Cpu size={18} />, group: 'inspection' },
   { id: 'memory', label: 'Memory', icon: <MemoryStick size={18} />, group: 'inspection' },
   { id: 'disk', label: 'Disk', icon: <Disc size={18} />, group: 'inspection' },
+  { id: 'packages', label: 'Installed Apps', icon: <FileText size={18} />, group: 'inspection' },
   { id: 'processes', label: 'Processes', icon: <Activity size={18} />, group: 'inspection' },
   { id: 'services', label: 'Services', icon: <Settings size={18} />, group: 'inspection' },
+  { id: 'scheduler', label: 'Scheduler', icon: <Settings size={18} />, group: 'inspection' },
   { id: 'logs', label: 'Logs', icon: <FileText size={18} />, group: 'inspection' },
   { id: 'users', label: 'Users', icon: <Users size={18} />, group: 'inspection' },
   { id: 'diagnostics', label: 'Diagnostics', icon: <Stethoscope size={18} />, group: 'diagnosis' },
@@ -48,7 +54,21 @@ const categories: CategoryDef[] = [
 export function SysOps() {
   const { call } = useBackend()
   const { refreshInterval } = useSettingsStore()
+  const { targetTab, clearTargetTab } = useNavigationStore()
   const [activeCategory, setActiveCategory] = useState<SysOpsCategory>('diagnostics')
+
+  // Deep Link sync
+  useEffect(() => {
+    if (targetTab) {
+      // Check if targetTab is a valid category
+      const found = categories.find(c => c.id === targetTab)
+      if (found) {
+        setActiveCategory(found.id)
+        // Clear the target so it doesn't force switch on every re-render
+        clearTargetTab()
+      }
+    }
+  }, [targetTab, clearTargetTab])
 
   // Shared queries
   const { data: cpuInfo, dataUpdatedAt: cpuUpdatedAt } = useQuery<CPUInfo>({
@@ -104,6 +124,9 @@ export function SysOps() {
       case 'users': return <UsersTab />
       case 'diagnostics': return <DiagnosticsTab />
       case 'actions': return <ActionsTab />
+      case 'hardware': return <HardwareTab />
+      case 'packages': return <PackageManagerTab />
+      case 'scheduler': return <SchedulerTab />
       default: return <DiagnosticsTab />
     }
   }

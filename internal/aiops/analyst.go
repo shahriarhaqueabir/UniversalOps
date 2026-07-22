@@ -51,7 +51,7 @@ func SanitizeInput(s string) string {
 
 // BuildAnalystPrompt creates a structured system prompt using physical system reality.
 func BuildAnalystPrompt(k common.SystemKnowledge, history string) string {
-	return fmt.Sprintf(`You are the AllOpsFull System Analyst.
+	return fmt.Sprintf(`You are the Universal-Ops System Analyst.
 Current System State:
 - CPU: %.1f%%
 - RAM: %.1f%%

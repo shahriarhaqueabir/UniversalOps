@@ -47,7 +47,26 @@ export interface GPUData {
   detected: boolean
 }
 
+export interface GPUInfo {
+  name: string
+  vendor: string
+  memory_gb: number
+  driver: string
+  detected: boolean
+  temperature: number
+  utilization: number
+  fan_speed: number
+}
+
 export interface BatteryData {
+  percent: number
+  charging: boolean
+  time_left_sec: number
+  status: string
+  detected: boolean
+}
+
+export interface BatteryInfo {
   percent: number
   charging: boolean
   time_left_sec: number
@@ -105,6 +124,8 @@ export interface ProcessInfo {
   num_fds: number
   read_bytes: number
   write_bytes: number
+  is_signed: boolean
+  publisher: string
 }
 
 export interface SystemInfo {
@@ -861,6 +882,7 @@ export interface NetworkSummary {
 export interface ActionPreview {
   handshake_id: string
   action: string
+  command?: string
   description: string
   risks: string[]
   rollback: string
@@ -954,6 +976,31 @@ export interface LearnedBaseline {
   max: number
   stdDev: number
   count: number
+}
+
+// ── Hardware Telemetry Types ──
+
+export interface SensorData {
+  name: string
+  type: string
+  value: number
+  unit: string
+  category: string
+}
+
+export interface BaseboardInfo {
+  manufacturer: string
+  product: string
+  version: string
+  serial_number: string
+}
+
+export interface HardwareInfo {
+  cpu: CPUExtendedInfo
+  gpu: GPUInfo
+  battery: BatteryInfo
+  sensors: SensorData[]
+  baseboard: BaseboardInfo
 }
 
 // ── NetworkDesign Analysis Types ──
@@ -1117,6 +1164,14 @@ export interface ExtendedDiagnosticResult {
   checks: DiagnosticCheckData[]
   score: number
   timestamp: string
+}
+
+export interface ReportRecord {
+  id: string
+  timestamp: string
+  type: string
+  score: number
+  data_json: string
 }
 
 // ── NetOps Extended Types ──

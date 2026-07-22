@@ -7,13 +7,16 @@ describe('Sidebar', () => {
     const onNavigate = vi.fn()
     render(<Sidebar currentPage="dashboard" onNavigate={onNavigate} />)
 
-    expect(screen.getByText('OPSFORALL')).toBeInTheDocument()
+    expect(screen.getByText('ALLOPSFULL')).toBeInTheDocument()
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
     expect(screen.getByText('System Ops')).toBeInTheDocument()
+    expect(screen.getByText('Workflow Library')).toBeInTheDocument()
     expect(screen.getByText('Network Ops')).toBeInTheDocument()
     expect(screen.getByText('Security Ops')).toBeInTheDocument()
     expect(screen.getByText('DevOps')).toBeInTheDocument()
     expect(screen.getByText('AI Ops')).toBeInTheDocument()
+    expect(screen.getByText('Reports')).toBeInTheDocument()
+    expect(screen.getByText('Alerts')).toBeInTheDocument()
     expect(screen.getByText('Logs')).toBeInTheDocument()
     expect(screen.getByText('Settings')).toBeInTheDocument()
   })
@@ -37,7 +40,7 @@ describe('Sidebar', () => {
   it('shows version footer', () => {
     render(<Sidebar currentPage="dashboard" onNavigate={vi.fn()} />)
 
-    expect(screen.getByText('OpsForAll v1.3.0')).toBeInTheDocument()
+    expect(screen.getByText('AllOpsFull v1.3.1')).toBeInTheDocument()
   })
 
   it('collapses and expands when toggle is clicked', () => {

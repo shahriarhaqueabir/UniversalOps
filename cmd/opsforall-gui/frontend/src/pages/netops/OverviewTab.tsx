@@ -27,8 +27,7 @@ import {
   CheckCircle2,
   Radio,
 } from 'lucide-react'
-import { SectionHeader } from '@/components/ui/SectionHeader'
-import { Panel } from '@/components/ui/Panel'
+import { Panel, PanelHeader } from '@/components/ui/Panel'
 import type {
   ConnectionInfo,
   InterfaceInfo,
@@ -266,7 +265,7 @@ export function OverviewTab() {
 
       {/* ── Section 1: Connectivity Status ── */}
       <Panel padding="md" category="network">
-        <SectionHeader icon={<Signal size={18} className="text-accent" />} title="Connectivity Status" />
+        <PanelHeader icon={<Signal size={20} />} title="Connectivity Status" category="network" />
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {connectivityCards.map(card => (
             <ConnectivityCard key={card.label} {...card} />
@@ -276,7 +275,7 @@ export function OverviewTab() {
 
       {/* ── Section 2: Active Connections ── */}
       <Panel padding="lg" category="network">
-        <SectionHeader icon={<Activity size={20} className="text-accent" />} title="Active Connections" count={connections.length} />
+        <PanelHeader icon={<Activity size={20} />} title="Active Connections" category="network" action={<span className="text-xs font-black px-4 py-1.5 rounded-full bg-panel-3 text-accent border border-border tabular-nums shadow-inner">{connections.length}</span>} />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
             { label: 'Established', value: establishedCount, color: 'var(--color-success)', icon: <ArrowUpRight size={20} /> },
@@ -304,7 +303,7 @@ export function OverviewTab() {
 
       {/* ── Section 3: Interface Health ── */}
       <Panel padding="md" category="network">
-        <SectionHeader icon={<Wifi size={18} className="text-accent" />} title="Interface Health" count={connInterfaces.length} />
+        <PanelHeader icon={<Wifi size={20} />} title="Interface Health" category="network" action={<span className="text-xs font-black px-4 py-1.5 rounded-full bg-panel-3 text-accent border border-border tabular-nums shadow-inner">{connInterfaces.length}</span>} />
         {ifacesLoading ? (
           <div className="flex items-center justify-center py-10">
             <RefreshCw size={20} className="animate-spin text-text-faint" />
@@ -362,7 +361,7 @@ export function OverviewTab() {
 
       {/* ── Section 4: Network Quality ── */}
       <Panel padding="lg" category="network">
-        <SectionHeader icon={<Zap size={20} className="text-accent" />} title="Network Quality" />
+        <PanelHeader icon={<Zap size={20} />} title="Network Quality" category="network" />
         <div className="flex items-center gap-8">
           <button
             onClick={runPingTest}
@@ -412,7 +411,7 @@ export function OverviewTab() {
 
       {/* ── Section 5: DNS Summary ── */}
       <Panel padding="md" category="network">
-        <SectionHeader icon={<Globe size={18} className="text-accent" />} title="DNS Summary" />
+        <PanelHeader icon={<Globe size={20} />} title="DNS Summary" category="network" />
         {dnsSummaryResult ? (
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-panel-2 border border-border rounded-xl p-4">
@@ -433,7 +432,7 @@ export function OverviewTab() {
 
       {/* ── Section 6: Recent Changes ── */}
       <Panel padding="md" category="network">
-        <SectionHeader icon={<Network size={18} className="text-accent" />} title="Recent Changes" count={recentChanges.length} />
+        <PanelHeader icon={<Network size={20} />} title="Recent Changes" category="network" action={<span className="text-xs font-black px-4 py-1.5 rounded-full bg-panel-3 text-accent border border-border tabular-nums shadow-inner">{recentChanges.length}</span>} />
         {recentChanges.length === 0 ? (
           <p className="text-sm font-medium text-text-faint text-center py-6">No interface changes detected yet.</p>
         ) : (

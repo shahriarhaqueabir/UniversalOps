@@ -1,10 +1,14 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
+	"os/exec"
+	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/secops"
+	sysopsPkg "github.com/shahriarhaqueabir/AllOpsFull/internal/sysops"
 )
 
 // SecOps exposes security operations bindings to the frontend.
@@ -152,11 +156,13 @@ func (s *SecOps) GetSecurityEvents() []SecurityEvent {
 // SetFirewallRuleHandshake requests a safety handshake for a firewall rule change.
 func (s *SecOps) SetFirewallRuleHandshake(name string, enable bool) common.ActionPreview {
 	actionName := "Disable Firewall Rule"
+	command := fmt.Sprintf("netsh advfirewall firewall set rule name=\"%s\" new enable=no", name)
 	if enable {
 		actionName = "Enable Firewall Rule"
+		command = fmt.Sprintf("netsh advfirewall firewall set rule name=\"%s\" new enable=yes", name)
 	}
 
-	id := common.GetHandshakeRegistry().Register("SetFirewallRule", map[string]interface{}{
+	id := common.GetHandshakeRegistry().Register("SetFirewallRule", command, map[string]interface{}{
 		"name":   name,
 		"enable": enable,
 	})
@@ -164,10 +170,38 @@ func (s *SecOps) SetFirewallRuleHandshake(name string, enable bool) common.Actio
 	return common.ActionPreview{
 		HandshakeID: id,
 		Action:      actionName,
+		Command:     command,
 		Description: fmt.Sprintf("%s: '%s'", actionName, name),
 		Risks:       []string{"May disrupt active network connections", "Potential security surface change"},
 		Rollback:    "Can be toggled back manually via the same interface.",
 	}
+}
+
+// executeApplyHardening runs the actual remediation logic.
+func (s *SecOps) executeApplyHardening(checkName string) common.SecActionResult {
+	var err error
+	var msg string
+
+	if common.IsWindows() {
+		switch checkName {
+		case "SMBv1 disabled":
+			err = exec.Command("powershell", "-Command", "Set-SmbServerConfiguration -EnableSMB1Protocol $false -Force").Run()
+			msg = "SMBv1 has been disabled."
+		case "Guest account disabled":
+			err = exec.Command("net", "user", "Guest", "/active:no").Run()
+			msg = "Guest account has been disabled."
+		case "Firewall enabled":
+			err = exec.Command("netsh", "advfirewall", "set", "allprofiles", "state", "on").Run()
+			msg = "Windows Firewall enabled on all profiles."
+		default:
+			return common.SecActionResult{Success: false, Error: "Unknown hardening action: " + checkName}
+		}
+	}
+
+	if err != nil {
+		return common.SecActionResult{Success: false, Error: err.Error()}
+	}
+	return common.SecActionResult{Success: true, Message: msg}
 }
 
 // executeSetFirewallRuleState enables or disables a firewall rule.
@@ -599,7 +633,8 @@ func (s *SecOps) RunSecurityAuditChecklist() SecurityAuditResult {
 			Remediation: i.Remediation,
 		})
 	}
-	return SecurityAuditResult{
+
+	out := SecurityAuditResult{
 		Score:     result.Score,
 		Total:     result.Total,
 		Passed:    result.Passed,
@@ -607,11 +642,53 @@ func (s *SecOps) RunSecurityAuditChecklist() SecurityAuditResult {
 		Items:     items,
 		Timestamp: result.Timestamp,
 	}
+
+	// PERSIST: Save to reports table
+	storage := common.GetStorage()
+	if storage != nil {
+		data, _ := json.Marshal(out)
+		id := fmt.Sprintf("sec-audit-%d", time.Now().Unix())
+		_ = storage.InsertReport(common.ReportRecord{
+			ID:        id,
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			Type:      "security",
+			Score:     out.Score,
+			DataJSON:  string(data),
+		})
+	}
+
+	return out
+}
+
+// ListHistoricalSecurityReports returns summary of all persisted security audits.
+func (s *SecOps) ListHistoricalSecurityReports() []common.ReportRecord {
+	storage := common.GetStorage()
+	if storage == nil {
+		return []common.ReportRecord{}
+	}
+	reports, _ := storage.ListReportsByType("security")
+	return reports
+}
+
+// GetHistoricalSecurityReport retrieves a specific security audit by ID.
+func (s *SecOps) GetHistoricalSecurityReport(id string) (SecurityAuditResult, error) {
+	storage := common.GetStorage()
+	if storage == nil {
+		return SecurityAuditResult{}, fmt.Errorf("storage unavailable")
+	}
+	r, err := storage.GetReport(id)
+	if err != nil || r == nil {
+		return SecurityAuditResult{}, fmt.Errorf("report not found")
+	}
+	var res SecurityAuditResult
+	err = json.Unmarshal([]byte(r.DataJSON), &res)
+	return res, err
 }
 
 // IsolateHost requests a safety handshake for isolating the host.
 func (s *SecOps) IsolateHost(confirm bool, autoExpireSeconds int) common.ActionPreview {
-	id := common.GetHandshakeRegistry().Register("IsolateHost", map[string]interface{}{
+	command := "netsh advfirewall set allprofiles firewallpolicy blockinbound,blockoutbound"
+	id := common.GetHandshakeRegistry().Register("IsolateHost", command, map[string]interface{}{
 		"confirm":           confirm,
 		"autoExpireSeconds": autoExpireSeconds,
 	})
@@ -619,6 +696,7 @@ func (s *SecOps) IsolateHost(confirm bool, autoExpireSeconds int) common.ActionP
 	return common.ActionPreview{
 		HandshakeID: id,
 		Action:      "Isolate Host",
+		Command:     command,
 		Description: "Sever all inbound and outbound network connectivity except for essential management traffic.",
 		Risks:       []string{"Loss of network connectivity", "May disrupt active SSH or remote management sessions", "Potential for local lockout if not carefully configured"},
 		Rollback:    fmt.Sprintf("Isolation rule will automatically expire in %d seconds if configured.", autoExpireSeconds),
@@ -626,22 +704,24 @@ func (s *SecOps) IsolateHost(confirm bool, autoExpireSeconds int) common.ActionP
 }
 
 // executeIsolateHost isolates the host from the network.
-func (s *SecOps) executeIsolateHost(confirm bool, autoExpireSeconds int) SecActionResult {
+func (s *SecOps) executeIsolateHost(confirm bool, autoExpireSeconds int) common.SecActionResult {
 	result, err := secops.IsolateHost(confirm, autoExpireSeconds)
 	if err != nil {
 		common.LogWarn("IsolateHost failed: %v", err)
-		return SecActionResult{Success: false, Error: err.Error()}
+		return common.SecActionResult{Success: false, Error: err.Error()}
 	}
-	return SecActionResult{Success: result.Success, Message: result.Message, Error: result.Error}
+	return *result
 }
 
 // KillProcess requests a safety handshake for terminating a process.
 func (s *SecOps) KillProcess(pid int) common.ActionPreview {
-	id := common.GetHandshakeRegistry().Register("KillProcess", map[string]interface{}{"pid": pid})
+	command := fmt.Sprintf("taskkill /F /PID %d", pid)
+	id := common.GetHandshakeRegistry().Register("KillProcess", command, map[string]interface{}{"pid": pid})
 
 	return common.ActionPreview{
 		HandshakeID: id,
 		Action:      "Kill Process",
+		Command:     command,
 		Description: fmt.Sprintf("Forcefully terminate process with PID %d", pid),
 		Risks:       []string{"Unsaved data in the application may be lost", "System instability if a critical service is terminated"},
 		Rollback:    "Cannot be undone. Application must be restarted manually.",
@@ -649,22 +729,49 @@ func (s *SecOps) KillProcess(pid int) common.ActionPreview {
 }
 
 // executeKillProcess force-kills a process by PID.
-func (s *SecOps) executeKillProcess(pid int) SecActionResult {
+func (s *SecOps) executeKillProcess(pid int) common.SecActionResult {
 	result, err := secops.KillProcess(pid)
 	if err != nil {
 		common.LogWarn("KillProcess failed: %v", err)
-		return SecActionResult{Success: false, Error: err.Error()}
+		return common.SecActionResult{Success: false, Error: err.Error()}
 	}
-	return SecActionResult{Success: result.Success, Message: result.Message, Error: result.Error}
+	return *result
+}
+
+// KillProcessTree requests a safety handshake for terminating a process and its children.
+func (s *SecOps) KillProcessTree(pid int) common.ActionPreview {
+	command := fmt.Sprintf("Get-Process -Id %d | Stop-Process -Force", pid)
+	id := common.GetHandshakeRegistry().Register("KillProcessTree", command, map[string]interface{}{"pid": pid})
+
+	return common.ActionPreview{
+		HandshakeID: id,
+		Action:      "Kill Process Tree",
+		Command:     command,
+		Description: fmt.Sprintf("Forcefully terminate process with PID %d and ALL its child processes", pid),
+		Risks:       []string{"Unsaved data in the application or its sub-processes may be lost", "System instability if critical parent/child services are terminated"},
+		Rollback:    "Cannot be undone. Applications must be restarted manually.",
+	}
+}
+
+// executeKillProcessTree force-kills a process tree by parent PID.
+func (s *SecOps) executeKillProcessTree(pid int) common.SecActionResult {
+	err := sysopsPkg.KillProcessTree(int32(pid))
+	if err != nil {
+		common.LogWarn("KillProcessTree failed: %v", err)
+		return common.SecActionResult{Success: false, Error: err.Error()}
+	}
+	return common.SecActionResult{Success: true, Message: fmt.Sprintf("Process tree for PID %d successfully terminated", pid)}
 }
 
 // BlockIP requests a safety handshake for blocking an IP address.
 func (s *SecOps) BlockIP(ip string) common.ActionPreview {
-	id := common.GetHandshakeRegistry().Register("BlockIP", map[string]interface{}{"ip": ip})
+	command := fmt.Sprintf("netsh advfirewall firewall add rule name=\"Block %s\" dir=in action=block remoteip=%s", ip, ip)
+	id := common.GetHandshakeRegistry().Register("BlockIP", command, map[string]interface{}{"ip": ip})
 
 	return common.ActionPreview{
 		HandshakeID: id,
 		Action:      "Block IP Address",
+		Command:     command,
 		Description: fmt.Sprintf("Add a host-level firewall rule to block all traffic from: %s", ip),
 		Risks:       []string{"May block legitimate traffic if IP is spoofed or shared", "Increases firewall rule complexity"},
 		Rollback:    "Can be removed manually via the Firewall management tab.",
@@ -672,22 +779,24 @@ func (s *SecOps) BlockIP(ip string) common.ActionPreview {
 }
 
 // executeBlockIP blocks an IP address via firewall.
-func (s *SecOps) executeBlockIP(ip string) SecActionResult {
+func (s *SecOps) executeBlockIP(ip string) common.SecActionResult {
 	result, err := secops.BlockIP(ip)
 	if err != nil {
 		common.LogWarn("BlockIP failed: %v", err)
-		return SecActionResult{Success: false, Error: err.Error()}
+		return common.SecActionResult{Success: false, Error: err.Error()}
 	}
-	return SecActionResult{Success: result.Success, Message: result.Message, Error: result.Error}
+	return *result
 }
 
 // DisableAccount requests a safety handshake for disabling a local user account.
 func (s *SecOps) DisableAccount(username string) common.ActionPreview {
-	id := common.GetHandshakeRegistry().Register("DisableAccount", map[string]interface{}{"username": username})
+	command := fmt.Sprintf("net user %s /active:no", username)
+	id := common.GetHandshakeRegistry().Register("DisableAccount", command, map[string]interface{}{"username": username})
 
 	return common.ActionPreview{
 		HandshakeID: id,
 		Action:      "Disable Account",
+		Command:     command,
 		Description: fmt.Sprintf("Instantly disable the local user account: '%s'", username),
 		Risks:       []string{"User will be unable to log in", "May disrupt active sessions or scheduled tasks running under this account"},
 		Rollback:    "Can be re-enabled via the Identity & Access tab or Computer Management.",
@@ -695,22 +804,98 @@ func (s *SecOps) DisableAccount(username string) common.ActionPreview {
 }
 
 // executeDisableAccount disables a local user account.
-func (s *SecOps) executeDisableAccount(username string) SecActionResult {
+func (s *SecOps) executeDisableAccount(username string) common.SecActionResult {
 	result, err := secops.DisableAccount(username)
 	if err != nil {
 		common.LogWarn("DisableAccount failed: %v", err)
-		return SecActionResult{Success: false, Error: err.Error()}
+		return common.SecActionResult{Success: false, Error: err.Error()}
 	}
-	return SecActionResult{Success: result.Success, Message: result.Message, Error: result.Error}
+	return *result
+}
+
+// ListForensics returns all forensic snapshots.
+func (s *SecOps) ListForensics() []common.ForensicRecord {
+	storage := common.GetStorage()
+	if storage == nil {
+		return []common.ForensicRecord{}
+	}
+	records, err := storage.ListForensics()
+	if err != nil {
+		return []common.ForensicRecord{}
+	}
+	return records
+}
+
+// GetForensic returns a full forensic snapshot by ID.
+func (s *SecOps) GetForensic(id string) common.ForensicRecord {
+	storage := common.GetStorage()
+	if storage == nil {
+		return common.ForensicRecord{}
+	}
+	r, err := storage.GetForensic(id)
+	if err != nil || r == nil {
+		return common.ForensicRecord{}
+	}
+	return *r
+}
+
+// ForensicDiff holds the results of comparing two forensic snapshots.
+type ForensicDiff struct {
+	NewProcesses  []string `json:"new_processes"`
+	GoneProcesses []string `json:"gone_processes"`
+	SnapshotA     string   `json:"snapshot_a"`
+	SnapshotB     string   `json:"snapshot_b"`
+}
+
+// DiffForensics compares two snapshots and identifies structural changes.
+func (s *SecOps) DiffForensics(idA, idB string) (ForensicDiff, error) {
+	storage := common.GetStorage()
+	if storage == nil {
+		return ForensicDiff{}, fmt.Errorf("storage unavailable")
+	}
+
+	snapA, errA := storage.GetForensic(idA)
+	snapB, errB := storage.GetForensic(idB)
+	if errA != nil || errB != nil || snapA == nil || snapB == nil {
+		return ForensicDiff{}, fmt.Errorf("failed to retrieve snapshots")
+	}
+
+	// Simple process diff logic (comparing names for now)
+	type proc struct {
+		ProcessName string `json:"ProcessName"`
+	}
+	var dataA, dataB map[string]interface{}
+	_ = json.Unmarshal([]byte(snapA.DataJSON), &dataA)
+	_ = json.Unmarshal([]byte(snapB.DataJSON), &dataB)
+
+	var listA, listB []proc
+	_ = json.Unmarshal([]byte(dataA["processes"].(string)), &listA)
+	_ = json.Unmarshal([]byte(dataB["processes"].(string)), &listB)
+
+	mapA := make(map[string]bool)
+	for _, p := range listA {
+		mapA[p.ProcessName] = true
+	}
+
+	diff := ForensicDiff{SnapshotA: idA, SnapshotB: idB}
+	for _, p := range listB {
+		if !mapA[p.ProcessName] {
+			diff.NewProcesses = append(diff.NewProcesses, p.ProcessName)
+		}
+	}
+
+	return diff, nil
 }
 
 // CaptureEvidence requests a safety handshake for collecting forensic evidence.
 func (s *SecOps) CaptureEvidence() common.ActionPreview {
-	id := common.GetHandshakeRegistry().Register("CaptureEvidence", nil)
+	command := "Forensic Snapshot (Process List, Connections, Environment)"
+	id := common.GetHandshakeRegistry().Register("CaptureEvidence", command, nil)
 
 	return common.ActionPreview{
 		HandshakeID: id,
 		Action:      "Capture Evidence",
+		Command:     command,
 		Description: "Perform a high-density snapshot of volatile system state (processes, connections, memory strings).",
 		Risks:       []string{"Temporary CPU spike during collection", "Privacy risk: will collect metadata from all running processes"},
 		Rollback:    "Non-destructive. Collected evidence can be deleted manually.",
@@ -718,34 +903,36 @@ func (s *SecOps) CaptureEvidence() common.ActionPreview {
 }
 
 // executeCaptureEvidence collects forensic evidence into a summary.
-func (s *SecOps) executeCaptureEvidence() SecActionResult {
+func (s *SecOps) executeCaptureEvidence() common.SecActionResult {
 	result, err := secops.CaptureEvidence()
 	if err != nil {
 		common.LogWarn("CaptureEvidence failed: %v", err)
-		return SecActionResult{Success: false, Error: err.Error()}
+		return common.SecActionResult{Success: false, Error: err.Error()}
 	}
-	return SecActionResult{Success: result.Success, Message: result.Message, Error: result.Error}
+	return *result
 }
 
 // ExportForensicBundle requests a safety handshake for exporting evidence.
-func (s *SecOps) ExportForensicBundle() common.ActionPreview {
-	id := common.GetHandshakeRegistry().Register("ExportForensicBundle", nil)
+func (s *SecOps) ExportForensicBundle(snapshotID string) common.ActionPreview {
+	command := fmt.Sprintf("Export snapshot %s to local archive", snapshotID)
+	id := common.GetHandshakeRegistry().Register("ExportForensicBundle", command, map[string]interface{}{"id": snapshotID})
 
 	return common.ActionPreview{
 		HandshakeID: id,
 		Action:      "Export Forensic Bundle",
-		Description: "Package and compress all captured evidence into a portable .zip archive.",
+		Command:     command,
+		Description: fmt.Sprintf("Package and compress captured evidence snapshot %s into a portable JSON archive.", snapshotID),
 		Risks:       []string{"Disk space consumption", "Exposure risk if bundle is stored in an unencrypted location"},
 		Rollback:    "Non-destructive. Delete the resulting bundle manually.",
 	}
 }
 
 // executeExportForensicBundle exports evidence to a file.
-func (s *SecOps) executeExportForensicBundle() SecActionResult {
-	result, err := secops.ExportForensicBundle()
+func (s *SecOps) executeExportForensicBundle(snapshotID string) common.SecActionResult {
+	result, err := secops.ExportForensicBundle(snapshotID)
 	if err != nil {
 		common.LogWarn("ExportForensicBundle failed: %v", err)
-		return SecActionResult{Success: false, Error: err.Error()}
+		return common.SecActionResult{Success: false, Error: err.Error()}
 	}
-	return SecActionResult{Success: result.Success, Message: result.Message, Error: result.Error}
+	return *result
 }

@@ -27,6 +27,42 @@ type PingStats struct {
 	WorstTarget string  `json:"worst_target"`
 }
 
+// LatencyMatrix holds a multi-hop latency assessment.
+type LatencyMatrix struct {
+	Gateway PingResultMulti `json:"gateway"`
+	ISP     PingResultMulti `json:"isp"`
+	Cloud   PingResultMulti `json:"cloud"`
+	CongestionSource string `json:"congestion_source"` // "local", "isp", "backbone", "none"
+}
+
+// GetLatencyMatrix pings a chain of targets to identify bottleneck segments.
+func GetLatencyMatrix() LatencyMatrix {
+	gw := GetDefaultGateway().IP
+	if gw == "" { gw = "192.168.1.1" } // fallback
+
+	targets := []string{gw, "1.1.1.1", "google.com"}
+	results := PingMultiTarget(targets, 3)
+
+	matrix := LatencyMatrix{
+		Gateway: results[0],
+		ISP:     results[1],
+		Cloud:   results[2],
+	}
+
+	// Heuristic segment analysis
+	if matrix.Gateway.AvgMs > 50 {
+		matrix.CongestionSource = "local"
+	} else if matrix.ISP.AvgMs > matrix.Gateway.AvgMs + 100 {
+		matrix.CongestionSource = "isp"
+	} else if matrix.Cloud.AvgMs > matrix.ISP.AvgMs + 150 {
+		matrix.CongestionSource = "backbone"
+	} else {
+		matrix.CongestionSource = "none"
+	}
+
+	return matrix
+}
+
 // PingMultiTarget pings multiple targets concurrently.
 func PingMultiTarget(targets []string, count int) []PingResultMulti {
 	if count <= 0 {

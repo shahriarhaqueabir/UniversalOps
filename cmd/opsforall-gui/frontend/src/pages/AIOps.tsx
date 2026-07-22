@@ -45,12 +45,18 @@ interface ChatResponse {
 
 // ── Inline helpers ──
 
-function ChatBubble({ role, content, actions }: ChatMessage) {
+interface ChatBubbleProps extends ChatMessage {
+  sessionID: string;
+  onAssistantReply: (content: string, actions?: ActionPreview[]) => void;
+}
+
+function ChatBubble({ role, content, actions, sessionID, onAssistantReply }: ChatBubbleProps) {
   const { call } = useBackend()
   const isAssistant = role === 'assistant' || role === 'system'
   const [copied, setCopied] = useState(false)
   const [authorizedIds, setAuthorizedIds] = useState<Set<string>>(new Set())
   const [abortedIds, setAbortedIds] = useState<Set<string>>(new Set())
+  const [isExecuting, setIsExecuting] = useState(false)
 
   const handleCopy = async () => {
     try {
@@ -61,18 +67,46 @@ function ChatBubble({ role, content, actions }: ChatMessage) {
   }
 
   const handleAuthorize = async (action: ActionPreview) => {
+    if (isExecuting) return
+    setIsExecuting(true)
+    const tid = toast.loading(`Executing ${action.action}...`)
     try {
-      await call('App.ConfirmAction', action.handshake_id)
+      const result = await call('App.ConfirmAction', action.handshake_id) as any
       setAuthorizedIds(prev => new Set(prev).add(action.handshake_id))
-      toast.success('Action executed successfully')
+      toast.success('Action executed successfully', { id: tid })
+
+      // Explicitly show result in chat
+      const detail = result.message || result.error || 'No output'
+      const status = result.success ? 'SUCCESS' : 'FAILED'
+
+      // Notify the AI about the success and GET a summary response
+      try {
+        const response = await call('AIOps.NotifyActionResult', sessionID, action.action, status, detail) as ChatResponse
+        if (response.content) {
+          onAssistantReply(response.content, response.actions)
+        }
+      } catch (chatErr) {
+        console.error('Failed to notify AI of action success:', chatErr)
+      }
     } catch (err) {
       console.error(err)
-      toast.error('Neural Authorization Failed')
+      toast.error('Neural Authorization Failed', { id: tid })
+    } finally {
+      setIsExecuting(false)
     }
   }
 
-  const handleAbort = (action: ActionPreview) => {
+  const handleAbort = async (action: ActionPreview) => {
     setAbortedIds(prev => new Set(prev).add(action.handshake_id))
+    // Notify the AI about the abort
+    try {
+      const response = await call('AIOps.NotifyActionResult', sessionID, action.action, 'ABORTED', 'User cancelled the action.') as ChatResponse
+      if (response.content) {
+        onAssistantReply(response.content, response.actions)
+      }
+    } catch (chatErr) {
+      console.error('Failed to notify AI of action abort:', chatErr)
+    }
   }
 
   return (
@@ -126,6 +160,12 @@ function ChatBubble({ role, content, actions }: ChatMessage) {
                     <p className="text-xs font-bold text-text-faint uppercase tracking-tighter mb-1">Proposed Action</p>
                     <p className="text-base font-bold text-text">{action.description}</p>
                   </div>
+                  {action.command && (
+                    <div className="bg-panel-3/50 border border-border p-3 rounded-xl">
+                      <p className="text-[10px] font-bold text-text-faint uppercase tracking-widest mb-2">Technical command to be executed</p>
+                      <code className="text-xs font-mono text-accent block break-all whitespace-pre-wrap">{action.command}</code>
+                    </div>
+                  )}
                   <div>
                     <p className="text-xs font-bold text-text-faint uppercase tracking-tighter mb-2">Technical Risks</p>
                     <ul className="space-y-1">
@@ -432,11 +472,11 @@ function ChatTab() {
         if (!cancelled && msgs && msgs.length > 0) {
           setMessages(msgs)
         } else if (!cancelled) {
-          setMessages([{ role: 'assistant', content: 'Greetings. I am the AllOpsFull AI Analyst. I have analyzed your system metrics and identified several areas for potential optimization. How can I assist you today?' }])
+          setMessages([{ role: 'assistant', content: 'Greetings. I am the Universal-Ops AI Analyst. I have analyzed your system metrics and identified several areas for potential optimization. How can I assist you today?' }])
         }
       } catch { /* ignore */
         if (!cancelled) {
-          setMessages([{ role: 'assistant', content: 'Greetings. I am the AllOpsFull AI Analyst. I have analyzed your system metrics and identified several areas for potential optimization. How can I assist you today?' }])
+          setMessages([{ role: 'assistant', content: 'Greetings. I am the Universal-Ops AI Analyst. I have analyzed your system metrics and identified several areas for potential optimization. How can I assist you today?' }])
         }
       } finally {
         if (!cancelled) setLoaded(true)
@@ -461,7 +501,7 @@ function ChatTab() {
     } catch { /* ignore */ }
 
     try {
-      const response = await call('AIOps.Chat', input) as ChatResponse
+      const response = await call('AIOps.Chat', activeSession, input) as ChatResponse
       const assistantMsg: ChatMessage = {
         role: 'assistant',
         content: response.content,
@@ -591,7 +631,16 @@ function ChatTab() {
               {/* Messages */}
               <div ref={chatRef} className="flex-1 overflow-y-auto p-10 space-y-8 relative z-10 scroll-smooth">
                 {messages.map((msg, i) => (
-                  <ChatBubble key={i} role={msg.role} content={msg.content} actions={msg.actions} />
+                  <ChatBubble
+                    key={i}
+                    role={msg.role}
+                    content={msg.content}
+                    actions={msg.actions}
+                    sessionID={activeSession}
+                    onAssistantReply={(content, actions) => {
+                      setMessages(prev => [...prev, { role: 'assistant', content, actions }])
+                    }}
+                  />
                 ))}
                 {isTyping && (
                   <div className="flex gap-6 max-w-[80%] animate-pulse">

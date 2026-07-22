@@ -6,7 +6,7 @@ import {
   Compass, Zap, Globe2,
 } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
-import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useSettingsStore, useNavigationStore } from '@/stores'
 import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 import { CategoryGroup } from '@/components/ui/CategoryGroup'
 
@@ -61,7 +61,19 @@ const categories: CategoryDef[] = [
 export function NetOps() {
   const { call } = useBackend()
   const { refreshInterval } = useSettingsStore()
+  const { targetTab, clearTargetTab } = useNavigationStore()
   const [activeCategory, setActiveCategory] = useState<NetOpsCategory>('overview')
+
+  // Deep Link sync
+  useEffect(() => {
+    if (targetTab) {
+      const found = categories.find(c => c.id === targetTab)
+      if (found) {
+        setActiveCategory(found.id)
+        clearTargetTab()
+      }
+    }
+  }, [targetTab, clearTargetTab])
 
   const { dataUpdatedAt: ifacesUpdatedAt } = useQuery({
     queryKey: ['netops-interfaces-sidebar'],

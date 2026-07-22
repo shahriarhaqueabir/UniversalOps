@@ -42,14 +42,14 @@ func main() {
 		OnStartup:  application.Startup,
 		OnShutdown: application.Shutdown,
 		Windows: &windows.Options{
-			WebviewIsTransparent:              true,
-			WindowIsTranslucent:               true,
-			BackdropType:                      windows.Mica,
-			DisableWindowIcon:                 false,
+			WebviewIsTransparent: true,
+			WindowIsTranslucent:  true,
+			BackdropType:         windows.Mica,
+			DisableWindowIcon:    false,
 
-			Theme:                             windows.Dark,
-			CustomTheme:                       &windows.ThemeSettings{},
-			IsZoomControlEnabled:              false,
+			Theme:                windows.Dark,
+			CustomTheme:          &windows.ThemeSettings{},
+			IsZoomControlEnabled: false,
 
 			DisableFramelessWindowDecorations: false,
 		},
@@ -79,6 +79,7 @@ func main() {
 			application.Logs,
 			application.Timeline,
 			application.Workflows,
+			application.Reports,
 		},
 	})
 

@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Sun, Moon, Bell, Trash2, RefreshCw, AlertTriangle, AlertOctagon, Info, CheckCircle2, Clock, Sparkles } from 'lucide-react'
+import { Sun, Moon, Bell, Trash2, RefreshCw, AlertTriangle, AlertOctagon, Info, CheckCircle2, Clock, Sparkles, ArrowLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
-import type { Page } from '../../App'
-import { useThemeStore, useAlertStore, useSettingsStore } from '../../stores'
+import type { Page } from '../../stores/useSettingsStore'
+import { useThemeStore, useAlertStore, useSettingsStore, useNavigationStore } from '../../stores'
 import type { AlertInfo } from '@/types'
 
 interface TopBarProps {
@@ -20,6 +20,8 @@ const pageLabels: Record<Page, string> = {
   secops: 'Security Operations',
   devops: 'Development Operations',
   aiops: 'AI Operations',
+  reports: 'Reports Center',
+  alerts: 'Alerts Dashboard',
   logs: 'Log Viewer',
   settings: 'Settings',
 }
@@ -34,6 +36,7 @@ export function TopBar({ currentPage, onToggleHawk }: TopBarProps) {
   const { theme, toggle } = useThemeStore()
   const { call } = useBackend()
   const { refreshInterval } = useSettingsStore()
+  const { history, goBack } = useNavigationStore()
   const queryClient = useQueryClient()
   const alertCount = useAlertStore((s) => s.alertCount)
   const clearAlerts = useAlertStore((s) => s.clearAlerts)
@@ -79,7 +82,16 @@ export function TopBar({ currentPage, onToggleHawk }: TopBarProps) {
     >
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm wails-no-drag">
-        <span className="text-[var(--color-text-faint)]">OpsForAll</span>
+        {history.length > 0 && (
+          <button
+            onClick={goBack}
+            className="p-1 rounded-md text-[var(--color-text-dim)] hover:text-[var(--color-text)] hover:bg-[var(--color-sidebar-hover)] transition-all mr-1"
+            title="Go Back"
+          >
+            <ArrowLeft size={16} />
+          </button>
+        )}
+        <span className="text-[var(--color-text-faint)]">Universal-Ops</span>
         <span className="text-[var(--color-text-faint)] text-[10px]">/</span>
         <span className="text-[var(--color-text)] font-medium">{pageLabels[currentPage]}</span>
       </div>

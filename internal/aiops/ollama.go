@@ -82,9 +82,24 @@ func ResetDefaultClient() {
 	defaultClient = nil
 }
 
-// Chat sends a chat request using the default client.
+// Chat sends a chat request using the default client and context.Background().
 func Chat(messages []ChatMessage) (string, error) {
-	return getDefaultClient().Chat(messages)
+	return ChatWithContext(context.Background(), messages)
+}
+
+// ChatWithContext sends a chat request using the default client and the provided context.
+func ChatWithContext(ctx context.Context, messages []ChatMessage) (string, error) {
+	return getDefaultClient().Chat(ctx, messages, "")
+}
+
+// ChatWithModel sends a chat request using a specific model override.
+func ChatWithModel(messages []ChatMessage, modelOverride string) (string, error) {
+	return ChatWithModelAndContext(context.Background(), messages, modelOverride)
+}
+
+// ChatWithModelAndContext sends a chat request using a specific model override and context.
+func ChatWithModelAndContext(ctx context.Context, messages []ChatMessage, modelOverride string) (string, error) {
+	return getDefaultClient().Chat(ctx, messages, modelOverride)
 }
 
 // SetModel updates the model for the default client.
@@ -94,22 +109,42 @@ func SetModel(model string) {
 
 // CheckOllama checks the status using the default client.
 func CheckOllama() (*OllamaStatus, error) {
-	return getDefaultClient().CheckStatus()
+	return CheckOllamaWithContext(context.Background())
+}
+
+// CheckOllamaWithContext checks the status using the default client and context.
+func CheckOllamaWithContext(ctx context.Context) (*OllamaStatus, error) {
+	return getDefaultClient().CheckStatus(ctx)
 }
 
 // PullModel downloads a model using the default client.
 func PullModel(name string, onProgress func(api.ProgressResponse) error) error {
-	return getDefaultClient().PullModel(name, onProgress)
+	return PullModelWithContext(context.Background(), name, onProgress)
+}
+
+// PullModelWithContext downloads a model using the default client and context.
+func PullModelWithContext(ctx context.Context, name string, onProgress func(api.ProgressResponse) error) error {
+	return getDefaultClient().PullModel(ctx, name, onProgress)
 }
 
 // CreateModel creates a model using the default client.
 func CreateModel(name, from, system string, parameters map[string]any) error {
-	return getDefaultClient().CreateModel(name, from, system, parameters)
+	return CreateModelWithContext(context.Background(), name, from, system, parameters)
+}
+
+// CreateModelWithContext creates a model using the default client and context.
+func CreateModelWithContext(ctx context.Context, name, from, system string, parameters map[string]any) error {
+	return getDefaultClient().CreateModel(ctx, name, from, system, parameters)
 }
 
 // DeleteModel removes a model using the default client.
 func DeleteModel(name string) error {
-	return getDefaultClient().DeleteModel(name)
+	return DeleteModelWithContext(context.Background(), name)
+}
+
+// DeleteModelWithContext removes a model using the default client and context.
+func DeleteModelWithContext(ctx context.Context, name string) error {
+	return getDefaultClient().DeleteModel(ctx, name)
 }
 
 // ── OllamaClient Implementation ─────────────────────────────────────────────
@@ -147,19 +182,19 @@ func CheckOllamaBinary() bool {
 }
 
 // PullModel downloads a model from the Ollama library.
-func (c *OllamaClient) PullModel(name string, onProgress func(api.ProgressResponse) error) error {
+func (c *OllamaClient) PullModel(ctx context.Context, name string, onProgress func(api.ProgressResponse) error) error {
 	req := &api.PullRequest{Model: name}
-	return c.api.Pull(context.Background(), req, onProgress)
+	return c.api.Pull(ctx, req, onProgress)
 }
 
 // DeleteModel removes a local model.
-func (c *OllamaClient) DeleteModel(name string) error {
+func (c *OllamaClient) DeleteModel(ctx context.Context, name string) error {
 	req := &api.DeleteRequest{Model: name}
-	return c.api.Delete(context.Background(), req)
+	return c.api.Delete(ctx, req)
 }
 
 // CreateModel creates a new model from structured parameters.
-func (c *OllamaClient) CreateModel(name string, from string, system string, parameters map[string]any) error {
+func (c *OllamaClient) CreateModel(ctx context.Context, name string, from string, system string, parameters map[string]any) error {
 	req := &api.CreateRequest{
 		Model:      name,
 		From:       from,
@@ -167,14 +202,14 @@ func (c *OllamaClient) CreateModel(name string, from string, system string, para
 		Parameters: parameters,
 	}
 
-	return c.api.Create(context.Background(), req, func(resp api.ProgressResponse) error {
+	return c.api.Create(ctx, req, func(resp api.ProgressResponse) error {
 		return nil
 	})
 }
 
 // CheckStatus checks if the Ollama service is available.
-func (c *OllamaClient) CheckStatus() (*OllamaStatus, error) {
-	listResp, err := c.api.List(context.Background())
+func (c *OllamaClient) CheckStatus(ctx context.Context) (*OllamaStatus, error) {
+	listResp, err := c.api.List(ctx)
 	if err != nil {
 		return &OllamaStatus{Available: false}, fmt.Errorf("ollama list failed: %w", err)
 	}
@@ -212,7 +247,7 @@ func (c *OllamaClient) CheckStatus() (*OllamaStatus, error) {
 }
 
 // Chat sends a chat request to the Ollama API.
-func (c *OllamaClient) Chat(messages []ChatMessage) (string, error) {
+func (c *OllamaClient) Chat(ctx context.Context, messages []ChatMessage, modelOverride string) (string, error) {
 	apiMessages := make([]api.Message, len(messages))
 	for i, m := range messages {
 		apiMessages[i] = api.Message{
@@ -221,15 +256,20 @@ func (c *OllamaClient) Chat(messages []ChatMessage) (string, error) {
 		}
 	}
 
+	model := c.GetModel()
+	if modelOverride != "" {
+		model = modelOverride
+	}
+
 	stream := false
 	req := &api.ChatRequest{
-		Model:    c.GetModel(),
+		Model:    model,
 		Messages: apiMessages,
 		Stream:   &stream,
 	}
 
 	var responseText string
-	err := c.api.Chat(context.Background(), req, func(resp api.ChatResponse) error {
+	err := c.api.Chat(ctx, req, func(resp api.ChatResponse) error {
 		responseText += resp.Message.Content
 		return nil
 	})

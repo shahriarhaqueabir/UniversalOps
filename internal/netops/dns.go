@@ -1,9 +1,13 @@
 package netops
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"net"
+	"os"
+	"os/exec"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -27,6 +31,74 @@ type DNSResult struct {
 var publicDNS = []string{
 	"8.8.8.8:53",
 	"1.1.1.1:53",
+}
+
+// GetSystemDNSServers reads the DNS servers actually configured on this machine.
+// Returns the list of DNS server IPs (without port), or an empty slice if they
+// cannot be discovered.
+func GetSystemDNSServers() []string {
+	switch runtime.GOOS {
+	case "windows":
+		return getWindowsDNSServers()
+	case "linux", "darwin":
+		return getUnixDNSServers()
+	default:
+		return nil
+	}
+}
+
+// getWindowsDNSServers queries Windows DNS client configuration via PowerShell.
+func getWindowsDNSServers() []string {
+	cmd := exec.Command("powershell", "-NoProfile", "-Command",
+		"Get-DnsClientServerAddress | Where-Object { $_.ServerAddresses } | Select-Object -ExpandProperty ServerAddresses",
+	)
+	out, err := cmd.Output()
+	if err != nil {
+		return nil
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(string(out)))
+	var servers []string
+	seen := make(map[string]bool)
+	for scanner.Scan() {
+		s := strings.TrimSpace(scanner.Text())
+		if s == "" {
+			continue
+		}
+		// Validate it looks like an IP
+		if net.ParseIP(s) != nil && !seen[s] {
+			servers = append(servers, s)
+			seen[s] = true
+		}
+	}
+	return servers
+}
+
+// getUnixDNSServers parses /etc/resolv.conf for nameserver entries.
+func getUnixDNSServers() []string {
+	f, err := os.Open("/etc/resolv.conf")
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	var servers []string
+	seen := make(map[string]bool)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(line, "nameserver ") {
+			parts := strings.Fields(line)
+			if len(parts) >= 2 {
+				ip := net.ParseIP(parts[1])
+				if ip != nil && !seen[parts[1]] {
+					servers = append(servers, parts[1])
+					seen[parts[1]] = true
+				}
+			}
+		}
+	}
+	return servers
 }
 
 // LookupDNS performs DNS lookups for a given hostname using optional custom DNS servers.

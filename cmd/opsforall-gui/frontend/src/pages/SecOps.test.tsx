@@ -58,9 +58,8 @@ describe('SecOps Page', () => {
 
   it('renders page header', () => {
     render(<SecOps />)
-    const headings = screen.getAllByRole('heading')
-    const hasHeader = headings.some(h => /SECURITY OPERATIONS/i.test(h.textContent ?? ''))
-    expect(hasHeader).toBe(true)
+    expect(screen.getByText('Security Operations')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /threat.*perimeter/i })).toBeInTheDocument()
   })
 
   it('renders sidebar category groups', () => {

@@ -34,6 +34,10 @@ type AIOps struct {
 	pipelineAPI  *PipelineAPI
 	sysOps       *SysOps
 	dataDir      string
+
+	// Configurable models per capability
+	AnalystModel   string
+	OptimizerModel string
 }
 
 // NewAIOps creates a new AIOps facade.
@@ -53,6 +57,53 @@ func (a *AIOps) SetDataDir(dir string) {
 	a.dataDir = dir
 }
 
+// SetCompanionName persists the AI assistant name.
+func (a *AIOps) SetCompanionName(name string) {
+	s := common.GetStorage()
+	if s != nil {
+		s.UpsertSetting("companionName", name)
+	}
+}
+
+// LoadModels retrieves persisted model overrides.
+func (a *AIOps) LoadModels() {
+	s := common.GetStorage()
+	if s == nil {
+		return
+	}
+	a.AnalystModel, _ = s.GetSetting("model_analyst")
+	a.OptimizerModel, _ = s.GetSetting("model_optimizer")
+}
+
+// SetModelForCapability updates and persists a model override for a specific capability.
+func (a *AIOps) SetModelForCapability(capability, model string) {
+	s := common.GetStorage()
+	if s == nil {
+		return
+	}
+	key := "model_" + capability
+	s.UpsertSetting(key, model)
+
+	if capability == "analyst" {
+		a.AnalystModel = model
+	} else if capability == "optimizer" {
+		a.OptimizerModel = model
+	}
+}
+
+// GetCompanionName retrieves the persisted AI assistant name.
+func (a *AIOps) GetCompanionName() string {
+	s := common.GetStorage()
+	if s == nil {
+		return "Hawk"
+	}
+	val, err := s.GetSetting("companionName")
+	if err != nil || val == "" {
+		return "Hawk"
+	}
+	return val
+}
+
 // ChatResponse contains the AI message and any proposed actions.
 type ChatResponse struct {
 	Content string                 `json:"content"`
@@ -61,30 +112,74 @@ type ChatResponse struct {
 }
 
 // Chat sends a message to the Ollama chat API and returns the response.
-func (a *AIOps) Chat(message string) ChatResponse {
+func (a *AIOps) Chat(sessionID, message string) ChatResponse {
 	// 1. Prepare Context
 	knowledge := a.knowledge.GetSnapshot()
 
 	storage := common.GetStorage()
 	var historyContext string
+	var chatHistory []aiops.ChatMessage
+
 	if storage != nil {
-		cpuHistory, _ := storage.GetMetricHistory(common.MetricCPU, 10)
-		memHistory, _ := storage.GetMetricHistory(common.MetricMem, 10)
-		if len(cpuHistory) > 0 {
-			historyContext = fmt.Sprintf("\nHistorical Context (10s window):\nCPU usage patterns: %v\nRAM occupancy patterns: %v\n", cpuHistory, memHistory)
+		// Load historical metrics for prompt context - Expanded to 100 points (~5 mins at 3s)
+		cpuHistory, _ := storage.GetMetricHistory(common.MetricCPU, 100)
+		memHistory, _ := storage.GetMetricHistory(common.MetricMem, 100)
+		diskHistory, _ := storage.GetMetricHistory(common.MetricDisk, 100)
+
+		// Load recent system events (last 50)
+		events, _ := storage.QueryEvents("", "", 50, 0)
+		var eventStrings []string
+		for _, e := range events {
+			eventStrings = append(eventStrings, fmt.Sprintf("[%s] %s: %s", e.Timestamp.Format("15:04:05"), e.Title, e.Detail))
+		}
+
+		// Load recent anomalies (last 20)
+		anoms := a.DetectAnomalies()
+		var anomStrings []string
+		for i, anom := range anoms {
+			if i >= 20 {
+				break
+			}
+			anomStrings = append(anomStrings, fmt.Sprintf("%s: %s (Value: %.1f)", anom.Timestamp, anom.Metric, anom.Value))
+		}
+
+		historyContext = fmt.Sprintf("\n--- SYSTEM HISTORY (Last 5 Mins) ---\n"+
+			"CPU Summary: %s\n"+
+			"RAM Summary: %s\n"+
+			"Disk Summary: %s\n\n"+
+			"Recent System Events:\n%s\n\n"+
+			"Recent Anomalies:\n%s\n"+
+			"------------------------------------\n",
+			a.summarizeMetrics("CPU", cpuHistory),
+			a.summarizeMetrics("RAM", memHistory),
+			a.summarizeMetrics("Disk", diskHistory),
+			strings.Join(eventStrings, "\n"),
+			strings.Join(anomStrings, "\n"))
+
+		// Load conversation history if sessionID is provided
+		if sessionID != "" {
+			msgs, _ := storage.GetMessages(sessionID)
+			for _, m := range msgs {
+				chatHistory = append(chatHistory, aiops.ChatMessage{
+					Role:    m.Role,
+					Content: m.Content,
+				})
+			}
 		}
 	}
 
 	systemPrompt := aiops.BuildAnalystPrompt(knowledge, historyContext)
 	wrappedMessage := fmt.Sprintf("<user_query>%s</user_query>", aiops.SanitizeInput(message))
 
+	// Construct full message list: [System, ...History, CurrentUser]
 	messages := []aiops.ChatMessage{
 		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: wrappedMessage},
 	}
+	messages = append(messages, chatHistory...)
+	messages = append(messages, aiops.ChatMessage{Role: "user", Content: wrappedMessage})
 
 	// 2. Execute Chat
-	rawResponse, err := aiops.Chat(messages)
+	rawResponse, err := aiops.ChatWithModelAndContext(a.ctx, messages, a.AnalystModel)
 	if err != nil {
 		common.LogWarn("AI Chat failed: %v", err)
 		return ChatResponse{Content: "Error: " + err.Error()}
@@ -106,7 +201,7 @@ func (a *AIOps) GenerateReport(sections []string) string {
 		title = aiops.SanitizeInput(title)
 		prompt := "Generate a brief operations report section for: " + title +
 			". Include key metrics and observations based on recent system data."
-		resp, err := aiops.Chat([]aiops.ChatMessage{
+		resp, err := aiops.ChatWithContext(a.ctx, []aiops.ChatMessage{
 			{Role: "system", Content: "You are a system operations analyst. Be concise and factual."},
 			{Role: "user", Content: prompt},
 		})
@@ -127,7 +222,7 @@ func (a *AIOps) GenerateReport(sections []string) string {
 
 // GetOllamaStatus returns the current Ollama service status.
 func (a *AIOps) GetOllamaStatus() OllamaStatus {
-	status, err := aiops.CheckOllama()
+	status, err := aiops.CheckOllamaWithContext(a.ctx)
 
 	// Use the centralized CapabilityRegistry for binary detection
 	binaryExists := false
@@ -181,7 +276,7 @@ func (a *AIOps) SetOllamaModel(modelName string) {
 // PullModel initiates a model pull and emits progress events to the frontend.
 func (a *AIOps) PullModel(modelName string) error {
 	common.LogInfo("AIOps: Pulling model %q", modelName)
-	err := aiops.PullModel(modelName, func(resp api.ProgressResponse) error {
+	err := aiops.PullModelWithContext(a.ctx, modelName, func(resp api.ProgressResponse) error {
 		if a.ctx != nil {
 			percent := 0.0
 			if resp.Total > 0 {
@@ -207,7 +302,7 @@ func (a *AIOps) PullModel(modelName string) error {
 // DeleteModel removes a local model from Ollama.
 func (a *AIOps) DeleteModel(modelName string) error {
 	common.LogInfo("AIOps: Deleting model %q", modelName)
-	return aiops.DeleteModel(modelName)
+	return aiops.DeleteModelWithContext(a.ctx, modelName)
 }
 
 // CreateOpsPersona creates the specialized 'allopsfull' model from the local modelfile.
@@ -229,38 +324,33 @@ func (a *AIOps) CreateOpsPersona() error {
 
 	// 2. Ensure allopsfull.modelfile exists in data/
 	if _, err := os.Stat(modelfilePath); os.IsNotExist(err) {
-		common.LogInfo("AIOps: allopsfull.modelfile missing in data/. Creating default.")
-		content := `FROM hf.co/empero-ai/Qwythos-9B-Claude-Mythos-5-1M-GGUF:Q6_K
+		common.LogInfo("AIOps: allopsfull.modelfile missing in data/. Creating default (MiniCPM-Thinking).")
+		content := `FROM hf.co/GnLOLot/MiniCPM5-1B-Claude-Opus-Fable5-V2-Thinking-GGUF:Q8_0
 
-# System message for AllOpsFull System Analyst
+# System message for Universal-Ops System Analyst
 SYSTEM """
-You are the AllOpsFull System Analyst, an expert in system, network, and security operations.
-Your objective is to analyze telemetry and provide clear, factual technical briefings.
-Provide technical details without unnecessary filler.
-Base your findings on metrics and system data.
+You are the Universal-Ops System Analyst, a high-density technical co-pilot.
+Objective: Synthesize complex telemetry into factual technical briefings.
 
-### System Actions
-You can request system actions. When remediation is needed:
-1. Explain why the action is recommended.
-2. Emit an action request tag:
-   <action_request name="ACTION_NAME" param1="VALUE" />
+### Operational Protocol
+1. Use your <thought> block to correlate telemetry history and identify root causes.
+2. Provide a concise technical justification for any proposed action.
+3. Emit action requests using: <action_request name="ACTION_NAME" param1="VALUE" />
 
-Available Actions:
-- kill_process (params: pid) -> Stop a specific process.
-- block_ip (params: ip) -> Block an IP in the firewall.
-- isolate_host (params: none) -> Stop all network traffic.
-- restart_service (params: name) -> Restart a service.
+### Available Actions
+- kill_process (pid): Stop a specific process.
+- restart_service (name): Restart a system service.
+- disk_cleanup: Initiate temporary file removal.
+- defrag: Optimize primary drive storage.
 
-Example:
-"Process PID 4412 is using excessive resources and making unusual network calls.
-I recommend stopping it.
-<action_request name="kill_process" pid="4412" />"
-
-Always provide a justification based on system data before requesting an action.
+Anchor all findings in the provided System History and live Metrics.
 """
 
-# Parameters
+# Parameters for technical precision and consistency
 PARAMETER temperature 0.1
+PARAMETER num_ctx 32768
+PARAMETER stop "</action_request>"
+PARAMETER stop "──"
 `
 		if err := os.WriteFile(modelfilePath, []byte(content), 0644); err != nil {
 			common.LogWarn("AIOps: Failed to create modelfile: %v", err)
@@ -270,15 +360,15 @@ PARAMETER temperature 0.1
 	// 2. Parse Modelfile
 	config, err := aiops.ParseModelfile(modelfilePath)
 	if err != nil {
-		common.LogWarn("AIOps: Failed to parse Modelfile: %v. Using hardcoded fallbacks.", err)
+		common.LogWarn("AIOps: Failed to parse Modelfile: %v. Using hardcoded defaults (MiniCPM).", err)
 		config = &aiops.ModelfileConfig{
-			From:   "hf.co/empero-ai/Qwythos-9B-Claude-Mythos-5-1M-GGUF:Q6_K",
-			System: "You are the AllOpsFull Technical Auditor, a professional system, network, and security intelligence agent.\nYour primary objective is to synthesize complex telemetry into high-density technical briefings.\nMuted industrial tone. Mechanics-first explanation. Zero fluff.\nAnchor all claims in metrics and specific protocol mechanisms.",
+			From:   "hf.co/GnLOLot/MiniCPM5-1B-Claude-Opus-Fable5-V2-Thinking-GGUF:Q8_0",
+			System: "You are the AllOpsFull System Analyst, a high-density technical co-pilot.\nObjective: Synthesize complex telemetry into factual technical briefings.\nUse your <thought> block to correlate telemetry history and identify root causes.",
 			Parameters: map[string]any{
-				"temperature":    0.1,
-				"top_p":          0.95,
-				"repeat_penalty": 1.1,
-				"stop":           []string{"──"},
+				"temperature": 0.1,
+				"num_ctx":     32768,
+				"top_p":       0.95,
+				"stop":        []string{"──", "</action_request>"},
 			},
 		}
 	} else {
@@ -286,7 +376,21 @@ PARAMETER temperature 0.1
 	}
 
 	// 3. Create Model via SDK
-	err = aiops.CreateModel("allopsfull", config.From, config.System, config.Parameters)
+	common.LogInfo("AIOps: Requesting model creation for 'allopsfull' (Base: %s)", config.From)
+
+	// Note: Ollama's Create API handles pulling the base model automatically
+	// in recent versions if it's missing from the library.
+	err = aiops.CreateModelWithContext(a.ctx, "allopsfull", config.From, config.System, config.Parameters)
+	if err != nil {
+		// If creation fails because base is missing, attempt an explicit pull
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "pull") {
+			common.LogInfo("AIOps: Base model missing. Attempting explicit pull of %s", config.From)
+			_ = a.PullModel(config.From)
+			// Retry creation after pull attempt
+			err = aiops.CreateModelWithContext(a.ctx, "allopsfull", config.From, config.System, config.Parameters)
+		}
+	}
+
 	if err != nil {
 		common.LogWarn("AIOps: CreateModel failed: %v", err)
 		return err
@@ -319,10 +423,10 @@ func (a *AIOps) DetectAnomalies() []AnomalyInfo {
 // AskAI sends a prompt to the AI with the given context and returns the response.
 func (a *AIOps) AskAI(ctx context.Context, prompt string) (string, error) {
 	messages := []aiops.ChatMessage{
-		{Role: "system", Content: "You are the OpsForAll AI assistant, an expert operations analyst. Be concise and specific."},
+		{Role: "system", Content: "You are the Universal-Ops AI assistant, an expert operations analyst. Be concise and specific."},
 		{Role: "user", Content: prompt},
 	}
-	return aiops.Chat(messages)
+	return aiops.ChatWithContext(ctx, messages)
 }
 
 // WithTimeout returns a context with the given timeout.
@@ -349,7 +453,7 @@ func (a *AIOps) GetAIInsights() []AIInsight {
 	anomalies := a.DetectAnomalies()
 	for _, anom := range anomalies {
 		insights = append(insights, AIInsight{
-			Category:  metricCategory(anom.Metric),
+			Category:  a.metricCategory(anom.Metric),
 			Severity:  anom.Severity,
 			Title:     fmt.Sprintf("%s anomaly detected", titleCaser.String(anom.Metric)),
 			Message:   fmt.Sprintf("%s is at %.1f (expected ~%.1f, %.1fσ deviation)", anom.Metric, anom.Value, anom.Expected, anom.Deviation),
@@ -367,7 +471,7 @@ func (a *AIOps) GetAIInsights() []AIInsight {
 		}
 		if mf.Trend.Direction == common.TrendRising && mf.LastValue > 75 {
 			insights = append(insights, AIInsight{
-				Category:  metricCategory(name),
+				Category:  a.metricCategory(name),
 				Severity:  "warning",
 				Title:     fmt.Sprintf("%s trending upward", strings.ToUpper(name)),
 				Message:   fmt.Sprintf("%s is at %.1f%% and rising. May reach critical threshold.", name, mf.LastValue),
@@ -376,7 +480,7 @@ func (a *AIOps) GetAIInsights() []AIInsight {
 			})
 		} else if mf.Trend.Direction == common.TrendFalling && mf.LastValue > 90 {
 			insights = append(insights, AIInsight{
-				Category:  metricCategory(name),
+				Category:  a.metricCategory(name),
 				Severity:  "info",
 				Title:     fmt.Sprintf("%s recovering", strings.ToUpper(name)),
 				Message:   fmt.Sprintf("%s was high but is now trending down from %.1f%%.", name, mf.LastValue),
@@ -656,11 +760,11 @@ If no changes are needed, return the current settings in the payload.`,
 		knowledge.CPUUsage, knowledge.MemoryUsage, knowledge.DiskUsage, knowledge.Anomalies,
 		settings["refreshInterval"], settings["pingCount"], settings["dnsTimeout"])
 
-	// 2. Call AI
-	resp, err := aiops.Chat([]aiops.ChatMessage{
+	// 2. Call AI with Optimizer model override
+	resp, err := aiops.ChatWithModelAndContext(a.ctx, []aiops.ChatMessage{
 		{Role: "system", Content: "You are the OpsForAll Engine Optimizer. Output JSON only."},
 		{Role: "user", Content: prompt},
-	})
+	}, a.OptimizerModel)
 
 	if err != nil {
 		return ChatResponse{Content: "Optimization analysis failed: " + err.Error()}
@@ -690,8 +794,142 @@ If no changes are needed, return the current settings in the payload.`,
 	return result
 }
 
+// NotifyActionResult informs the AI of an action outcome and returns its response.
+func (a *AIOps) NotifyActionResult(sessionID, actionName, status, details string) ChatResponse {
+	message := fmt.Sprintf("SYSTEM_NOTIFICATION: Action %q finished with status %q. Details: %s", actionName, status, details)
+	a.SaveMessage(sessionID, "user", message)
+	resp := a.Chat(sessionID, message)
+	if resp.Content != "" {
+		a.SaveMessage(sessionID, "assistant", resp.Content)
+	}
+	return resp
+}
+
+// VerifyRemediation asks Hawk to verify if a workflow improved system metrics.
+func (a *AIOps) VerifyRemediation(sessionID, workflowID string, beforeMetrics map[string]float64) ChatResponse {
+	knowledge := a.knowledge.GetSnapshot()
+
+	prompt := fmt.Sprintf(`Verify the outcome of workflow '%s'.
+Baseline before execution: %v
+Current metrics: CPU=%.1f%%, RAM=%.1f%%, Disk=%.1f%%.
+
+Determine if the remediation was successful and provide a brief technical assessment.`,
+		workflowID, beforeMetrics, knowledge.CPUUsage, knowledge.MemoryUsage, knowledge.DiskUsage)
+
+	a.SaveMessage(sessionID, "user", prompt)
+	resp := a.Chat(sessionID, prompt)
+	if resp.Content != "" {
+		a.SaveMessage(sessionID, "assistant", resp.Content)
+	}
+	return resp
+}
+
+// PlanWorkflow asks Hawk to design a custom operational workflow.
+func (a *AIOps) PlanWorkflow(sessionID, objective string) ChatResponse {
+	prompt := fmt.Sprintf(`Plan a multi-step operational workflow to achieve this objective: "%s".
+Your response MUST be a valid JSON object matching this structure:
+{
+  "content": "Reasoning for the plan.",
+  "payload": {
+    "id": "wf-slug",
+    "name": "Human Name",
+    "description": "Short description",
+    "why": "Context",
+    "steps": [
+      {"id": "step-1", "label": "Label", "description": "Action details", "command": "Optional PowerShell command"}
+    ]
+  }
+}
+Keep it technical and focused on system/network/security ops.`, objective)
+
+	a.SaveMessage(sessionID, "user", prompt)
+
+	// Use OptimizerModel for structured planning if available
+	resp, err := aiops.ChatWithModelAndContext(a.ctx, []aiops.ChatMessage{
+		{Role: "system", Content: "You are the OpsForAll Workflow Architect. Output JSON only."},
+		{Role: "user", Content: prompt},
+	}, a.OptimizerModel)
+
+	if err != nil {
+		return ChatResponse{Content: "Workflow planning failed: " + err.Error()}
+	}
+
+	// Simple JSON Extraction
+	jsonStr := resp
+	if strings.Contains(resp, "```json") {
+		parts := strings.Split(resp, "```json")
+		if len(parts) > 1 {
+			jsonStr = strings.Split(parts[1], "```")[0]
+		}
+	}
+
+	var result ChatResponse
+	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+		common.LogWarn("AIOps: Failed to parse workflow JSON: %v", err)
+		return ChatResponse{Content: "Hawk generated an invalid workflow plan. Please try again."}
+	}
+
+	if result.Content != "" {
+		a.SaveMessage(sessionID, "assistant", result.Content)
+	}
+	return result
+}
+
+// ExportReportAsPDF converts a markdown report to a formatted file.
+func (a *AIOps) ExportReportAsPDF(title, markdown string) (string, error) {
+	// For portability without heavy dependencies (like wkhtmltopdf/gotenberg),
+	// we will generate a nicely formatted .txt/md "Professional Report"
+	// until a light PDF lib is integrated.
+
+	filename := fmt.Sprintf("Report_%d.md", time.Now().Unix())
+	path := filepath.Join(a.dataDir, "reports", filename)
+
+	_ = os.MkdirAll(filepath.Join(a.dataDir, "reports"), 0755)
+
+	report := fmt.Sprintf("# %s\n\n_Generated by %s AI Analyst_\n_Date: %s_\n\n%s",
+		title, a.GetCompanionName(), time.Now().Format(time.RFC1123), markdown)
+
+	err := os.WriteFile(path, []byte(report), 0644)
+	return path, err
+}
+
+// summarizeMetrics produces a technical string summary of a value slice.
+func (a *AIOps) summarizeMetrics(name string, values []float64) string {
+	if len(values) == 0 {
+		return "No data"
+	}
+
+	var sum, min, max float64
+	min = values[0]
+	max = values[0]
+
+	for _, v := range values {
+		sum += v
+		if v < min {
+			min = v
+		}
+		if v > max {
+			max = v
+		}
+	}
+
+	avg := sum / float64(len(values))
+
+	// Calculate StdDev
+	var sumSqDiff float64
+	for _, v := range values {
+		diff := v - avg
+		sumSqDiff += diff * diff
+	}
+	stdDev := math.Sqrt(sumSqDiff / float64(len(values)))
+
+	return fmt.Sprintf("Avg=%.1f%%, Min=%.1f%%, Max=%.1f%%, StdDev=%.1f (n=%d)",
+		avg, min, max, stdDev, len(values))
+}
+
 // metricCategory maps a metric name to an insight category.
-func metricCategory(name string) string {
+func (a *AIOps) metricCategory(name string) string {
+	name = strings.ToLower(name)
 	switch {
 	case strings.Contains(name, "cpu"):
 		return "performance"
