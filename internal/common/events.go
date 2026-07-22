@@ -84,10 +84,24 @@ func NewEventBus(capacity int) *EventBus {
 }
 
 // Subscribe registers a handler that receives all future events.
-func (eb *EventBus) Subscribe(h EventHandler) {
+// It returns a function that can be called to unsubscribe.
+func (eb *EventBus) Subscribe(h EventHandler) func() {
 	eb.mu.Lock()
 	defer eb.mu.Unlock()
 	eb.handlers = append(eb.handlers, h)
+
+	return func() {
+		eb.mu.Lock()
+		defer eb.mu.Unlock()
+		for i, existing := range eb.handlers {
+			// In Go, comparing functions is tricky.
+			// For this simple bus, we'll just filter out the first match.
+			if fmt.Sprintf("%v", existing) == fmt.Sprintf("%v", h) {
+				eb.handlers = append(eb.handlers[:i], eb.handlers[i+1:]...)
+				return
+			}
+		}
+	}
 }
 
 // Emit publishes an event to all subscribers and stores it in the ring buffer.

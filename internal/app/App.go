@@ -918,6 +918,10 @@ func (a *App) ConfirmAction(handshakeID string) common.SecActionResult {
 		}
 		return a.SecOps.executeApplyHardening(check)
 
+	case "reboot", "shutdown", "flush_dns", "disk_cleanup", "clear_temp", "defrag", "system_update", "clean_pkg_cache", "sleep", "hibernate", "clear_arp":
+		// Generic system actions
+		return a.SysOps.executeSystemAction(pending.Action)
+
 	case "block_ip", "BlockIP":
 		ip := getStringParam(pending.Params, "ip")
 		if ip == "" {
@@ -958,9 +962,6 @@ func (a *App) ConfirmAction(handshakeID string) common.SecActionResult {
 			return common.SecActionResult{Success: false, Error: "Workflow execution failed: " + err.Error()}
 		}
 		return common.SecActionResult{Success: true, Message: "Workflow executed successfully", Detail: "Report ID: " + reportID}
-
-	case "flush_dns", "clear_arp", "disk_cleanup", "defrag", "reboot", "shutdown", "sleep", "hibernate", "clean_pkg_cache", "system_update":
-		return a.SysOps.executeSystemAction(pending.Action)
 
 	default:
 		return common.SecActionResult{Success: false, Error: "Unknown or unimplemented action type: " + pending.Action}
