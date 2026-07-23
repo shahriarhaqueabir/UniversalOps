@@ -8,6 +8,8 @@ export function AskAI(arg1:context.Context,arg2:string):Promise<string>;
 
 export function Chat(arg1:string,arg2:string):Promise<app.ChatResponse>;
 
+export function ChatStream(arg1:string,arg2:string):Promise<app.ChatResponse>;
+
 export function CreateOpsPersona():Promise<void>;
 
 export function DeleteModel(arg1:string):Promise<void>;

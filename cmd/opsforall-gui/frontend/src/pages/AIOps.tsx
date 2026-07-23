@@ -30,6 +30,7 @@ import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
+import { useEvents } from '@/hooks/useEvents'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { EmptyState } from '@/components/ui/EmptyState'
 import * as Tabs from '@radix-ui/react-tabs'
@@ -283,7 +284,7 @@ export function AIOps() {
   }, [])
 
   const ollamaStatus: OllamaStatus = ollamaStatusData ?? { available: false, binary_exists: false, model: '', version: '' }
-  const isPersonaMissing = ollamaStatus.available && !ollamaStatus.model.startsWith('opsforall')
+  const isPersonaMissing = ollamaStatus.available && !ollamaStatus.model.startsWith('universalops')
 
   const handleInitializePersona = async () => {
     if (initializing) return
@@ -452,6 +453,7 @@ function ChatTab() {
   const [isTyping, setIsTyping] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [activeSession, setActiveSession] = useState<string>(`sess-${Date.now()}`)
+  const [streamingContent, setStreamingContent] = useState<string | null>(null)
   const chatRef = useRef<HTMLDivElement>(null)
 
   const { data: sessions = [], refetch: refetchSessions } = useQuery<ChatSession[]>({
@@ -462,11 +464,45 @@ function ChatTab() {
     }
   })
 
+  // ── Streaming Events ────────────────────────────────────────────
+  useEvents('chat:token', (data: unknown) => {
+    const d = data as { sessionId: string; token: string }
+    if (d.sessionId === activeSession) {
+      setStreamingContent(prev => (prev ?? '') + d.token)
+    }
+  })
+
+  useEvents('chat:done', (data: unknown) => {
+    const d = data as { sessionId: string; content: string }
+    if (d.sessionId === activeSession) {
+      const assistantMsg: ChatMessage = {
+        role: 'assistant',
+        content: d.content,
+      }
+      setMessages(prev => [...prev, assistantMsg])
+      setStreamingContent(null)
+      setIsTyping(false)
+      refetchSessions()
+    }
+  })
+
+  useEvents('chat:error', (data: unknown) => {
+    const d = data as { sessionId: string; error: string }
+    if (d.sessionId === activeSession) {
+      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${d.error}` }])
+      setStreamingContent(null)
+      setIsTyping(false)
+    }
+  })
+  // ───────────────────────────────────────────────────────────────
+
   // Load persisted messages when activeSession changes
   useEffect(() => {
     let cancelled = false
     const loadMessages = async () => {
       setLoaded(false)
+      setStreamingContent(null)
+      setIsTyping(false)
       try {
         const msgs = await call('AIOps.GetMessages', activeSession) as ChatMessage[]
         if (!cancelled && msgs && msgs.length > 0) {
@@ -493,39 +529,26 @@ function ChatTab() {
     setMessages(prev => [...prev, userMsg])
     setInput('')
     setIsTyping(true)
+    setStreamingContent('') // ← signals frontend to show live bubble
 
-    // Persist user message
+    // Persist user message + fire streaming request (response arrives via events)
     try {
       await call('AIOps.SaveMessage', activeSession, 'user', userMsg.content)
       refetchSessions()
     } catch { /* ignore */ }
 
     try {
-      const response = await call('AIOps.Chat', activeSession, input) as ChatResponse
-      const assistantMsg: ChatMessage = {
-        role: 'assistant',
-        content: response.content,
-        actions: response.actions
-      }
-      setMessages(prev => [...prev, assistantMsg])
-      // Persist assistant message
-      try {
-        await call('AIOps.SaveMessage', activeSession, 'assistant', response.content)
-        refetchSessions()
-      } catch { /* ignore */ }
-    } catch {
-      const errMsg = 'Analyst Error: request failed'
-      setMessages(prev => [...prev, { role: 'assistant', content: errMsg }])
-      try {
-        await call('AIOps.SaveMessage', activeSession, 'assistant', errMsg)
-      } catch { /* ignore */ }
-    } finally {
+      await call('AIOps.ChatStream', activeSession, input)
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', content: `Analyst Error: ${String(err)}` }])
+      setStreamingContent(null)
       setIsTyping(false)
     }
   }
 
   const handleNewSession = () => {
     setActiveSession(`sess-${Date.now()}`)
+    setStreamingContent(null)
   }
 
   const handleDeleteSession = async (sid: string, e: React.MouseEvent) => {
@@ -549,7 +572,7 @@ function ChatTab() {
     if (chatRef.current) {
       chatRef.current.scrollTop = chatRef.current.scrollHeight
     }
-  }, [messages, isTyping])
+  }, [messages, isTyping, streamingContent])
 
   return (
     <div className="flex h-full bg-[var(--color-bg)] overflow-hidden">
@@ -642,7 +665,14 @@ function ChatTab() {
                     }}
                   />
                 ))}
-                {isTyping && (
+                {streamingContent !== null ? (
+                  <ChatBubble
+                    role="assistant"
+                    content={streamingContent}
+                    sessionID={activeSession}
+                    onAssistantReply={() => {}}
+                  />
+                ) : isTyping ? (
                   <div className="flex gap-6 max-w-[80%] animate-pulse">
                     <div className="w-12 h-12 rounded-xl bg-panel-3 border border-accent/20 flex items-center justify-center shrink-0">
                       <Bot size={24} className="text-accent" />
@@ -656,7 +686,7 @@ function ChatTab() {
                       </div>
                     </div>
                   </div>
-                )}
+                ) : null}
               </div>
 
               {/* Input Area */}

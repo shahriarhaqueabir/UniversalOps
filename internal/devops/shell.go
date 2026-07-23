@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -14,6 +15,30 @@ import (
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
+
+// ansiRegexp matches CSI ANSI escape sequences (ESC[...m) used for
+// terminal color/formatting that PowerShell 7 injects into captured output.
+var ansiRegexp = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+
+// stripANSI removes all ANSI escape codes from a string.
+func stripANSI(s string) string {
+	return ansiRegexp.ReplaceAllString(s, "")
+}
+
+// findGitBash locates Git Bash on Windows by checking common install paths.
+// Returns the full path to bash.exe or empty string if not found.
+func findGitBash() string {
+	candidates := []string{
+		"C:\\Program Files\\Git\\bin\\bash.exe",
+		"C:\\Program Files (x86)\\Git\\bin\\bash.exe",
+	}
+	for _, p := range candidates {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	return ""
+}
 
 // ShellResult holds the result of a shell command execution.
 type ShellResult struct {
@@ -322,20 +347,31 @@ var AllowedPowerShellWorkflows = []string{
 
 // PowerShellProfilePath is the path to the PowerShell profile script.
 // It tries multiple locations in order of preference:
-//  1. Relative to the executable's directory (production build)
-//  2. Relative to the current working directory (dev mode, run from project root)
-//  3. Parent of CWD (dev mode, run from cmd/opsforall-gui)
-//  4. Plain "profiles" relative path
+	// 1. Relative to the executable's directory (production build, e.g. universal-ops.exe)
+//  2. Relative to the current working directory (dev mode via `wails dev`)
+//  3. Two levels above CWD (dev mode when CWD is buried in a temp dir)
+//  4. Plain "profiles/powershell_profile.ps1" relative path
 //
-// Override for testing.
+// The variable is re-resolved at package init time. For dev mode the
+// executable path leads to a temp dir so the CWD fallback is essential.
 var PowerShellProfilePath = func() string {
 	candidates := []string{}
 
+	// 1. Executable-relative (production build)
 	if exe, err := os.Executable(); err == nil {
-		// Only allow profiles relative to the verified executable directory
-		// to prevent CWD-based profile hijacking.
 		candidates = append(candidates, filepath.Join(filepath.Dir(exe), "profiles", "powershell_profile.ps1"))
 	}
+
+	// 2. CWD-relative (dev mode: `wails dev` sets CWD to project root)
+	if cwd, err := os.Getwd(); err == nil {
+		candidates = append(candidates, filepath.Join(cwd, "profiles", "powershell_profile.ps1"))
+		// 3. Grandparent of CWD (dev mode when CWD is deep, e.g. cmd/opsforall-gui)
+		candidates = append(candidates, filepath.Join(filepath.Dir(cwd), "profiles", "powershell_profile.ps1"))
+		candidates = append(candidates, filepath.Join(filepath.Dir(filepath.Dir(cwd)), "profiles", "powershell_profile.ps1"))
+	}
+
+	// 4. Plain relative fallback
+	candidates = append(candidates, "profiles/powershell_profile.ps1")
 
 	for _, p := range candidates {
 		if _, err := os.Stat(p); err == nil {
@@ -343,10 +379,7 @@ var PowerShellProfilePath = func() string {
 		}
 	}
 
-	// Fallback: return the first candidate (exe-relative) even if it doesn't exist
-	if len(candidates) > 0 {
-		return candidates[0]
-	}
+	// Return the safest fallback even if it doesn't stat (caller handles missing)
 	return "profiles/powershell_profile.ps1"
 }()
 
@@ -380,14 +413,28 @@ func RunPowerShell(cmd string) (*ShellResult, error) {
 		common.LogInfo("RunPowerShell: PowerShell profile not found at %s, running without profile: %v", PowerShellProfilePath, err)
 	}
 
-	// 3. Use 'pwsh' (PowerShell 7) if available, otherwise 'powershell'
+	// 3. Use 'pwsh' (PowerShell 7) if available, otherwise 'powershell'.
+	//    For pwsh we disable $PSStyle to prevent ANSI escape codes from
+	//    leaking into captured output. We also pipe through Out-String to
+	//    convert any emitted objects to consistent string format (avoids
+	//    the @{Prop=Value} PowerShell object serialization).
 	shell := "pwsh"
+	usePwsh := true
 	if _, err := exec.LookPath("pwsh"); err != nil {
 		shell = "powershell"
+		usePwsh = false
 	}
 
-	// 4. Run inside the system-query sandbox (replaces raw exec.Command)
-	c := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), shell, "-NoProfile", "-Command", psCmd)
+	var fullCommand string
+	if usePwsh {
+		fullCommand = fmt.Sprintf("$PSStyle.OutputRendering='PlainText'; %s | Out-String -Width 4096", psCmd)
+	} else {
+		// Windows PowerShell: no $PSStyle, just pipe through Out-String
+		fullCommand = fmt.Sprintf("%s | Out-String -Width 4096", psCmd)
+	}
+
+	// 4. Run inside the system-query sandbox
+	c := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), shell, "-NoProfile", "-Command", fullCommand)
 
 	output, err := c.CombinedOutput()
 	exitCode := 0
@@ -397,9 +444,15 @@ func RunPowerShell(cmd string) (*ShellResult, error) {
 		}
 	}
 
+	// 5. Strip ANSI escape codes that may have survived
+	cleanOutput := stripANSI(string(output))
+
+	// Trim trailing newlines for cleaner display
+	cleanOutput = strings.TrimRight(cleanOutput, "\r\n ")
+
 	return &ShellResult{
 		Command:  cmd,
-		Output:   string(output),
+		Output:   cleanOutput,
 		ExitCode: exitCode,
 		Duration: time.Since(start),
 	}, nil
@@ -426,12 +479,92 @@ func RunPowerShellWithLiveOutput(cmd string, output chan string) (result *ShellR
 		shell = "powershell"
 	}
 
-	// Build the command that loads the user's $PROFILE then runs cmd.
-	// Using -NoProfile to skip system-wide profiles for a clean session,
-	// then manually dot-sourcing $PROFILE loads the user's personal profile.
-	psCmd := fmt.Sprintf(". $PROFILE; %s", cmd)
+	// Disable $PSStyle in pwsh to prevent ANSI codes in captured output.
+	// Then run the actual command the user typed.
+	psCmd := cmd
+	if shell == "pwsh" {
+		psCmd = fmt.Sprintf("$PSStyle.OutputRendering='PlainText'; %s", psCmd)
+	}
 
 	c := common.SandboxedCommand(shell, "-NoProfile", "-Command", psCmd)
+
+	stdout, pipeErr := c.StdoutPipe()
+	if pipeErr != nil {
+		return nil, pipeErr
+	}
+	stderr, pipeErr := c.StderrPipe()
+	if pipeErr != nil {
+		return nil, pipeErr
+	}
+
+	if startErr := c.Start(); startErr != nil {
+		return nil, startErr
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer common.RecoverPanic()
+		defer wg.Done()
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			line := stripANSI(scanner.Text())
+			stdoutBuf.WriteString(line + "\n")
+			output <- line
+		}
+	}()
+
+	go func() {
+		defer common.RecoverPanic()
+		defer wg.Done()
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			line := stripANSI(scanner.Text())
+			stderrBuf.WriteString(line + "\n")
+			output <- line
+		}
+	}()
+
+	waitErr := c.Wait()
+	wg.Wait()
+	close(output)
+
+	exitCode := 0
+	if waitErr != nil {
+		if exitErr, ok := waitErr.(*exec.ExitError); ok {
+			exitCode = exitErr.ExitCode()
+		}
+	}
+
+	result = &ShellResult{
+		Command:  cmd,
+		Output:   stdoutBuf.String() + stderrBuf.String(),
+		ExitCode: exitCode,
+		Duration: time.Since(start),
+	}
+	return
+}
+
+// RunGitBashWithLiveOutput executes a command via Git Bash and streams each
+// line of output through the provided channel. It locates Git Bash by checking
+// common installation paths. The channel is closed when the command finishes.
+func RunGitBashWithLiveOutput(cmd string, output chan string) (result *ShellResult, err error) {
+	defer func() {
+		if err != nil {
+			close(output)
+		}
+	}()
+
+	bashPath := findGitBash()
+	if bashPath == "" {
+		return nil, fmt.Errorf("Git Bash not found: check C:\\Program Files\\Git\\bin\\bash.exe")
+	}
+
+	start := time.Now()
+	var stdoutBuf, stderrBuf strings.Builder
+
+	c := common.SandboxedCommand(bashPath, "-c", cmd)
 
 	stdout, pipeErr := c.StdoutPipe()
 	if pipeErr != nil {

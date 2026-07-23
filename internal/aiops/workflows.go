@@ -22,7 +22,7 @@ func GenerateEnhancedReport(title string, data map[string]string) *EnhancedRepor
 	}
 
 	if title == "" {
-		report.Title = "OpsForAll System Report"
+		report.Title = "Universal-Ops System Report"
 	}
 
 	for sectionTitle, content := range data {

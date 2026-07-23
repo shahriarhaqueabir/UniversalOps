@@ -367,7 +367,7 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
                   <span className="text-[var(--color-accent)] italic">Professional.</span>
                 </h3>
                 <p className="text-[var(--color-text-dim)] text-base max-w-md mx-auto">
-                  Welcome to AllOpsFull. Let&apos;s configure your local operations environment.
+                  Welcome to Universal-Ops. Let&apos;s configure your local operations environment.
                 </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
@@ -457,9 +457,9 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
                   Storage Locations
                 </p>
                 {[
-                  { icon: <Database size={16} />, title: 'Database', path: `${config.storagePath}/allopsfull.db`, desc: 'Local SQLite database for metrics and alerts.', action: () => pickFolder('storagePath'), pathKey: 'storagePath' as const },
-                  { icon: <HardDrive size={16} />, title: 'AI Configuration', path: config.modelPath || './data/allopsfull.modelfile', desc: 'Local assistant settings and rules.', action: pickModelfile, pathKey: 'modelPath' as const },
-                  { icon: <ScrollText size={16} />, title: 'Logs', path: `${config.logsPath}/allopsfull.log`, desc: 'System event logs for auditing.', action: () => pickFolder('logsPath'), pathKey: 'logsPath' as const },
+                  { icon: <Database size={16} />, title: 'Database', path: `${config.storagePath}/universalops.db`, desc: 'Local SQLite database for metrics and alerts.', action: () => pickFolder('storagePath'), pathKey: 'storagePath' as const },
+                  { icon: <HardDrive size={16} />, title: 'AI Configuration', path: config.modelPath || './data/universalops.modelfile', desc: 'Local assistant settings and rules.', action: pickModelfile, pathKey: 'modelPath' as const },
+                  { icon: <ScrollText size={16} />, title: 'Logs', path: `${config.logsPath}/universalops.log`, desc: 'System event logs for auditing.', action: () => pickFolder('logsPath'), pathKey: 'logsPath' as const },
                 ].map((item, i) => (
                   <div
                     key={i}

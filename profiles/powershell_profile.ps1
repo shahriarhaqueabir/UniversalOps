@@ -1,18 +1,18 @@
 # ──────────────────────────────────────────────────────────────────────────
-#  OpsForAll Operations Platform — PowerShell Diagnostic Profile
+#  Universal-Ops Operations Platform — PowerShell Diagnostic Profile
 # ──────────────────────────────────────────────────────────────────────────
-#  Sourced by the OpsForAll Go backend for the PowerShell Pro tab.
+#  Sourced by the Universal-Ops Go backend for the PowerShell Pro tab.
 #  Contains utility functions for high-density system diagnostics.
 #
 #  Naming Convention: Ops-<Noun>
 #  Example: Get-OpsOSInfo
 #
-#  All functions output formatted text suitable for display in the OpsForAll
+#  All functions output formatted text suitable for display in the Universal-Ops
 #  terminal interface using consistent headers and result pairs.
 # ──────────────────────────────────────────────────────────────────────────
 
-# Author: OpsForAll Operations Platform
-# Copyright: (c) OpsForAll. All rights reserved.
+# Author: Universal-Ops Operations Platform
+# Copyright: (c) Universal-Ops. All rights reserved.
 
 # ── Formatting Helpers ──────────────────────────────────────────────────
 

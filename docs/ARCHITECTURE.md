@@ -199,7 +199,7 @@ All telemetry and configuration are stored in `ops_core.db` using Write-Ahead Lo
 - **Retention**: Automated background pruning based on a configurable duration (default 7 days).
 
 ### 4. Local-First AI Integration
-OpsForAll integrates with **Ollama** locally.
+Universal-Ops integrates with **Ollama** locally.
 - **Consultative Partner**: Uses **MiniCPM5-1B-Thinking** for Chain-of-Thought (CoT) reasoning and Root Cause Analysis (RCA).
 - **Expanded Context**: A consistent **32k context window** allows for long-horizon analysis of system events and anomalies.
 - **Contextual Grounding**: Hawk is grounded via the Knowledge Layer, which receives real-time updates (last 100 samples) from the Engine Loop.
@@ -220,7 +220,7 @@ To handle frequent metric writes from the `DataPipeline` without blocking read q
 - **Resilient Ingestion**: `InsertMetric` utilizes a 500ms resilient window to handle transient disk I/O spikes without telemetry loss.
 
 ### Why Local-First AI?
-OpsForAll integrates with **Ollama** locally. 
+Universal-Ops integrates with **Ollama** locally. 
 - **Portable Sovereignty**: All data (DB, logs, markers) is stored strictly in the application root (`./data`, `./logs`).
 - **Request Isolation**: AI state is instance-based via `OllamaClient`, ensuring zero state-leakage between concurrent user sessions and background diagnostics.
 

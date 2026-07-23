@@ -1,7 +1,7 @@
-# Copilot Instructions — OpsForAll
+# Copilot Instructions — Universal-Ops
 
 ## Project
-OpsForAll is a native desktop operations platform (Go/Wails v2 + React 19/TypeScript). 100% local, zero telemetry.
+Universal-Ops is a native desktop operations platform (Go/Wails v2 + React 19/TypeScript). 100% local, zero telemetry.
 
 ## Stack
 - **Backend**: Go 1.26+, Wails v2, gopsutil, miekg/dns, modernc.org/sqlite

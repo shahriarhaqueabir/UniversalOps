@@ -70,6 +70,10 @@ export function RunDevOpsDiagnostics() {
   return window['go']['app']['DevOps']['RunDevOpsDiagnostics']();
 }
 
+export function RunGitBashLive(arg1, arg2) {
+  return window['go']['app']['DevOps']['RunGitBashLive'](arg1, arg2);
+}
+
 export function RunPowerShellLive(arg1, arg2) {
   return window['go']['app']['DevOps']['RunPowerShellLive'](arg1, arg2);
 }

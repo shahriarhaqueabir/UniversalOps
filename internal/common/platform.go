@@ -54,7 +54,6 @@ func IsAdmin() bool {
 	return os.Geteuid() == 0
 }
 
-
 // GetBaseDir returns the application base directory. It prefers a local 'data'
 // directory for portable mode, but falls back to the OS-standard UserConfigDir.
 func GetBaseDir() string {
@@ -68,7 +67,7 @@ func GetBaseDir() string {
 	if err != nil {
 		return "." // Last resort
 	}
-	return filepath.Join(configDir, "allopsfull")
+	return filepath.Join(configDir, "universalops")
 }
 
 // ConfigDir returns the application data directory path.

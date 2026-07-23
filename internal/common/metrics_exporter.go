@@ -15,12 +15,12 @@ import (
 var (
 	metricsOnce     sync.Once
 	metricsPort     = 9210
-	cpuGauge        = prometheus.NewGauge(prometheus.GaugeOpts{Name: "opsforall_cpu_percent", Help: "Current CPU usage percentage"})
-	memGauge        = prometheus.NewGauge(prometheus.GaugeOpts{Name: "opsforall_memory_percent", Help: "Current memory usage percentage"})
-	diskGauge       = prometheus.NewGauge(prometheus.GaugeOpts{Name: "opsforall_disk_percent", Help: "Current disk usage percentage"})
-	procGauge       = prometheus.NewGauge(prometheus.GaugeOpts{Name: "opsforall_process_count", Help: "Number of running processes"})
-	alertsGauge     = prometheus.NewGauge(prometheus.GaugeOpts{Name: "opsforall_alerts_total", Help: "Total number of active alerts"})
-	pipelineTickCnt = prometheus.NewCounter(prometheus.CounterOpts{Name: "opsforall_pipeline_ticks_total", Help: "Number of pipeline collection ticks"})
+	cpuGauge        = prometheus.NewGauge(prometheus.GaugeOpts{Name: "universalops_cpu_percent", Help: "Current CPU usage percentage"})
+	memGauge        = prometheus.NewGauge(prometheus.GaugeOpts{Name: "universalops_memory_percent", Help: "Current memory usage percentage"})
+	diskGauge       = prometheus.NewGauge(prometheus.GaugeOpts{Name: "universalops_disk_percent", Help: "Current disk usage percentage"})
+	procGauge       = prometheus.NewGauge(prometheus.GaugeOpts{Name: "universalops_process_count", Help: "Number of running processes"})
+	alertsGauge     = prometheus.NewGauge(prometheus.GaugeOpts{Name: "universalops_alerts_total", Help: "Total number of active alerts"})
+	pipelineTickCnt = prometheus.NewCounter(prometheus.CounterOpts{Name: "universalops_pipeline_ticks_total", Help: "Number of pipeline collection ticks"})
 )
 
 // InitMetricsExporter registers Prometheus metrics and starts an HTTP server
@@ -39,7 +39,7 @@ func InitMetricsExporter(port int) {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"status":    "ok",
-				"app":       "OpsForAll",
+				"app":       "Universal-Ops",
 				"version":   "1.3.0",
 				"timestamp": time.Now().UTC().Format(time.RFC3339),
 				"port":      metricsPort,

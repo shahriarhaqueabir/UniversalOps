@@ -36,4 +36,6 @@ export function RunCommandLive(arg1:string,arg2:string):Promise<app.CommandResul
 
 export function RunDevOpsDiagnostics():Promise<app.DevOpsDiagResult>;
 
+export function RunGitBashLive(arg1:string,arg2:string):Promise<app.CommandResult>;
+
 export function RunPowerShellLive(arg1:string,arg2:string):Promise<app.CommandResult>;

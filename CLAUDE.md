@@ -1,4 +1,4 @@
-# Project Instructions: Universal-Ops GUI
+# Project Instructions: Universal-Ops
 
 ## Project Overview
 Universal-Ops is a high-performance native desktop operations platform built with Go (Wails v2) and React/TypeScript. It provides a technical utility suite for systems, network, and security operations with integrated local AI.

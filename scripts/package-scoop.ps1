@@ -1,5 +1,5 @@
 param([string]$Version)
-# Generates a Scoop manifest for OpsForAll
+# Generates a Scoop manifest for Universal-Ops
 $BaseUrl = "https://github.com/shahriarhaqueabir/AllOpsFull/releases/download"
 
 $manifest = @{
@@ -9,19 +9,19 @@ $manifest = @{
     license = "MIT"
     architecture = @{
         "64bit" = @{
-            url = "$BaseUrl/v$Version/opsforall-$Version-windows-amd64.exe#/opsforall.exe"
+            url = "$BaseUrl/v$Version/universal-ops-$Version-windows-amd64.exe#/universal-ops.exe"
             hash = "PASTE_HASH_HERE"
         }
     }
-    bin = "opsforall.exe"
+    bin = "universal-ops.exe"
     checkver = "github"
     autoupdate = @{
         architecture = @{
             "64bit" = @{
-                url = "$BaseUrl/v$version/opsforall-$version-windows-amd64.exe#/opsforall.exe"
+                url = "$BaseUrl/v$version/universal-ops-$version-windows-amd64.exe#/universal-ops.exe"
             }
         }
     }
 }
 
-$manifest | ConvertTo-Json -Depth 10 | Out-File "opsforall.json" -Encoding utf8
+$manifest | ConvertTo-Json -Depth 10 | Out-File "universal-ops.json" -Encoding utf8

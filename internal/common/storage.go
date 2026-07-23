@@ -55,7 +55,7 @@ type Storage struct {
 
 var (
 	// DefaultDBName is the name of the SQLite database file.
-	DefaultDBName = "allopsfull.db"
+	DefaultDBName = "universalops.db"
 
 	// globalStorageMu serialises access to globalStorage so that
 	// InitStorage (writer) and GetStorage (readers) never race.

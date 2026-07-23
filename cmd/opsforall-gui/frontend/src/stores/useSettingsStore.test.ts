@@ -28,7 +28,7 @@ describe('useSettingsStore', () => {
       useSettingsStore.getState().setRefreshInterval(10000)
     })
     expect(useSettingsStore.getState().refreshInterval).toBe(10000)
-    expect(localStorage.getItem('opsforall_refreshInterval')).toBe('10000')
+    expect(localStorage.getItem('universalops_refreshInterval')).toBe('10000')
   })
 
   it('should update pingCount and persist to localStorage', () => {
@@ -36,7 +36,7 @@ describe('useSettingsStore', () => {
       useSettingsStore.getState().setPingCount(8)
     })
     expect(useSettingsStore.getState().pingCount).toBe(8)
-    expect(localStorage.getItem('opsforall_pingCount')).toBe('8')
+    expect(localStorage.getItem('universalops_pingCount')).toBe('8')
   })
 
   it('should update dnsTimeout and persist to localStorage', () => {
@@ -44,7 +44,7 @@ describe('useSettingsStore', () => {
       useSettingsStore.getState().setDnsTimeout(5000)
     })
     expect(useSettingsStore.getState().dnsTimeout).toBe(5000)
-    expect(localStorage.getItem('opsforall_dnsTimeout')).toBe('5000')
+    expect(localStorage.getItem('universalops_dnsTimeout')).toBe('5000')
   })
 })
 
@@ -111,7 +111,7 @@ describe('useThemeStore', () => {
     })
     expect(useThemeStore.getState().theme).toBe('light')
     expect(document.documentElement.getAttribute('data-theme')).toBe('light')
-    expect(localStorage.getItem('opsforall-theme')).toBe('light')
+    expect(localStorage.getItem('universalops-theme')).toBe('light')
 
     act(() => {
       useThemeStore.getState().toggle()

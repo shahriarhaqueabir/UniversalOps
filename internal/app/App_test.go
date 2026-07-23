@@ -31,8 +31,8 @@ func TestGetAppInfo(t *testing.T) {
 	a.startedAt = time.Now().Add(-1 * time.Hour)
 	info := a.GetAppInfo()
 
-	if info.Name != "AllOpsFull Universal Platform" {
-		t.Errorf("Name = %q, want %q", info.Name, "AllOpsFull Universal Platform")
+	if info.Name != "Universal-Ops Operations Platform" {
+		t.Errorf("Name = %q, want %q", info.Name, "Universal-Ops Operations Platform")
 	}
 	if info.Uptime == "" {
 		t.Error("Uptime is empty")

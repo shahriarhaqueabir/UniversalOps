@@ -51,12 +51,12 @@ describe('AIOps Page', () => {
       const key = opts.queryKey[0]
       if (key === 'chat-sessions') return { data: mockSessions, isLoading: false, refetch: vi.fn() } as any
       if (key === 'ollama-status') {
-        return { data: { available: true, binary_exists: true, model: 'opsforall', version: '1.0' }, isLoading: false, refetch: vi.fn() } as any
+        return { data: { available: true, binary_exists: true, model: 'universalops', version: '1.0' }, isLoading: false, refetch: vi.fn() } as any
       }
       if (key === 'anomalies') return { data: mockAnomalies, isLoading: false } as any
       if (key === 'ai-insights') return { data: mockInsights, isLoading: false } as any
       if (key === 'dashboard-mini') return { data: { cpu: { value: 45 }, memory: { value: 62 }, disk: { value: 55 } }, isLoading: false } as any
-      return { data: { available: true, binary_exists: true, model: 'opsforall', version: '1.0' }, isLoading: false, refetch: vi.fn() } as any
+      return { data: { available: true, binary_exists: true, model: 'universalops', version: '1.0' }, isLoading: false, refetch: vi.fn() } as any
     })
     mockCall.mockResolvedValue(null)
   })
@@ -69,7 +69,7 @@ describe('AIOps Page', () => {
   it('shows ollama status', () => {
     render(<AIOps />)
     expect(screen.getByText(/Ollama Online/i)).toBeInTheDocument()
-    expect(screen.getByText(/opsforall/i)).toBeInTheDocument()
+    expect(screen.getByText(/universalops/i)).toBeInTheDocument()
   })
 
   it('switches to AI Insights tab', async () => {

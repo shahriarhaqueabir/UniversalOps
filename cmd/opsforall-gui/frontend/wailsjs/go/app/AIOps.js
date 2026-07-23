@@ -10,6 +10,10 @@ export function Chat(arg1, arg2) {
   return window['go']['app']['AIOps']['Chat'](arg1, arg2);
 }
 
+export function ChatStream(arg1, arg2) {
+  return window['go']['app']['AIOps']['ChatStream'](arg1, arg2);
+}
+
 export function CreateOpsPersona() {
   return window['go']['app']['AIOps']['CreateOpsPersona']();
 }

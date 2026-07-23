@@ -2,7 +2,7 @@
 
 ## Overview
 
-OpsForAll uses a modular, multi-threaded collector system. Every data source — CPU, memory, disk, network — runs in its own independent goroutine with its own schedule and lifecycle.
+Universal-Ops uses a modular, multi-threaded collector system. Every data source — CPU, memory, disk, network — runs in its own independent goroutine with its own schedule and lifecycle.
 
 ## Design Goals
 - **Zero Lock Contention**: Sharded data stores ensure concurrent collection does not block telemetry reading.

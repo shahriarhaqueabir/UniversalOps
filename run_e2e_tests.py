@@ -20,7 +20,7 @@ for p in extra_paths:
 
 # 3. CONFIGURE ENVIRONMENT FOR TESTS
 os.environ["APP_PATH"] = r"E:\Projects\projectx\AllOpsFull\build\bin\universal-ops.exe"
-os.environ["APP_TITLE"] = "OpsForAll Universal Platform"
+os.environ["APP_TITLE"] = "Universal-Ops"
 os.environ["PYTHONPATH"] = ";".join(extra_paths) + ";" + os.environ.get("PYTHONPATH", "")
 
 # 4. RUN PYTEST

@@ -216,6 +216,47 @@ func (d *DevOps) RunPowerShellLive(cmd string, id string) CommandResult {
 	}
 }
 
+// RunGitBashLive executes a command via Git Bash and streams each output line
+// as a Wails event. The `id` parameter allows the frontend to correlate lines.
+func (d *DevOps) RunGitBashLive(cmd string, id string) CommandResult {
+	start := time.Now()
+	lineCh := make(chan string, 100)
+
+	go func() {
+		defer common.RecoverPanic()
+		for line := range lineCh {
+			wailsruntime.EventsEmit(d.ctx, EventCmdLine, map[string]string{
+				"id":   id,
+				"line": line,
+			})
+		}
+		wailsruntime.EventsEmit(d.ctx, EventCmdDone, id)
+	}()
+
+	result, err := devops.RunGitBashWithLiveOutput(cmd, lineCh)
+	dur := time.Since(start).Milliseconds()
+	if err != nil {
+		common.LogWarn("RunGitBashLive failed: %v", err)
+		errMsg := sanitizeError(err)
+		if result != nil {
+			return CommandResult{
+				Command:  cmd,
+				Output:   result.Output,
+				ExitCode: result.ExitCode,
+				Duration: dur,
+				Error:    errMsg,
+			}
+		}
+		return CommandResult{Command: cmd, Duration: dur, Error: errMsg}
+	}
+	return CommandResult{
+		Command:  cmd,
+		Output:   result.Output,
+		ExitCode: result.ExitCode,
+		Duration: dur,
+	}
+}
+
 // GetDefaultPath returns the application root directory for file browsing.
 func (d *DevOps) GetDefaultPath() string {
 	root, err := os.Getwd()

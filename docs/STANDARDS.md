@@ -1,4 +1,4 @@
-# OpsForAll — Development Standards
+# Universal-Ops — Development Standards
 
 ## Go Conventions (Backend)
 

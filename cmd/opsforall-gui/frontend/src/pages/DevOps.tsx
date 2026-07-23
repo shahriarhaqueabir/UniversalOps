@@ -33,7 +33,7 @@ function stripAnsi(text: string): string {
   return text.replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, '')
 }
 
-type TabId = 'overview' | 'terminal' | 'services' | 'docker' | 'servers' | 'environment' | 'kubernetes' | 'diagnostics'
+type TabId = 'overview' | 'powershell' | 'bash' | 'services' | 'docker' | 'servers' | 'environment' | 'kubernetes' | 'diagnostics'
 
 const ActionButton = memo(function ActionButton({ icon, label, onClick, variant, disabled }: { icon: React.ReactNode; label: string; onClick: () => void; variant?: string; disabled?: boolean }) {
   const colors: Record<string, string> = {
@@ -52,7 +52,8 @@ const ActionButton = memo(function ActionButton({ icon, label, onClick, variant,
 
 const TAB_LIST = [
   { id: 'overview', label: 'Overview', icon: <Activity size={20} className="text-accent" /> },
-  { id: 'terminal', label: 'Terminal', icon: <Terminal size={20} /> },
+  { id: 'powershell', label: 'PS', icon: <Terminal size={20} /> },
+  { id: 'bash', label: 'Bash', icon: <TerminalSquare size={20} /> },
   { id: 'docker', label: 'Docker', icon: <Container size={20} /> },
   { id: 'kubernetes', label: 'K8s', icon: <Layers size={20} /> },
   { id: 'diagnostics', label: 'Health', icon: <Shield size={20} /> },
@@ -103,7 +104,8 @@ export function DevOps() {
 
         <div className="flex-1 overflow-hidden">
           <Tabs.Content value="overview" className="h-full"><OverviewTab /></Tabs.Content>
-          <Tabs.Content value="terminal" className="h-full"><TerminalTab /></Tabs.Content>
+          <Tabs.Content value="powershell" className="h-full"><PowerShellTab /></Tabs.Content>
+          <Tabs.Content value="bash" className="h-full"><BashTab /></Tabs.Content>
           <Tabs.Content value="docker" className="h-full"><DockerTabExpanded /></Tabs.Content>
           <Tabs.Content value="kubernetes" className="h-full"><KubernetesTab /></Tabs.Content>
           <Tabs.Content value="diagnostics" className="h-full"><DiagnosticsTab /></Tabs.Content>
@@ -312,10 +314,12 @@ function OverviewTab() {
   )
 }
 
-function TerminalTab() {
+function ShellTerminal({ shell }: { shell: 'powershell' | 'gitbash' }) {
   const { call } = useBackend()
   const [input, setInput] = useState('')
-  const [output, setOutput] = useState<string[]>([`PowerShell Terminal: Enter a command...\n`])
+  const [output, setOutput] = useState<string[]>([
+    shell === 'gitbash' ? 'Git Bash Terminal: Enter a command...\n' : 'PowerShell Terminal: Enter a command...\n'
+  ])
   const [history, setHistory] = useState<string[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
   const [isRunning, setIsRunning] = useState(false)
@@ -332,6 +336,10 @@ function TerminalTab() {
     if (id === currentCmdId) { setIsRunning(false); setCurrentCmdId(null) }
   })
 
+  const backendMethod = shell === 'gitbash' ? 'DevOps.RunGitBashLive' : 'DevOps.RunPowerShellLive'
+  const promptLabel = shell === 'gitbash' ? 'BASH' : 'PS'
+  const placeholder = shell === 'gitbash' ? 'Enter bash command...' : 'Enter PowerShell command...'
+
   const runCommand = useCallback(async (cmd: string) => {
     if (!cmd.trim() || isRunning) return
     const id = nanoid()
@@ -339,14 +347,14 @@ function TerminalTab() {
     setHistory(prev => [...prev, cmd])
     setOutput(prev => [...prev, `$ ${cmd}`])
     try {
-      const res = await call('DevOps.RunPowerShellLive', cmd, id) as CommandResult
+      const res = await call(backendMethod, cmd, id) as CommandResult
       if (res.error) setOutput(prev => [...prev, `\u001b[31mError: ${res.error}\u001b[0m`])
       else if (res.output) setOutput(prev => [...prev, res.output])
     } catch (err) {
       setOutput(prev => [...prev, `\u001b[31mExecution Error: ${String(err)}\u001b[0m`])
       setIsRunning(false)
     }
-  }, [call, isRunning])
+  }, [call, isRunning, backendMethod])
 
   const handleImportScript = async () => {
     try {
@@ -399,9 +407,9 @@ function TerminalTab() {
       <div className="flex items-center gap-4">
         <div className="relative flex-1 group">
           <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown}
-            placeholder="Enter PowerShell command..." disabled={isRunning}
+            placeholder={placeholder} disabled={isRunning}
             className="w-full bg-[var(--color-bg)] border border-[var(--color-border)] rounded-2xl pl-12 pr-6 py-4 text-sm font-mono text-text focus:outline-none focus:border-accent transition-all shadow-inner group-hover:border-accent/30" />
-          <span className="absolute left-5 top-1/2 -translate-y-1/2 text-success text-sm font-black font-mono opacity-60 group-focus-within:opacity-100 transition-opacity">PS&gt;</span>
+          <span className="absolute left-5 top-1/2 -translate-y-1/2 text-success text-sm font-black font-mono opacity-60 group-focus-within:opacity-100 transition-opacity">{promptLabel}&gt;</span>
         </div>
         <button onClick={handleImportScript} disabled={isRunning}
           className="p-4 bg-panel-3 border border-border text-text-dim hover:text-white rounded-2xl transition-all active:scale-95" title="Import Script">
@@ -411,7 +419,8 @@ function TerminalTab() {
           className="flex items-center gap-2.5 px-8 py-4 text-xs font-black uppercase tracking-widest bg-accent text-white rounded-2xl hover:bg-accent/90 disabled:opacity-50 transition-all shadow-xl active:scale-95">
           <Play size={16} /> Run Command
         </button>
-        <button onClick={() => setOutput([`PowerShell Terminal: Enter a command...\n`])} className="px-6 py-4 text-sm font-bold text-text-faint border border-border rounded-2xl hover:bg-panel-3 transition-all hover:text-danger">
+        <button onClick={() => setOutput([shell === 'gitbash' ? 'Git Bash Terminal: Enter a command...\n' : 'PowerShell Terminal: Enter a command...\n'])}
+          className="px-6 py-4 text-sm font-bold text-text-faint border border-border rounded-2xl hover:bg-panel-3 transition-all hover:text-danger">
           <Trash2 size={18} />
         </button>
       </div>
@@ -425,6 +434,9 @@ function TerminalTab() {
     </div>
   )
 }
+
+const PowerShellTab = () => <ShellTerminal shell="powershell" />
+const BashTab = () => <ShellTerminal shell="gitbash" />
 
 function DockerTabExpanded() {
   const { call } = useBackend()

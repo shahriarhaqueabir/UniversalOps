@@ -31,7 +31,7 @@ func main() {
 	application := app.NewApp()
 
 	err := wails.Run(&options.App{
-		Title:     "OpsForAll Universal Platform",
+		Title:     "Universal-Ops Operations Platform",
 		Width:     1400,
 		Height:    900,
 		MinWidth:  1024,

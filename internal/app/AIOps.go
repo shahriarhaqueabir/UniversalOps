@@ -9,9 +9,10 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
@@ -24,6 +25,14 @@ import (
 // titleCaser replaces the deprecated strings.Title (removed guidance since
 // Go 1.18); see CROSS-1.
 var titleCaser = cases.Title(language.English)
+
+// systemContextCache holds a recently-built system context snapshot to avoid
+// redundant DB reads on consecutive chat messages.
+type systemContextCache struct {
+	mu        sync.Mutex
+	snapshot  string
+	timestamp time.Time
+}
 
 // AIOps exposes AI operations bindings to the frontend.
 type AIOps struct {
@@ -38,6 +47,8 @@ type AIOps struct {
 	// Configurable models per capability
 	AnalystModel   string
 	OptimizerModel string
+
+	contextCache *systemContextCache
 }
 
 // NewAIOps creates a new AIOps facade.
@@ -50,6 +61,7 @@ func NewAIOps(ctx context.Context, pipeline *common.DataPipeline, knowledge *Kno
 		pipelineAPI:  pipelineAPI,
 		sysOps:       sysOps,
 		dataDir:      dataDir,
+		contextCache: &systemContextCache{},
 	}
 }
 
@@ -108,7 +120,7 @@ func (a *AIOps) GetCompanionName() string {
 type ChatResponse struct {
 	Content string                 `json:"content"`
 	Actions []common.ActionPreview `json:"actions,omitempty"`
-	Payload map[string]interface{}  `json:"payload,omitempty"`
+	Payload map[string]interface{} `json:"payload,omitempty"`
 }
 
 // Chat sends a message to the Ollama chat API and returns the response.
@@ -204,6 +216,226 @@ func (a *AIOps) Chat(sessionID, message string) ChatResponse {
 	}
 }
 
+// ── Context Cache Helpers ──────────────────────────────────────────────
+
+const contextCacheTTL = 5 * time.Second
+
+// isTrivialMessage returns true when the message is short and contains no
+// system-related keywords — likely a greeting or small talk. For these messages
+// we skip heavy context loading to reduce first-token latency.
+func isTrivialMessage(msg string) bool {
+	if len(msg) > 20 {
+		return false
+	}
+	lower := strings.ToLower(msg)
+	keywords := []string{
+		"cpu", "mem", "disk", "network", "anomaly", "error", "alert",
+		"health", "service", "process", "system", "status", "log",
+		"event", "threat", "scan", "port", "latency", "utilization",
+		"performance", "bottleneck", "memory", "storage",
+	}
+	for _, kw := range keywords {
+		if strings.Contains(lower, kw) {
+			return false
+		}
+	}
+	return true
+}
+
+// buildSystemContextSnapshot loads metrics, events and anomalies in parallel
+// and returns a formatted context string. Results are cached with a 5-second TTL.
+func (a *AIOps) buildSystemContextSnapshot(forceRefresh bool) string {
+	cache := a.contextCache
+	if cache != nil {
+		cache.mu.Lock()
+		if !forceRefresh && cache.snapshot != "" && time.Since(cache.timestamp) < contextCacheTTL {
+			snap := cache.snapshot
+			cache.mu.Unlock()
+			return snap
+		}
+		cache.mu.Unlock()
+	}
+
+	storage := common.GetStorage()
+	if storage == nil {
+		return ""
+	}
+
+	var (
+		cpuHistory  []float64
+		memHistory  []float64
+		diskHistory []float64
+		eventStrs   []string
+		anomStrs    []string
+	)
+
+	// Load metrics, events, and anomalies concurrently
+	var wg sync.WaitGroup
+	wg.Add(5)
+
+	go func() {
+		defer common.RecoverPanic()
+		defer wg.Done()
+		cpuHistory, _ = storage.GetMetricHistory(common.MetricCPU, 100)
+	}()
+	go func() {
+		defer common.RecoverPanic()
+		defer wg.Done()
+		memHistory, _ = storage.GetMetricHistory(common.MetricMem, 100)
+	}()
+	go func() {
+		defer common.RecoverPanic()
+		defer wg.Done()
+		diskHistory, _ = storage.GetMetricHistory(common.MetricDisk, 100)
+	}()
+	go func() {
+		defer common.RecoverPanic()
+		defer wg.Done()
+		events, _ := storage.QueryEvents("", "", 50, 0)
+		for _, e := range events {
+			eventStrs = append(eventStrs, fmt.Sprintf("[%s] %s: %s", e.Timestamp.Format("15:04:05"), e.Title, e.Detail))
+		}
+	}()
+	go func() {
+		defer common.RecoverPanic()
+		defer wg.Done()
+		anoms := a.DetectAnomalies()
+		for i, anom := range anoms {
+			if i >= 20 {
+				break
+			}
+			anomStrs = append(anomStrs, fmt.Sprintf("%s: %s (Value: %.1f)", anom.Timestamp, anom.Metric, anom.Value))
+		}
+	}()
+
+	wg.Wait()
+
+	snapshot := fmt.Sprintf("\n--- SYSTEM HISTORY (Snapshot: %s) ---\n"+
+		"CPU Summary: %s\n"+
+		"RAM Summary: %s\n"+
+		"Disk Summary: %s\n\n"+
+		"Recent System Events:\n%s\n\n"+
+		"Recent Anomalies:\n%s\n"+
+		"------------------------------------\n",
+		time.Now().Format("15:04:05.000"),
+		a.summarizeMetrics("CPU", cpuHistory),
+		a.summarizeMetrics("RAM", memHistory),
+		a.summarizeMetrics("Disk", diskHistory),
+		strings.Join(eventStrs, "\n"),
+		strings.Join(anomStrs, "\n"))
+
+	// Cache the snapshot
+	if cache != nil {
+		cache.mu.Lock()
+		cache.snapshot = snapshot
+		cache.timestamp = time.Now()
+		cache.mu.Unlock()
+	}
+
+	return snapshot
+}
+
+// ── Streaming Chat ─────────────────────────────────────────────────────
+
+// ChatStream sends a message to the Ollama chat API and streams each
+// response token as a Wails "chat:token" event. Emits "chat:done" when
+// complete, or "chat:error" on failure. Returns the parsed ChatResponse.
+func (a *AIOps) ChatStream(sessionID, message string) ChatResponse {
+	if sessionID == "" || message == "" {
+		return ChatResponse{Content: "Error: sessionID and message are required"}
+	}
+
+	knowledge := a.knowledge.GetSnapshot()
+	storage := common.GetStorage()
+
+	// Resolve model once (no need to re-read from DB in goroutine)
+	activeModel := a.AnalystModel
+	if storage != nil {
+		if m, err := storage.GetSetting("model_analyst"); err == nil && m != "" {
+			activeModel = m
+		}
+	}
+
+	// Decide whether to load heavy context
+	trivial := isTrivialMessage(message)
+	historyContext := a.buildSystemContextSnapshot(trivial)
+
+	// Load chat history (must happen on this goroutine; storage is not
+	// guaranteed goroutine-safe for sequential access patterns).
+	var chatHistory []aiops.ChatMessage
+	if storage != nil && sessionID != "" {
+		msgs, _ := storage.GetMessages(sessionID)
+		for _, m := range msgs {
+			chatHistory = append(chatHistory, aiops.ChatMessage{
+				Role:    m.Role,
+				Content: m.Content,
+			})
+		}
+		chatHistory = aiops.TruncateHistory(chatHistory, 20000)
+	}
+
+	systemPrompt := aiops.BuildAnalystPrompt(knowledge, historyContext)
+	wrappedMessage := fmt.Sprintf("<user_query>%s</user_query>", aiops.SanitizeInput(message))
+
+	messages := []aiops.ChatMessage{
+		{Role: "system", Content: systemPrompt},
+	}
+	messages = append(messages, chatHistory...)
+	messages = append(messages, aiops.ChatMessage{Role: "user", Content: wrappedMessage})
+
+	// Emit a start event so the frontend can correlate
+	wailsruntime.EventsEmit(a.ctx, "chat:start", map[string]string{
+		"sessionId": sessionID,
+	})
+
+	// Execute streaming chat — the onToken callback emits events inline
+	// while the Ollama API delivers chunks. Events reach the frontend
+	// immediately because Wails processes them asynchronously.
+	rawResponse, err := aiops.ChatStreamWithModelAndContext(a.ctx, messages, activeModel, func(token string) {
+		wailsruntime.EventsEmit(a.ctx, "chat:token", map[string]string{
+			"sessionId": sessionID,
+			"token":     token,
+		})
+	})
+
+	if err != nil {
+		common.LogWarn("AI ChatStream failed: %v", err)
+		wailsruntime.EventsEmit(a.ctx, "chat:error", map[string]string{
+			"sessionId": sessionID,
+			"error":     err.Error(),
+		})
+		return ChatResponse{Content: "Error: " + err.Error()}
+	}
+
+	content, actions := aiops.ParseActions(rawResponse)
+
+	// Persist messages
+	if storage != nil && sessionID != "" {
+		if err := storage.InsertMessage(sessionID, "user", message); err != nil {
+			common.LogError("AIOps: failed to persist user message: %v", err)
+		}
+		if err := storage.InsertMessage(sessionID, "assistant", content); err != nil {
+			common.LogError("AIOps: failed to persist assistant message: %v", err)
+		}
+	}
+
+	wailsruntime.EventsEmit(a.ctx, "chat:done", map[string]string{
+		"sessionId": sessionID,
+		"content":   content,
+	})
+
+	// Also save actions as JSON payload
+	if len(actions) > 0 {
+		actionJSON, _ := json.Marshal(actions)
+		common.LogInfo("ChatStream actions for session %s: %s", sessionID, string(actionJSON))
+	}
+
+	return ChatResponse{
+		Content: content,
+		Actions: actions,
+	}
+}
+
 // GenerateReport creates a formatted text report from the given sections.
 func (a *AIOps) GenerateReport(sections []string) string {
 	var reportSections []aiops.ReportSection
@@ -256,23 +488,23 @@ func (a *AIOps) GetOllamaStatus() OllamaStatus {
 	}
 }
 
-// GetModelfile reads the local allopsfull.modelfile and returns its content.
+// GetModelfile reads the local universalops.modelfile and returns its content.
 func (a *AIOps) GetModelfile() (string, error) {
-	path := filepath.Join(a.dataDir, "allopsfull.modelfile")
+	path := filepath.Join(a.dataDir, "universalops.modelfile")
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return "", fmt.Errorf("failed to read allopsfull.modelfile: %w", err)
+		return "", fmt.Errorf("failed to read universalops.modelfile: %w", err)
 	}
 	return string(content), nil
 }
 
-// SaveModelfile writes the given content to the local allopsfull.modelfile.
+// SaveModelfile writes the given content to the local universalops.modelfile.
 func (a *AIOps) SaveModelfile(content string) error {
-	common.LogInfo("AIOps: Saving updated allopsfull.modelfile")
-	path := filepath.Join(a.dataDir, "allopsfull.modelfile")
+	common.LogInfo("AIOps: Saving updated universalops.modelfile")
+	path := filepath.Join(a.dataDir, "universalops.modelfile")
 	err := os.WriteFile(path, []byte(content), 0644)
 	if err != nil {
-		return fmt.Errorf("failed to save allopsfull.modelfile: %w", err)
+		return fmt.Errorf("failed to save universalops.modelfile: %w", err)
 	}
 	return nil
 }
@@ -292,7 +524,7 @@ func (a *AIOps) PullModel(modelName string) error {
 			if resp.Total > 0 {
 				percent = float64(resp.Completed) / float64(resp.Total) * 100
 			}
-			runtime.EventsEmit(a.ctx, "ollama:progress", OllamaProgress{
+			wailsruntime.EventsEmit(a.ctx, "ollama:progress", OllamaProgress{
 				Status:    resp.Status,
 				Percent:   percent,
 				Total:     resp.Total,
@@ -315,11 +547,11 @@ func (a *AIOps) DeleteModel(modelName string) error {
 	return aiops.DeleteModelWithContext(a.ctx, modelName)
 }
 
-// CreateOpsPersona creates the specialized 'allopsfull' model from the local modelfile.
+// CreateOpsPersona creates the specialized 'universalops' model from the local modelfile.
 func (a *AIOps) CreateOpsPersona() error {
-	common.LogInfo("AIOps: Creating allopsfull persona")
+	common.LogInfo("AIOps: Creating universalops persona")
 
-	modelfilePath := filepath.Join(a.dataDir, "allopsfull.modelfile")
+	modelfilePath := filepath.Join(a.dataDir, "universalops.modelfile")
 
 	// 1. Check for legacy root Modelfile and migrate if necessary
 	legacyPaths := []string{"Modelfile", filepath.Join("data", "Modelfile")}
@@ -334,7 +566,7 @@ func (a *AIOps) CreateOpsPersona() error {
 
 	// 2. Ensure allopsfull.modelfile exists in data/
 	if _, err := os.Stat(modelfilePath); os.IsNotExist(err) {
-		common.LogInfo("AIOps: allopsfull.modelfile missing in data/. Creating default (MiniCPM-Thinking).")
+		common.LogInfo("AIOps: universalops.modelfile missing in data/. Creating default (MiniCPM-Thinking).")
 		content := `FROM hf.co/GnLOLot/MiniCPM5-1B-Claude-Opus-Fable5-V2-Thinking-GGUF:Q8_0
 
 # System message for Universal-Ops System Analyst
@@ -373,7 +605,7 @@ PARAMETER stop "──"
 		common.LogWarn("AIOps: Failed to parse Modelfile: %v. Using hardcoded defaults (MiniCPM).", err)
 		config = &aiops.ModelfileConfig{
 			From:   "hf.co/GnLOLot/MiniCPM5-1B-Claude-Opus-Fable5-V2-Thinking-GGUF:Q8_0",
-			System: "You are the AllOpsFull System Analyst, a high-density technical co-pilot.\nObjective: Synthesize complex telemetry into factual technical briefings.\nUse your <thought> block to correlate telemetry history and identify root causes.",
+			System: "You are the Universal-Ops System Analyst, a high-density technical co-pilot.\nObjective: Synthesize complex telemetry into factual technical briefings.\nUse your <thought> block to correlate telemetry history and identify root causes.",
 			Parameters: map[string]any{
 				"temperature": 0.1,
 				"num_ctx":     32768,
@@ -386,18 +618,18 @@ PARAMETER stop "──"
 	}
 
 	// 3. Create Model via SDK
-	common.LogInfo("AIOps: Requesting model creation for 'allopsfull' (Base: %s)", config.From)
+	common.LogInfo("AIOps: Requesting model creation for 'universalops' (Base: %s)", config.From)
 
 	// Note: Ollama's Create API handles pulling the base model automatically
 	// in recent versions if it's missing from the library.
-	err = aiops.CreateModelWithContext(a.ctx, "allopsfull", config.From, config.System, config.Parameters)
+	err = aiops.CreateModelWithContext(a.ctx, "universalops", config.From, config.System, config.Parameters)
 	if err != nil {
 		// If creation fails because base is missing, attempt an explicit pull
 		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "pull") {
 			common.LogInfo("AIOps: Base model missing. Attempting explicit pull of %s", config.From)
 			_ = a.PullModel(config.From)
 			// Retry creation after pull attempt
-			err = aiops.CreateModelWithContext(a.ctx, "allopsfull", config.From, config.System, config.Parameters)
+			err = aiops.CreateModelWithContext(a.ctx, "universalops", config.From, config.System, config.Parameters)
 		}
 	}
 
@@ -406,10 +638,9 @@ PARAMETER stop "──"
 		return err
 	}
 
-	common.LogInfo("AIOps: Successfully created allopsfull persona")
+	common.LogInfo("AIOps: Successfully created universalops persona")
 	return nil
 }
-
 
 // DetectAnomalies performs anomaly detection on pipeline metrics.
 func (a *AIOps) DetectAnomalies() []AnomalyInfo {
@@ -772,7 +1003,7 @@ If no changes are needed, return the current settings in the payload.`,
 
 	// 2. Call AI with Optimizer model override
 	resp, err := aiops.ChatWithModelAndContext(a.ctx, []aiops.ChatMessage{
-		{Role: "system", Content: "You are the OpsForAll Engine Optimizer. Output JSON only."},
+		{Role: "system", Content: "You are the Universal-Ops Engine Optimizer. Output JSON only."},
 		{Role: "user", Content: prompt},
 	}, a.OptimizerModel)
 
@@ -856,7 +1087,7 @@ Keep it technical and focused on system/network/security ops.`, objective)
 
 	// Use OptimizerModel for structured planning if available
 	resp, err := aiops.ChatWithModelAndContext(a.ctx, []aiops.ChatMessage{
-		{Role: "system", Content: "You are the OpsForAll Workflow Architect. Output JSON only."},
+		{Role: "system", Content: "You are the Universal-Ops Workflow Architect. Output JSON only."},
 		{Role: "user", Content: prompt},
 	}, a.OptimizerModel)
 

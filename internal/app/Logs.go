@@ -15,7 +15,7 @@ func NewLogs() *Logs {
 	return &Logs{}
 }
 
-// GetLogs returns filtered log entries from the opsforall database.
+// GetLogs returns filtered log entries from the Universal-Ops database.
 func (l *Logs) GetLogs(level string, since string, n int) []LogEntry {
 	if n <= 0 {
 		n = 200

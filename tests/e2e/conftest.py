@@ -15,7 +15,7 @@ from config import APP_PATH, APP_TITLE, LAUNCH_TIMEOUT, ARTIFACT_DIR
 @pytest.fixture(scope="session")
 def sandbox_dir():
     """Create a persistent sandbox directory for the entire session."""
-    tmp_dir = tempfile.mkdtemp(prefix="opsforall_e2e_session_")
+    tmp_dir = tempfile.mkdtemp(prefix="universalops_e2e_session_")
     yield tmp_dir
     # Cleanup at the very end
     shutil.rmtree(tmp_dir, ignore_errors=True)

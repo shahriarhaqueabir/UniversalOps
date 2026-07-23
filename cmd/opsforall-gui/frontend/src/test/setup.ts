@@ -6,7 +6,7 @@ const mockWails = {
   go: {
     app: {
       App: {
-        GetAppInfo: vi.fn().mockResolvedValue({ name: 'OpsForAll', version: '1.3.0' }),
+        GetAppInfo: vi.fn().mockResolvedValue({ name: 'Universal-Ops', version: '1.3.0' }),
       },
       SysOps: {
         GetCPUInfo: vi.fn(),
