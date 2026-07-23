@@ -59,3 +59,22 @@ attached_assets/
 docs/superpowers/
 plans/
 tests/e2e/artifacts/
+
+# IDE / tool config
+.qodo/
+
+# Backup directories
+cmd/opsforall-gui.bak/
+
+# Build artifacts
+cmd/opsforall-gui/frontend/src/assets/
+
+# Runtime data
+data/lhm/
+logs/
+
+# Python cache
+__pycache__/
+.pytest_cache/
+tests/e2e/__pycache__/
+tests/e2e/.pytest_cache/

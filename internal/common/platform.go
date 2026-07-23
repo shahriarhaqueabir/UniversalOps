@@ -2,7 +2,6 @@ package common
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 )
@@ -47,7 +46,7 @@ func IsAdminRequired() bool {
 func IsAdmin() bool {
 	if runtime.GOOS == "windows" {
 		// Windows check via shell command as fallback if syscalls aren't easily bundled
-		cmd := exec.Command("net", "session")
+		cmd := HiddenCommand("net", "session")
 		err := cmd.Run()
 		return err == nil
 	}

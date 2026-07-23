@@ -3,7 +3,6 @@ package secops
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -61,7 +60,7 @@ func getHardeningChecksWindows() ([]HardeningCheck, error) {
 	})
 
 	// SMBv1 check
-	out, err := exec.Command("powershell", "-Command",
+	out, err := common.HiddenCommand("powershell", "-Command",
 		"Get-SmbServerConfiguration | Select-Object -ExpandProperty EnableSMB1Protocol").Output()
 	smbv1Disabled := err != nil || !strings.Contains(strings.TrimSpace(string(out)), "True")
 	checks = append(checks, HardeningCheck{
@@ -70,7 +69,7 @@ func getHardeningChecksWindows() ([]HardeningCheck, error) {
 	})
 
 	// Guest account check
-	guestOut, err := exec.Command("net", "user", "Guest").Output()
+	guestOut, err := common.HiddenCommand("net", "user", "Guest").Output()
 	guestDisabled := err != nil || strings.Contains(strings.ToLower(string(guestOut)), "account is disabled")
 	checks = append(checks, HardeningCheck{
 		Category: "Account", Check: "Guest account disabled", Passed: guestDisabled,
@@ -84,7 +83,7 @@ func getHardeningChecksLinux() ([]HardeningCheck, error) {
 	var checks []HardeningCheck
 
 	// UFW/firewall check
-	ufwOut, err := exec.Command("ufw", "status").Output()
+	ufwOut, err := common.HiddenCommand("ufw", "status").Output()
 	firewallActive := err == nil && strings.Contains(strings.ToLower(string(ufwOut)), "active")
 	checks = append(checks, HardeningCheck{
 		Category: "Firewall", Check: "Firewall active", Passed: firewallActive,

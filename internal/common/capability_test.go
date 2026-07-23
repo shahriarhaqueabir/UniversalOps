@@ -7,6 +7,10 @@ import (
 func TestCapabilityRegistry_LHM(t *testing.T) {
 	r := NewCapabilityRegistry()
 
+	// Synchronously refresh CapLHM so it's in the map before we check List().
+	// The background goroutine may not have reached it yet.
+	r.RefreshBatch([]CapabilityID{CapLHM})
+
 	// Since LHM depends on a running service, we can't easily assert 'true' in CI
 	// but we can assert the ID exists in the list.
 	found := false

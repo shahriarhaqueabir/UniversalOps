@@ -3,12 +3,13 @@ package sysops
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 	"github.com/shirou/gopsutil/v4/process"
 )
 
@@ -49,7 +50,35 @@ var (
 	lastSnapshot   []ProcessInfo
 	lastSnapshotMu sync.RWMutex
 	lastSnapshotAt time.Time
+
+	// New: Async Trust Worker
+	trustQueue   = make(chan string, 500)
+	trustWorkerOnce sync.Once
 )
+
+func startTrustWorker() {
+	trustWorkerOnce.Do(func() {
+		go func() {
+			for path := range trustQueue {
+				// Avoid redundant checks if already in cache
+				trustCacheMu.RLock()
+				_, found := trustCache[path]
+				trustCacheMu.RUnlock()
+				if found {
+					continue
+				}
+
+				// Perform expensive PowerShell check
+				isSigned, publisher := fetchTrustInfo(path)
+
+				// Update cache
+				trustCacheMu.Lock()
+				trustCache[path] = procTrustInfo{IsSigned: isSigned, Publisher: publisher}
+				trustCacheMu.Unlock()
+			}
+		}()
+	})
+}
 
 // UpdateProcessSnapshot performs a full system process scan and caches the result.
 // OPTIMIZATION: Only fetches expensive metrics (CPU/Mem/FDs) for top active processes.
@@ -185,6 +214,8 @@ func getTrustInfo(path string) (bool, string) {
 		return false, ""
 	}
 
+	startTrustWorker()
+
 	// 1. Check Cache
 	trustCacheMu.RLock()
 	info, found := trustCache[path]
@@ -193,12 +224,31 @@ func getTrustInfo(path string) (bool, string) {
 		return info.IsSigned, info.Publisher
 	}
 
+	// 2. Enqueue for background check if not in cache
+	select {
+	case trustQueue <- path:
+		// Enqueued
+	default:
+		// Queue full, skip for now to avoid blocking
+	}
+
+	return false, "Verifying..."
+}
+
+func fetchTrustInfo(path string) (bool, string) {
 	// 2. Fetch via PowerShell (Expensive)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "powershell", "-Command",
+	cmd := common.HiddenCommandContext(ctx, "powershell", "-Command",
 		fmt.Sprintf("(Get-AuthenticodeSignature '%s').Status; (Get-AuthenticodeSignature '%s').SignerCertificate.Subject", path, path))
+
+	// HIDE WINDOW on Windows to prevent terminal spam
+	if cmd.SysProcAttr == nil {
+		cmd.SysProcAttr = &syscall.SysProcAttr{}
+	}
+	cmd.SysProcAttr.HideWindow = true
+
 	out, err := cmd.Output()
 	if err != nil {
 		return false, ""
@@ -219,11 +269,6 @@ func getTrustInfo(path string) (bool, string) {
 			publisher = strings.Split(publisher[idx+3:], ",")[0]
 		}
 	}
-
-	// 3. Store in Cache
-	trustCacheMu.Lock()
-	trustCache[path] = procTrustInfo{IsSigned: isSigned, Publisher: publisher}
-	trustCacheMu.Unlock()
 
 	return isSigned, publisher
 }

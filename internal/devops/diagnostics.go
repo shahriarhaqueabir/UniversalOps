@@ -5,6 +5,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
 type DiagnosticCheck struct {
@@ -28,7 +30,7 @@ func RunDevOpsDiagnostics() DiagnosticResult {
 	gitCheck := func() DiagnosticCheck {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
-		cmd := exec.CommandContext(ctx, "git", "status")
+		cmd := common.HiddenCommandContext(ctx, "git", "status")
 		if err := cmd.Run(); err != nil {
 			return DiagnosticCheck{Name: "Git", Status: "fail", Message: "Git not available or not in a repo", Value: "not-found"}
 		}
@@ -47,7 +49,7 @@ func RunDevOpsDiagnostics() DiagnosticResult {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		cmd := exec.CommandContext(ctx, "docker", "info")
+		cmd := common.HiddenCommandContext(ctx, "docker", "info")
 		if err := cmd.Run(); err != nil {
 			return DiagnosticCheck{Name: "Docker Daemon", Status: "fail", Message: "Docker installed but daemon not running", Value: "stopped"}
 		}
@@ -66,7 +68,7 @@ func RunDevOpsDiagnostics() DiagnosticResult {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		cmd := exec.CommandContext(ctx, "kubectl", "cluster-info")
+		cmd := common.HiddenCommandContext(ctx, "kubectl", "cluster-info")
 		if err := cmd.Run(); err != nil {
 			return DiagnosticCheck{Name: "Kubernetes Cluster", Status: "warn", Message: "kubectl installed but cannot connect to cluster", Value: "disconnected"}
 		}
@@ -85,7 +87,7 @@ func RunDevOpsDiagnostics() DiagnosticResult {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
-		cmd := exec.CommandContext(ctx, "node", "--version")
+		cmd := common.HiddenCommandContext(ctx, "node", "--version")
 		output, err := cmd.Output()
 		if err != nil {
 			return DiagnosticCheck{Name: "Node.js", Status: "fail", Message: "Node.js found but version check failed", Value: "error"}
@@ -105,7 +107,7 @@ func RunDevOpsDiagnostics() DiagnosticResult {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
-		cmd := exec.CommandContext(ctx, "go", "version")
+		cmd := common.HiddenCommandContext(ctx, "go", "version")
 		output, err := cmd.Output()
 		if err != nil {
 			return DiagnosticCheck{Name: "Go", Status: "fail", Message: "Go found but version check failed", Value: "error"}
@@ -124,7 +126,7 @@ func RunDevOpsDiagnostics() DiagnosticResult {
 		if modCheck != "" {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			cmd := exec.CommandContext(ctx, "go", "env", "GOMODCACHE")
+			cmd := common.HiddenCommandContext(ctx, "go", "env", "GOMODCACHE")
 			if output, err := cmd.Output(); err == nil && strings.TrimSpace(string(output)) != "" {
 				return DiagnosticCheck{Name: "Module Cache", Status: "pass", Message: "Go module cache configured", Value: "ok"}
 			}

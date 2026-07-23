@@ -47,7 +47,7 @@ func GetContainers() (ContainerSummary, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, dockerPath, "ps", "-a", "--format", `{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.Ports}}`)
+	cmd := common.HiddenCommandContext(ctx, dockerPath, "ps", "-a", "--format", `{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.Ports}}`)
 	var stdout strings.Builder
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
@@ -114,7 +114,7 @@ func GetDockerStatus() (DockerStatus, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	verCmd := exec.CommandContext(ctx, dockerPath, "--version")
+	verCmd := common.HiddenCommandContext(ctx, dockerPath, "--version")
 	if output, err := verCmd.Output(); err == nil {
 		fields := strings.Fields(strings.TrimSpace(string(output)))
 		if len(fields) >= 3 {
@@ -122,7 +122,7 @@ func GetDockerStatus() (DockerStatus, error) {
 		}
 	}
 
-	infoCmd := exec.CommandContext(ctx, dockerPath, "info", "--format", `{{.ServerVersion}}`)
+	infoCmd := common.HiddenCommandContext(ctx, dockerPath, "info", "--format", `{{.ServerVersion}}`)
 	if err := infoCmd.Run(); err == nil {
 		status.Running = true
 	}
@@ -161,6 +161,6 @@ func ControlContainer(id string, action string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, dockerPath, cmdArg, id)
+	cmd := common.HiddenCommandContext(ctx, dockerPath, cmdArg, id)
 	return cmd.Run()
 }

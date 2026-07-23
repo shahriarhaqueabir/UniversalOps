@@ -3,6 +3,8 @@
 import {app} from '../models';
 import {common} from '../models';
 
+export function DownloadLHM():Promise<app.LHMStatusResult>;
+
 export function GetBatteryInfo():Promise<app.BatteryInfo>;
 
 export function GetCPUExtended():Promise<app.CPUExtendedInfo>;
@@ -18,6 +20,10 @@ export function GetGPUInfo():Promise<app.GPUInfo>;
 export function GetHardwareInfo():Promise<app.HardwareInfo>;
 
 export function GetHistoricalHealthReport(arg1:string):Promise<app.ExtendedDiagnosticResult>;
+
+export function GetLHMAuthorization():Promise<app.LHMAuthorization>;
+
+export function GetLHMStatus():Promise<app.LHMStatusResult>;
 
 export function GetLoggedInUsers():Promise<Array<app.LoggedInUserData>>;
 
@@ -46,3 +52,7 @@ export function ListHistoricalHealthReports():Promise<Array<common.ReportRecord>
 export function RunExtendedDiagnostics():Promise<app.ExtendedDiagnosticResult>;
 
 export function RunSystemAction(arg1:string):Promise<common.ActionPreview>;
+
+export function StartLHM():Promise<app.LHMStatusResult>;
+
+export function StopLHM():Promise<app.LHMStatusResult>;

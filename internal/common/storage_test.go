@@ -191,6 +191,9 @@ func TestInsertLogAndQuery(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Flush to ensure async writes are committed
+	s.flushMetrics()
+
 	// Query with specific module to be deterministic
 	entries, err := s.QueryLogs("", testModule, 10)
 	if err != nil {

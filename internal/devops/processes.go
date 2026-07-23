@@ -3,9 +3,9 @@ package devops
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"sort"
 
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 	"github.com/shirou/gopsutil/v4/process"
 )
 
@@ -140,7 +140,7 @@ func RestartProcess(pid int32) error {
 		return err
 	}
 
-	cmd := exec.Command(exe, args...)
+	cmd := common.HiddenCommand(exe, args...)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("restart process %d: %w", pid, err)
 	}

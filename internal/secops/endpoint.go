@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -41,7 +40,7 @@ func GetDiskEncryptionStatus() ([]DiskEncryption, error) {
 }
 
 func getDiskEncryptionWindows() ([]DiskEncryption, error) {
-	out, err := exec.Command("powershell", "-Command",
+	out, err := common.HiddenCommand("powershell", "-Command",
 		"Get-BitLockerVolume | Select-Object MountPoint,ProtectionStatus,EncryptionMethod | ConvertTo-Json -As Array -Depth 2").Output()
 	if err != nil {
 		return []DiskEncryption{{Volume: "C:", Encrypted: false, Method: "Unknown", Status: "Unavailable"}}, nil
@@ -105,7 +104,7 @@ func parseBitLockerJSON(jsonStr string) []DiskEncryption {
 }
 
 func getDiskEncryptionLinux() ([]DiskEncryption, error) {
-	out, err := exec.Command("lsblk", "--discard", "-o", "NAME,TYPE,FSTYPE,MOUNTPOINT").Output()
+	out, err := common.HiddenCommand("lsblk", "--discard", "-o", "NAME,TYPE,FSTYPE,MOUNTPOINT").Output()
 	if err != nil {
 		return nil, fmt.Errorf("lsblk failed: %w", err)
 	}
@@ -136,7 +135,7 @@ func GetSecureBootStatus() (*SecureBoot, error) {
 }
 
 func getSecureBootWindows() (*SecureBoot, error) {
-	out, err := exec.Command("powershell", "-Command", "Confirm-SecureBootUEFI").Output()
+	out, err := common.HiddenCommand("powershell", "-Command", "Confirm-SecureBootUEFI").Output()
 	if err != nil {
 		return &SecureBoot{Enabled: false, State: "Unable to determine"}, nil
 	}
@@ -152,7 +151,7 @@ func getSecureBootLinux() (*SecureBoot, error) {
 	if err != nil {
 		return &SecureBoot{Enabled: false, State: "Legacy BIOS"}, nil
 	}
-	out, err := exec.Command("mokutil", "--sb-state").Output()
+	out, err := common.HiddenCommand("mokutil", "--sb-state").Output()
 	if err != nil {
 		return &SecureBoot{Enabled: false, State: "UEFI (status unknown)"}, nil
 	}
@@ -172,21 +171,158 @@ func GetRunningServices() ([]SystemService, error) {
 }
 
 func getRunningServicesWindows() ([]SystemService, error) {
-	out, err := exec.Command("powershell", "-Command",
-		"Get-Service | Select-Object Name,DisplayName,Status,StartType | ConvertTo-Json -As Array -Depth 2").Output()
-	if err != nil {
-		return nil, fmt.Errorf("Get-Service failed: %w", err)
+	// Try PowerShell (omit -As Array for PS 5.1 compatibility)
+	out, err := common.HiddenCommand("powershell", "-Command",
+		"Get-Service | Select-Object Name,DisplayName,Status,StartType | ConvertTo-Json -Depth 2").Output()
+	if err == nil {
+		services := parseServicesJSON(string(out))
+		if len(services) > 0 {
+			return services, nil
+		}
 	}
-	return parseServicesJSON(string(out)), nil
+
+	// Fallback to sc query (works on all Windows versions)
+	cmd := common.HiddenCommand("cmd", "/c", "sc query type= service state= all bufsize= 262144")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("query Windows services: %w", err)
+	}
+	return parseServicesSCQuery(string(output)), nil
 }
 
+// parseServicesJSON parses Get-Service JSON output (handles both PS5.1 numeric
+// values and PS7+ string values, and both single-object and array formats).
 func parseServicesJSON(jsonStr string) []SystemService {
-	// Simplified: return empty
-	return []SystemService{}
+	jsonStr = strings.TrimSpace(jsonStr)
+	if jsonStr == "" {
+		return nil
+	}
+
+	// Handle both array and single-object JSON
+	var raw []map[string]interface{}
+	if strings.HasPrefix(jsonStr, "{") {
+		var single map[string]interface{}
+		if err := json.Unmarshal([]byte(jsonStr), &single); err != nil {
+			return nil
+		}
+		raw = []map[string]interface{}{single}
+	} else if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
+		return nil
+	}
+
+	services := make([]SystemService, 0, len(raw))
+	for _, item := range raw {
+		s := SystemService{
+			Name:        stringOrEmpty(item["Name"]),
+			DisplayName: stringOrEmpty(item["DisplayName"]),
+			Status:      serviceStatusString(item["Status"]),
+			StartupType: serviceStartTypeString(item["StartType"]),
+		}
+		if s.Name != "" {
+			services = append(services, s)
+		}
+	}
+	return services
+}
+
+// stringOrEmpty extracts a string from a JSON value, returning "" on nil.
+func stringOrEmpty(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	switch val := v.(type) {
+	case string:
+		return strings.TrimSpace(val)
+	case float64:
+		return fmt.Sprintf("%.0f", val)
+	}
+	return strings.TrimSpace(fmt.Sprintf("%v", v))
+}
+
+// serviceStatusString converts numeric or string service status to display form.
+// PowerShell 5.1 returns int (1=Stopped, 4=Running).
+func serviceStatusString(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	switch val := v.(type) {
+	case string:
+		return val
+	case float64:
+		switch int(val) {
+		case 1:
+			return "Stopped"
+		case 4:
+			return "Running"
+		default:
+			return fmt.Sprintf("Unknown(%d)", int(val))
+		}
+	}
+	return fmt.Sprintf("%v", v)
+}
+
+// serviceStartTypeString converts numeric or string start type to display form.
+// PowerShell 5.1 returns int (2=Auto, 3=Manual, 4=Disabled).
+func serviceStartTypeString(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	switch val := v.(type) {
+	case string:
+		return val
+	case float64:
+		switch int(val) {
+		case 1:
+			return "Other"
+		case 2:
+			return "Automatic"
+		case 3:
+			return "Manual"
+		case 4:
+			return "Disabled"
+		default:
+			return fmt.Sprintf("Unknown(%d)", int(val))
+		}
+	}
+	return fmt.Sprintf("%v", v)
+}
+
+// parseServicesSCQuery parses the output of "sc query type= service state= all".
+// sc query does not include START_TYPE, so that field will be empty.
+func parseServicesSCQuery(output string) []SystemService {
+	var services []SystemService
+	blocks := strings.Split(output, "\n\n")
+	for _, block := range blocks {
+		lines := strings.Split(block, "\n")
+		var s SystemService
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "SERVICE_NAME:") {
+				s.Name = strings.TrimSpace(strings.TrimPrefix(line, "SERVICE_NAME:"))
+			} else if strings.HasPrefix(line, "DISPLAY_NAME:") {
+				s.DisplayName = strings.TrimSpace(strings.TrimPrefix(line, "DISPLAY_NAME:"))
+			} else if strings.HasPrefix(line, "STATE") {
+				stateParts := strings.Fields(line)
+				if len(stateParts) >= 4 {
+					s.Status = stateParts[3]
+				}
+			}
+		}
+		if s.Name != "" {
+			switch s.Status {
+			case "RUNNING":
+				s.Status = "Running"
+			case "STOPPED":
+				s.Status = "Stopped"
+			}
+			services = append(services, s)
+		}
+	}
+	return services
 }
 
 func getRunningServicesLinux() ([]SystemService, error) {
-	out, err := exec.Command("systemctl", "list-units", "--type=service", "--all", "--no-pager", "--plain", "--no-legend").Output()
+	out, err := common.HiddenCommand("systemctl", "list-units", "--type=service", "--all", "--no-pager", "--plain", "--no-legend").Output()
 	if err != nil {
 		return nil, fmt.Errorf("systemctl failed: %w", err)
 	}

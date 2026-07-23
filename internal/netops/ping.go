@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/net/icmp"
@@ -28,6 +29,14 @@ type PingResult struct {
 	Jitter   time.Duration
 	TTL      int
 }
+
+// JitterWindow size for long-term tracking
+const JitterWindowSize = 50
+
+var (
+	jitterWindow   = make(map[string][]time.Duration)
+	jitterWindowMu sync.Mutex
+)
 
 // Ping sends ICMP echo requests to a target host.
 // On Windows, it falls back to using the system ping.exe.
@@ -136,21 +145,42 @@ func pingICMP(target string, count int) (*PingResult, error) {
 		}
 		result.Avg = total / time.Duration(len(rtts))
 
-		// Calculate Jitter: average difference between consecutive RTTs
-		if len(rtts) > 1 {
-			var jitterTotal time.Duration
-			for i := 1; i < len(rtts); i++ {
-				diff := rtts[i] - rtts[i-1]
-				if diff < 0 {
-					diff = -diff
-				}
-				jitterTotal += diff
-			}
-			result.Jitter = jitterTotal / time.Duration(len(rtts)-1)
-		}
+		// Calculate Jitter using a sliding window for long-term accuracy
+		result.Jitter = calculateSlidingJitter(target, rtts)
 	}
 
 	return result, nil
+}
+
+func calculateSlidingJitter(target string, currentRTTs []time.Duration) time.Duration {
+	jitterWindowMu.Lock()
+	defer jitterWindowMu.Unlock()
+
+	// 1. Update window for this target
+	window := jitterWindow[target]
+	window = append(window, currentRTTs...)
+
+	// 2. Truncate to window size
+	if len(window) > JitterWindowSize {
+		window = window[len(window)-JitterWindowSize:]
+	}
+	jitterWindow[target] = window
+
+	// 3. Calculate average difference between consecutive RTTs in the window
+	if len(window) < 2 {
+		return 0
+	}
+
+	var totalDiff time.Duration
+	for i := 1; i < len(window); i++ {
+		diff := window[i] - window[i-1]
+		if diff < 0 {
+			diff = -diff
+		}
+		totalDiff += diff
+	}
+
+	return totalDiff / time.Duration(len(window)-1)
 }
 
 // pingExec uses the system ping command as a fallback.
@@ -228,6 +258,9 @@ func parsePingOutput(target, output string, count int) (*PingResult, error) {
 		result.Min = time.Duration(minVal) * time.Millisecond
 		result.Max = time.Duration(maxVal) * time.Millisecond
 		result.Avg = time.Duration(avgVal) * time.Millisecond
+
+		// Best effort jitter update using the average RTT as a sample
+		result.Jitter = calculateSlidingJitter(target, []time.Duration{result.Avg})
 	}
 
 	// Extract TTL

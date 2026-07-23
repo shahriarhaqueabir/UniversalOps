@@ -31,7 +31,7 @@ describe('TopBar Component', () => {
   it('renders correctly for a given page', () => {
     render(<TopBar currentPage="dashboard" />)
     expect(screen.getByText(/Dashboard/i)).toBeTruthy()
-    expect(screen.getByText(/OpsForAll/i)).toBeTruthy()
+    expect(screen.getByText(/Universal-Ops/i)).toBeTruthy()
   })
 
   it('displays "All Systems Nominal" when no alerts', () => {

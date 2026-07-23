@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"strings"
 	"sync"
 	"time"
@@ -33,7 +32,7 @@ func GetSecurityEvents() ([]SecurityEvent, error) {
 		defer cancel()
 
 		// Try Security log first (requires Admin).
-		cmd := exec.CommandContext(ctx, "powershell", "-Command",
+		cmd := common.HiddenCommandContext(ctx, "powershell", "-Command",
 			"Get-WinEvent -LogName Security -MaxEvents 25 -ErrorAction Stop | Select-Object Id,LevelDisplayName,ProviderName,TimeCreated,Message | ConvertTo-Json -As Array -Depth 2")
 		output, err := cmd.Output()
 		if err != nil {
@@ -44,7 +43,7 @@ func GetSecurityEvents() ([]SecurityEvent, error) {
 
 			ctx2, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel2()
-			cmd = exec.CommandContext(ctx2, "powershell", "-Command",
+			cmd = common.HiddenCommandContext(ctx2, "powershell", "-Command",
 				"Get-WinEvent -LogName System -MaxEvents 25 -ErrorAction SilentlyContinue | Select-Object Id,LevelDisplayName,ProviderName,TimeCreated,Message | ConvertTo-Json -As Array -Depth 2")
 			output, err = cmd.Output()
 			if err != nil {

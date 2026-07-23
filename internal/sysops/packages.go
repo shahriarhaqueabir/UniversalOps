@@ -1,9 +1,10 @@
 package sysops
 
 import (
-	"os/exec"
 	"runtime"
 	"strings"
+
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
 // PackageInfo holds info about a single installed package.
@@ -38,7 +39,7 @@ func GetInstalledPackages() []PackageManagerInfo {
 
 func getAptPackages() PackageManagerInfo {
 	result := PackageManagerInfo{Name: "apt", Found: false}
-	cmd := exec.Command("dpkg", "--get-selections")
+	cmd := common.HiddenCommand("dpkg", "--get-selections")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return result
@@ -57,7 +58,7 @@ func getAptPackages() PackageManagerInfo {
 
 func getDnfPackages() PackageManagerInfo {
 	result := PackageManagerInfo{Name: "dnf", Found: false}
-	cmd := exec.Command("dnf", "list", "installed", "-q")
+	cmd := common.HiddenCommand("dnf", "list", "installed", "-q")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return result
@@ -76,7 +77,7 @@ func getDnfPackages() PackageManagerInfo {
 
 func getPacmanPackages() PackageManagerInfo {
 	result := PackageManagerInfo{Name: "pacman", Found: false}
-	cmd := exec.Command("pacman", "-Q")
+	cmd := common.HiddenCommand("pacman", "-Q")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return result
@@ -95,7 +96,7 @@ func getPacmanPackages() PackageManagerInfo {
 
 func getWingetPackages() PackageManagerInfo {
 	result := PackageManagerInfo{Name: "winget", Found: false}
-	cmd := exec.Command("winget", "list", "--accept-source-agreements")
+	cmd := common.HiddenCommand("winget", "list", "--accept-source-agreements")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return result
@@ -114,7 +115,7 @@ func getWingetPackages() PackageManagerInfo {
 
 func getChocoPackages() PackageManagerInfo {
 	result := PackageManagerInfo{Name: "choco", Found: false}
-	cmd := exec.Command("choco", "list", "--local-only")
+	cmd := common.HiddenCommand("choco", "list", "--local-only")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return result

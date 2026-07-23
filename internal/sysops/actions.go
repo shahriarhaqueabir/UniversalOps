@@ -42,61 +42,61 @@ func RunSystemAction(action SystemAction) (*ActionResult, error) {
 	switch action {
 	case ActionReboot:
 		if runtime.GOOS == "windows" {
-			cmd = exec.Command("shutdown", "/r", "/t", "0")
+			cmd = common.HiddenCommand("shutdown", "/r", "/t", "0")
 		} else {
 			cmd = exec.Command("sudo", "shutdown", "-r", "now")
 		}
 	case ActionShutdown:
 		if runtime.GOOS == "windows" {
-			cmd = exec.Command("shutdown", "/s", "/t", "0")
+			cmd = common.HiddenCommand("shutdown", "/s", "/t", "0")
 		} else {
 			cmd = exec.Command("sudo", "shutdown", "-h", "now")
 		}
 	case ActionSleep:
 		if runtime.GOOS == "windows" {
-			cmd = exec.Command("rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0")
+			cmd = common.HiddenCommand("rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0")
 		} else {
 			cmd = exec.Command("systemctl", "suspend")
 		}
 	case ActionHibernate:
 		if runtime.GOOS == "windows" {
-			cmd = exec.Command("rundll32.exe", "powrprof.dll,SetSuspendState", "1,1,0")
+			cmd = common.HiddenCommand("rundll32.exe", "powrprof.dll,SetSuspendState", "1,1,0")
 		} else {
 			cmd = exec.Command("systemctl", "hibernate")
 		}
 	case ActionFlushDNS:
 		if runtime.GOOS == "windows" {
-			cmd = exec.Command("ipconfig", "/flushdns")
+			cmd = common.HiddenCommand("ipconfig", "/flushdns")
 		} else {
 			cmd = exec.Command("sudo", "resolvectl", "flush-caches")
 		}
 	case ActionClearTemp:
 		if runtime.GOOS == "windows" {
-			cmd = exec.Command("powershell", "-Command", "Remove-Item -Recurse -Force $env:TEMP\\* -ErrorAction SilentlyContinue")
+			cmd = common.HiddenCommand("powershell", "-Command", "Remove-Item -Recurse -Force $env:TEMP\\* -ErrorAction SilentlyContinue")
 		} else {
 			cmd = exec.Command("sudo", "rm", "-rf", "/tmp/*")
 		}
 	case ActionCleanPkgCache:
 		if runtime.GOOS == "windows" {
-			cmd = exec.Command("powershell", "-Command", "winget source update")
+			cmd = common.HiddenCommand("powershell", "-Command", "winget source update")
 		} else {
 			cmd = exec.Command("sudo", "apt-get", "clean")
 		}
 	case ActionSystemUpdate:
 		if runtime.GOOS == "windows" {
-			cmd = exec.Command("powershell", "-Command", "winget upgrade --all --accept-package-agreements --accept-source-agreements")
+			cmd = common.HiddenCommand("powershell", "-Command", "winget upgrade --all --accept-package-agreements --accept-source-agreements")
 		} else {
 			cmd = exec.Command("sudo", "apt-get", "update", "&&", "sudo", "apt-get", "upgrade", "-y")
 		}
 	case ActionDiskCleanup:
 		if runtime.GOOS == "windows" {
-			cmd = exec.Command("cleanmgr", "/sagerun:1")
+			cmd = common.HiddenCommand("cleanmgr", "/sagerun:1")
 		} else {
 			cmd = exec.Command("sudo", "apt-get", "autoremove", "-y")
 		}
 	case ActionDefrag:
 		if runtime.GOOS == "windows" {
-			cmd = exec.Command("defrag", "C:", "/O")
+			cmd = common.HiddenCommand("defrag", "C:", "/O")
 		} else {
 			cmd = exec.Command("sudo", "fstrim", "-av")
 		}
@@ -129,7 +129,7 @@ func RestartService(name string) (*ActionResult, error) {
 	var cmd *exec.Cmd
 
 	if runtime.GOOS == "windows" {
-		cmd = exec.Command("powershell", "-Command", fmt.Sprintf("Restart-Service -Name '%s' -Force", name))
+		cmd = common.HiddenCommand("powershell", "-Command", fmt.Sprintf("Restart-Service -Name '%s' -Force", name))
 	} else {
 		cmd = exec.Command("sudo", "systemctl", "restart", name)
 	}

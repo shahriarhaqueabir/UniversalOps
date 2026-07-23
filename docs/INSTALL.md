@@ -10,24 +10,19 @@ Download the latest pre-compiled binary for your architecture from the **[Releas
 
 ---
 
-## 2. Power-Up: The Dependency Matrix
-Universal-Ops is a "Native-First" application. It works out-of-the-box for 85% of tasks, but needs these "External Power-ups" for full data density.
+## 2. External Tool Detection
+Universal-Ops works out-of-the-box for core functionality. Some features require external tools that the app detects automatically on launch.
 
-### A. Local AI Brain (Ollama)
-Required for the **AI Ops** tab and **Technical Briefings**.
-1. **Download**: [ollama.com](https://ollama.com)
-2. **Install**: Run the installer and ensure the Ollama icon is visible in your system tray.
-3. **Connect**: Universal-Ops will automatically detect it on launch.
+| Tool | Required For | Status |
+|------|-------------|--------|
+| **Ollama** | AI Ops tab, Technical Briefings | Auto-detected |
+| **LibreHardwareMonitor** | CPU/GPU temperatures, fan speeds | Auto-detected |
+| **NVIDIA SMI** | GPU utilization monitoring | Auto-detected with NVIDIA drivers |
+| **PowerShell** | System queries, Windows API fallback | Built into Windows |
+| **Docker** | Container management | Auto-detected |
+| **Git** | Repository operations | Auto-detected |
 
-### B. Hardware Sensors (LibreHardwareMonitor)
-Required for **CPU/GPU Temperatures** and **Fan Speeds**.
-1. **Download**: [Latest Zip from GitHub](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases)
-2. **Run**: Extract the ZIP and run `LibreHardwareMonitor.exe` as **Administrator**.
-3. **Enable WMI**: Inside LHM, go to `Options` -> `Remote Control` -> `Enable WMI Provider`.
-
-### C. GPU Metrics (NVIDIA)
-Required for real-time **GPU Utilization**.
-- Simply ensure your official **NVIDIA Drivers** are installed. The app uses the built-in `nvidia-smi` utility.
+> Missing tools will not block startup. The app degrades gracefully and shows `N/A` for unavailable data.
 
 ---
 
@@ -35,12 +30,14 @@ Required for real-time **GPU Utilization**.
 When you first open Universal-Ops, follow the **Enhanced Onboarding Wizard**:
 
 1.  **Welcome**: Review the local-first privacy policy.
-2.  **System Check**: The app will scan for the power-ups above. Click **"Verify Now"** for any missing items.
+2.  **System Check**: The app scans for tools and shows their detection status.
 3.  **Baseline**: Let the app sit for 30 seconds to capture your system's "Normal" state.
 4.  **Ready**: Enter the Control Center.
 
+---
+
 ## 4. Troubleshooting
 If the dashboard shows `N/A` for sensors:
-- Ensure LibreHardwareMonitor is running as **Administrator**.
-- Check that Ollama is not blocked by your firewall.
+- Ensure LibreHardwareMonitor is running as **Administrator** with WMI Provider enabled.
+- Check that Ollama is running in your system tray.
 - See the [Troubleshooting Guide](./TROUBLESHOOTING.md) for more.

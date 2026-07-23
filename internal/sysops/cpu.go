@@ -3,10 +3,11 @@ package sysops
 import (
 	"runtime"
 	"sync"
+	"time"
 
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/load"
-	"github.com/yusufpapurcu/wmi"
 )
 
 var (
@@ -27,7 +28,7 @@ func calculateDelta(last, current []cpu.TimesStat) []float64 {
 		tIdle := t2.Idle - t1.Idle
 
 		if tAll > 0 {
-			deltas[i] = (float64(tAll - tIdle) / float64(tAll)) * 100
+			deltas[i] = (float64(tAll-tIdle) / float64(tAll)) * 100
 		}
 	}
 	return deltas
@@ -48,11 +49,11 @@ type CPUStats struct {
 
 // CPUExtendedStats holds extended CPU information.
 type CPUExtendedStats struct {
-	ModelName    string        `json:"model_name"`
-	FrequencyMHz float64       `json:"frequency_mhz"`
-	CacheSizeKB  int32         `json:"cache_size_kb"`
-	Temperature  float64       `json:"temperature"`
-	PerCPUInfo   []PerCPUInfo  `json:"per_cpu_info"`
+	ModelName    string       `json:"model_name"`
+	FrequencyMHz float64      `json:"frequency_mhz"`
+	CacheSizeKB  int32        `json:"cache_size_kb"`
+	Temperature  float64      `json:"temperature"`
+	PerCPUInfo   []PerCPUInfo `json:"per_cpu_info"`
 }
 
 // PerCPUInfo holds per-core detailed info.
@@ -99,16 +100,16 @@ func getTemperatureLibre() float64 {
 	var dst []Sensor
 	// 1. Try LibreHardwareMonitor
 	q := "SELECT Value FROM Sensor WHERE SensorType='Temperature' AND (Name LIKE '%Package%' OR Name LIKE '%Core%')"
-	if err := wmi.QueryNamespace(q, &dst, "root\\LibreHardwareMonitor"); err == nil && len(dst) > 0 {
+	if err := common.WMIQueryNamespaceWithTimeout(q, &dst, "root\\LibreHardwareMonitor", 2*time.Second); err == nil && len(dst) > 0 {
 		return dst[0].Value
 	}
 
 	// 2. Try MSAcpi_ThermalZoneTemperature (Windows Native, often requires Admin)
 	type MSAcpi_ThermalZoneTemperature struct {
-		CurrentTemperature uint32
+		CurrentTemperature int32
 	}
 	var acpi []MSAcpi_ThermalZoneTemperature
-	if err := wmi.QueryNamespace("SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature", &acpi, "root\\wmi"); err == nil && len(acpi) > 0 {
+	if err := common.WMIQueryNamespaceWithTimeout("SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature", &acpi, "root\\wmi", 2*time.Second); err == nil && len(acpi) > 0 {
 		// Value is in 10ths of degrees Kelvin
 		return (float64(acpi[0].CurrentTemperature) / 10.0) - 273.15
 	}

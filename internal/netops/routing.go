@@ -2,9 +2,10 @@ package netops
 
 import (
 	"fmt"
-	"os/exec"
 	"runtime"
 	"strings"
+
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
 // RouteEntry holds a single routing table entry.
@@ -30,7 +31,7 @@ func GetRoutingTable() ([]RouteEntry, error) {
 }
 
 func getRoutingTableWindows() ([]RouteEntry, error) {
-	cmd := exec.Command("netstat", "-rn")
+	cmd := common.HiddenCommand("netstat", "-rn")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
@@ -66,7 +67,7 @@ func getRoutingTableWindows() ([]RouteEntry, error) {
 }
 
 func getRoutingTableLinux() ([]RouteEntry, error) {
-	cmd := exec.Command("ip", "route", "show")
+	cmd := common.HiddenCommand("ip", "route", "show")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
@@ -109,19 +110,19 @@ func ManageStaticRoutes(action, dest, mask, gateway string) error {
 	case "windows":
 		switch action {
 		case "add":
-			_, err := exec.Command("netsh", "interface", "ipv4", "add", "route", dest, mask, gateway).CombinedOutput()
+			_, err := common.HiddenCommand("netsh", "interface", "ipv4", "add", "route", dest, mask, gateway).CombinedOutput()
 			return err
 		case "delete":
-			_, err := exec.Command("netsh", "interface", "ipv4", "delete", "route", dest, mask, gateway).CombinedOutput()
+			_, err := common.HiddenCommand("netsh", "interface", "ipv4", "delete", "route", dest, mask, gateway).CombinedOutput()
 			return err
 		}
 	case "linux":
 		switch action {
 		case "add":
-			_, err := exec.Command("sudo", "ip", "route", "add", dest, "via", gateway).CombinedOutput()
+			_, err := common.HiddenCommand("sudo", "ip", "route", "add", dest, "via", gateway).CombinedOutput()
 			return err
 		case "delete":
-			_, err := exec.Command("sudo", "ip", "route", "del", dest, "via", gateway).CombinedOutput()
+			_, err := common.HiddenCommand("sudo", "ip", "route", "del", dest, "via", gateway).CombinedOutput()
 			return err
 		}
 	}

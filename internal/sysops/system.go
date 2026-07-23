@@ -3,6 +3,7 @@ package sysops
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 	"github.com/shirou/gopsutil/v4/host"
@@ -44,18 +45,18 @@ func GetBaseboardInfo() *BaseboardInfo {
 		SerialNumber string
 	}
 	var dst []Win32_BaseBoard
-	if err := wmi.Query("SELECT Manufacturer, Product, Version, SerialNumber FROM Win32_BaseBoard", &dst); err != nil || len(dst) == 0 {
+	if err := common.WMIQueryWithTimeout("SELECT Manufacturer, Product, Version, SerialNumber FROM Win32_BaseBoard", &dst, 2*time.Second); err != nil || len(dst) == 0 {
 		return nil
 	}
 
 	type Win32_SystemEnclosure struct {
-		ChassisTypes []uint16
+		ChassisTypes []int32
 	}
 	var enc []Win32_SystemEnclosure
 	chassis := "Unknown"
-	if err := wmi.Query("SELECT ChassisTypes FROM Win32_SystemEnclosure", &enc); err == nil && len(enc) > 0 {
+	if err := common.WMIQueryWithTimeout("SELECT ChassisTypes FROM Win32_SystemEnclosure", &enc, 2*time.Second); err == nil && len(enc) > 0 {
 		if len(enc[0].ChassisTypes) > 0 {
-			chassis = mapChassisType(enc[0].ChassisTypes[0])
+			chassis = mapChassisType(uint16(enc[0].ChassisTypes[0]))
 		}
 	}
 
@@ -86,14 +87,25 @@ func mapChassisType(t uint16) string {
 
 // BatteryHealth holds detailed battery wear data.
 type BatteryHealth struct {
-	Percent      int     `json:"percent"`
-	Charging     bool    `json:"charging"`
-	DesignCap    uint32  `json:"design_cap"`
-	FullCap      uint32  `json:"full_cap"`
-	WearLevel    float64 `json:"wear_level"`
-	CycleCount   uint32  `json:"cycle_count"`
-	Chemistry    string  `json:"chemistry"`
-	Temperature  float64 `json:"temperature"`
+	Percent     int     `json:"percent"`
+	Charging    bool    `json:"charging"`
+	DesignCap   uint32  `json:"design_cap"`
+	FullCap     uint32  `json:"full_cap"`
+	WearLevel   float64 `json:"wear_level"`
+	CycleCount  uint32  `json:"cycle_count"`
+	Chemistry   string  `json:"chemistry"`
+	Temperature float64 `json:"temperature"`
+}
+
+// win32BatteryWMI is the raw WMI struct for Win32_Battery.
+// Uses signed int32 fields to avoid the reflect.Value.Uint panic.
+type win32BatteryWMI struct {
+	EstimatedChargeRemaining int32
+	BatteryStatus            int32
+	DesignCapacity           int32
+	FullChargeCapacity       int32
+	CycleCount               int32
+	Chemistry                int32
 }
 
 // PhysicalDisk holds hardware-level disk information.
@@ -102,8 +114,8 @@ type PhysicalDisk struct {
 	Model        string `json:"model"`
 	MediaType    string `json:"media_type"`
 	Size         uint64 `json:"size"`
-	Status       string `json:"status"`        // OK, Degraded, etc
-	PredictFail  bool   `json:"predict_fail"`  // SMART predictive failure
+	Status       string `json:"status"`       // OK, Degraded, etc
+	PredictFail  bool   `json:"predict_fail"` // SMART predictive failure
 	SerialNumber string `json:"serial_number"`
 }
 
@@ -142,23 +154,23 @@ func GetPhysicalDisks() ([]PhysicalDisk, error) {
 		DeviceID     string
 		Model        string
 		MediaType    string
-		Size         uint64
+		Size         int64
 		Status       string
 		SerialNumber string
 	}
 	var dst []Win32_DiskDrive
 	q := "SELECT DeviceID, Model, MediaType, Size, Status, SerialNumber FROM Win32_DiskDrive"
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := common.WMIQueryWithTimeout(q, &dst, 3*time.Second); err != nil {
 		return nil, err
 	}
 
 	// Secondary query for Predictive Failure (SMART)
 	type MSStorageDriver_FailurePredictStatus struct {
-		InstanceName string
+		InstanceName   string
 		PredictFailure bool
 	}
 	var smart []MSStorageDriver_FailurePredictStatus
-	_ = wmi.QueryNamespace("SELECT InstanceName, PredictFailure FROM MSStorageDriver_FailurePredictStatus", &smart, "root\\wmi")
+	_ = common.WMIQueryNamespaceWithTimeout("SELECT InstanceName, PredictFailure FROM MSStorageDriver_FailurePredictStatus", &smart, "root\\wmi", 2*time.Second)
 
 	res := make([]PhysicalDisk, len(dst))
 	for i, d := range dst {
@@ -166,7 +178,7 @@ func GetPhysicalDisks() ([]PhysicalDisk, error) {
 			DeviceID:     d.DeviceID,
 			Model:        d.Model,
 			MediaType:    d.MediaType,
-			Size:         d.Size,
+			Size:         uint64(d.Size),
 			Status:       d.Status,
 			SerialNumber: strings.TrimSpace(d.SerialNumber),
 		}
@@ -186,16 +198,8 @@ func GetDetailedBatteryHealth() (*BatteryHealth, error) {
 		return nil, nil
 	}
 
-	type Win32_Battery struct {
-		EstimatedChargeRemaining uint32
-		BatteryStatus            uint16
-		DesignCapacity           uint32
-		FullChargeCapacity       uint32
-		CycleCount               uint32
-		Chemistry                uint16
-	}
-	var dst []Win32_Battery
-	if err := wmi.Query("SELECT EstimatedChargeRemaining, BatteryStatus, DesignCapacity, FullChargeCapacity, CycleCount, Chemistry FROM Win32_Battery", &dst); err != nil || len(dst) == 0 {
+	var dst []win32BatteryWMI
+	if err := common.WMIQueryWithTimeout("SELECT EstimatedChargeRemaining, BatteryStatus, DesignCapacity, FullChargeCapacity, CycleCount, Chemistry FROM Win32_Battery", &dst, 2*time.Second); err != nil || len(dst) == 0 {
 		return nil, nil
 	}
 
@@ -203,9 +207,9 @@ func GetDetailedBatteryHealth() (*BatteryHealth, error) {
 	health := &BatteryHealth{
 		Percent:    int(b.EstimatedChargeRemaining),
 		Charging:   b.BatteryStatus == 2 || b.BatteryStatus == 6 || b.BatteryStatus == 7,
-		DesignCap:  b.DesignCapacity,
-		FullCap:    b.FullChargeCapacity,
-		CycleCount: b.CycleCount,
+		DesignCap:  uint32(b.DesignCapacity),
+		FullCap:    uint32(b.FullChargeCapacity),
+		CycleCount: uint32(b.CycleCount),
 	}
 
 	if b.DesignCapacity > 0 {
@@ -325,7 +329,7 @@ type Win32_ComputerSystem struct {
 func getLoggedInUsersWMI() ([]LoggedInUser, error) {
 	var dst []Win32_ComputerSystem
 	q := wmi.CreateQuery(&dst, "")
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := common.WMIQueryWithTimeout(q, &dst, 2*time.Second); err != nil {
 		return []LoggedInUser{}, nil
 	}
 
@@ -352,4 +356,3 @@ func getLoggedInUsersWMI() ([]LoggedInUser, error) {
 	}
 	return result, nil
 }
-

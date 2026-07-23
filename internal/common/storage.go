@@ -324,7 +324,10 @@ func (s *Storage) writerLoop() {
 				return
 			}
 			metricsBatch = append(metricsBatch, w)
-			if len(metricsBatch) >= 32 {
+			// PERFORMANCE: Larger batches (512) and opportunistic draining
+			// reduces transaction overhead significantly during spikes.
+			if len(metricsBatch) >= 512 {
+				metricsBatch = s.drainMetrics(metricsBatch)
 				s.insertMetricsBatch(metricsBatch)
 				metricsBatch = nil
 			}
@@ -337,7 +340,8 @@ func (s *Storage) writerLoop() {
 				return
 			}
 			logsBatch = append(logsBatch, l)
-			if len(logsBatch) >= 50 {
+			if len(logsBatch) >= 256 {
+				logsBatch = s.drainLogs(logsBatch)
 				s.insertLogsBatch(logsBatch)
 				logsBatch = nil
 			}
@@ -353,11 +357,14 @@ func (s *Storage) writerLoop() {
 			close(f)
 
 		case <-ticker.C:
+			// Ticker ensures data is persisted even if batches aren't full.
 			if len(metricsBatch) > 0 {
+				metricsBatch = s.drainMetrics(metricsBatch)
 				s.insertMetricsBatch(metricsBatch)
 				metricsBatch = nil
 			}
 			if len(logsBatch) > 0 {
+				logsBatch = s.drainLogs(logsBatch)
 				s.insertLogsBatch(logsBatch)
 				logsBatch = nil
 			}
@@ -367,8 +374,9 @@ func (s *Storage) writerLoop() {
 
 // drainMetrics reads all currently available items from metricsCh
 // into the provided batch and returns the accumulated batch.
+// Limits to 2000 items to prevent unbounded transaction size.
 func (s *Storage) drainMetrics(batch []MetricWrite) []MetricWrite {
-	for {
+	for len(batch) < 2000 {
 		select {
 		case w, ok := <-s.metricsCh:
 			if !ok {
@@ -379,12 +387,13 @@ func (s *Storage) drainMetrics(batch []MetricWrite) []MetricWrite {
 			return batch
 		}
 	}
+	return batch
 }
 
 // drainLogs reads all currently available items from logsCh
 // into the provided batch and returns the accumulated batch.
 func (s *Storage) drainLogs(batch []LogWrite) []LogWrite {
-	for {
+	for len(batch) < 1000 {
 		select {
 		case l, ok := <-s.logsCh:
 			if !ok {
@@ -395,6 +404,7 @@ func (s *Storage) drainLogs(batch []LogWrite) []LogWrite {
 			return batch
 		}
 	}
+	return batch
 }
 
 func (s *Storage) metricsLoggerLoop() {
@@ -920,10 +930,6 @@ func (s *Storage) Prune(olderThan time.Duration) {
 	tx.Exec(`DELETE FROM events WHERE timestamp < ?`, cutoff)
 	tx.Exec(`DELETE FROM alerts WHERE timestamp < ? AND resolved = 1`, cutoff)
 	tx.Exec(`DELETE FROM conversations WHERE timestamp < ?`, cutoff)
-	tx.Exec(`DELETE FROM forensics WHERE timestamp < ?`, cutoff)
-	tx.Exec(`DELETE FROM reports WHERE timestamp < ?`, cutoff)
-	tx.Exec(`DELETE FROM incidents WHERE timestamp < ?`, cutoff)
-	tx.Exec(`DELETE FROM health_scores WHERE timestamp < ?`, cutoff)
 	tx.Exec(`DELETE FROM forensics WHERE timestamp < ?`, cutoff)
 	tx.Exec(`DELETE FROM reports WHERE timestamp < ?`, cutoff)
 	tx.Exec(`DELETE FROM incidents WHERE timestamp < ?`, cutoff)

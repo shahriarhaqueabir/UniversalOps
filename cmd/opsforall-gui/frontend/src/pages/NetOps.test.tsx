@@ -25,6 +25,11 @@ vi.mock('@/stores/useSettingsStore', () => ({
     pingCount: 4,
     dnsTimeout: 3000,
   }),
+  useNavigationStore: () => ({
+    activeTab: 'overview',
+    setActiveTab: vi.fn(),
+    clearTargetTab: vi.fn(),
+  }),
 }))
 
 vi.mock('@/components/ui/DataFreshnessIndicator', () => ({

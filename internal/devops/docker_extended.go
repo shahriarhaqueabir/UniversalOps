@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
 type DockerStatsEntry struct {
@@ -63,7 +65,7 @@ func dockerExec(args ...string) (string, error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, dockerPath, args...)
+	cmd := common.HiddenCommandContext(ctx, dockerPath, args...)
 	var stdout, stderr strings.Builder
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -81,7 +83,7 @@ func dockerExecLongTimeout(timeout time.Duration, args ...string) (string, error
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, dockerPath, args...)
+	cmd := common.HiddenCommandContext(ctx, dockerPath, args...)
 	var stdout, stderr strings.Builder
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

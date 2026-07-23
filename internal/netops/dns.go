@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/exec"
 	"runtime"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/miekg/dns"
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
 // DNSResult holds DNS lookup results.
@@ -49,7 +49,7 @@ func GetSystemDNSServers() []string {
 
 // getWindowsDNSServers queries Windows DNS client configuration via PowerShell.
 func getWindowsDNSServers() []string {
-	cmd := exec.Command("powershell", "-NoProfile", "-Command",
+	cmd := common.HiddenCommand("powershell", "-NoProfile", "-Command",
 		"Get-DnsClientServerAddress | Where-Object { $_.ServerAddresses } | Select-Object -ExpandProperty ServerAddresses",
 	)
 	out, err := cmd.Output()

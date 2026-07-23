@@ -3,7 +3,6 @@ package secops
 import (
 	"encoding/csv"
 	"fmt"
-	"os/exec"
 	"strconv"
 	"strings"
 
@@ -18,14 +17,75 @@ type ListeningPort struct {
 	PID         int
 	State       string
 	IsExternal  bool
+	ServiceName string `json:"service_name"` // e.g. "SSH", "HTTP", "RDP"
+	RiskLevel   string `json:"risk_level"`   // "high", "medium", "low"
+}
+
+// wellKnownPorts maps port numbers to their service name and inherent risk level.
+// Risk is assessed independently of whether the port is externally exposed.
+var wellKnownPorts = map[int]struct {
+	name string
+	risk string
+}{
+	20:    {"FTP-Data", "medium"},
+	21:    {"FTP", "high"},
+	22:    {"SSH", "low"},
+	23:    {"Telnet", "high"},
+	25:    {"SMTP", "medium"},
+	53:    {"DNS", "medium"},
+	80:    {"HTTP", "medium"},
+	110:   {"POP3", "medium"},
+	111:   {"RPCBind", "high"},
+	135:   {"RPC-EP", "high"},
+	139:   {"NetBIOS", "high"},
+	143:   {"IMAP", "medium"},
+	389:   {"LDAP", "medium"},
+	443:   {"HTTPS", "low"},
+	445:   {"SMB", "high"},
+	464:   {"Kerberos", "medium"},
+	514:   {"Syslog", "medium"},
+	636:   {"LDAPS", "low"},
+	993:   {"IMAPS", "low"},
+	995:   {"POP3S", "low"},
+	1025:  {"RPC", "high"},
+	1433:  {"MSSQL", "high"},
+	1434:  {"MSSQL-UDP", "high"},
+	1521:  {"Oracle", "high"},
+	3306:  {"MySQL", "high"},
+	3389:  {"RDP", "high"},
+	5432:  {"PostgreSQL", "high"},
+	5985:  {"WinRM", "high"},
+	5986:  {"WinRM-S", "high"},
+	6379:  {"Redis", "high"},
+	8080:  {"HTTP-Alt", "medium"},
+	8443:  {"HTTPS-Alt", "low"},
+	9090:  {"Prometheus", "medium"},
+	27017: {"MongoDB", "high"},
+}
+
+// riskForPort returns the inherent risk level for a given port number.
+// Unknown ports are treated as medium risk.
+func riskForPort(port int) string {
+	if info, ok := wellKnownPorts[port]; ok {
+		return info.risk
+	}
+	return "medium"
+}
+
+// serviceNameForPort returns the well-known service name for a port, or "" if unknown.
+func serviceNameForPort(port int) string {
+	if info, ok := wellKnownPorts[port]; ok {
+		return info.name
+	}
+	return ""
 }
 
 // GetListeningPorts retrieves all ports in LISTENING state.
 func GetListeningPorts() ([]ListeningPort, error) {
 	if common.IsWindows() {
-		// Use direct exec.Command for Windows system tools because netstat
+		// Use HiddenCommand for Windows system tools because netstat
 		// requires access often restricted by sandboxing.
-		cmd := exec.Command("cmd", "/c", "netstat -ano")
+		cmd := common.HiddenCommand("cmd", "/c", "netstat -ano")
 		output, err := cmd.Output()
 		if err == nil {
 			ports := parseListeningPorts(string(output))
@@ -91,6 +151,11 @@ func parseSSOutput(output string) ([]ListeningPort, error) {
 			continue
 		}
 
+		// Determine if externally exposed
+		isExternal := strings.HasPrefix(localField, "0.0.0.0") ||
+			strings.HasPrefix(localField, "[::]") ||
+			strings.HasPrefix(localField, "*")
+
 		// Extract PID and process name from the process field (last field)
 		pid := 0
 		procName := ""
@@ -121,6 +186,9 @@ func parseSSOutput(output string) ([]ListeningPort, error) {
 			ProcessName: procName,
 			PID:         pid,
 			State:       "LISTENING",
+			IsExternal:  isExternal,
+			ServiceName: serviceNameForPort(port),
+			RiskLevel:   riskForPort(port),
 		})
 	}
 
@@ -215,11 +283,13 @@ func parseListeningPorts(output string) []ListeningPort {
 			strings.HasPrefix(localAddr, "*")
 
 		ports = append(ports, ListeningPort{
-			Port:       port,
-			Protocol:   proto,
-			PID:        pid,
-			State:      state,
-			IsExternal: isExternal,
+			Port:        port,
+			Protocol:    proto,
+			PID:         pid,
+			State:       state,
+			IsExternal:  isExternal,
+			ServiceName: serviceNameForPort(port),
+			RiskLevel:   riskForPort(port),
 		})
 	}
 
@@ -248,8 +318,8 @@ func extractPort(addr string) string {
 
 // resolveProcessNames resolves PID to process name using tasklist.
 func resolveProcessNames(ports []ListeningPort) []ListeningPort {
-	// Use direct exec.Command.
-	cmd := exec.Command("cmd", "/c", "tasklist /FO CSV /NH")
+	// Use HiddenCommand.
+	cmd := common.HiddenCommand("cmd", "/c", "tasklist /FO CSV /NH")
 	output, err := cmd.Output()
 	if err != nil {
 		for i := range ports {
@@ -300,8 +370,8 @@ func parseTasklistCSV(output string) map[int]string {
 
 // getProcessNameByPID resolves a single PID to a process name.
 func getProcessNameByPID(pid int) string {
-	// Use direct exec.Command.
-	cmd := exec.Command("cmd", "/c", fmt.Sprintf("tasklist /FI \"PID eq %d\" /FO CSV /NH", pid))
+	// Use HiddenCommand.
+	cmd := common.HiddenCommand("cmd", "/c", fmt.Sprintf("tasklist /FI \"PID eq %d\" /FO CSV /NH", pid))
 	output, err := cmd.Output()
 	if err != nil {
 		return fmt.Sprintf("pid:%d", pid)

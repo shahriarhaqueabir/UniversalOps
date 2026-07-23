@@ -3,7 +3,6 @@
 package common
 
 import (
-	"bytes"
 	"os/exec"
 	"sync"
 	"syscall"
@@ -81,55 +80,6 @@ var (
 
 func init() {
 	jobTrackers = make(map[*exec.Cmd]*activeJob)
-}
-
-// CombinedOutput runs the command and returns its combined stdout+stderr.
-// It calls Start() first, assigns the job object synchronously, then calls Wait().
-func (sc *SandboxedCmd) CombinedOutput() ([]byte, error) {
-	if sc.Cmd.Stdout != nil {
-		return nil, errStdoutSet
-	}
-	if sc.Cmd.Stderr != nil {
-		return nil, errStderrSet
-	}
-	var b bytes.Buffer
-	sc.Cmd.Stdout = &b
-	sc.Cmd.Stderr = &b
-	err := sc.Cmd.Start()
-	if err != nil {
-		return nil, err
-	}
-	assignJobForCmd(sc.Cmd)
-	err = sc.Cmd.Wait()
-	return b.Bytes(), err
-}
-
-// Output runs the command and returns its stdout.
-// It calls Start() first, assigns the job object synchronously, then calls Wait().
-func (sc *SandboxedCmd) Output() ([]byte, error) {
-	if sc.Cmd.Stdout != nil {
-		return nil, errStdoutSet
-	}
-	var b bytes.Buffer
-	sc.Cmd.Stdout = &b
-	err := sc.Cmd.Start()
-	if err != nil {
-		return nil, err
-	}
-	assignJobForCmd(sc.Cmd)
-	err = sc.Cmd.Wait()
-	return b.Bytes(), err
-}
-
-// Run starts the command and waits for it to complete.
-// It calls Start() first, assigns the job object synchronously, then calls Wait().
-func (sc *SandboxedCmd) Run() error {
-	err := sc.Cmd.Start()
-	if err != nil {
-		return err
-	}
-	assignJobForCmd(sc.Cmd)
-	return sc.Cmd.Wait()
 }
 
 // assignJobForCmd looks up the job object for the given cmd and assigns
@@ -378,10 +328,9 @@ func applyPlatformSandbox(cmd *exec.Cmd, cfg SandboxConfig) *SandboxedCmd {
 	}
 	sa := cmd.SysProcAttr
 
-	// Hide the window when isolation is requested.
-	if cfg.DenyProcessSpawn || cfg.DenyNetworkAccess {
-		sa.HideWindow = true
-	}
+	// ALWAYS hide the console window on Windows for sandboxed commands
+	// to prevent terminal spam during background diagnostics.
+	sa.HideWindow = true
 
 	// Handle token-based restrictions (privilege drop and integrity levels).
 	if cfg.DropPrivileges || cfg.ReadOnlyFS {

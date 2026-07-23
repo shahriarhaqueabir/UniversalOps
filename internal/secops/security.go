@@ -3,7 +3,6 @@ package secops
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 
@@ -42,7 +41,7 @@ func GetPasswordPolicy() (*PasswordPolicy, error) {
 }
 
 func getPasswordPolicyWindows() (*PasswordPolicy, error) {
-	out, err := exec.Command("net", "accounts").Output()
+	out, err := common.HiddenCommand("net", "accounts").Output()
 	if err != nil {
 		return nil, fmt.Errorf("net accounts failed: %w", err)
 	}
@@ -127,8 +126,8 @@ func GetFailedLogins() ([]FailedLogin, error) {
 }
 
 func getFailedLoginsWindows() ([]FailedLogin, error) {
-	// Use direct exec.Command for event log access.
-	cmd := exec.Command("powershell", "-Command",
+	// Use HiddenCommand for event log access.
+	cmd := common.HiddenCommand("powershell", "-Command",
 		`Get-WinEvent -FilterHashtable @{Id=4625} -MaxEvents 50 -ErrorAction SilentlyContinue |
 		Select-Object TimeCreated,Message | ConvertTo-Json -As Array -Depth 2`)
 	out, err := cmd.Output()
@@ -140,7 +139,7 @@ func getFailedLoginsWindows() ([]FailedLogin, error) {
 
 func getFailedLoginsLinux() ([]FailedLogin, error) {
 	// Try lastb first
-	cmd := exec.Command("lastb", "-F", "-i", "-n", "50")
+	cmd := common.HiddenCommand("lastb", "-F", "-i", "-n", "50")
 	out, err := cmd.Output()
 	if err != nil {
 		return []FailedLogin{}, nil
@@ -193,7 +192,7 @@ func GetAccountLockouts() ([]LockedAccount, error) {
 }
 
 func getAccountLockoutsWindows() ([]LockedAccount, error) {
-	out, err := exec.Command("net", "user").Output()
+	out, err := common.HiddenCommand("net", "user").Output()
 	if err != nil {
 		return nil, fmt.Errorf("net user failed: %w", err)
 	}

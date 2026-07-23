@@ -118,7 +118,14 @@ func (d *Dashboard) GenerateDashboardBriefing() []BriefingSection {
 }
 
 // GetDashboardData returns a snapshot of all key metrics for the dashboard view.
-func (d *Dashboard) GetDashboardData() DashboardData {
+func (d *Dashboard) GetDashboardData() (out DashboardData) {
+	defer func() {
+		if r := recover(); r != nil {
+			common.LogWarn("GetDashboardData recovered panic: %v", r)
+			out = DashboardData{} // Return zero-value instead of crashing
+		}
+	}()
+
 	p := d.pipeline
 
 	cpuMF := p.GetMetricWithForecast(common.MetricCPU)
@@ -185,7 +192,14 @@ func (d *Dashboard) GetDashboardData() DashboardData {
 }
 
 // GetSystemSnapshot returns a full state snapshot for efficient Batch IPC.
-func (d *Dashboard) GetSystemSnapshot() SystemSnapshot {
+func (d *Dashboard) GetSystemSnapshot() (out SystemSnapshot) {
+	defer func() {
+		if r := recover(); r != nil {
+			common.LogWarn("GetSystemSnapshot recovered panic: %v", r)
+			out = SystemSnapshot{} // Return zero-value instead of crashing
+		}
+	}()
+
 	metrics := d.GetDashboardData()
 
 	// Fetch last 10 alerts

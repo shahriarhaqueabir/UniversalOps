@@ -104,13 +104,13 @@ func CaptureEvidence() (*common.SecActionResult, error) {
 
 	// 1. Collect Data
 	// Process List
-	procs, _ := exec.CommandContext(ctx, "powershell", "-Command", "Get-Process | Select-Object Id,ProcessName,CPU,WorkingSet,Path | ConvertTo-Json").Output()
+	procs, _ := common.HiddenCommandContext(ctx, "powershell", "-Command", "Get-Process | Select-Object Id,ProcessName,CPU,WorkingSet,Path | ConvertTo-Json").Output()
 	if runtime.GOOS != "windows" {
 		procs, _ = exec.CommandContext(ctx, "ps", "aux", "--json").Output()
 	}
 
 	// Connections
-	conns, _ := exec.CommandContext(ctx, "powershell", "-Command", "Get-NetTCPConnection | Select-Object LocalAddress,LocalPort,RemoteAddress,RemotePort,State,OwningProcess | ConvertTo-Json").Output()
+	conns, _ := common.HiddenCommandContext(ctx, "powershell", "-Command", "Get-NetTCPConnection | Select-Object LocalAddress,LocalPort,RemoteAddress,RemotePort,State,OwningProcess | ConvertTo-Json").Output()
 
 	// Env
 	env := strings.Join(os.Environ(), "\n")
@@ -157,7 +157,7 @@ func ExportForensicBundle(id string) (*common.SecActionResult, error) {
 	// Export the forensic snapshot to a JSON file in data/forensics/
 	dataDir, _ := common.ConfigDir()
 	exportDir := fmt.Sprintf("%s/forensics", dataDir)
-	_ = exec.Command("cmd", "/c", "mkdir", exportDir).Run()
+	_ = common.HiddenCommand("cmd", "/c", "mkdir", exportDir).Run()
 
 	filename := fmt.Sprintf("%s/%s.json", exportDir, id)
 	err = os.WriteFile(filename, []byte(record.DataJSON), 0644)

@@ -1,16 +1,25 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"sort"
 	"time"
-
-	"github.com/yusufpapurcu/wmi"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/sysops"
 )
+
+// safeFloat guards against NaN and Inf values that would break JSON serialization
+// in Wails IPC and crash the frontend renderer.
+func safeFloat(v float64) float64 {
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return 0
+	}
+	return v
+}
 
 // SysOps exposes system operations bindings to the frontend.
 type SysOps struct {
@@ -99,14 +108,16 @@ func (s *SysOps) GetTopProcesses(n int) []ProcessInfo {
 	result := make([]ProcessInfo, 0, len(procs))
 	for _, p := range procs {
 		result = append(result, ProcessInfo{
-			PID:    p.PID,
-			PPID:   p.PPID,
-			Name:   p.Name,
-			CPU:    p.CPU,
-			Memory: p.Memory,
-			MemPct: p.MemPct,
-			Status: p.Status,
-			NumFDs: p.NumFDs,
+			PID:       p.PID,
+			PPID:      p.PPID,
+			Name:      p.Name,
+			CPU:       p.CPU,
+			Memory:    p.Memory,
+			MemPct:    p.MemPct,
+			Status:    p.Status,
+			NumFDs:    p.NumFDs,
+			IsSigned:  p.IsSigned,
+			Publisher: p.Publisher,
 		})
 	}
 	return result
@@ -133,7 +144,14 @@ func (s *SysOps) GetSystemInfo() SystemInfo {
 }
 
 // GetGPUInfo returns GPU hardware information.
-func (s *SysOps) GetGPUInfo() GPUInfo {
+func (s *SysOps) GetGPUInfo() (out GPUInfo) {
+	defer func() {
+		if r := recover(); r != nil {
+			common.LogWarn("GetGPUInfo recovered panic: %v", r)
+			out = GPUInfo{Detected: false}
+		}
+	}()
+
 	gpu := sysops.GetGPUInfo()
 	if gpu == nil || !gpu.Detected {
 		return GPUInfo{Detected: false}
@@ -141,25 +159,32 @@ func (s *SysOps) GetGPUInfo() GPUInfo {
 
 	stats := sysops.GetGPUStats()
 
-	out := GPUInfo{
+	out = GPUInfo{
 		Name:     gpu.Name,
 		Vendor:   gpu.Vendor,
-		MemoryGB: float64(gpu.Memory) / (1024 * 1024 * 1024),
+		MemoryGB: safeFloat(float64(gpu.Memory) / (1024 * 1024 * 1024)),
 		Driver:   gpu.Driver,
 		Detected: true,
 	}
 
 	if stats != nil {
-		out.Temperature = stats.Temperature
-		out.Utilization = stats.Utilization
-		out.FanSpeed = stats.FanSpeed
+		out.Temperature = safeFloat(stats.Temperature)
+		out.Utilization = safeFloat(stats.Utilization)
+		out.FanSpeed = safeFloat(stats.FanSpeed)
 	}
 
 	return out
 }
 
 // GetBatteryInfo returns battery status information.
-func (s *SysOps) GetBatteryInfo() BatteryInfo {
+func (s *SysOps) GetBatteryInfo() (out BatteryInfo) {
+	defer func() {
+		if r := recover(); r != nil {
+			common.LogWarn("GetBatteryInfo recovered panic: %v", r)
+			out = BatteryInfo{Detected: false}
+		}
+	}()
+
 	bat := sysops.GetBatteryInfo()
 	if bat == nil || !bat.Detected {
 		return BatteryInfo{Detected: false}
@@ -456,7 +481,14 @@ func (s *SysOps) executeSystemAction(action string) common.SecActionResult {
 }
 
 // GetHardwareInfo returns comprehensive workstation telemetry.
-func (s *SysOps) GetHardwareInfo() HardwareInfo {
+// RecoverPanic prevents a WMI or reflection panic from crashing the Wails process.
+func (s *SysOps) GetHardwareInfo() (out HardwareInfo) {
+	defer func() {
+		if r := recover(); r != nil {
+			common.LogWarn("GetHardwareInfo recovered panic: %v", r)
+			out = HardwareInfo{} // Return zero-value instead of crashing
+		}
+	}()
 	cpu := s.GetCPUExtended()
 	gpu := s.GetGPUInfo()
 	battery := s.GetBatteryInfo()
@@ -472,8 +504,8 @@ func (s *SysOps) GetHardwareInfo() HardwareInfo {
 		}
 	}
 
-	// Sensors
-	var sensors []SensorData
+	// Sensors — always initialize as empty slice to avoid nil JSON serialization
+	sensors := make([]SensorData, 0)
 	if common.IsWindows() {
 		// Attempt to get Fan speeds from Libre
 		type Sensor struct {
@@ -482,7 +514,7 @@ func (s *SysOps) GetHardwareInfo() HardwareInfo {
 			Unit  string
 		}
 		var dst []Sensor
-		_ = wmi.QueryNamespace("SELECT Name, Value FROM Sensor WHERE SensorType='Fan' OR SensorType='Temperature'", &dst, "root\\LibreHardwareMonitor")
+		_ = common.WMIQueryNamespaceWithTimeout("SELECT Name, Value FROM Sensor WHERE SensorType='Fan' OR SensorType='Temperature'", &dst, "root\\LibreHardwareMonitor", 2*time.Second)
 		for _, s := range dst {
 			sensors = append(sensors, SensorData{
 				Name:  s.Name,
@@ -503,7 +535,14 @@ func (s *SysOps) GetHardwareInfo() HardwareInfo {
 }
 
 // GetCPUExtended returns extended CPU details.
-func (s *SysOps) GetCPUExtended() CPUExtendedInfo {
+func (s *SysOps) GetCPUExtended() (out CPUExtendedInfo) {
+	defer func() {
+		if r := recover(); r != nil {
+			common.LogWarn("GetCPUExtended recovered panic: %v", r)
+			out = CPUExtendedInfo{}
+		}
+	}()
+
 	stats, err := sysops.GetCPUExtended()
 	if err != nil {
 		common.LogWarn("GetCPUExtended failed: %v", err)
@@ -524,6 +563,92 @@ func (s *SysOps) GetCPUExtended() CPUExtendedInfo {
 		Temperature:  stats.Temperature,
 		PerCPUInfo:   perCPU,
 	}
+}
+
+// ── LHM (LibreHardwareMonitor) Management ───────────────────────────────────
+
+// GetLHMStatus returns the current state of the bundled LHM instance.
+func (s *SysOps) GetLHMStatus() LHMStatusResult {
+	mgr := common.GetLHMManager()
+	st := mgr.Status()
+	return LHMStatusResult{
+		Available:  st.Available,
+		Running:    st.Running,
+		NeedsAdmin: st.NeedsAdmin,
+		Version:    st.Version,
+		Error:      st.Error,
+	}
+}
+
+// GetLHMAuthorization returns the explanation shown to the user before the UAC
+// elevation prompt.  This lets the app display exactly what the admin elevation
+// is required for, before triggering the Windows UAC dialog.
+func (s *SysOps) GetLHMAuthorization() LHMAuthorization {
+	return LHMAuthorization{
+		Reason: "OpsForAll needs admin privileges to start LibreHardwareMonitor, " +
+			"which reads low-level hardware sensor data (CPU temperature, GPU " +
+			"temperature, fan speeds, voltages). These sensors are restricted to " +
+			"admin-level processes by Windows for security reasons.",
+		Capabil: []string{
+			"Real-time CPU package temperature",
+			"GPU temperature, utilization, and fan speed",
+			"Motherboard fan speeds and voltages",
+			"NVMe SSD temperature",
+		},
+		Risks: []string{
+			"LibreHardwareMonitor will run as a hidden background process",
+			"It communicates only via local WMI — no network traffic",
+			"The process stops automatically when OpsForAll closes",
+		},
+		BinaryName: "LibreHardwareMonitor.exe",
+		Publisher:  "LibreHardwareMonitor Contributors (MPL-2.0)",
+	}
+}
+
+// DownloadLHM downloads the LHM binary (user consent already obtained via frontend).
+func (s *SysOps) DownloadLHM() LHMStatusResult {
+	mgr := common.GetLHMManager()
+	if mgr.IsAvailable() {
+		return s.GetLHMStatus()
+	}
+
+	ctx := context.Background()
+	err := mgr.Download(ctx, func(downloaded int64, total int64) {
+		common.LogInfo("LHM: Download progress %d / %d", downloaded, total)
+	})
+	if err != nil {
+		st := s.GetLHMStatus()
+		st.Error = fmt.Sprintf("Download failed: %v", err)
+		return st
+	}
+	return s.GetLHMStatus()
+}
+
+// StartLHM starts the LHM process with admin elevation (triggers Windows UAC).
+func (s *SysOps) StartLHM() LHMStatusResult {
+	mgr := common.GetLHMManager()
+
+	// Ensure binary exists first
+	if !mgr.IsAvailable() {
+		st := s.GetLHMStatus()
+		st.Error = "LHM binary not found — download first"
+		return st
+	}
+
+	err := mgr.Start()
+	if err != nil {
+		st := s.GetLHMStatus()
+		st.Error = err.Error()
+		return st
+	}
+	return s.GetLHMStatus()
+}
+
+// StopLHM terminates the LHM background process.
+func (s *SysOps) StopLHM() LHMStatusResult {
+	mgr := common.GetLHMManager()
+	_ = mgr.Stop()
+	return s.GetLHMStatus()
 }
 
 // GetSystemLogs retrieves OS system logs.

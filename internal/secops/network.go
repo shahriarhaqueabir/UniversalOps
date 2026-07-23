@@ -37,7 +37,7 @@ func GetTLSCertificates() ([]TLSCertificate, error) {
 }
 
 func getTLSCertificatesWindows() ([]TLSCertificate, error) {
-	out, err := exec.Command("powershell", "-Command",
+	out, err := common.HiddenCommand("powershell", "-Command",
 		`Get-ChildItem Cert:\LocalMachine\My | Select-Object Subject,Issuer,NotAfter,KeySize | ConvertTo-Json -As Array -Depth 2`).Output()
 	if err != nil {
 		return []TLSCertificate{}, nil

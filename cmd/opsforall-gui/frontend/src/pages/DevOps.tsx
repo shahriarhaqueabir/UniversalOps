@@ -5,10 +5,10 @@ import { toast } from 'sonner'
 import {
   Terminal, Server, Play, Trash2,
   PlayCircle, StopCircle, Zap, Activity, Globe,
-  TerminalSquare, GitBranch, Box, Wrench, Container, Variable,
-  GitMerge, GitPullRequest, RefreshCw,
+  TerminalSquare, Box, Container, Variable,
+  RefreshCw,
   Shield, Layers, RotateCcw,
-  Download, Upload,
+  Upload,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import * as Tabs from '@radix-ui/react-tabs'
@@ -21,9 +21,9 @@ import { SearchInput } from '@/components/ui/SearchInput'
 import { Panel } from '@/components/ui/Panel'
 import { nanoid } from 'nanoid'
 import type {
-  CommandResult, ServiceEntry, ToolInfo, ContainerSummary,
-  GitSummary, LocalServer, EnvironmentInfo, DockerStatus, KubernetesStatus,
-  ServiceGroupSummary, GitBranchInfo, GitTagInfo, GitStashEntry, GitRemoteInfo,
+  CommandResult, ServiceEntry, ContainerSummary,
+  LocalServer, EnvironmentInfo, DockerStatus, KubernetesStatus,
+  ServiceGroupSummary,
   DockerStatsEntry, DockerComposeProject, DockerNetworkInfo, DockerVolumeInfo,
   K8sResourceItem, K8sRolloutStatus, K8sEvent, K8sNamespaceInfo,
 } from '@/types'
@@ -33,7 +33,7 @@ function stripAnsi(text: string): string {
   return text.replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, '')
 }
 
-type TabId = 'overview' | 'terminal' | 'powershell-pro' | 'services' | 'toolbox' | 'docker' | 'git' | 'servers' | 'environment' | 'kubernetes' | 'diagnostics'
+type TabId = 'overview' | 'terminal' | 'powershell-pro' | 'services' | 'docker' | 'servers' | 'environment' | 'kubernetes' | 'diagnostics'
 
 const ActionButton = memo(function ActionButton({ icon, label, onClick, variant, disabled }: { icon: React.ReactNode; label: string; onClick: () => void; variant?: string; disabled?: boolean }) {
   const colors: Record<string, string> = {
@@ -54,14 +54,12 @@ const TAB_LIST = [
   { id: 'overview', label: 'Overview', icon: <Activity size={20} className="text-accent" /> },
   { id: 'terminal', label: 'Terminal', icon: <Terminal size={20} /> },
   { id: 'powershell-pro', label: 'PowerShell', icon: <Zap size={20} className="text-warning" /> },
-  { id: 'git', label: 'Git', icon: <GitBranch size={20} /> },
   { id: 'docker', label: 'Docker', icon: <Container size={20} /> },
   { id: 'kubernetes', label: 'K8s', icon: <Layers size={20} /> },
   { id: 'diagnostics', label: 'Health', icon: <Shield size={20} /> },
   { id: 'services', label: 'Services', icon: <Server size={20} /> },
   { id: 'servers', label: 'Servers', icon: <Globe size={20} /> },
   { id: 'environment', label: 'Env', icon: <Variable size={20} /> },
-  { id: 'toolbox', label: 'Toolbox', icon: <Wrench size={20} /> },
 ] as const
 
 export function DevOps() {
@@ -108,12 +106,10 @@ export function DevOps() {
           <Tabs.Content value="overview" className="h-full"><OverviewTab /></Tabs.Content>
           <Tabs.Content value="terminal" className="h-full"><TerminalTab /></Tabs.Content>
           <Tabs.Content value="powershell-pro" className="h-full"><PowerShellProTab /></Tabs.Content>
-          <Tabs.Content value="git" className="h-full"><GitTabExpanded /></Tabs.Content>
           <Tabs.Content value="docker" className="h-full"><DockerTabExpanded /></Tabs.Content>
           <Tabs.Content value="kubernetes" className="h-full"><KubernetesTab /></Tabs.Content>
           <Tabs.Content value="diagnostics" className="h-full"><DiagnosticsTab /></Tabs.Content>
           <Tabs.Content value="services" className="h-full"><ServicesTab /></Tabs.Content>
-          <Tabs.Content value="toolbox" className="h-full"><ToolboxTab /></Tabs.Content>
           <Tabs.Content value="servers" className="h-full"><ServersTab /></Tabs.Content>
           <Tabs.Content value="environment" className="h-full"><EnvironmentTab /></Tabs.Content>
         </div>
@@ -479,169 +475,6 @@ function PowerShellProTab() {
   )
 }
 
-function GitTabExpanded() {
-  const { call } = useBackend()
-  const { refreshInterval } = useSettingsStore()
-  const [selectedRepo, setSelectedRepo] = useState('')
-  const [branchName, setBranchName] = useState('')
-  const [commitMsg, setCommitMsg] = useState('')
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const [pendingAction, setPendingAction] = useState<{ label: string; action: () => void } | null>(null)
-  const queryClient = useQueryClient()
-  const [logOutput, setLogOutput] = useState('')
-
-  const { data: gitSummary } = useQuery<GitSummary>({
-    queryKey: ['devops-git'],
-    queryFn: async () => (await call('DevOps.GetGitSummary') as GitSummary) || { repositories: [] },
-    refetchInterval: refreshInterval,
-  })
-
-  const repos = gitSummary?.repositories || []
-  const activeRepo = selectedRepo || repos[0]?.path || ''
-
-  const { data: branches = [] } = useQuery<GitBranchInfo[]>({
-    queryKey: ['devops-git-branches', activeRepo],
-    queryFn: async () => (await call('DevOps.GetGitBranches', activeRepo) as GitBranchInfo[]) || [],
-    enabled: !!activeRepo,
-  })
-
-  const { data: tags = [] } = useQuery<GitTagInfo[]>({
-    queryKey: ['devops-git-tags', activeRepo],
-    queryFn: async () => (await call('DevOps.GetGitTags', activeRepo) as GitTagInfo[]) || [],
-    enabled: !!activeRepo,
-  })
-
-  const { data: stash = [] } = useQuery<GitStashEntry[]>({
-    queryKey: ['devops-git-stash', activeRepo],
-    queryFn: async () => (await call('DevOps.GetGitStash', activeRepo) as GitStashEntry[]) || [],
-    enabled: !!activeRepo,
-  })
-
-  const { data: remotes = [] } = useQuery<GitRemoteInfo[]>({
-    queryKey: ['devops-git-remotes', activeRepo],
-    queryFn: async () => (await call('DevOps.GetGitRemotes', activeRepo) as GitRemoteInfo[]) || [],
-    enabled: !!activeRepo,
-  })
-
-  const runGitAction = async (action: string, ...args: string[]) => {
-    try {
-      const res = await call(`DevOps.Git${action}`, activeRepo, ...args) as CommandResult
-      if (res.error) console.error(res.error)
-      queryClient.invalidateQueries({ queryKey: ['devops-git'] })
-      return res
-    } catch (err) { console.error(err) }
-  }
-
-  const fetchLog = useCallback(async (branch = '') => {
-    const log = await call('DevOps.GitLogExtended', activeRepo, 15, branch) as string
-    setLogOutput(log || 'No commits')
-  }, [call, activeRepo])
-
-  useEffect(() => { if (activeRepo) fetchLog() }, [activeRepo, fetchLog])
-
-  return (
-    <div className="flex flex-col h-full p-6 space-y-4 overflow-y-auto">
-      <ConfirmDialog open={confirmOpen} title="Confirm Git Action"
-        description={pendingAction?.label || ''}
-        onConfirm={() => { pendingAction?.action() }}
-        onClose={() => setConfirmOpen(false)} />
-
-      <div className="flex items-center gap-3 flex-wrap">
-        <select value={activeRepo} onChange={(e) => setSelectedRepo(e.target.value)}
-          className="bg-panel border border-border rounded-xl px-4 py-2 text-sm font-mono text-text focus:outline-none focus:border-accent">
-          {repos.map(r => <option key={r.path} value={r.path}>{r.path.split(/[\\/]/).pop()} ({r.branch})</option>)}
-        </select>
-        <span className="text-xs font-mono text-text-faint">{activeRepo}</span>
-        <div className="ml-auto flex gap-2">
-          <ActionButton icon={<RefreshCw size={14} />} label="Fetch" variant="primary" onClick={() => runGitAction('Fetch', '', '')} />
-          <ActionButton icon={<Download size={14} />} label="Pull" onClick={() => runGitAction('Pull', '', '')} />
-          <ActionButton icon={<Upload size={14} />} label="Push" onClick={() => runGitAction('Push', '', '')} />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-panel border border-border rounded-xl p-5">
-          <h4 className="text-xs font-bold text-text-dim uppercase tracking-widest mb-3">Branches</h4>
-          <div className="max-h-40 overflow-y-auto space-y-1">
-            {branches.map(b => (
-              <div key={b.name} className={cn('flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm', b.current ? 'bg-accent/10 text-accent' : 'hover:bg-panel-3')}>
-                <GitBranch size={12} className={b.current ? 'text-accent' : 'text-text-faint'} />
-                <span className={cn('font-mono', b.current && 'font-bold')}>{b.name} {b.current && '*'}</span>
-                <span className="text-xs text-text-faint ml-auto">{b.last_commit}</span>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2 mt-3">
-            <input value={branchName} onChange={(e) => setBranchName(e.target.value)} placeholder="New branch..."
-              className="flex-1 bg-[var(--color-bg)] border border-border rounded-lg px-3 py-1.5 text-xs font-mono" />
-            <button onClick={() => runGitAction('CreateBranch', branchName)} disabled={!branchName}
-              className="px-3 py-1.5 text-xs font-bold bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50">Create</button>
-          </div>
-        </div>
-
-        <div className="bg-panel border border-border rounded-xl p-5">
-          <h4 className="text-xs font-bold text-text-dim uppercase tracking-widest mb-3">Tags & Stash</h4>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-xs font-semibold text-text-faint mb-1">Tags ({tags.length})</p>
-              <div className="max-h-20 overflow-y-auto space-y-1">
-                {tags.map(t => <div key={t.name} className="flex items-center gap-2 text-xs font-mono"><span className="text-accent">●</span>{t.name}</div>)}
-              </div>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-text-faint mb-1">Stash ({stash.length})</p>
-              <div className="max-h-20 overflow-y-auto space-y-1">
-                {stash.map(s => <div key={s.index} className="flex items-center gap-2 text-xs font-mono"><span className="text-warning">●</span>{s.message}</div>)}
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-2 mt-3">
-            <input value={commitMsg} onChange={(e) => setCommitMsg(e.target.value)} placeholder="Commit message..."
-              className="flex-1 bg-[var(--color-bg)] border border-border rounded-lg px-3 py-1.5 text-xs font-mono" />
-            <button onClick={() => { if (commitMsg) { setPendingAction({ label: `Commit: "${commitMsg}"`, action: () => runGitAction('Commit', commitMsg) }); setConfirmOpen(true) } }}
-              disabled={!commitMsg} className="px-3 py-1.5 text-xs font-bold bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50">Commit</button>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-panel border border-border rounded-xl p-5">
-          <h4 className="text-xs font-bold text-text-dim uppercase tracking-widest mb-3">Remotes</h4>
-          <div className="space-y-1">
-            {remotes.map(r => (
-              <div key={r.name} className="flex items-center gap-2 text-sm font-mono">
-                <Globe size={12} className="text-text-faint" />
-                <span className="font-bold text-text-dim">{r.name}:</span>
-                <span className="text-text-faint truncate">{r.url}</span>
-              </div>
-            ))}
-            {remotes.length === 0 && <p className="text-xs text-text-faint">No remotes configured</p>}
-          </div>
-        </div>
-
-        <div className="bg-panel border border-border rounded-xl p-5">
-          <h4 className="text-xs font-bold text-text-dim uppercase tracking-widest mb-3">Actions</h4>
-          <div className="flex flex-wrap gap-2">
-            <ActionButton icon={<GitMerge size={14} />} label="Merge" variant="warning"
-              onClick={() => { const br = prompt('Branch to merge:'); if (br) runGitAction('Merge', br) }} />
-            <ActionButton icon={<RotateCcw size={14} />} label="Rebase" variant="warning"
-              onClick={() => { const br = prompt('Branch to rebase onto:'); if (br) runGitAction('Rebase', br) }} />
-            <ActionButton icon={<Trash2 size={14} />} label="Clean" variant="danger"
-              onClick={() => { setPendingAction({ label: 'Clean untracked files?', action: () => runGitAction('Clean') }); setConfirmOpen(true) }} />
-            <ActionButton icon={<GitPullRequest size={14} />} label="Add All" onClick={() => runGitAction('Add', '.')} />
-            <ActionButton icon={<GitBranch size={14} />} label="Status"
-              onClick={async () => { const r = await runGitAction('Status'); if (r) setLogOutput(r.output || r.error || '') }} />
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-[var(--color-terminal-bg)] border border-border rounded-2xl p-5 overflow-y-auto max-h-48">
-        <pre className="text-xs font-mono text-[var(--color-success)] leading-relaxed whitespace-pre-wrap">{logOutput}</pre>
-      </div>
-    </div>
-  )
-}
-
 function DockerTabExpanded() {
   const { call } = useBackend()
   const { refreshInterval } = useSettingsStore()
@@ -989,24 +822,6 @@ function ServicesTab() {
           </table>
         </div>
       </div>
-    </div>
-  )
-}
-
-function ToolboxTab() {
-  const { call } = useBackend()
-  const { data: tools = [] } = useQuery<ToolInfo[]>({
-    queryKey: ['devops-tools'],
-    queryFn: async () => (await call('DevOps.GetInstalledTools') as ToolInfo[]) || []
-  })
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto h-full p-6">
-      {tools.map(t => (
-        <div key={t.name} className="p-5 rounded-xl border border-border bg-panel flex justify-between items-center">
-          <div><p className="font-bold">{t.name}</p><p className="text-xs font-mono text-text-faint">{t.version || 'not found'}</p></div>
-          <StatusBadge status={t.status} />
-        </div>
-      ))}
     </div>
   )
 }

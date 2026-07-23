@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
 // DoHResult holds the result of a DNS-over-HTTPS test.
@@ -26,7 +27,7 @@ type DoHResult struct {
 func FlushDNSCache() error {
 	switch runtime.GOOS {
 	case "windows":
-		_, err := exec.Command("ipconfig", "/flushdns").CombinedOutput()
+		_, err := common.HiddenCommand("ipconfig", "/flushdns").CombinedOutput()
 		return err
 	case "linux":
 		_, err := exec.Command("sudo", "resolvectl", "flush-caches").CombinedOutput()
@@ -83,7 +84,13 @@ func TestDoH(server string) DoHResult {
 	}
 	body, _ := json.Marshal(dohQuery{Name: "google.com", Type: 1})
 	start := time.Now()
-	resp, err := http.Post(server+"/dns-query", "application/dns-json", bytes.NewReader(body))
+	dohClient := &http.Client{Timeout: 10 * time.Second}
+	req, err := http.NewRequest(http.MethodPost, server+"/dns-query", bytes.NewReader(body))
+	if err != nil {
+		return result
+	}
+	req.Header.Set("Content-Type", "application/dns-json")
+	resp, err := dohClient.Do(req)
 	if err != nil {
 		return result
 	}
