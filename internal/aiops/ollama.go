@@ -283,3 +283,27 @@ func (c *OllamaClient) Chat(ctx context.Context, messages []ChatMessage, modelOv
 
 	return responseText, nil
 }
+
+// TruncateHistory ensures the chat history doesn't exceed a safe context window.
+// Uses a simple word-count heuristic (approx 0.75 words per token).
+// Limit is roughly 24k words for a 32k context.
+func TruncateHistory(messages []ChatMessage, wordLimit int) []ChatMessage {
+	if wordLimit <= 0 {
+		wordLimit = 24000
+	}
+
+	totalWords := 0
+	// Count from newest to oldest
+	var keptMessages []ChatMessage
+	for i := len(messages) - 1; i >= 0; i-- {
+		msg := messages[i]
+		words := len(strings.Fields(msg.Content))
+		if totalWords+words > wordLimit {
+			break
+		}
+		totalWords += words
+		keptMessages = append([]ChatMessage{msg}, keptMessages...)
+	}
+
+	return keptMessages
+}

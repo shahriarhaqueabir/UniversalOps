@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"strings"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -33,9 +32,9 @@ type FirewallProfile struct {
 // GetFirewallProfiles retrieves firewall profile status (Domain, Private, Public).
 func GetFirewallProfiles() ([]FirewallProfile, error) {
 	if common.IsWindows() {
-		// Use direct exec.Command because Get-NetFirewallProfile needs registry access
+		// Use HiddenCommand because Get-NetFirewallProfile needs registry access
 		// often restricted by sandboxing.
-		cmd := exec.Command("powershell", "-NoProfile", "-Command",
+		cmd := common.HiddenCommand("powershell", "-NoProfile", "-Command",
 			"Get-NetFirewallProfile -ErrorAction SilentlyContinue | Select-Object Name,Enabled | ConvertTo-Json -As Array -Depth 1")
 		output, err := cmd.Output()
 		if err != nil {
@@ -84,7 +83,7 @@ func GetFirewallProfiles() ([]FirewallProfile, error) {
 
 // getFirewallStatusFallback uses netsh as a fallback when Get-NetFirewallProfile fails.
 func getFirewallStatusFallback() ([]FirewallProfile, error) {
-	cmd := exec.Command("netsh", "advfirewall", "show", "allprofiles", "state")
+	cmd := common.HiddenCommand("netsh", "advfirewall", "show", "allprofiles", "state")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("netsh firewall fallback failed: %w", err)
@@ -108,8 +107,8 @@ func getFirewallStatusFallback() ([]FirewallProfile, error) {
 // GetFirewallRules retrieves firewall rules from the current platform.
 func GetFirewallRules() ([]FirewallRule, error) {
 	if common.IsWindows() {
-		// Approach 1: netsh verbose (English locale)
-		cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "cmd", "/c", "netsh advfirewall firewall show rule name=all verbose")
+		// Approach 1: netsh verbose (English locale) — pass args separately to avoid cmd/c injection
+		cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "netsh", "advfirewall", "firewall", "show", "rule", "name=all", "verbose")
 		output, err := cmd.Output()
 		if err == nil {
 			rules, parseErr := parseFirewallRules(string(output))
@@ -142,13 +141,15 @@ func SetFirewallRuleState(name string, enable bool) error {
 	if !common.ValidFirewallRuleName(name) {
 		return fmt.Errorf("invalid firewall rule name: %q", name)
 	}
-	state := "no"
-	if enable {
-		state = "yes"
-	}
 
 	if common.IsWindows() {
-		cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "cmd", "/c", "netsh advfirewall firewall set rule name=\""+name+"\" new enable="+state)
+		// Use PowerShell Set-NetFirewallRule — avoids cmd/c string injection risk
+		enabledVal := "Disabled"
+		if enable {
+			enabledVal = "Enabled"
+		}
+		cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-NoProfile", "-Command",
+			fmt.Sprintf("Set-NetFirewallRule -Name '%s' -Enabled %s", name, enabledVal))
 		return cmd.Run()
 	}
 
@@ -158,17 +159,15 @@ func SetFirewallRuleState(name string, enable bool) error {
 // IsolateHost enables or disables host-wide network isolation.
 func IsolateHost(isolate bool, autoExpireSeconds int) (*common.SecActionResult, error) {
 	if common.IsWindows() {
-		// Uses netsh to block all traffic by enabling extreme profile defaults
-		var cmdStr string
+		// Use netsh with direct args (no cmd/c string concat)
+		var policy string
 		if isolate {
-			// Block everything
-			cmdStr = "netsh advfirewall set allprofiles firewallpolicy blockinbound,blockoutbound"
+			policy = "blockinbound,blockoutbound"
 		} else {
-			// Restore standard (Allow outbound, block inbound)
-			cmdStr = "netsh advfirewall set allprofiles firewallpolicy blockinbound,allowoutbound"
+			policy = "blockinbound,allowoutbound"
 		}
 
-		cmd := exec.Command("cmd", "/c", cmdStr)
+		cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "netsh", "advfirewall", "set", "allprofiles", "firewallpolicy", policy)
 		if err := cmd.Run(); err != nil {
 			return nil, err
 		}
@@ -189,8 +188,8 @@ func IsolateHost(isolate bool, autoExpireSeconds int) (*common.SecActionResult, 
 		if isolate {
 			action = "-A"
 		}
-		_ = exec.Command("iptables", action, "INPUT", "-j", "DROP").Run()
-		_ = exec.Command("iptables", action, "OUTPUT", "-j", "DROP").Run()
+		_ = common.HiddenCommand("iptables", action, "INPUT", "-j", "DROP").Run()
+		_ = common.HiddenCommand("iptables", action, "OUTPUT", "-j", "DROP").Run()
 
 		return &common.SecActionResult{
 			Success: true,

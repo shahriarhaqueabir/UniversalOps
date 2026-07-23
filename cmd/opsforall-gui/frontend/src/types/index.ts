@@ -122,8 +122,6 @@ export interface ProcessInfo {
   mem_pct: number
   status: string
   num_fds: number
-  read_bytes: number
-  write_bytes: number
   is_signed: boolean
   publisher: string
 }
@@ -298,6 +296,8 @@ export interface ListeningPort {
   pid: number
   state: string
   is_external: boolean
+  service_name: string
+  risk_level: 'high' | 'medium' | 'low'
 }
 
 export interface DefenderStatus {
@@ -1304,4 +1304,22 @@ export interface CapabilityInfo {
   id: string
   available: boolean
   path: string
+}
+
+// ── LHM (LibreHardwareMonitor) Types ──
+
+export interface LHMStatusResult {
+  available: boolean
+  running: boolean
+  needsAdmin: boolean
+  version: string
+  error?: string
+}
+
+export interface LHMAuthorization {
+  reason: string
+  capabilities: string[]
+  risks: string[]
+  binaryName: string
+  publisher: string
 }

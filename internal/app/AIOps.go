@@ -120,7 +120,12 @@ func (a *AIOps) Chat(sessionID, message string) ChatResponse {
 	var historyContext string
 	var chatHistory []aiops.ChatMessage
 
+	// Load model override from settings for this specific request to avoid global leakage
+	activeModel := a.AnalystModel
 	if storage != nil {
+		if m, err := storage.GetSetting("model_analyst"); err == nil && m != "" {
+			activeModel = m
+		}
 		// Load historical metrics for prompt context - Expanded to 100 points (~5 mins at 3s)
 		cpuHistory, _ := storage.GetMetricHistory(common.MetricCPU, 100)
 		memHistory, _ := storage.GetMetricHistory(common.MetricMem, 100)
@@ -143,13 +148,14 @@ func (a *AIOps) Chat(sessionID, message string) ChatResponse {
 			anomStrings = append(anomStrings, fmt.Sprintf("%s: %s (Value: %.1f)", anom.Timestamp, anom.Metric, anom.Value))
 		}
 
-		historyContext = fmt.Sprintf("\n--- SYSTEM HISTORY (Last 5 Mins) ---\n"+
+		historyContext = fmt.Sprintf("\n--- SYSTEM HISTORY (Snapshot: %s) ---\n"+
 			"CPU Summary: %s\n"+
 			"RAM Summary: %s\n"+
 			"Disk Summary: %s\n\n"+
 			"Recent System Events:\n%s\n\n"+
 			"Recent Anomalies:\n%s\n"+
 			"------------------------------------\n",
+			time.Now().Format("15:04:05.000"),
 			a.summarizeMetrics("CPU", cpuHistory),
 			a.summarizeMetrics("RAM", memHistory),
 			a.summarizeMetrics("Disk", diskHistory),
@@ -165,6 +171,8 @@ func (a *AIOps) Chat(sessionID, message string) ChatResponse {
 					Content: m.Content,
 				})
 			}
+			// ENSURE: Context window truncation to prevent Ollama crashes on long sessions
+			chatHistory = aiops.TruncateHistory(chatHistory, 20000)
 		}
 	}
 
@@ -179,7 +187,9 @@ func (a *AIOps) Chat(sessionID, message string) ChatResponse {
 	messages = append(messages, aiops.ChatMessage{Role: "user", Content: wrappedMessage})
 
 	// 2. Execute Chat
-	rawResponse, err := aiops.ChatWithModelAndContext(a.ctx, messages, a.AnalystModel)
+	// CRITICAL: We pass the locally resolved activeModel to ensure session isolation
+	// and prevent background diagnostics from changing the user's preferred model.
+	rawResponse, err := aiops.ChatWithModelAndContext(a.ctx, messages, activeModel)
 	if err != nil {
 		common.LogWarn("AI Chat failed: %v", err)
 		return ChatResponse{Content: "Error: " + err.Error()}

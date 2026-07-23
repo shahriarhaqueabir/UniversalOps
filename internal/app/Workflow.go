@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/aiops"
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/devops"
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/netops"
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/secops"
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/sysops"
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/aiops"
 )
 
 // WorkflowAPI exposes reusable operational workflows to the frontend.
@@ -406,6 +406,151 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 					}
 					return res.Markdown(), nil
 				},
+			},
+		},
+	})
+
+	// ── PowerShell Diagnostic Workflows ──
+	// These delegate to the PowerShell profile functions sourced from
+	// profiles/powershell_profile.ps1. The WorkflowEngine executes them
+	// via devops.RunPowerShell when Action is nil and Type is PowerShell.
+
+	// ── Workflow: Daily Operations Snapshot ──
+	engine.Register(common.WorkflowDefinition{
+		ID:          "ps-daily-ops",
+		Name:        "Daily Operations Snapshot",
+		Description: "Quick overview of OS, disk volumes, performance counters, and top processes.",
+		Why:         "A single command that replaces four separate checks — ideal for a morning health check.",
+		Risks:       []string{"None", "Read-only, lightweight counters"},
+		TypicalVals: "CPU < 70%, Disk > 15% free",
+		Steps: []common.WorkflowStep{
+			{
+				ID:              "run-daily-ops",
+				Type:            common.StepTypePowerShell,
+				Label:           "Run Daily Ops Snapshot",
+				Description:     "Collect OS info, volume usage, performance counters, and top 5 processes.",
+				Command:         "Invoke-OpsDailyOps",
+				ExpectedOutcome: "Formatted report of system vitals for the day.",
+			},
+		},
+	})
+
+	// ── Workflow: System Review ──
+	engine.Register(common.WorkflowDefinition{
+		ID:          "ps-system-review",
+		Name:        "System Review",
+		Description: "Comprehensive system information audit — OS, CPU, Memory, Disks, Volumes, BIOS, GPU, and uptime.",
+		Why:         "One-shot inventory of every hardware and OS detail. Use before capacity planning or handoff.",
+		Risks:       []string{"None", "Read-only CIM queries"},
+		TypicalVals: "All components reported, no errors",
+		Steps: []common.WorkflowStep{
+			{
+				ID:              "run-system-review",
+				Type:            common.StepTypePowerShell,
+				Label:           "Run System Review",
+				Description:     "Execute full system info audit across all hardware and OS layers.",
+				Command:         "Invoke-OpsSystemReview",
+				ExpectedOutcome: "Complete hardware and OS inventory report.",
+			},
+		},
+	})
+
+	// ── Workflow: Security Surface Audit ──
+	engine.Register(common.WorkflowDefinition{
+		ID:          "ps-security-audit",
+		Name:        "Security Surface Audit",
+		Description: "Enumerate admin groups and verify Windows Defender protection status.",
+		Why:         "Quickly confirm who has admin access and whether real-time protection is active.",
+		Risks:       []string{"None", "Read-only enumeration"},
+		TypicalVals: "Defender ON, limited admin group membership",
+		Steps: []common.WorkflowStep{
+			{
+				ID:              "run-sec-audit",
+				Type:            common.StepTypePowerShell,
+				Label:           "Run Security Audit",
+				Description:     "Check administrator group membership and antivirus status.",
+				Command:         "Invoke-OpsSecurityAudit",
+				ExpectedOutcome: "List of admin users and Defender protection status.",
+			},
+		},
+	})
+
+	// ── Workflow: Network Diagnostics ──
+	engine.Register(common.WorkflowDefinition{
+		ID:          "ps-network-diagnostics",
+		Name:        "Network Diagnostics",
+		Description: "Detailed adapter configuration and active TCP connections snapshot.",
+		Why:         "Correlate IP, DNS, gateway, and live connections to pinpoint network misconfigurations.",
+		Risks:       []string{"Minimal", "Read-only netstat snapshot"},
+		TypicalVals: "All adapters have valid IP, no unexpected listeners",
+		Steps: []common.WorkflowStep{
+			{
+				ID:              "run-net-diag",
+				Type:            common.StepTypePowerShell,
+				Label:           "Run Network Diagnostics",
+				Description:     "Enumerate adapter details and capture top 20 TCP connections.",
+				Command:         "Invoke-OpsNetworkDiagnostics",
+				ExpectedOutcome: "Adapter configuration table and active connection list.",
+			},
+		},
+	})
+
+	// ── Workflow: Threat Hunting Primer ──
+	engine.Register(common.WorkflowDefinition{
+		ID:          "ps-threat-hunt",
+		Name:        "Threat Hunting Primer",
+		Description: "Surface suspicious listening sockets and recently modified system executables.",
+		Why:         "First-pass triage for compromised systems — unusual sockets and new binaries are strong indicators.",
+		Risks:       []string{"Minimal", "Read-only enumeration"},
+		TypicalVals: "No unexpected LISTENING sockets, System32 binaries unchanged",
+		Steps: []common.WorkflowStep{
+			{
+				ID:              "run-threat-hunt",
+				Type:            common.StepTypePowerShell,
+				Label:           "Run Threat Hunt",
+				Description:     "Scan for suspicious sockets and recently modified executables in System32.",
+				Command:         "Invoke-OpsThreatHunt",
+				ExpectedOutcome: "List of listening sockets and recently modified system binaries.",
+			},
+		},
+	})
+
+	// ── Workflow: System Change Audit ──
+	engine.Register(common.WorkflowDefinition{
+		ID:          "ps-change-audit",
+		Name:        "System Change Audit",
+		Description: "Review recently installed programs from the Windows registry.",
+		Why:         "Detect unauthorized or unexpected software installations.",
+		Risks:       []string{"None", "Read-only registry query"},
+		TypicalVals: "Only known software in install history",
+		Steps: []common.WorkflowStep{
+			{
+				ID:              "run-change-audit",
+				Type:            common.StepTypePowerShell,
+				Label:           "Run Change Audit",
+				Description:     "Query the registry for the 10 most recently installed programs.",
+				Command:         "Invoke-OpsChangeAudit",
+				ExpectedOutcome: "Sorted list of recent installations with dates.",
+			},
+		},
+	})
+
+	// ── Workflow: Compliance Check ──
+	engine.Register(common.WorkflowDefinition{
+		ID:          "ps-compliance-check",
+		Name:        "Compliance Check",
+		Description: "Audit password policy and account lockout settings.",
+		Why:         "Verify that domain or local password policies meet security baselines.",
+		Risks:       []string{"None", "Read-only policy query"},
+		TypicalVals: "Password complexity enforced, lockout after 5 attempts",
+		Steps: []common.WorkflowStep{
+			{
+				ID:              "run-compliance",
+				Type:            common.StepTypePowerShell,
+				Label:           "Run Compliance Check",
+				Description:     "Retrieve current password and lockout policy settings.",
+				Command:         "Invoke-OpsComplianceCheck",
+				ExpectedOutcome: "Password policy details and lockout thresholds.",
 			},
 		},
 	})

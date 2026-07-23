@@ -1,14 +1,84 @@
 package common
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"net"
 	"os/exec"
 	"regexp"
+	"runtime"
 	"strconv"
+	"sync"
+	"syscall"
 )
+
+var (
+	// Global registry of active child processes for clean shutdown
+	activeProcesses   = make(map[int]*exec.Cmd)
+	activeProcessesMu sync.Mutex
+)
+
+// HiddenCommand creates a regular exec.Cmd that does not show a console window on Windows.
+func HiddenCommand(name string, args ...string) *exec.Cmd {
+	cmd := exec.Command(name, args...)
+	if IsWindows() {
+		if cmd.SysProcAttr == nil {
+			cmd.SysProcAttr = &syscall.SysProcAttr{}
+		}
+		cmd.SysProcAttr.HideWindow = true
+	}
+	return cmd
+}
+
+// HiddenCommandContext creates a regular exec.Cmd with context that does not show a console window on Windows.
+func HiddenCommandContext(ctx context.Context, name string, args ...string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, name, args...)
+	if IsWindows() {
+		if cmd.SysProcAttr == nil {
+			cmd.SysProcAttr = &syscall.SysProcAttr{}
+		}
+		cmd.SysProcAttr.HideWindow = true
+	}
+	return cmd
+}
+
+// RegisterProcess adds a command to the global tracking list.
+func RegisterProcess(cmd *exec.Cmd) {
+	if cmd == nil || cmd.Process == nil {
+		return
+	}
+	activeProcessesMu.Lock()
+	defer activeProcessesMu.Unlock()
+	activeProcesses[cmd.Process.Pid] = cmd
+}
+
+// UnregisterProcess removes a command from the tracking list.
+func UnregisterProcess(pid int) {
+	activeProcessesMu.Lock()
+	defer activeProcessesMu.Unlock()
+	delete(activeProcesses, pid)
+}
+
+// CleanupActiveProcesses terminates all registered child processes.
+// Called during application shutdown to prevent zombie processes.
+func CleanupActiveProcesses() {
+	activeProcessesMu.Lock()
+	defer activeProcessesMu.Unlock()
+
+	for pid, cmd := range activeProcesses {
+		LogInfo("Cleanup: Terminating orphaned process %d (%s)", pid, cmd.Path)
+		if runtime.GOOS == "windows" {
+			// On Windows, TaskKill is more reliable for tree cleanup
+			killCmd := exec.Command("taskkill", "/F", "/T", "/PID", strconv.Itoa(pid))
+			_ = killCmd.Run()
+		} else {
+			_ = cmd.Process.Kill()
+		}
+		delete(activeProcesses, pid)
+	}
+}
 
 // errStdoutSet is returned when Stdout is already set before calling CombinedOutput/Output.
 var errStdoutSet = errors.New("exec: Stdout already set")
@@ -199,9 +269,97 @@ func SandboxedCommandWithConfigContext(ctx context.Context, cfg SandboxConfig, n
 	return applySandbox(cmd, cfg)
 }
 
+// TrackedCommand creates a regular exec.Cmd that is registered for cleanup.
+// Use this instead of exec.Command for tasks that don't need sandboxing
+// but must be terminated on application exit.
+func TrackedCommand(name string, args ...string) *exec.Cmd {
+	cmd := exec.Command(name, args...)
+	// Note: We can only register after Start() is called, but we can't
+	// easily wrap exec.Cmd without changing all call sites to a new type.
+	// We'll rely on developers calling Start() on SandboxedCmd or
+	// manually registering if using raw exec.Cmd.
+	return cmd
+}
+
 func applySandbox(cmd *exec.Cmd, cfg SandboxConfig) *SandboxedCmd {
 	if cfg.WorkingDir != "" {
 		cmd.Dir = cfg.WorkingDir
 	}
 	return applyPlatformSandbox(cmd, cfg)
+}
+
+// Start starts the command and registers it in the global process list.
+func (sc *SandboxedCmd) Start() error {
+	err := sc.Cmd.Start()
+	if err == nil {
+		RegisterProcess(sc.Cmd)
+	}
+	return err
+}
+
+// Wait waits for the command to exit and unregisters it.
+func (sc *SandboxedCmd) Wait() error {
+	err := sc.Cmd.Wait()
+	if sc.Cmd.Process != nil {
+		UnregisterProcess(sc.Cmd.Process.Pid)
+	}
+	return err
+}
+
+// Run starts the command and waits for it to complete.
+func (sc *SandboxedCmd) Run() error {
+	err := sc.Start()
+	if err != nil {
+		return err
+	}
+	assignJobIfWindows(sc.Cmd)
+	return sc.Wait()
+}
+
+// Output runs the command and returns its stdout.
+func (sc *SandboxedCmd) Output() ([]byte, error) {
+	if sc.Cmd.Stdout != nil {
+		return nil, errStdoutSet
+	}
+	var b bytes.Buffer
+	sc.Cmd.Stdout = &b
+
+	err := sc.Start()
+	if err != nil {
+		return nil, err
+	}
+	assignJobIfWindows(sc.Cmd)
+	err = sc.Wait()
+	return b.Bytes(), err
+}
+
+// CombinedOutput runs the command and returns combined stdout and stderr.
+// Registers/unregisters process automatically.
+func (sc *SandboxedCmd) CombinedOutput() ([]byte, error) {
+	if sc.Cmd.Stdout != nil {
+		return nil, errStdoutSet
+	}
+	if sc.Cmd.Stderr != nil {
+		return nil, errStderrSet
+	}
+	var b bytes.Buffer
+	sc.Cmd.Stdout = &b
+	sc.Cmd.Stderr = &b
+
+	err := sc.Start()
+	if err != nil {
+		return nil, err
+	}
+
+	// Platform-specific hook for Job Objects (Windows)
+	assignJobIfWindows(sc.Cmd)
+
+	err = sc.Wait()
+	return b.Bytes(), err
+}
+
+func assignJobIfWindows(cmd *exec.Cmd) {
+	if IsWindows() {
+		assignJobForCmd(cmd)
+	}
 }

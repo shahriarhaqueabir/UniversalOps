@@ -99,7 +99,7 @@ export function OverviewTab() {
       <div className="grid grid-cols-4 gap-4">
         <MiniStat label="Security Score" value={score?.score ?? 'N/A'} icon={<Shield size={24} />} variant={score && score.score >= 75 ? 'success' : score && score.score >= 50 ? 'warning' : 'danger'} />
         <MiniStat label="Active Admins" value={users.filter(u => u.is_admin && u.is_enabled).length} icon={<Users size={24} />} variant={users.filter(u => u.is_admin && u.is_enabled).length <= 2 ? 'success' : 'warning'} />
-        <MiniStat label="External Ports" value={ports.filter(p => p.is_external).length} icon={<Radio size={24} />} variant={ports.filter(p => p.is_external).length === 0 ? 'success' : 'warning'} />
+        <MiniStat label="High-Risk Ports" value={ports.filter(p => p.risk_level === 'high').length} icon={<Radio size={24} />} variant={ports.filter(p => p.risk_level === 'high').length === 0 ? 'success' : 'danger'} />
         <MiniStat label="Security Events" value={events.length} icon={<AlertTriangle size={24} />} variant={events.filter(e => e.level === 'Error').length === 0 ? 'success' : 'danger'} />
       </div>
 

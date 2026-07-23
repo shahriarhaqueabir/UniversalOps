@@ -88,7 +88,12 @@ export function BandwidthTab() {
               return (
                 <div key={iface.name} className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 shadow-xl">
                   <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-                    <h3 className="text-lg font-bold text-text uppercase tracking-wider">{iface.name}</h3>
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-lg font-bold text-text uppercase tracking-wider">{iface.name}</h3>
+                      {iface.speed && iface.speed !== 'unknown' && iface.speed !== 'N/A (loopback)' && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-accent/10 text-accent border border-accent/20">{iface.speed}</span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-4 text-sm font-bold tabular-nums">
                       <span className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-success)]" />
@@ -98,6 +103,11 @@ export function BandwidthTab() {
                         <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-accent)]" />
                         <span className="text-text-dim">TX <span className="text-text">{(iface.tx_rate_bps / 1_000_000).toFixed(2)}</span> Mbps</span>
                       </span>
+                      {iface.rx_bytes > 0 && (
+                        <span className="text-text-faint text-xs">
+                          Total: {((iface.rx_bytes + iface.tx_bytes) / 1_000_000_000).toFixed(2)} GB
+                        </span>
+                      )}
                     </div>
                   </div>
                   {hasHistory ? (

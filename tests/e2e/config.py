@@ -12,8 +12,8 @@ APP_PATH = os.environ.get(
 
 APP_TITLE = os.environ.get("APP_TITLE", "OpsForAll")
 
-LAUNCH_TIMEOUT = int(os.environ.get("LAUNCH_TIMEOUT", "15"))
-ACTION_TIMEOUT = int(os.environ.get("ACTION_TIMEOUT", "10"))
+LAUNCH_TIMEOUT = int(os.environ.get("LAUNCH_TIMEOUT", "45"))
+ACTION_TIMEOUT = int(os.environ.get("ACTION_TIMEOUT", "15"))
 ARTIFACT_DIR = os.path.join(os.path.dirname(__file__), "artifacts")
 
 # ──────────────────────────────────────────────────────────────────────

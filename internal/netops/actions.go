@@ -5,6 +5,8 @@ import (
 	"os/exec"
 	"regexp"
 	"runtime"
+
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
 // validInterfaceName matches typical OS-assigned interface names on
@@ -58,7 +60,7 @@ func renewDHCP(iface string) error {
 		if iface == "" {
 			iface = "*"
 		}
-		_, err := exec.Command("ipconfig", "/renew", iface).CombinedOutput()
+		_, err := common.HiddenCommand("ipconfig", "/renew", iface).CombinedOutput()
 		return err
 	case "linux":
 		if iface == "" {
@@ -78,9 +80,9 @@ func resetInterface(iface string) error {
 	if err := setInterfaceState(iface, false); err != nil {
 		return err
 	}
-	cmd := exec.Command("sleep", "2")
+	cmd := common.HiddenCommand("sleep", "2")
 	if runtime.GOOS == "windows" {
-		cmd = exec.Command("timeout", "2", "cmd", "/c", "echo.")
+		cmd = common.HiddenCommand("timeout", "2", "cmd", "/c", "echo.")
 	}
 	cmd.Run()
 	return setInterfaceState(iface, true)
@@ -96,7 +98,7 @@ func setInterfaceState(iface string, enable bool) error {
 	}
 	switch runtime.GOOS {
 	case "windows":
-		_, err := exec.Command("netsh", "interface", "set", "interface", "name="+iface, state).CombinedOutput()
+		_, err := common.HiddenCommand("netsh", "interface", "set", "interface", "name="+iface, state).CombinedOutput()
 		return err
 	case "linux":
 		action := "up"
@@ -113,7 +115,7 @@ func setInterfaceState(iface string, enable bool) error {
 func clearARPCache() error {
 	switch runtime.GOOS {
 	case "windows":
-		_, err := exec.Command("netsh", "interface", "ipv4", "delete", "arpcache").CombinedOutput()
+		_, err := common.HiddenCommand("netsh", "interface", "ipv4", "delete", "arpcache").CombinedOutput()
 		return err
 	case "linux":
 		_, err := exec.Command("sudo", "ip", "neigh", "flush", "all").CombinedOutput()

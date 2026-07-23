@@ -29,7 +29,7 @@ export function PerimeterTab() {
   })
 
   const highRiskRules = rules.filter(r => r.is_high_risk && r.enabled).length
-  const externalPorts = ports.filter(p => p.is_external).length
+  const highRiskPorts = ports.filter(p => p.risk_level === 'high').length
 
   const requestToggle = async (rule: FirewallRule) => {
     const p = await call('SecOps.SetFirewallRuleHandshake', rule.name, !rule.enabled) as ActionPreview
@@ -60,9 +60,9 @@ export function PerimeterTab() {
 
       <div className="grid grid-cols-4 gap-4">
         <MiniStat label="Total Rules" value={rules.length} icon={<Shield size={24} />} variant="default" />
-        <MiniStat label="High Risk" value={highRiskRules} icon={<AlertTriangle size={24} />} variant={highRiskRules === 0 ? 'success' : 'danger'} />
-        <MiniStat label="Active Ports" value={ports.length} icon={<Activity size={24} />} variant="default" />
-        <MiniStat label="Ext. Exposed" value={externalPorts} icon={<Radio size={24} />} variant={externalPorts === 0 ? 'success' : 'warning'} />
+        <MiniStat label="High Risk Rules" value={highRiskRules} icon={<AlertTriangle size={24} />} variant={highRiskRules === 0 ? 'success' : 'danger'} />
+        <MiniStat label="Listening Ports" value={ports.length} icon={<Activity size={24} />} variant="default" />
+        <MiniStat label="High Risk Ports" value={highRiskPorts} icon={<Radio size={24} />} variant={highRiskPorts === 0 ? 'success' : 'danger'} />
       </div>
 
       {/* Firewall Rules */}
@@ -112,32 +112,50 @@ export function PerimeterTab() {
       <div className="bg-panel border border-border rounded-[2rem] p-10 shadow-xl">
         <h3 className="text-xl font-black text-text uppercase tracking-widest mb-8 flex items-center gap-3">
           <div className="w-1.5 h-6 bg-accent rounded-full" />
-          Neural Link Exposure (Listening Ports)
+          Listening Ports
         </h3>
         <div className="max-h-[500px] overflow-y-auto pr-2 space-y-2">
-          {ports.map((p, i) => (
-            <div key={i} className={cn(
-              "flex items-center justify-between p-5 rounded-xl border transition-all duration-300",
-              p.is_external ? "bg-warning/5 border-warning/30" : "bg-panel-2 border-border/50"
-            )}>
-              <div className="flex items-center gap-4">
-                <div className={cn(
-                  "w-10 h-10 rounded-lg flex items-center justify-center border",
-                  p.is_external ? "bg-warning/10 border-warning/20 text-warning" : "bg-panel-3 border-border text-text-dim"
-                )}>
-                  <Radio size={18} />
+          {ports.map((p, i) => {
+            const riskStyle = p.risk_level === 'high'
+              ? "bg-danger/5 border-danger/30"
+              : p.risk_level === 'medium'
+                ? "bg-warning/5 border-warning/30"
+                : "bg-panel-2 border-border/50"
+            const iconStyle = p.risk_level === 'high'
+              ? "bg-danger/10 border-danger/20 text-danger"
+              : p.risk_level === 'medium'
+                ? "bg-warning/10 border-warning/20 text-warning"
+                : "bg-success/10 border-success/20 text-success"
+            return (
+              <div key={i} className={cn(
+                "flex items-center justify-between p-5 rounded-xl border transition-all duration-300",
+                riskStyle
+              )}>
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "w-10 h-10 rounded-lg flex items-center justify-center border",
+                    iconStyle
+                  )}>
+                    <Radio size={18} />
+                  </div>
+                  <div>
+                    <span className="text-sm font-black text-text uppercase tabular-nums tracking-wider">PORT {p.port}</span>
+                    {p.service_name && (
+                      <span className="ml-2 text-[10px] font-bold text-accent uppercase tracking-widest">({p.service_name})</span>
+                    )}
+                    <p className="text-[10px] font-bold text-text-faint uppercase tracking-widest mt-0.5">{p.process_name} (PID {p.pid})</p>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-sm font-black text-text uppercase tabular-nums tracking-wider">PORT {p.port}</span>
-                  <p className="text-[10px] font-bold text-text-faint uppercase tracking-widest mt-0.5">{p.process_name} (PID {p.pid})</p>
+                <div className="flex items-center gap-4">
+                  <span className="text-[10px] font-black text-text-faint uppercase tracking-widest">{p.protocol}</span>
+                  {p.is_external && (
+                    <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest bg-warning/10 text-warning border border-warning/30">External</span>
+                  )}
+                  <StatusBadge status={p.risk_level === 'high' ? 'danger' : p.risk_level === 'medium' ? 'warning' : 'success'} />
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <span className="text-[10px] font-black text-text-faint uppercase tracking-widest">{p.protocol}</span>
-                <StatusBadge status={p.is_external ? 'danger' : 'success'} />
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>

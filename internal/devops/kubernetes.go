@@ -32,7 +32,7 @@ func GetKubernetesStatus() (KubernetesStatus, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	clusterCmd := exec.CommandContext(ctx, kubectlPath, "cluster-info")
+	clusterCmd := common.HiddenCommandContext(ctx, kubectlPath, "cluster-info")
 	output, err := clusterCmd.CombinedOutput()
 	if err == nil {
 		status.Connected = true
@@ -62,7 +62,7 @@ func GetKubernetesStatus() (KubernetesStatus, error) {
 	}
 
 	// Count nodes
-	nodeCmd := exec.CommandContext(ctx, kubectlPath, "get", "nodes", "--no-headers")
+	nodeCmd := common.HiddenCommandContext(ctx, kubectlPath, "get", "nodes", "--no-headers")
 	if nodeOut, err := nodeCmd.Output(); err == nil {
 		for _, line := range strings.Split(string(nodeOut), "\n") {
 			if strings.TrimSpace(line) != "" {
@@ -72,7 +72,7 @@ func GetKubernetesStatus() (KubernetesStatus, error) {
 	}
 
 	// Count pods across all namespaces
-	podCmd := exec.CommandContext(ctx, kubectlPath, "get", "pods", "--all-namespaces", "--no-headers")
+	podCmd := common.HiddenCommandContext(ctx, kubectlPath, "get", "pods", "--all-namespaces", "--no-headers")
 	if podOut, err := podCmd.Output(); err == nil {
 		for _, line := range strings.Split(string(podOut), "\n") {
 			if strings.TrimSpace(line) != "" {
@@ -105,7 +105,7 @@ func GetK8sResources(namespace string, resourceType string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, kubectlPath, args...)
+	cmd := common.HiddenCommandContext(ctx, kubectlPath, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("%v: %s", err, string(output))

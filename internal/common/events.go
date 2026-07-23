@@ -3,6 +3,7 @@ package common
 import (
 	"crypto/rand"
 	"fmt"
+	"regexp"
 	"sync"
 	"time"
 )
@@ -227,7 +228,36 @@ func NewEvent(category EventCategory, level EventLevel, module, title, detail st
 
 // NewEventWithMeta creates an event with metadata key-value pairs.
 func NewEventWithMeta(category EventCategory, level EventLevel, module, title, detail string, meta map[string]string) TimelineEvent {
-	e := NewEvent(category, level, module, title, detail)
-	e.Metadata = meta
+	// SANITIZATION: Scrub potential secrets from detail and metadata before storage
+	scrubbedDetail := ScrubSecrets(detail)
+	scrubbedMeta := make(map[string]string)
+	for k, v := range meta {
+		scrubbedMeta[k] = ScrubSecrets(v)
+	}
+
+	e := NewEvent(category, level, module, title, scrubbedDetail)
+	e.Metadata = scrubbedMeta
 	return e
+}
+
+// ScrubSecrets redacts sensitive patterns (passwords, keys) using regex.
+func ScrubSecrets(s string) string {
+	if s == "" {
+		return ""
+	}
+
+	// 1. Redact common CLI password flags: -p, --password, -pass
+	// Patterns: -p [pass], --password=[pass], --password [pass], -pass=[pass]
+	pwdFlags := regexp.MustCompile(`(?i)(-(?:-password|pass|p))(?:\s*=| +)([^\s]+)`)
+	s = pwdFlags.ReplaceAllString(s, "$1 [REDACTED]")
+
+	// 2. Redact common KV patterns: password=xxx, pwd=xxx, api_key=xxx
+	kvPatterns := regexp.MustCompile(`(?i)(password|pwd|pass|api_key|secret|token|apikey)(?:\s*[:=]\s*)([^\s,"'\}]+)`)
+	s = kvPatterns.ReplaceAllString(s, "$1=[REDACTED]")
+
+	// 3. Redact common URL auth
+	urlAuth := regexp.MustCompile(`(?i)(://)([^:/]+):([^@/]+)(@)`)
+	s = urlAuth.ReplaceAllString(s, "$1$2:[REDACTED]$4")
+
+	return s
 }

@@ -30,12 +30,20 @@ type BandwidthCounter struct {
 	TXBytes uint64
 }
 
-// NewNetOps creates a new NetOps facade.
+// NewNetOps creates a NetOps facade and seeds initial bandwidth counters
+// so the first frontend call already has a baseline for rate calculation.
 func NewNetOps(eventBus *common.EventBus) *NetOps {
-	return &NetOps{
+	n := &NetOps{
 		eventBus: eventBus,
 		model:    &netOpsModel{},
 	}
+	// Seed initial counters so the first GetInterfaces() call can compute rates
+	counters, err := netops.GetBandwidthCounters()
+	if err == nil {
+		n.model.lastCounters = counters
+		n.model.lastCapture = time.Now()
+	}
+	return n
 }
 
 // Ping sends ICMP echo requests to a target host.
@@ -276,4 +284,3 @@ func (n *NetOps) RunNetworkHealthCheck() NetworkHealthReport {
 		Duration: report.Duration,
 	}
 }
-

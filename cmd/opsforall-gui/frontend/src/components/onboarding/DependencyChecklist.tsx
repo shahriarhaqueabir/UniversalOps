@@ -2,11 +2,12 @@ import React, { useState } from 'react'
 import {
   CheckCircle2,
   XCircle,
-  ChevronDown,
-  ChevronUp,
-  ExternalLink,
   RefreshCw,
-  Info
+  BrainCircuit,
+  Cpu,
+  Terminal,
+  Box,
+  GitBranch,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -19,17 +20,25 @@ export interface CapabilityInfo {
   version: string
 }
 
+/** Tools the app actually invokes at runtime — the only ones worth showing. */
+const RUNTIME_TOOLS: { id: string; name: string; purpose: string; icon: any }[] = [
+  { id: 'ollama',      name: 'Ollama',      purpose: 'AI inference engine for system briefings and RCA', icon: BrainCircuit },
+  { id: 'nvidia-smi',  name: 'NVIDIA SMI',  purpose: 'GPU utilization and performance monitoring',           icon: Cpu },
+  { id: 'powershell',  name: 'Windows PowerShell', purpose: 'Legacy WinRM, AD, and Windows API fallback',   icon: Terminal },
+  { id: 'pwsh',        name: 'PowerShell 7',   purpose: 'Modern system queries and execution engine',        icon: Terminal },
+  { id: 'docker',      name: 'Docker',       purpose: 'Container status observation',                       icon: Box },
+  { id: 'git',         name: 'Git',          purpose: 'Repository status observation',                      icon: GitBranch },
+]
+
 interface DependencyItemProps {
   info: CapabilityInfo
   name: string
-  description: string
-  url: string
-  instructions: string[]
+  purpose: string
+  icon: any
   onVerify: (id: string) => Promise<void>
 }
 
-const DependencyItem = ({ info, name, description, url, instructions, onVerify }: DependencyItemProps) => {
-  const [expanded, setExpanded] = useState(false)
+const DependencyItem = ({ info, name, purpose, icon: Icon, onVerify }: DependencyItemProps) => {
   const [verifying, setVerifying] = useState(false)
 
   const handleVerify = async (e: React.MouseEvent) => {
@@ -49,10 +58,7 @@ const DependencyItem = ({ info, name, description, url, instructions, onVerify }
         ? "bg-[var(--color-panel-2)] border-[var(--color-success)]/20"
         : "bg-[var(--color-panel-3)] border-[var(--color-border)]"
     )}>
-      <div
-        className="p-4 flex items-center justify-between cursor-pointer"
-        onClick={() => setExpanded(!expanded)}
-      >
+      <div className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className={cn(
             "w-10 h-10 rounded-lg flex items-center justify-center",
@@ -62,67 +68,26 @@ const DependencyItem = ({ info, name, description, url, instructions, onVerify }
           </div>
           <div>
             <div className="flex items-center gap-2">
+              <Icon size={14} className="text-[var(--color-text-dim)]" />
               <p className="font-bold text-[var(--color-text)] text-sm">{name}</p>
-              {info.available && (
+              {info.available && info.version && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-success)]/10 text-[var(--color-success)] font-mono">
-                  {info.version || 'Ready'}
+                  {info.version}
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-[var(--color-text-faint)]">{description}</p>
+            <p className="text-[11px] text-[var(--color-text-faint)]">{purpose}</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          {!info.available && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-              className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-accent)] hover:underline"
-            >
-              Setup Guide
-            </button>
-          )}
-          {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </div>
+        <button
+          onClick={handleVerify}
+          disabled={verifying}
+          className="p-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] text-[var(--color-text-faint)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] transition-all disabled:opacity-50"
+          title="Re-scan for this tool"
+        >
+          {verifying ? <RefreshCw size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+        </button>
       </div>
-
-      {expanded && (
-        <div className="px-4 pb-6 pt-2 border-t border-[var(--color-border)] space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="space-y-2">
-            <p className="text-[11px] font-bold text-[var(--color-text-faint)] uppercase tracking-wider flex items-center gap-2">
-              <Info size={12} /> Instructions
-            </p>
-            <ul className="space-y-1.5">
-              {instructions.map((step, i) => (
-                <li key={i} className="text-[11px] text-[var(--color-text-dim)] flex gap-2">
-                  <span className="text-[var(--color-accent)] font-bold">{i + 1}.</span>
-                  {step}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--color-panel-2)] border border-[var(--color-border)] text-[11px] font-bold text-[var(--color-text)] hover:bg-[var(--color-panel-3)] transition-all"
-            >
-              <ExternalLink size={14} />
-              Download {name}
-            </a>
-            <button
-              onClick={handleVerify}
-              disabled={verifying}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--color-accent)] text-white text-[11px] font-bold hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
-            >
-              {verifying ? <RefreshCw size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-              Verify Now
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -144,77 +109,25 @@ export const DependencyChecklist = ({ dependencies, onRefresh }: DependencyCheck
         })
         await onRefresh()
       } else {
-        toast.error(`${id} not found. Please ensure it is installed and running.`)
+        toast.error(`${id} not found. Some features may be unavailable.`)
       }
     } catch (err: any) {
       toast.error(`Verification failed: ${err.message}`)
     }
   }
 
-  const getMetadata = (id: string) => {
-    switch(id) {
-      case 'ollama':
-        return {
-          name: 'Ollama AI Engine',
-          description: 'Local assistant brain for system briefings and RCA.',
-          url: 'https://ollama.com',
-          instructions: [
-            'Download and install Ollama from the official website.',
-            'Ensure the Ollama application is running in your system tray.',
-            'Wait for the server to initialize (usually a few seconds).',
-            'Click "Verify Now" to link it with AllOpsFull.'
-          ]
-        }
-      case 'lhm':
-        return {
-          name: 'LibreHardwareMonitor',
-          description: 'Kernel-level sensors for temperatures and fan speeds.',
-          url: 'https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases',
-          instructions: [
-            'Download the latest release ZIP and extract it.',
-            'Run LibreHardwareMonitor.exe as Administrator.',
-            'Go to Options -> Remote Control -> Enable WMI Provider.',
-            'Click "Verify Now" below.'
-          ]
-        }
-      case 'nvidia-smi':
-        return {
-          name: 'NVIDIA GPU Tools',
-          description: 'NVIDIA-specific utilization and thermal monitoring.',
-          url: 'https://www.nvidia.com/Download/index.aspx',
-          instructions: [
-            'Ensure you have the latest NVIDIA proprietary drivers installed.',
-            'These tools are usually bundled with the driver package.',
-            'Reboot your system if you just installed them.'
-          ]
-        }
-      default:
-        return {
-          name: id.toUpperCase(),
-          description: 'System capability tool.',
-          url: '#',
-          instructions: ['Ensure the tool is installed and available in your system PATH.']
-        }
-    }
-  }
-
-  // Filter to show major tools first
-  const priorityIds = ['ollama', 'lhm', 'nvidia-smi']
-  const sorted = [...dependencies].sort((a, b) => {
-    const aIdx = priorityIds.indexOf(a.id)
-    const bIdx = priorityIds.indexOf(b.id)
-    if (aIdx !== -1 && bIdx === -1) return -1
-    if (aIdx === -1 && bIdx !== -1) return 1
-    return 0
-  })
+  // Only show tools the app actually invokes — build a lookup from backend results
+  const depMap = new Map(dependencies.map(d => [d.id, d]))
 
   return (
     <div className="space-y-3">
-      {sorted.map(dep => (
+      {RUNTIME_TOOLS.map(tool => (
         <DependencyItem
-          key={dep.id}
-          info={dep}
-          {...getMetadata(dep.id)}
+          key={tool.id}
+          info={depMap.get(tool.id) || { id: tool.id, available: false, path: '', version: '' }}
+          name={tool.name}
+          purpose={tool.purpose}
+          icon={tool.icon}
           onVerify={handleVerify}
         />
       ))}

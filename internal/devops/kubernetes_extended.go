@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
 type K8sResourceItem struct {
@@ -53,7 +55,7 @@ func kubectlExec(args ...string) (string, error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, kubectlPath, args...)
+	cmd := common.HiddenCommandContext(ctx, kubectlPath, args...)
 	var stdout, stderr strings.Builder
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -71,7 +73,7 @@ func kubectlExecLongTimeout(timeout time.Duration, args ...string) (string, erro
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, kubectlPath, args...)
+	cmd := common.HiddenCommandContext(ctx, kubectlPath, args...)
 	var stdout, stderr strings.Builder
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

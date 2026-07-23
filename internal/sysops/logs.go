@@ -5,6 +5,8 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
 // LogEntry holds a single log line.
@@ -23,6 +25,7 @@ type SystemLogsResult struct {
 }
 
 // GetSystemLogs retrieves OS system logs.
+// source can be "system", "application", "security", or empty (defaults to "system").
 func GetSystemLogs(n int, source string) (*SystemLogsResult, error) {
 	if n <= 0 {
 		n = 50
@@ -33,9 +36,21 @@ func GetSystemLogs(n int, source string) (*SystemLogsResult, error) {
 
 	switch runtime.GOOS {
 	case "windows":
-		logSource = "Windows Event Log"
-		cmd = exec.Command("powershell", "-Command",
-			fmt.Sprintf("Get-EventLog -LogName System -Newest %d | Select-Object TimeGenerated, EntryType, Source, Message | ConvertTo-Json", n))
+		// Map source to Windows event log name
+		logName := "System"
+		switch strings.ToLower(source) {
+		case "application", "app":
+			logName = "Application"
+		case "security", "sec":
+			logName = "Security"
+		case "system", "":
+			logName = "System"
+		default:
+			logName = source // Allow raw log names like "Setup", "Windows PowerShell"
+		}
+		logSource = logName
+		cmd = common.HiddenCommand("powershell", "-Command",
+			fmt.Sprintf("Get-EventLog -LogName '%s' -Newest %d | Select-Object TimeGenerated, EntryType, Source, Message | ConvertTo-Json", logName, n))
 	case "linux":
 		if source == "dmesg" {
 			logSource = "dmesg"

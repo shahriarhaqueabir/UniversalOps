@@ -3,7 +3,6 @@ package app
 import (
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -83,6 +82,8 @@ func (s *SecOps) GetListeningPorts() []ListeningPort {
 			PID:         p.PID,
 			State:       p.State,
 			IsExternal:  p.IsExternal,
+			ServiceName: p.ServiceName,
+			RiskLevel:   p.RiskLevel,
 		})
 	}
 	return out
@@ -185,13 +186,13 @@ func (s *SecOps) executeApplyHardening(checkName string) common.SecActionResult 
 	if common.IsWindows() {
 		switch checkName {
 		case "SMBv1 disabled":
-			err = exec.Command("powershell", "-Command", "Set-SmbServerConfiguration -EnableSMB1Protocol $false -Force").Run()
+			err = common.HiddenCommand("powershell", "-Command", "Set-SmbServerConfiguration -EnableSMB1Protocol $false -Force").Run()
 			msg = "SMBv1 has been disabled."
 		case "Guest account disabled":
-			err = exec.Command("net", "user", "Guest", "/active:no").Run()
+			err = common.HiddenCommand("net", "user", "Guest", "/active:no").Run()
 			msg = "Guest account has been disabled."
 		case "Firewall enabled":
-			err = exec.Command("netsh", "advfirewall", "set", "allprofiles", "state", "on").Run()
+			err = common.HiddenCommand("netsh", "advfirewall", "set", "allprofiles", "state", "on").Run()
 			msg = "Windows Firewall enabled on all profiles."
 		default:
 			return common.SecActionResult{Success: false, Error: "Unknown hardening action: " + checkName}

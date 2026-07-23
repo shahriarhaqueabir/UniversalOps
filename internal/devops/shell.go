@@ -80,23 +80,46 @@ func normalizeWhitespace(cmd string) string {
 }
 
 // IsDangerousCommand checks if a command contains dangerous patterns (case-insensitive).
-// Now uses token-based validation for higher precision.
+// Uses token-based validation for higher precision:
+//   - Patterns ending with a space (e.g. "rm ") only match when the first token is
+//     an exact match AND the command has arguments. A bare "rm" is safe; "rm -rf" is blocked.
+//   - Patterns without a trailing space (e.g. "powershell", "certutil") match any exact token.
+//   - Substring check catches operators like "> ", "&&", ";" anywhere in the command.
 func IsDangerousCommand(cmd string) bool {
 	normalized := normalizeWhitespace(cmd)
 	lower := strings.ToLower(normalized)
 	tokens := strings.Fields(lower)
 
-	for _, token := range tokens {
-		// Exact match for base commands that are dangerous
-		for _, dangerous := range DangerousCommands {
-			d := strings.TrimSpace(dangerous)
-			if token == d || strings.HasPrefix(token, d) {
+	if len(tokens) == 0 {
+		return false
+	}
+
+	firstToken := tokens[0]
+	hasArguments := len(tokens) > 1
+
+	// Token-based check: precise matching for command names
+	for _, dangerous := range DangerousCommands {
+		d := strings.TrimSpace(dangerous)
+
+		if strings.HasSuffix(dangerous, " ") {
+			// Patterns with trailing space: only dangerous when the command has arguments.
+			// Bare "rm" is safe; "rm -rf /" is blocked.
+			if firstToken == d && hasArguments {
 				return true
+			}
+		} else {
+			// Patterns without trailing space: exact token match on any token.
+			// Catches "powershell -c", "certutil", "Remove-Item" etc.
+			for _, token := range tokens {
+				if token == d {
+					return true
+				}
 			}
 		}
 	}
 
-	// Substring check for patterns like redirects or pipes if they weren't caught
+	// Substring check for redirect/pipe/shell operators that can appear mid-command:
+	// "> ", ">> ", "| ", "&&", "||", ";", "& "
 	for _, dangerous := range DangerousCommands {
 		if strings.Contains(lower, dangerous) {
 			return true
@@ -309,15 +332,10 @@ var PowerShellProfilePath = func() string {
 	candidates := []string{}
 
 	if exe, err := os.Executable(); err == nil {
+		// Only allow profiles relative to the verified executable directory
+		// to prevent CWD-based profile hijacking.
 		candidates = append(candidates, filepath.Join(filepath.Dir(exe), "profiles", "powershell_profile.ps1"))
 	}
-
-	if cwd, err := os.Getwd(); err == nil {
-		candidates = append(candidates, filepath.Join(cwd, "profiles", "powershell_profile.ps1"))
-		candidates = append(candidates, filepath.Join(cwd, "..", "profiles", "powershell_profile.ps1"))
-	}
-
-	candidates = append(candidates, filepath.Join("profiles", "powershell_profile.ps1"))
 
 	for _, p := range candidates {
 		if _, err := os.Stat(p); err == nil {

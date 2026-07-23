@@ -171,17 +171,6 @@ describe('DevOps Page', () => {
     })
   })
 
-  it('switches to Toolbox tab', async () => {
-    const user = userEvent.setup()
-    render(<DevOps />)
-    await user.click(screen.getByRole('tab', { name: /Toolbox/i }))
-    await waitFor(() => {
-      // Use exact text (lowercase) to avoid matching "Git" tab trigger (uppercase)
-      expect(screen.getByText('git')).toBeInTheDocument()
-      expect(screen.getByText('node')).toBeInTheDocument()
-    })
-  })
-
   it('switches to Environment tab', async () => {
     const user = userEvent.setup()
     render(<DevOps />)

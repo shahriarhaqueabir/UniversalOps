@@ -1335,6 +1335,46 @@ export namespace app {
 	        this.pods = source["pods"];
 	    }
 	}
+	export class LHMAuthorization {
+	    reason: string;
+	    capabilities: string[];
+	    risks: string[];
+	    binaryName: string;
+	    publisher: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new LHMAuthorization(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.reason = source["reason"];
+	        this.capabilities = source["capabilities"];
+	        this.risks = source["risks"];
+	        this.binaryName = source["binaryName"];
+	        this.publisher = source["publisher"];
+	    }
+	}
+	export class LHMStatusResult {
+	    available: boolean;
+	    running: boolean;
+	    needsAdmin: boolean;
+	    version: string;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new LHMStatusResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.available = source["available"];
+	        this.running = source["running"];
+	        this.needsAdmin = source["needsAdmin"];
+	        this.version = source["version"];
+	        this.error = source["error"];
+	    }
+	}
 	export class LearnedBaseline {
 	    metric: string;
 	    mean: number;
@@ -1364,6 +1404,8 @@ export namespace app {
 	    pid: number;
 	    state: string;
 	    is_external: boolean;
+	    service_name: string;
+	    risk_level: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ListeningPort(source);
@@ -1377,6 +1419,8 @@ export namespace app {
 	        this.pid = source["pid"];
 	        this.state = source["state"];
 	        this.is_external = source["is_external"];
+	        this.service_name = source["service_name"];
+	        this.risk_level = source["risk_level"];
 	    }
 	}
 	export class LoadAverageData {

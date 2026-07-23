@@ -5,6 +5,8 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
 // ScheduledTaskInfo holds info about a scheduled task.
@@ -57,7 +59,7 @@ func getCronTasks() ([]ScheduledTaskInfo, error) {
 }
 
 func getSchtasks() ([]ScheduledTaskInfo, error) {
-	cmd := exec.Command("schtasks", "/query", "/fo", "LIST", "/v")
+	cmd := common.HiddenCommand("schtasks", "/query", "/fo", "LIST", "/v")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
@@ -95,7 +97,7 @@ func RunScheduledTask(name string) error {
 	if runtime.GOOS != "windows" {
 		return fmt.Errorf("RunScheduledTask is only supported on Windows")
 	}
-	cmd := exec.Command("schtasks", "/run", "/tn", name)
+	cmd := common.HiddenCommand("schtasks", "/run", "/tn", name)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to run task %s: %v (output: %s)", name, err, string(output))

@@ -35,6 +35,12 @@ type EngineLoop struct {
 	// New: Autonomous workflow invocation
 	invoker WorkflowInvoker
 
+	// Internal state for diagnostic isolation
+	auditRunning   bool
+	auditMu        sync.Mutex
+	lastAuditTime  time.Time
+	auditCooldown  time.Duration
+
 	// Callbacks for UI/External notification
 	OnMetricsEmit func(snapshot MetricSnapshot)
 	OnAlertsEmit  func(newAlerts []Alert)
@@ -58,6 +64,7 @@ func NewEngineLoop(p *DataPipeline, a *AlertEngine, eb *EventBus, sl *sync.RWMut
 		baselines:   NewBaselinesEngine(p),
 		invoker:     invoker,
 		quit:        make(chan struct{}),
+		auditCooldown: 5 * time.Minute, // Default 5 min cooldown for autonomous audits
 	}
 }
 
@@ -121,42 +128,44 @@ func (e *EngineLoop) Stop() {
 func (e *EngineLoop) Step() {
 	defer RecoverPanic()
 
-	// 1. Lock for storage safety
-	if e.storageLock != nil {
-		e.storageLock.RLock()
-		defer e.storageLock.RUnlock()
-	}
-
 	var newAlerts []Alert
 	var snapshot MetricSnapshot
 
-	var wg sync.WaitGroup
-	wg.Add(2)
+	// 1. Capture Data (Lane 1 & 2)
+	{
+		// We only hold the storage lock while reading metrics and evaluating alerts
+		// to prevent blocking the rest of the 3s tick logic.
+		if e.storageLock != nil {
+			e.storageLock.RLock()
+			defer e.storageLock.RUnlock()
+		}
 
-	// 2. Evaluate Alerts (Lane 1)
-	go func() {
-		defer RecoverPanic()
-		defer wg.Done()
-		newAlerts = e.alerts.Evaluate()
-	}()
+		var wg sync.WaitGroup
+		wg.Add(2)
 
-	// 3. Capture Snapshot (Lane 2)
-	go func() {
-		defer RecoverPanic()
-		defer wg.Done()
-		snapshot = e.CaptureSnapshot()
-	}()
+		go func() {
+			defer RecoverPanic()
+			defer wg.Done()
+			newAlerts = e.alerts.Evaluate()
+		}()
 
-	wg.Wait()
+		go func() {
+			defer RecoverPanic()
+			defer wg.Done()
+			snapshot = e.CaptureSnapshot()
+		}()
 
-	// 4. Update External State (Prometheus, etc)
+		wg.Wait()
+	}
+
+	// 2. Update External State (Prometheus, etc)
 	e.UpdatePrometheus(snapshot)
 
-	// 5. Detect Spikes & Drift
+	// 3. Detect Spikes & Drift
 	e.DetectSpikes(snapshot)
 	e.DetectDrift()
 
-	// 6. Notify Callbacks
+	// 4. Notify Callbacks
 	if e.OnMetricsEmit != nil {
 		e.OnMetricsEmit(snapshot)
 	}
@@ -254,8 +263,24 @@ func (e *EngineLoop) autonomousAudit(workflowID, reason string) {
 	if e.invoker == nil {
 		return
 	}
+
+	e.auditMu.Lock()
+	if e.auditRunning || time.Since(e.lastAuditTime) < e.auditCooldown {
+		e.auditMu.Unlock()
+		return
+	}
+	e.auditRunning = true
+	e.lastAuditTime = time.Now()
+	e.auditMu.Unlock()
+
 	go func() {
 		defer RecoverPanic()
+		defer func() {
+			e.auditMu.Lock()
+			e.auditRunning = false
+			e.auditMu.Unlock()
+		}()
+
 		reportID, err := e.invoker.TriggerWorkflow(workflowID)
 		if err == nil && e.eventBus != nil {
 			e.eventBus.Emit(NewEventWithMeta(

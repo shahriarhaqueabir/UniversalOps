@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -45,7 +44,7 @@ func GetDefenderStatus() (*DefenderStatus, error) {
 
 	// Approach 1: Standard Get-MpComputerStatus. Using direct exec.Command instead of Sandboxed
 	// because Defender WMI/registry access often requires privileges stripped in the sandbox.
-	cmd := exec.Command("powershell", "-NoProfile", "-Command",
+	cmd := common.HiddenCommand("powershell", "-NoProfile", "-Command",
 		"$r=Get-MpComputerStatus -ErrorAction SilentlyContinue; if($r){$r|ConvertTo-Json -Depth 2}else{echo '{}'}}")
 	output, err := cmd.Output()
 	if err != nil {
@@ -62,8 +61,8 @@ func GetDefenderStatus() (*DefenderStatus, error) {
 		}
 	}
 
-	// Approach 2: Try Get-MpPreference as alternative. Using direct exec.Command.
-	cmd3 := exec.Command("powershell", "-NoProfile", "-Command",
+	// Approach 2: Try Get-MpPreference as alternative. Using HiddenCommand.
+	cmd3 := common.HiddenCommand("powershell", "-NoProfile", "-Command",
 		"Get-MpPreference -ErrorAction SilentlyContinue | Select-Object DisableRealtimeMonitoring,DisableIOAVProtection,DisableBehaviorMonitoring,DisableScriptScanning | ConvertTo-Json -Depth 2")
 	output3, err3 := cmd3.Output()
 	if err3 != nil {
@@ -92,7 +91,7 @@ func GetDefenderStatus() (*DefenderStatus, error) {
 
 // getDefenderThreatCount queries Get-MpThreatDetection to count recent threats.
 func getDefenderThreatCount() int {
-	cmd := exec.Command("powershell", "-NoProfile", "-Command",
+	cmd := common.HiddenCommand("powershell", "-NoProfile", "-Command",
 		"(Get-MpThreatDetection -ErrorAction SilentlyContinue | Measure-Object).Count")
 	output, err := cmd.Output()
 	if err != nil {
@@ -106,7 +105,7 @@ func getDefenderThreatCount() int {
 // defenderWMICFallback queries Windows Defender via WMIC as a fallback
 // when PowerShell is unavailable.
 func defenderWMICFallback() (*DefenderStatus, error) {
-	cmd := exec.Command("wmic",
+	cmd := common.HiddenCommand("wmic",
 		"/namespace:\\\\root\\Microsoft\\Windows\\Defender",
 		"path", "MSFT_MpComputerStatus",
 		"get", "AntivirusEnabled,AMServiceEnabled,AntispywareEnabled,NISEnabled,RealTimeProtectionEnabled,CloudProtectionEnabled,SignatureAge,QuickScanAge,FullScanAge,QuickScanEndTime,FullScanEndTime",

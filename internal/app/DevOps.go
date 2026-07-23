@@ -111,13 +111,15 @@ func (d *DevOps) GetDevProcesses() []ProcessInfo {
 	out := make([]ProcessInfo, 0, len(procs))
 	for _, p := range procs {
 		out = append(out, ProcessInfo{
-			PID:    p.PID,
-			Name:   p.Name,
-			CPU:    p.CPU,
-			Memory: p.Memory,
-			MemPct: p.MemPct,
-			Status: p.Status,
-			NumFDs: p.NumFDs,
+			PID:       p.PID,
+			Name:      p.Name,
+			CPU:       p.CPU,
+			Memory:    p.Memory,
+			MemPct:    p.MemPct,
+			Status:    p.Status,
+			NumFDs:    p.NumFDs,
+			IsSigned:  p.IsSigned,
+			Publisher: p.Publisher,
 		})
 	}
 	return out
@@ -351,7 +353,7 @@ func detectTool(t toolSpec) ToolInfo {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, t.Command, t.Args...)
+	cmd := common.HiddenCommandContext(ctx, t.Command, t.Args...)
 	var stdout, stderr strings.Builder
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -408,7 +410,7 @@ func (d *DevOps) GetContainers() ContainerSummary {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "docker", "ps", "-a", "--format", `{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.Ports}}`)
+	cmd := common.HiddenCommandContext(ctx, "docker", "ps", "-a", "--format", `{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.Ports}}`)
 	var stdout strings.Builder
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
@@ -549,7 +551,7 @@ func (d *DevOps) getLocalServersWindows() []LocalServer {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "netstat", "-ano")
+	cmd := common.HiddenCommandContext(ctx, "netstat", "-ano")
 	var stdout strings.Builder
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
@@ -569,7 +571,7 @@ func (d *DevOps) getLocalServersUnix() []LocalServer {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "ss", "-tlnp")
+	cmd := common.HiddenCommandContext(ctx, "ss", "-tlnp")
 	var stdout strings.Builder
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
@@ -730,7 +732,7 @@ func lookupProcessName(pid string) string {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "tasklist", "/fi", "PID eq "+pid, "/fo", "csv", "/nh")
+	cmd := common.HiddenCommandContext(ctx, "tasklist", "/fi", "PID eq "+pid, "/fo", "csv", "/nh")
 	var stdout strings.Builder
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
@@ -989,7 +991,7 @@ func (d *DevOps) GetDockerStatus() DockerStatus {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	verCmd := exec.CommandContext(ctx, dockerPath, "--version")
+	verCmd := common.HiddenCommandContext(ctx, dockerPath, "--version")
 	var verOut strings.Builder
 	verCmd.Stdout = &verOut
 	if err := verCmd.Run(); err == nil {
@@ -1007,7 +1009,7 @@ func (d *DevOps) GetDockerStatus() DockerStatus {
 	ctx2, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel2()
 
-	infoCmd := exec.CommandContext(ctx2, dockerPath, "info", "--format", `{{.ServerVersion}}`)
+	infoCmd := common.HiddenCommandContext(ctx2, dockerPath, "info", "--format", `{{.ServerVersion}}`)
 	var infoOut strings.Builder
 	infoCmd.Stdout = &infoOut
 	if err := infoCmd.Run(); err == nil {
@@ -1022,7 +1024,7 @@ func (d *DevOps) GetDockerStatus() DockerStatus {
 	ctx3, cancel3 := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel3()
 
-	psCmd := exec.CommandContext(ctx3, dockerPath, "ps", "-a", "--format", `{{.Status}}`)
+	psCmd := common.HiddenCommandContext(ctx3, dockerPath, "ps", "-a", "--format", `{{.Status}}`)
 	var psOut strings.Builder
 	psCmd.Stdout = &psOut
 	if err := psCmd.Run(); err == nil {
@@ -1065,7 +1067,7 @@ func (d *DevOps) GetKubernetesStatus() KubernetesStatus {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	clusterCmd := exec.CommandContext(ctx, kubectlPath, "cluster-info")
+	clusterCmd := common.HiddenCommandContext(ctx, kubectlPath, "cluster-info")
 	var clusterOut strings.Builder
 	clusterCmd.Stdout = &clusterOut
 	var clusterErr strings.Builder
@@ -1104,7 +1106,7 @@ func (d *DevOps) GetKubernetesStatus() KubernetesStatus {
 	ctx2, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel2()
 
-	nodeCmd := exec.CommandContext(ctx2, kubectlPath, "get", "nodes", "--no-headers")
+	nodeCmd := common.HiddenCommandContext(ctx2, kubectlPath, "get", "nodes", "--no-headers")
 	var nodeOut strings.Builder
 	nodeCmd.Stdout = &nodeOut
 	if err := nodeCmd.Run(); err == nil {
@@ -1119,7 +1121,7 @@ func (d *DevOps) GetKubernetesStatus() KubernetesStatus {
 	ctx3, cancel3 := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel3()
 
-	podCmd := exec.CommandContext(ctx3, kubectlPath, "get", "pods", "--all-namespaces", "--no-headers")
+	podCmd := common.HiddenCommandContext(ctx3, kubectlPath, "get", "pods", "--all-namespaces", "--no-headers")
 	var podOut strings.Builder
 	podCmd.Stdout = &podOut
 	if err := podCmd.Run(); err == nil {
@@ -1248,4 +1250,3 @@ func (d *DevOps) GetServiceGroupSummary() ServiceGroupSummary {
 
 	return summary
 }
-

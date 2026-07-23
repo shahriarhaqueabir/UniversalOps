@@ -3,16 +3,18 @@ package sysops
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
-	"github.com/yusufpapurcu/wmi"
 )
 
 // Win32_VideoController represents a WMI GPU entry.
 type Win32_VideoController struct {
 	Name          string
-	AdapterRAM    interface{} // Use interface{} to handle large uint32/uint64 values from WMI
+	AdapterRAM    uint32 // WMI reports AdapterRAM as uint32 (capped at ~4 GB)
 	DriverVersion string
 	Status        string
 }
@@ -27,15 +29,52 @@ type GPUInfo struct {
 	Detected bool
 }
 
+var (
+	gpuInfoCache    *GPUInfo
+	gpuInfoCacheMu  sync.RWMutex
+	lastGpuInfoSync time.Time
+)
+
 // GetGPUInfo queries WMI or PowerShell for GPU information.
+// Implementation includes a 5-minute cache for hardware metadata to reduce
+// unnecessary OS interrogation.
 func GetGPUInfo() *GPUInfo {
+	gpuInfoCacheMu.RLock()
+	if gpuInfoCache != nil && time.Since(lastGpuInfoSync) < 5*time.Minute {
+		defer gpuInfoCacheMu.RUnlock()
+		return gpuInfoCache
+	}
+	gpuInfoCacheMu.RUnlock()
+
+	gpuInfoCacheMu.Lock()
+	defer gpuInfoCacheMu.Unlock()
+
+	// Double-check after lock
+	if gpuInfoCache != nil && time.Since(lastGpuInfoSync) < 5*time.Minute {
+		return gpuInfoCache
+	}
+
 	if common.IsWindows() {
 		gpu := getGPUInfoWMI()
 		if gpu.Detected {
+			// nvidia-smi reports true VRAM; WMI AdapterRAM is uint32 (~4GB cap)
+			if trueVRAM := getNvidiaSmiVRAM(); trueVRAM > 0 {
+				gpu.Memory = trueVRAM
+			}
+			gpuInfoCache = gpu
+			lastGpuInfoSync = time.Now()
 			return gpu
 		}
 		// Fallback to PowerShell/CIM
-		return getGPUInfoPowerShell()
+		gpu = getGPUInfoPowerShell()
+		if gpu.Detected {
+			if trueVRAM := getNvidiaSmiVRAM(); trueVRAM > 0 {
+				gpu.Memory = trueVRAM
+			}
+			gpuInfoCache = gpu
+			lastGpuInfoSync = time.Now()
+		}
+		return gpu
 	}
 	return &GPUInfo{Detected: false}
 }
@@ -43,7 +82,7 @@ func GetGPUInfo() *GPUInfo {
 func getGPUInfoWMI() *GPUInfo {
 	var dst []Win32_VideoController
 	q := "SELECT Name, AdapterRAM, DriverVersion, Status FROM Win32_VideoController"
-	if err := wmi.Query(q, &dst); err != nil {
+	if err := common.WMIQueryWithTimeout(q, &dst, 3*time.Second); err != nil {
 		return &GPUInfo{Detected: false}
 	}
 
@@ -160,22 +199,42 @@ func GetGPUStats() *GPUStats {
 	}
 	var dst []Sensor
 
-	_ = wmi.QueryNamespace("SELECT Value FROM Sensor WHERE SensorType='Temperature' AND Name LIKE '%GPU%'", &dst, "root\\LibreHardwareMonitor")
-	if len(dst) > 0 {
+	_ = common.WMIQueryNamespaceWithTimeout("SELECT Value FROM Sensor WHERE SensorType='Temperature' AND Name LIKE '%GPU%'", &dst, "root\\LibreHardwareMonitor", 2*time.Second)
+	if len(dst) > 0 && !math.IsNaN(dst[0].Value) && !math.IsInf(dst[0].Value, 0) {
 		stats.Temperature = dst[0].Value
 	}
 
-	_ = wmi.QueryNamespace("SELECT Value FROM Sensor WHERE SensorType='Load' AND Name LIKE '%GPU Core%'", &dst, "root\\LibreHardwareMonitor")
-	if len(dst) > 0 {
+	_ = common.WMIQueryNamespaceWithTimeout("SELECT Value FROM Sensor WHERE SensorType='Load' AND Name LIKE '%GPU Core%'", &dst, "root\\LibreHardwareMonitor", 2*time.Second)
+	if len(dst) > 0 && !math.IsNaN(dst[0].Value) && !math.IsInf(dst[0].Value, 0) {
 		stats.Utilization = dst[0].Value
 	}
 
-	_ = wmi.QueryNamespace("SELECT Value FROM Sensor WHERE SensorType='Fan' AND Name LIKE '%GPU%'", &dst, "root\\LibreHardwareMonitor")
-	if len(dst) > 0 {
+	_ = common.WMIQueryNamespaceWithTimeout("SELECT Value FROM Sensor WHERE SensorType='Fan' AND Name LIKE '%GPU%'", &dst, "root\\LibreHardwareMonitor", 2*time.Second)
+	if len(dst) > 0 && !math.IsNaN(dst[0].Value) && !math.IsInf(dst[0].Value, 0) {
 		stats.FanSpeed = dst[0].Value
 	}
 
 	return stats
+}
+
+// getNvidiaSmiVRAM queries nvidia-smi for the true physical VRAM in bytes.
+// This overrides the WMI AdapterRAM value which is capped at ~4GB (uint32).
+func getNvidiaSmiVRAM() uint64 {
+	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "nvidia-smi",
+		"--query-gpu=memory.total",
+		"--format=csv,noheader,nounits")
+	out, err := cmd.Output()
+	if err != nil {
+		return 0
+	}
+	var vramMiB float64
+	if _, err := fmt.Sscanf(strings.TrimSpace(string(out)), "%f", &vramMiB); err != nil {
+		return 0
+	}
+	if vramMiB <= 0 {
+		return 0
+	}
+	return uint64(vramMiB) * 1024 * 1024
 }
 
 func getStatsNvidiaSmi() *GPUStats {

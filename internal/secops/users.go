@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -43,9 +42,9 @@ type UserInfo struct {
 // GetUsers retrieves local user accounts.
 func GetUsers() ([]UserInfo, error) {
 	if common.IsWindows() {
-		// Use direct exec.Command for Windows system tools because 'net user'
+		// Use HiddenCommand for Windows system tools because 'net user'
 		// requires access often restricted by sandboxing.
-		cmd := exec.Command("cmd", "/c", "net user")
+		cmd := common.HiddenCommand("cmd", "/c", "net user")
 		output, err := cmd.Output()
 		if err == nil {
 			usernames := parseNetUserList(string(output))
@@ -194,8 +193,8 @@ func getDisabledUsers() map[string]bool {
 // GetGroups retrieves local security groups.
 func GetGroups() ([]string, error) {
 	if common.IsWindows() {
-		// Use direct exec.Command.
-		cmd := exec.Command("cmd", "/c", "net localgroup")
+		// Use HiddenCommand.
+	cmd := common.HiddenCommand("cmd", "/c", "net localgroup")
 		output, err := cmd.Output()
 		if err == nil {
 			groups := parseNetLocalGroup(string(output))
@@ -294,8 +293,8 @@ func collectUserDetails(usernames []string) ([]UserInfo, error) {
 			continue
 		}
 
-		// Use direct exec.Command.
-		cmd := exec.Command("cmd", "/c", "net user", name)
+		// Use HiddenCommand.
+	cmd := common.HiddenCommand("cmd", "/c", "net user", name)
 		output, err := cmd.Output()
 		if err != nil {
 			continue
