@@ -585,7 +585,7 @@ func (s *SysOps) GetLHMStatus() LHMStatusResult {
 // is required for, before triggering the Windows UAC dialog.
 func (s *SysOps) GetLHMAuthorization() LHMAuthorization {
 	return LHMAuthorization{
-		Reason: "OpsForAll needs admin privileges to start LibreHardwareMonitor, " +
+		Reason: "Universal-Ops needs admin privileges to start LibreHardwareMonitor, " +
 			"which reads low-level hardware sensor data (CPU temperature, GPU " +
 			"temperature, fan speeds, voltages). These sensors are restricted to " +
 			"admin-level processes by Windows for security reasons.",
@@ -598,7 +598,7 @@ func (s *SysOps) GetLHMAuthorization() LHMAuthorization {
 		Risks: []string{
 			"LibreHardwareMonitor will run as a hidden background process",
 			"It communicates only via local WMI — no network traffic",
-			"The process stops automatically when OpsForAll closes",
+			"The process stops automatically when Universal-Ops closes",
 		},
 		BinaryName: "LibreHardwareMonitor.exe",
 		Publisher:  "LibreHardwareMonitor Contributors (MPL-2.0)",
@@ -720,15 +720,20 @@ func (s *SysOps) RunExtendedDiagnostics() ExtendedDiagnosticResult {
 	// PERSIST: Save to reports table
 	storage := common.GetStorage()
 	if storage != nil {
-		data, _ := json.Marshal(out)
+		data, marshalErr := json.Marshal(out)
+		if marshalErr != nil {
+			common.LogError("SysOps: failed to marshal health report: %v", marshalErr)
+		}
 		id := fmt.Sprintf("health-%d", time.Now().Unix())
-		_ = storage.InsertReport(common.ReportRecord{
+		if err := storage.InsertReport(common.ReportRecord{
 			ID:        id,
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Type:      "health",
 			Score:     out.Score,
 			DataJSON:  string(data),
-		})
+		}); err != nil {
+			common.LogError("SysOps: failed to persist health report: %v", err)
+		}
 	}
 
 	return out

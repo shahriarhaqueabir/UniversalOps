@@ -8,20 +8,20 @@ if [ -z "$VERSION" ]; then
     exit 1
 fi
 
-echo "Building OpsForAll $VERSION..."
+echo "Building Universal-Ops $VERSION..."
 # Build all platforms
-wails build -platform windows/amd64 -o opsforall-$VERSION-windows-amd64.exe
-wails build -platform linux/amd64 -o opsforall-$VERSION-linux-amd64
-wails build -platform darwin/amd64 -o opsforall-$VERSION-darwin-amd64
-wails build -platform darwin/arm64 -o opsforall-$VERSION-darwin-arm64
+wails build -platform windows/amd64 -o universal-ops-$VERSION-windows-amd64.exe
+wails build -platform linux/amd64 -o universal-ops-$VERSION-linux-amd64
+wails build -platform darwin/amd64 -o universal-ops-$VERSION-darwin-amd64
+wails build -platform darwin/arm64 -o universal-ops-$VERSION-darwin-arm64
 
 echo "Creating GitHub release $VERSION..."
 gh release create "$VERSION" \
-    --title "OpsForAll $VERSION" \
+    --title "Universal-Ops $VERSION" \
     --notes "Release hardening and technical substrate updates." \
-    opsforall-$VERSION-windows-amd64.exe \
-    opsforall-$VERSION-linux-amd64 \
-    opsforall-$VERSION-darwin-amd64 \
-    opsforall-$VERSION-darwin-arm64
+    universal-ops-$VERSION-windows-amd64.exe \
+    universal-ops-$VERSION-linux-amd64 \
+    universal-ops-$VERSION-darwin-amd64 \
+    universal-ops-$VERSION-darwin-arm64
 
 echo "Release $VERSION uploaded successfully."

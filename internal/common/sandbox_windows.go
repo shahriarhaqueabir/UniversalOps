@@ -73,8 +73,8 @@ type activeJob struct {
 // This is used by the SandboxedCmd wrapper to find and assign the job
 // object synchronously after cmd.Start() returns.
 var (
-	jobTrackers   map[*exec.Cmd]*activeJob
-	jobTrackersMu sync.Mutex
+	jobTrackers     map[*exec.Cmd]*activeJob
+	jobTrackersMu   sync.Mutex
 	sandboxWarnOnce sync.Once
 )
 
@@ -370,7 +370,7 @@ func applyPlatformSandbox(cmd *exec.Cmd, cfg SandboxConfig) *SandboxedCmd {
 		}
 
 		if cfg.DenyNetworkAccess {
-			sid, err := EnsureAppContainerProfile("OpsForAllIsolation", "OpsForAll Network Isolation")
+			sid, err := EnsureAppContainerProfile("UniversalOpsIsolation", "Universal-Ops Network Isolation")
 			if err == nil {
 				// We have a valid AppContainer SID.
 				// NOTE: Direct integration with os/exec via sa.AttributeList is deferred

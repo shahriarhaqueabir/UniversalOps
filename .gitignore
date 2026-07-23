@@ -27,6 +27,8 @@ opsforall.db
 opsforall.db-shm
 opsforall.db-wal
 *.db
+allopsfull.db-shm
+allopsfull.db-wal
 
 # Dependencies
 node_modules/

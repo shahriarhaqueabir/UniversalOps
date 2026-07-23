@@ -1,6 +1,6 @@
-# OpsForAll User Guide
+# Universal-Ops User Guide
 
-Welcome to OpsForAll, the premium native GUI operations platform. This guide covers setup, usage, and customization.
+Welcome to Universal-Ops, the premium native GUI operations platform. This guide covers setup, usage, and customization.
 
 ## Table of Contents
 1. [Installation & Setup](#1-installation--setup)
@@ -17,7 +17,7 @@ Welcome to OpsForAll, the premium native GUI operations platform. This guide cov
 - **Go 1.26+**: Required for building from source.
 - **Wails v2 CLI**: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
 - **Node.js**: Required for frontend builds.
-- **Windows / Linux / macOS**: OpsForAll is cross-platform.
+- **Windows / Linux / macOS**: Universal-Ops is cross-platform.
 
 ### Building from Source
 ```bash
@@ -34,18 +34,18 @@ Each page is accessible from the sidebar. The five ops layers (SysOps, NetOps, S
 
 ## 2. AI Operations Setup
 
-OpsForAll uses **Ollama** by default for local, private AI operations.
+Universal-Ops uses **Ollama** by default for local, private AI operations.
 
 ### Installing Ollama
 1. Download Ollama from [ollama.com](https://ollama.com/).
 2. Install and run the Ollama application.
 3. Open a terminal and initialize the intelligence substrate:
    ```bash
-   ollama create opsforall -f Modelfile
+   ollama create universalops -f Modelfile
    ```
 
 ### Customizing the AI Model
-By default, OpsForAll looks for `opsforall` (based on Qwythos-9B) at `http://localhost:11434`.
+By default, Universal-Ops looks for `universalops` (based on Qwythos-9B) at `http://localhost:11434`.
  Falls back to the first available model if the default is not found. You can override this using environment variables or the **Settings** page within the application.
 
 - `OLLAMA_HOST`: The URL of your Ollama server (e.g., `http://192.168.1.50:11434`).
@@ -54,11 +54,11 @@ By default, OpsForAll looks for `opsforall` (based on Qwythos-9B) at `http://loc
 **Example (Windows PowerShell):**
 ```powershell
 $env:OLLAMA_MODEL = "mistral"
-./build/bin/OpsForAll.exe
+./build/bin/Universal-Ops.exe
 ```
 
 ### Using External AI (OpenAI/Anthropic)
-Currently, OpsForAll
+Currently, Universal-Ops
  focuses on local AI for privacy and offline capability. Integration with external APIs is planned for a future release. For now, you can use **LiteLLM** or a similar proxy to expose OpenAI-compatible endpoints as an Ollama-like service if needed.
 
 ---
@@ -103,7 +103,7 @@ Currently, OpsForAll
 
 ### Theming
 - Use the **Theme Toggle** button in the TopBar to switch between **Dark** and **Light** modes.
-- OpsForAll uses a "Squib" design system with fluid CSS variables, adapting its palette for optimal readability and focus.
+- Universal-Ops uses a "Squib" design system with fluid CSS variables, adapting its palette for optimal readability and focus.
 
 ### Refresh Interval
 The dashboard refreshes every 3 seconds by default. This can be configured in the **Settings** page, allowing you to balance data granularity with system overhead.
@@ -112,6 +112,6 @@ The dashboard refreshes every 3 seconds by default. This can be configured in th
 
 ## 5. Troubleshooting
 
-- **AI Ops not responding**: Ensure Ollama is running and you have initialized the substrate (`ollama create opsforall -f Modelfile`).
+- **AI Ops not responding**: Ensure Ollama is running and you have initialized the substrate (`ollama create universalops -f Modelfile`).
 - **Permission Denied (SecOps)**: Some security checks (like firewall rules) require Administrator/Sudo privileges.
-- **High CPU usage by OpsForAll**: This can happen if the refresh interval is set too low (e.g., < 500ms).
+- **High CPU usage by Universal-Ops**: This can happen if the refresh interval is set too low (e.g., < 500ms).

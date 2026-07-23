@@ -11,7 +11,7 @@ import (
 func newTestStorage(t *testing.T) *Storage {
 	t.Helper()
 
-	f, err := os.CreateTemp("", "opsforall-test-*.db")
+	f, err := os.CreateTemp("", "universalops-test-*.db")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,7 +35,7 @@ func newTestStorage(t *testing.T) *Storage {
 }
 
 func TestInitStoragePragmas(t *testing.T) {
-	f, err := os.CreateTemp("", "opsforall-test-*.db")
+	f, err := os.CreateTemp("", "universalops-test-*.db")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -280,7 +280,7 @@ func TestPruneData(t *testing.T) {
 }
 
 func TestStorageClose(t *testing.T) {
-	f, err := os.CreateTemp("", "opsforall-test-*.db")
+	f, err := os.CreateTemp("", "universalops-test-*.db")
 	if err != nil {
 		t.Fatal(err)
 	}

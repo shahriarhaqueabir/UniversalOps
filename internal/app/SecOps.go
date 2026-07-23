@@ -647,15 +647,20 @@ func (s *SecOps) RunSecurityAuditChecklist() SecurityAuditResult {
 	// PERSIST: Save to reports table
 	storage := common.GetStorage()
 	if storage != nil {
-		data, _ := json.Marshal(out)
+		data, marshalErr := json.Marshal(out)
+		if marshalErr != nil {
+			common.LogError("SecOps: failed to marshal audit report: %v", marshalErr)
+		}
 		id := fmt.Sprintf("sec-audit-%d", time.Now().Unix())
-		_ = storage.InsertReport(common.ReportRecord{
+		if err := storage.InsertReport(common.ReportRecord{
 			ID:        id,
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Type:      "security",
 			Score:     out.Score,
 			DataJSON:  string(data),
-		})
+		}); err != nil {
+			common.LogError("SecOps: failed to persist audit report: %v", err)
+		}
 	}
 
 	return out

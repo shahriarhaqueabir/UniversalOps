@@ -7,10 +7,10 @@ import os
 # Set via environment or edit directly
 APP_PATH = os.environ.get(
     "APP_PATH",
-    r"E:\Projects\projectx\AllOpsFull\build\bin\OpsForAll.exe"
+    r"E:\Projects\projectx\AllOpsFull\build\bin\universal-ops.exe"
 )
 
-APP_TITLE = os.environ.get("APP_TITLE", "OpsForAll")
+APP_TITLE = os.environ.get("APP_TITLE", "Universal-Ops")
 
 LAUNCH_TIMEOUT = int(os.environ.get("LAUNCH_TIMEOUT", "45"))
 ACTION_TIMEOUT = int(os.environ.get("ACTION_TIMEOUT", "15"))

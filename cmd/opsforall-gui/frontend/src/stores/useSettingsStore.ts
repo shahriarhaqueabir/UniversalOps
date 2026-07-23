@@ -27,30 +27,30 @@ function saveSetting<T>(key: string, value: T): void {
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
-  refreshInterval: loadSetting('opsforall_refreshInterval', 5000),
-  pingCount: loadSetting('opsforall_pingCount', 4),
-  dnsTimeout: loadSetting('opsforall_dnsTimeout', 2000),
-  companionName: loadSetting('opsforall_companionName', 'Hawk'),
+  refreshInterval: loadSetting('universalops_refreshInterval', 5000),
+  pingCount: loadSetting('universalops_pingCount', 4),
+  dnsTimeout: loadSetting('universalops_dnsTimeout', 2000),
+  companionName: loadSetting('universalops_companionName', 'Hawk'),
 
   setRefreshInterval: (val) => {
-    saveSetting('opsforall_refreshInterval', val)
+    saveSetting('universalops_refreshInterval', val)
     set({ refreshInterval: val })
   },
   setPingCount: (val) => {
-    saveSetting('opsforall_pingCount', val)
+    saveSetting('universalops_pingCount', val)
     set({ pingCount: val })
   },
   setDnsTimeout: (val) => {
-    saveSetting('opsforall_dnsTimeout', val)
+    saveSetting('universalops_dnsTimeout', val)
     set({ dnsTimeout: val })
   },
   setCompanionName: (name) => {
-    saveSetting('opsforall_companionName', name)
+    saveSetting('universalops_companionName', name)
     set({ companionName: name })
   },
   setBatch: (changes) => {
     Object.entries(changes).forEach(([key, value]) => {
-      saveSetting(`opsforall_${key}`, value)
+      saveSetting(`universalops_${key}`, value)
     })
     set((state) => ({ ...state, ...changes }))
   },
@@ -126,7 +126,7 @@ interface ThemeState {
   setTheme: (t: Theme) => void
 }
 
-const THEME_KEY = 'opsforall-theme'
+const THEME_KEY = 'universalops-theme'
 
 export const useThemeStore = create<ThemeState>((set) => ({
   theme: (() => {

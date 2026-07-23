@@ -1,4 +1,4 @@
-# OpsForAll — Code Connections & Data Flow
+# Universal-Ops — Code Connections & Data Flow
 
 This document plots the lifecycle of telemetry and commands across the application layers.
 

@@ -11,7 +11,7 @@ for p in "${PLATFORMS[@]}"; do
   IFS="/" read -r goos goarch <<< "$p"
   ext=""
   if [ "$goos" == "windows" ]; then ext=".exe"; fi
-  name="opsforall-${VERSION}-${goos}-${goarch}${ext}"
+  name="universal-ops-${VERSION}-${goos}-${goarch}${ext}"
 
   echo "Building for $p..."
   wails build -platform "$p" -o "$name"
@@ -24,9 +24,9 @@ done
 
 # Generate checksums
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-  sha256sum opsforall-"${VERSION}"-* > checksums.txt
+  sha256sum universal-ops-"${VERSION}"-* > checksums.txt
 else
-  shasum -a 256 opsforall-"${VERSION}"-* > checksums.txt
+  shasum -a 256 universal-ops-"${VERSION}"-* > checksums.txt
 fi
 
 echo "Builds and checksums complete."

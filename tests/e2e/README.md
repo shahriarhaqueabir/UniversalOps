@@ -1,6 +1,6 @@
 # Windows Desktop E2E Tests (pywinauto)
 
-End-to-end tests for the OpsForAll Wails desktop application using pywinauto + UI Automation.
+End-to-end tests for the Universal-Ops Wails desktop application using pywinauto + UI Automation.
 
 ## Prerequisites
 
@@ -12,8 +12,8 @@ pip install pywinauto pytest pytest-html pytest-timeout pillow
 
 ```bash
 # Set required environment variables
-export APP_PATH="E:\Projects\projectx\AllOpsFull\build\bin\OpsForAll.exe"
-export APP_TITLE="OpsForAll"
+export APP_PATH="E:\Projects\projectx\AllOpsFull\build\bin\universal-ops.exe"
+export APP_TITLE="Universal-Ops"
 export LAUNCH_TIMEOUT=15
 
 # Run all tests
@@ -24,7 +24,7 @@ pytest test_tabs.py -v
 pytest test_tabs.py -m smoke -v
 
 # Run with custom app path
-APP_PATH="./build/bin/OpsForAll.exe" pytest test_tabs.py -v
+APP_PATH="./build/bin/universal-ops.exe" pytest test_tabs.py -v
 ```
 
 ## Test Structure
@@ -74,8 +74,8 @@ jobs:
         run: wails build
       - name: Run E2E
         env:
-          APP_PATH: ${{ github.workspace }}\build\bin\OpsForAll.exe
-          APP_TITLE: "OpsForAll"
+          APP_PATH: ${{ github.workspace }}\build\bin\universal-ops.exe
+          APP_TITLE: "Universal-Ops"
         run: pytest tests/e2e/test_tabs.py -v
       - uses: actions/upload-artifact@v4
         if: always()

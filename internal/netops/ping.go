@@ -89,7 +89,7 @@ func pingICMP(target string, count int) (*PingResult, error) {
 			Body: &icmp.Echo{
 				ID:   i,
 				Seq:  i,
-				Data: []byte("OpsForAllNetOps"),
+				Data: []byte("UniversalOpsNetOps"),
 			},
 		}
 

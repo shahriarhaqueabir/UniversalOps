@@ -44,7 +44,7 @@ vi.mock('../stores', () => ({
 }))
 
 vi.mock('../hooks/useBackend', () => ({
-  useBackend: () => ({ call: vi.fn().mockResolvedValue({ name: 'OpsForAll'
+  useBackend: () => ({ call: vi.fn().mockResolvedValue({ name: 'Universal-Ops'
 , version: '1.0.0', goVersion: '1.26', uptime: '2h' }) }),
 }))
 
@@ -59,7 +59,7 @@ describe('Settings Page', () => {
     vi.clearAllMocks()
     vi.mocked(useQuery).mockImplementation(({ queryKey }: any) => {
       if (queryKey.includes('app-info')) {
-        return { data: { name: 'OpsForAll', version: '1.3.0', go_version: 'go1.26', uptime: '1h' }, isLoading: false } as any
+        return { data: { name: 'Universal-Ops', version: '1.3.0', go_version: 'go1.26', uptime: '1h' }, isLoading: false } as any
       }
       if (queryKey.includes('alert-rules')) {
         return { data: [], isLoading: false } as any

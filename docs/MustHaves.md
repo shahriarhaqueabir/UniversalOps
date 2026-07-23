@@ -710,7 +710,7 @@ These should appear on almost every overview page because they create a consiste
 | Recommendations     | Suggests next steps instead of just displaying data |
 | Last Scan / Refresh | Indicates data freshness                            |
 
-## One recommendation that would significantly improve OpsForAll
+## One recommendation that would significantly improve Universal-Ops
 
 Rather than having each overview independently query the backend, introduce a **System Knowledge Layer**. This layer continuously aggregates metrics, events, logs, processes, services, network state, and security findings into a unified state model. Each overview then becomes a different lens over the same underlying data.
 

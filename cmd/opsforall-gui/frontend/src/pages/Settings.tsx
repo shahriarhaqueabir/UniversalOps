@@ -455,7 +455,7 @@ export function Settings() {
                 <div className="flex items-center justify-between p-5 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-[var(--color-text)]">Active Modelfile</p>
-                    <p className="text-xs text-accent mt-1 font-mono truncate">{dataDir}/allopsfull.modelfile</p>
+                    <p className="text-xs text-accent mt-1 font-mono truncate">{dataDir}/universalops.modelfile</p>
                   </div>
                   <button
                     onClick={handlePickModelfile}
@@ -732,7 +732,7 @@ export function Settings() {
                 <div className="flex items-center justify-between p-5 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-[var(--color-text)]">Telemetry Core</p>
-                    <p className="text-xs text-accent mt-1 font-mono truncate">{dataDir}/allopsfull.db</p>
+                    <p className="text-xs text-accent mt-1 font-mono truncate">{dataDir}/universalops.db</p>
                   </div>
                   <button
                     onClick={handleRelocateData}
@@ -745,7 +745,7 @@ export function Settings() {
                 <div className="flex items-center justify-between p-5 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-[var(--color-text)]">Diagnostic Logs</p>
-                    <p className="text-xs text-accent mt-1 font-mono truncate">{logsDir}/allopsfull.log</p>
+                    <p className="text-xs text-accent mt-1 font-mono truncate">{logsDir}/universalops.log</p>
                   </div>
                   <button
                     onClick={handleRelocateLogs}

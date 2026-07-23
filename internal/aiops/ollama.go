@@ -30,7 +30,7 @@ type OllamaStatus struct {
 
 const (
 	defaultOllamaURL   = "http://127.0.0.1:11434"
-	defaultOllamaModel = "opsforall"
+	defaultOllamaModel = "universalops"
 	defaultHttpTimeout = 60 * time.Second
 )
 
@@ -60,8 +60,8 @@ func newClient() *api.Client {
 // ── Global Compatibility Wrappers ───────────────────────────────────────────
 
 var (
-	defaultClientMu   sync.Mutex
-	defaultClient     *OllamaClient
+	defaultClientMu sync.Mutex
+	defaultClient   *OllamaClient
 )
 
 func getDefaultClient() *OllamaClient {
@@ -100,6 +100,12 @@ func ChatWithModel(messages []ChatMessage, modelOverride string) (string, error)
 // ChatWithModelAndContext sends a chat request using a specific model override and context.
 func ChatWithModelAndContext(ctx context.Context, messages []ChatMessage, modelOverride string) (string, error) {
 	return getDefaultClient().Chat(ctx, messages, modelOverride)
+}
+
+// ChatStreamWithModelAndContext sends a streaming chat request using a specific model
+// override and context. Each token is delivered via onToken.
+func ChatStreamWithModelAndContext(ctx context.Context, messages []ChatMessage, modelOverride string, onToken func(string)) (string, error) {
+	return getDefaultClient().ChatStream(ctx, messages, modelOverride, onToken)
 }
 
 // SetModel updates the model for the default client.
@@ -246,7 +252,7 @@ func (c *OllamaClient) CheckStatus(ctx context.Context) (*OllamaStatus, error) {
 	}, nil
 }
 
-// Chat sends a chat request to the Ollama API.
+// Chat sends a chat request to the Ollama API (non-streaming).
 func (c *OllamaClient) Chat(ctx context.Context, messages []ChatMessage, modelOverride string) (string, error) {
 	apiMessages := make([]api.Message, len(messages))
 	for i, m := range messages {
@@ -275,6 +281,49 @@ func (c *OllamaClient) Chat(ctx context.Context, messages []ChatMessage, modelOv
 	})
 	if err != nil {
 		return "", fmt.Errorf("ollama chat failed: %w", err)
+	}
+
+	if responseText == "" {
+		return "", fmt.Errorf("ollama returned empty response")
+	}
+
+	return responseText, nil
+}
+
+// ChatStream sends a streaming chat request to the Ollama API. Each content
+// token is delivered via the onToken callback. The final accumulated response
+// is returned along with any error.
+func (c *OllamaClient) ChatStream(ctx context.Context, messages []ChatMessage, modelOverride string, onToken func(string)) (string, error) {
+	apiMessages := make([]api.Message, len(messages))
+	for i, m := range messages {
+		apiMessages[i] = api.Message{
+			Role:    m.Role,
+			Content: m.Content,
+		}
+	}
+
+	model := c.GetModel()
+	if modelOverride != "" {
+		model = modelOverride
+	}
+
+	stream := true
+	req := &api.ChatRequest{
+		Model:    model,
+		Messages: apiMessages,
+		Stream:   &stream,
+	}
+
+	var responseText string
+	err := c.api.Chat(ctx, req, func(resp api.ChatResponse) error {
+		if resp.Message.Content != "" {
+			responseText += resp.Message.Content
+			onToken(resp.Message.Content)
+		}
+		return nil
+	})
+	if err != nil {
+		return "", fmt.Errorf("ollama chat stream failed: %w", err)
 	}
 
 	if responseText == "" {

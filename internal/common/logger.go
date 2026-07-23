@@ -17,7 +17,7 @@ var (
 // InitLogger initializes the session logger locally.
 func InitLogger(filename string) error {
 	if filename == "" {
-		filename = filepath.Join("logs", "allopsfull.log")
+		filename = filepath.Join("logs", "universalops.log")
 	}
 
 	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -36,7 +36,7 @@ func InitLogger(filename string) error {
 	zlog = zerolog.New(output).
 		With().
 		Timestamp().
-		Str("app", "allopsfull").
+		Str("app", "universalops").
 		Logger()
 
 	// AUDIT: Default to Debug level to capture Phase 2 telemetry

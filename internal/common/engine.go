@@ -36,10 +36,10 @@ type EngineLoop struct {
 	invoker WorkflowInvoker
 
 	// Internal state for diagnostic isolation
-	auditRunning   bool
-	auditMu        sync.Mutex
-	lastAuditTime  time.Time
-	auditCooldown  time.Duration
+	auditRunning  bool
+	auditMu       sync.Mutex
+	lastAuditTime time.Time
+	auditCooldown time.Duration
 
 	// Callbacks for UI/External notification
 	OnMetricsEmit func(snapshot MetricSnapshot)
@@ -57,13 +57,13 @@ type EngineLoop struct {
 
 func NewEngineLoop(p *DataPipeline, a *AlertEngine, eb *EventBus, sl *sync.RWMutex, invoker WorkflowInvoker) *EngineLoop {
 	return &EngineLoop{
-		pipeline:    p,
-		alerts:      a,
-		eventBus:    eb,
-		storageLock: sl,
-		baselines:   NewBaselinesEngine(p),
-		invoker:     invoker,
-		quit:        make(chan struct{}),
+		pipeline:      p,
+		alerts:        a,
+		eventBus:      eb,
+		storageLock:   sl,
+		baselines:     NewBaselinesEngine(p),
+		invoker:       invoker,
+		quit:          make(chan struct{}),
 		auditCooldown: 5 * time.Minute, // Default 5 min cooldown for autonomous audits
 	}
 }
@@ -115,8 +115,12 @@ func (e *EngineLoop) DailyAnalysis() {
 		}
 	}
 
-	if score < 0 { score = 0 }
-	_ = s.UpsertHealthScore(score)
+	if score < 0 {
+		score = 0
+	}
+	if err := s.UpsertHealthScore(score); err != nil {
+		LogError("EngineLoop: failed to upsert health score %d: %v", score, err)
+	}
 }
 
 func (e *EngineLoop) Stop() {

@@ -243,13 +243,13 @@ func (a *App) Startup(ctx context.Context) {
 	a.DevOps.ctx = ctx
 
 	// Initialize persistent storage locally
-	dbPath := filepath.Join(dataDir, "allopsfull.db")
+	dbPath := filepath.Join(dataDir, "universalops.db")
 	if err := common.InitStorage(dbPath); err != nil {
 		common.LogWarn("Failed to init local storage: %v", err)
 	}
 
 	// Initialize the session logger locally
-	logPath := filepath.Join(logsDir, "allopsfull.log")
+	logPath := filepath.Join(logsDir, "universalops.log")
 	if err := common.InitLogger(logPath); err != nil {
 		common.LogWarn("Failed to init local logger: %v", err)
 	}
@@ -258,7 +258,7 @@ func (a *App) Startup(ctx context.Context) {
 	a.PipelineAPI.LoadSettings()
 	a.AIOps.LoadModels()
 
-	common.LogInfo("AllOpsFull initialized in self-contained mode (portable)")
+	common.LogInfo("Universal-Ops initialized in self-contained mode (portable)")
 
 	// Initialize System Knowledge Layer (linked to Pipeline for consistency)
 	common.InitKnowledge(a.pipeline)
@@ -292,7 +292,7 @@ func (a *App) Startup(ctx context.Context) {
 
 // Shutdown is called by Wails when the application shuts down.
 func (a *App) Shutdown(ctx context.Context) {
-	common.LogInfo("OpsForAll shutting down")
+	common.LogInfo("Universal-Ops shutting down")
 
 	// 0. Stop bundled LHM before general process cleanup
 	common.GetLHMManager().Stop()
@@ -321,7 +321,7 @@ func (a *App) Shutdown(ctx context.Context) {
 // GetAppInfo returns metadata about the application.
 func (a *App) GetAppInfo() AppInfo {
 	return AppInfo{
-		Name:      "AllOpsFull Universal Platform",
+		Name:      "Universal-Ops Operations Platform",
 		Version:   "1.3.1",
 		GoVersion: goruntime.Version(),
 		Uptime:    common.FormatUptime(uint64(time.Since(a.startedAt).Seconds())),
@@ -471,7 +471,7 @@ func (a *App) UpdateStorageConfig(dbDir string) error {
 	}
 	os.Remove(testFile)
 
-	dbPath := filepath.Join(dbDir, "allopsfull.db")
+	dbPath := filepath.Join(dbDir, "universalops.db")
 
 	common.LogInfo("App: Suspending operations for storage relocation to %s", dbDir)
 
@@ -519,7 +519,7 @@ func (a *App) GetLogsDir() string {
 
 // UpdateLogsConfig relocates the active log file.
 func (a *App) UpdateLogsConfig(logDir string) error {
-	logPath := filepath.Join(logDir, "allopsfull.log")
+	logPath := filepath.Join(logDir, "universalops.log")
 	common.LogInfo("App: Relocating log file to %s", logPath)
 
 	common.CloseLogger()
@@ -750,7 +750,9 @@ func (a *App) persistAlertsAsync(newAlerts []common.Alert) {
 			Threshold: alert.Threshold,
 		}, tx)
 	}
-	_ = tx.Commit()
+	if err := tx.Commit(); err != nil {
+		common.LogError("App: failed to commit alert transaction: %v", err)
+	}
 }
 
 // buildMetricsEvent gathers the latest snapshot from the pipeline.
@@ -1021,7 +1023,7 @@ func validateOllamaEnv() {
 	}
 	model := os.Getenv("OLLAMA_MODEL")
 	if model == "" {
-		common.LogInfo("OLLAMA_MODEL not set, defaulting to opsforall")
+		common.LogInfo("OLLAMA_MODEL not set, defaulting to universalops")
 	} else {
 		common.LogInfo("OLLAMA_MODEL=%s", model)
 	}

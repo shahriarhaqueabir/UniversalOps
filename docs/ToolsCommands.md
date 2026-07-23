@@ -1,6 +1,6 @@
 # Tools & Commands Reference
 
-> Research notes on Go libraries and platform APIs used by OpsForAll.
+> Research notes on Go libraries and platform APIs used by Universal-Ops.
 > This document catalogs the data sources and fallback mechanisms across the ops stack.
 
 ## Data Source Hierarchy
