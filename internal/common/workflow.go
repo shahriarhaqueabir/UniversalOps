@@ -34,22 +34,33 @@ type WorkflowStep struct {
 	Error  string `json:"error,omitempty"`
 }
 
+// WorkflowCategory groups workflows into functional domains for library filtering.
+type WorkflowCategory string
+
+const (
+	WorkflowCategorySystem       WorkflowCategory = "system"
+	WorkflowCategorySecurity     WorkflowCategory = "security"
+	WorkflowCategoryNetwork      WorkflowCategory = "network"
+	WorkflowCategoryIntelligence WorkflowCategory = "intelligence"
+	WorkflowCategoryDevOps       WorkflowCategory = "devops"
+)
 
 // WorkflowDefinition defines a reusable operational sequence.
 type WorkflowDefinition struct {
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	Description string         `json:"description"`
-	Why         string         `json:"why"`
-	Risks       []string       `json:"risks"`
-	TypicalVals string         `json:"typical_values"`
-	Steps       []WorkflowStep `json:"steps"`
+	ID          string           `json:"id"`
+	Name        string           `json:"name"`
+	Description string           `json:"description"`
+	Category    WorkflowCategory `json:"category"`
+	Why         string           `json:"why"`
+	Risks       []string         `json:"risks"`
+	TypicalVals string           `json:"typical_values"`
+	Steps       []WorkflowStep   `json:"steps"`
 }
 
 // WorkflowEngine manages the library of reusable operational workflows.
 type WorkflowEngine struct {
-	mu        sync.RWMutex
-	library   map[string]WorkflowDefinition
+	mu      sync.RWMutex
+	library map[string]WorkflowDefinition
 }
 
 func NewWorkflowEngine() *WorkflowEngine {

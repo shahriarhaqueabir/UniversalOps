@@ -24,6 +24,7 @@ interface Workflow {
   id: string
   name: string
   description: string
+  category: string
   why: string
   risks: string[]
   typical_values: string
@@ -36,6 +37,9 @@ export function WorkflowCenter() {
   const [activeStepIdx, setActiveStepIdx] = useState<number | null>(null)
   const [isLive, setIsLive] = useState(false)
   const [search, setSearch] = useState('')
+  const [activeCategory, setActiveCategory] = useState<string>('all')
+
+  const categories = ['all', ...new Set(workflows.map(w => w.category))]
 
   const { data: workflows = [], isLoading } = useQuery<Workflow[]>({
     queryKey: ['workflows'],
@@ -61,10 +65,12 @@ export function WorkflowCenter() {
     setIsLive(false)
   }
 
-  const filtered = workflows.filter(w =>
-    w.name.toLowerCase().includes(search.toLowerCase()) ||
-    w.description.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = workflows.filter(w => {
+    const matchesSearch = w.name.toLowerCase().includes(search.toLowerCase()) ||
+      w.description.toLowerCase().includes(search.toLowerCase())
+    const matchesCategory = activeCategory === 'all' || w.category === activeCategory
+    return matchesSearch && matchesCategory
+  })
 
   return (
     <div className="flex flex-col h-full bg-[var(--color-bg)] animate-in fade-in duration-500 overflow-hidden">
@@ -97,6 +103,25 @@ export function WorkflowCenter() {
               />
             </div>
           </div>
+          {/* Category filter bar */}
+          {categories.length > 1 && (
+            <div className="px-4 pb-3 pt-2 flex flex-wrap gap-1.5 border-b border-[var(--color-border)]/30">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={cn(
+                    "px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest border transition-all",
+                    activeCategory === cat
+                      ? "bg-accent/15 border-accent/40 text-accent"
+                      : "bg-transparent border-white/10 text-text-faint hover:border-white/30 hover:text-white"
+                  )}
+                >
+                  {cat === 'all' ? 'All' : cat}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex-1 overflow-y-auto p-4 space-y-2">
             {isLoading ? (
                <div className="flex flex-col items-center justify-center py-10 opacity-30">
@@ -114,7 +139,12 @@ export function WorkflowCenter() {
                     : "bg-panel-2/50 border-transparent hover:border-white/10 hover:bg-panel-2"
                 )}
               >
-                <p className={cn("text-xs font-black uppercase tracking-widest mb-1", selectedWf?.id === wf.id ? "text-accent" : "text-white")}>{wf.name}</p>
+                <p className={cn("text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-2", selectedWf?.id === wf.id ? "text-accent" : "text-white")}>
+                  {wf.name}
+                  {wf.category && (
+                    <span className="text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border border-white/10 text-text-faint">{wf.category}</span>
+                  )}
+                </p>
                 <p className="text-[10px] text-text-dim font-medium leading-relaxed line-clamp-2">{wf.description}</p>
               </button>
             ))}

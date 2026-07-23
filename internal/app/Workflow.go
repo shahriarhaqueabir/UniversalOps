@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/aiops"
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -123,6 +124,7 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 		ID:          "diag-slow-pc",
 		Name:        "Diagnose Slow PC",
 		Description: "Identify resource bottlenecks and rogue processes.",
+		Category:    common.WorkflowCategorySystem,
 		Why:         "Context switching between Task Manager, Resource Monitor, and terminal is inefficient. This correlates CPU, RAM, and Disk I/O instantly.",
 		Risks:       []string{"Minimal", "Collection has negligible overhead"},
 		TypicalVals: "CPU < 70%, RAM < 85%, Disk < 90%",
@@ -165,6 +167,7 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 		ID:          "sec-sweep",
 		Name:        "Quick Security Sweep",
 		Description: "Verify basic system hardening and perimeter safety.",
+		Category:    common.WorkflowCategorySecurity,
 		Why:         "Manually checking firewall, listeners, and defender status is error-prone.",
 		Risks:       []string{"None", "Read-only operation"},
 		TypicalVals: "Firewall ON, No 0.0.0.0 listeners without reason",
@@ -199,6 +202,7 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 		ID:          "core-maintenance",
 		Name:        "Core Maintenance",
 		Description: "Comprehensive system health sweep: resources, alerts, storage, processes, and services.",
+		Category:    common.WorkflowCategorySystem,
 		Why:         "Routine maintenance prevents drift. This workflow captures a full-system snapshot in one pass, replacing fragmented manual checks across multiple tools.",
 		Risks:       []string{"None", "Read-only, zero side effects"},
 		TypicalVals: "CPU <70%, RAM <85%, Disk <90%, 0 critical alerts",
@@ -265,22 +269,59 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 		ID:          "net-diag",
 		Name:        "Full Network Diagnostic",
 		Description: "Multi-layered network sanity check (Ping, DNS, Ports, Trace, Conns).",
+		Category:    common.WorkflowCategoryNetwork,
 		Why:         "Network issues are often multi-faceted. This correlates connectivity, resolution, and exposure in one pass.",
 		Risks:       []string{"Minimal", "Port scan restricted to common local ports"},
 		TypicalVals: "DNS resolves <100ms, Ping loss 0%",
 		Steps: []common.WorkflowStep{
 			{
-				ID:              "run-diag",
-				Label:           "Run Core Diagnostic",
-				Description:     "Execute parallel ping, dns, trace, and connection scans.",
-				Command:         "netops.RunNetworkDiagnostics()",
-				ExpectedOutcome: "Full diagnostic report with markdown summary.",
+				ID:              "ping-check",
+				Label:           "Ping Connectivity",
+				Description:     "Ping default gateway and public endpoint (8.8.8.8).",
+				Command:         "ping -n 3 8.8.8.8",
+				ExpectedOutcome: "Packet loss < 1%, latency within expected range.",
 				Action: func(ctx context.Context) (any, error) {
-					res, err := netops.RunNetworkDiagnostics()
-					if err != nil {
-						return nil, err
-					}
-					return res.Markdown(), nil
+					return netops.Ping("8.8.8.8", 3)
+				},
+			},
+			{
+				ID:              "dns-check",
+				Label:           "DNS Resolution",
+				Description:     "Resolve google.com via system DNS.",
+				Command:         "nslookup google.com",
+				ExpectedOutcome: "Resolution succeeds within 100ms.",
+				Action: func(ctx context.Context) (any, error) {
+					return netops.LookupDNS("google.com")
+				},
+			},
+			{
+				ID:              "port-scan",
+				Label:           "Local Port Scan",
+				Description:     "Scan common ports on localhost for exposed services.",
+				Command:         "netstat -an | findstr LISTENING",
+				ExpectedOutcome: "No unexpected open ports on all interfaces.",
+				Action: func(ctx context.Context) (any, error) {
+					return netops.ScanPorts("localhost", netops.DefaultScanPorts())
+				},
+			},
+			{
+				ID:              "trace-route",
+				Label:           "Traceroute",
+				Description:     "Trace the route to 8.8.8.8.",
+				Command:         "tracert 8.8.8.8",
+				ExpectedOutcome: "Full path identified; no unexpected routing loops.",
+				Action: func(ctx context.Context) (any, error) {
+					return netops.TraceRoute("8.8.8.8")
+				},
+			},
+			{
+				ID:              "conn-audit",
+				Label:           "Connection Audit",
+				Description:     "Enumerate active TCP connections.",
+				Command:         "netstat -ano",
+				ExpectedOutcome: "All connections accounted for; no suspicious outbound links.",
+				Action: func(ctx context.Context) (any, error) {
+					return netops.GetConnections()
 				},
 			},
 		},
@@ -291,22 +332,59 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 		ID:          "sec-audit",
 		Name:        "Comprehensive Security Audit",
 		Description: "Deep inspection of firewall, users, listeners, defender, and events.",
+		Category:    common.WorkflowCategorySecurity,
 		Why:         "Compliance and safety require a broad view of system posture.",
 		Risks:       []string{"None", "Read-only enumeration"},
 		TypicalVals: "Zero unauthorized listeners, Defender ACTIVE",
 		Steps: []common.WorkflowStep{
 			{
-				ID:              "run-audit",
-				Label:           "Run Full Security Audit",
-				Description:     "Correlate OS security parameters and identify risks.",
-				Command:         "secops.RunSecurityAudit()",
-				ExpectedOutcome: "Detailed risk assessment and posture summary.",
+				ID:              "firewall-rules",
+				Label:           "Firewall Rules",
+				Description:     "Enumerate all firewall rules with direction and action.",
+				Command:         "Get-NetFirewallRule | Select Name, Direction, Action",
+				ExpectedOutcome: "No disabled or overly permissive rules.",
 				Action: func(ctx context.Context) (any, error) {
-					res, err := secops.RunSecurityAudit()
-					if err != nil {
-						return nil, err
-					}
-					return res.Markdown(), nil
+					return secops.GetFirewallRules()
+				},
+			},
+			{
+				ID:              "user-audit",
+				Label:           "User Account Audit",
+				Description:     "List all local user accounts and admin group membership.",
+				Command:         "Get-LocalUser; net localgroup administrators",
+				ExpectedOutcome: "Limited admin accounts, no unexpected enabled users.",
+				Action: func(ctx context.Context) (any, error) {
+					return secops.GetUsers()
+				},
+			},
+			{
+				ID:              "listeners",
+				Label:           "Listening Ports",
+				Description:     "Identify processes with open network listeners.",
+				Command:         "Get-NetTCPConnection -State Listen",
+				ExpectedOutcome: "Only expected services are listening.",
+				Action: func(ctx context.Context) (any, error) {
+					return secops.GetListeningPorts()
+				},
+			},
+			{
+				ID:              "defender",
+				Label:           "Defender Status",
+				Description:     "Verify Windows Defender real-time protection and signature age.",
+				Command:         "Get-MpComputerStatus",
+				ExpectedOutcome: "Real-time protection ON, signatures up to date.",
+				Action: func(ctx context.Context) (any, error) {
+					return secops.GetDefenderStatus()
+				},
+			},
+			{
+				ID:              "sec-events",
+				Label:           "Security Events",
+				Description:     "Review recent security log events.",
+				Command:         "Get-WinEvent -LogName Security -MaxEvents 50",
+				ExpectedOutcome: "No critical security events in the recent window.",
+				Action: func(ctx context.Context) (any, error) {
+					return secops.GetSecurityEvents()
 				},
 			},
 		},
@@ -317,22 +395,59 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 		ID:          "deep-health",
 		Name:        "Deep System Health Check",
 		Description: "Detailed hardware and OS health inspection.",
+		Category:    common.WorkflowCategorySystem,
 		Why:         "Correlating CPU, Memory, Disk, and Processes in a single report identifies cross-resource contention.",
 		Risks:       []string{"None"},
 		TypicalVals: "CPU < 70%, RAM < 85%, Disk < 90%",
 		Steps: []common.WorkflowStep{
 			{
-				ID:              "run-health",
-				Label:           "Run Full Health Scan",
-				Description:     "Enumerate per-core stats, memory pressure, and top processes.",
-				Command:         "sysops.RunHealthCheck()",
-				ExpectedOutcome: "Hardware status and process resource consumption report.",
+				ID:              "cpu-stats",
+				Label:           "CPU Statistics",
+				Description:     "Per-core utilization and load averages.",
+				Command:         "Get-WmiObject Win32_Processor",
+				ExpectedOutcome: "Identify core saturation or frequency throttling.",
 				Action: func(ctx context.Context) (any, error) {
-					res, err := sysops.RunHealthCheck()
-					if err != nil {
-						return nil, err
-					}
-					return res.Markdown(), nil
+					return sysops.GetCPUStats()
+				},
+			},
+			{
+				ID:              "mem-stats",
+				Label:           "Memory Statistics",
+				Description:     "RAM usage, available bytes, and swap analysis.",
+				Command:         "Get-WmiObject Win32_OperatingSystem",
+				ExpectedOutcome: "Determine if paging/swapping is causing lag.",
+				Action: func(ctx context.Context) (any, error) {
+					return sysops.GetMemoryStats()
+				},
+			},
+			{
+				ID:              "disk-usage",
+				Label:           "Disk Usage",
+				Description:     "Partition utilization and free space.",
+				Command:         "Get-PSDrive -PSProvider FileSystem",
+				ExpectedOutcome: "All volumes have >15% free space.",
+				Action: func(ctx context.Context) (any, error) {
+					return sysops.GetDiskStats()
+				},
+			},
+			{
+				ID:              "system-info",
+				Label:           "System Information",
+				Description:     "OS details, uptime, and process count.",
+				Command:         "Get-WmiObject Win32_OperatingSystem",
+				ExpectedOutcome: "OS version and uptime within expected bounds.",
+				Action: func(ctx context.Context) (any, error) {
+					return sysops.GetSystemInfo()
+				},
+			},
+			{
+				ID:              "top-procs",
+				Label:           "Top Processes",
+				Description:     "Identify top 10 processes by resource consumption.",
+				Command:         "Get-Process | Sort-Object CPU -Descending | Select-Object -First 10",
+				ExpectedOutcome: "No unexpected high-CPU processes.",
+				Action: func(ctx context.Context) (any, error) {
+					return sysops.GetTopProcesses(10)
 				},
 			},
 		},
@@ -343,6 +458,7 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 		ID:          "ai-audit",
 		Name:        "AI System Auditor",
 		Description: "Multi-layered audit with AI-powered risk assessment.",
+		Category:    common.WorkflowCategoryIntelligence,
 		Why:         "Traditional reports require human interpretation. This uses local AI to synthesize system, security, and network data into actionable findings.",
 		Risks:       []string{"None", "Read-only, high CPU during AI processing"},
 		TypicalVals: "AI Confidence > 80%",
@@ -353,14 +469,39 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 				Description:     "Gather system health, security posture, and network diagnostics.",
 				ExpectedOutcome: "Aggregated raw data for AI analysis.",
 				Action: func(ctx context.Context) (any, error) {
-					h, _ := sysops.RunHealthCheck()
-					s, _ := secops.RunSecurityAudit()
-					n, _ := netops.RunNetworkDiagnostics()
-					return map[string]string{
-						"health":   h.String(),
-						"security": s.String(),
-						"network":  n.String(),
-					}, nil
+					var errs []string
+					h, err := sysops.RunHealthCheck()
+					if err != nil {
+						errs = append(errs, fmt.Sprintf("Health: %v", err))
+					}
+					s, err := secops.RunSecurityAudit()
+					if err != nil {
+						errs = append(errs, fmt.Sprintf("Security: %v", err))
+					}
+					n, err := netops.RunNetworkDiagnostics()
+					if err != nil {
+						errs = append(errs, fmt.Sprintf("Network: %v", err))
+					}
+					result := map[string]any{}
+					if h != nil {
+						result["health"] = h.String()
+					} else {
+						result["health"] = "Health check unavailable"
+					}
+					if s != nil {
+						result["security"] = s.String()
+					} else {
+						result["security"] = "Security audit unavailable"
+					}
+					if n != nil {
+						result["network"] = n.String()
+					} else {
+						result["network"] = "Network diagnostics unavailable"
+					}
+					if len(errs) > 0 {
+						result["warnings"] = strings.Join(errs, "; ")
+					}
+					return result, nil
 				},
 			},
 			{
@@ -369,13 +510,37 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 				Description:     "Send aggregated data to Hawk for cross-layer risk correlation.",
 				ExpectedOutcome: "Hawk identification of security risks or performance bottlenecks.",
 				Action: func(ctx context.Context) (any, error) {
-					h, _ := sysops.RunHealthCheck()
-					s, _ := secops.RunSecurityAudit()
-					n, _ := netops.RunNetworkDiagnostics()
-					data := map[string]string{
-						"System Health":    h.String(),
-						"Security Posture": s.String(),
-						"Network Status":   n.String(),
+					var errs []string
+					h, err := sysops.RunHealthCheck()
+					if err != nil {
+						errs = append(errs, fmt.Sprintf("Health: %v", err))
+					}
+					s, err := secops.RunSecurityAudit()
+					if err != nil {
+						errs = append(errs, fmt.Sprintf("Security: %v", err))
+					}
+					n, err := netops.RunNetworkDiagnostics()
+					if err != nil {
+						errs = append(errs, fmt.Sprintf("Network: %v", err))
+					}
+					data := map[string]string{}
+					if h != nil {
+						data["System Health"] = h.String()
+					} else {
+						data["System Health"] = "Unavailable"
+					}
+					if s != nil {
+						data["Security Posture"] = s.String()
+					} else {
+						data["Security Posture"] = "Unavailable"
+					}
+					if n != nil {
+						data["Network Status"] = n.String()
+					} else {
+						data["Network Status"] = "Unavailable"
+					}
+					if len(errs) > 0 {
+						data["Warnings"] = strings.Join(errs, "; ")
 					}
 					report := aiops.GenerateEnhancedReport("Full System Audit", data)
 					return report.OllamaReport()
@@ -389,22 +554,69 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 		ID:          "devops-audit",
 		Name:        "DevOps Environment Audit",
 		Description: "Verify development tools, services, and process environment.",
+		Category:    common.WorkflowCategoryDevOps,
 		Why:         "Development environments can drift. This ensures Go, Git, and critical services are available and healthy.",
 		Risks:       []string{"None"},
 		TypicalVals: "Go/Git installed, Core services RUNNING",
 		Steps: []common.WorkflowStep{
 			{
-				ID:              "run-dev-diag",
-				Label:           "Run Tooling Audit",
-				Description:     "Check compiler versions, git status, and process lists.",
-				Command:         "devops.RunDevDiagnostics()",
-				ExpectedOutcome: "Status report on dev tools and background services.",
+				ID:              "check-git",
+				Label:           "Version Control (Git)",
+				Description:     "Verify Git CLI availability.",
+				Command:         "git version",
+				ExpectedOutcome: "Git is installed and functional.",
 				Action: func(ctx context.Context) (any, error) {
-					res, err := devops.RunDevDiagnostics()
-					if err != nil {
-						return nil, err
+					diag := devops.RunDevOpsDiagnostics()
+					for _, c := range diag.Checks {
+						if c.Name == "Git" {
+							return c, nil
+						}
 					}
-					return res.Markdown(), nil
+					return devops.DiagnosticCheck{Name: "Git", Status: "fail", Message: "Git check unavailable"}, nil
+				},
+			},
+			{
+				ID:              "check-docker-k8s",
+				Label:           "Container Platforms (Docker, K8s)",
+				Description:     "Verify Docker daemon and kubectl cluster connectivity.",
+				Command:         "docker info; kubectl cluster-info",
+				ExpectedOutcome: "Docker daemon running, K8s cluster reachable or tool available.",
+				Action: func(ctx context.Context) (any, error) {
+					diag := devops.RunDevOpsDiagnostics()
+					var results []devops.DiagnosticCheck
+					for _, c := range diag.Checks {
+						if strings.Contains(c.Name, "Docker") || strings.Contains(c.Name, "Kubernetes") || strings.Contains(c.Name, "kubectl") {
+							results = append(results, c)
+						}
+					}
+					return results, nil
+				},
+			},
+			{
+				ID:              "check-sdk",
+				Label:           "SDK Availability (Node.js, Go)",
+				Description:     "Verify Node.js and Go runtimes.",
+				Command:         "node --version; go version",
+				ExpectedOutcome: "SDKs are installed and at expected versions.",
+				Action: func(ctx context.Context) (any, error) {
+					diag := devops.RunDevOpsDiagnostics()
+					var results []devops.DiagnosticCheck
+					for _, c := range diag.Checks {
+						if c.Name == "Node.js" || c.Name == "Go" {
+							results = append(results, c)
+						}
+					}
+					return results, nil
+				},
+			},
+			{
+				ID:              "check-services",
+				Label:           "Running Services",
+				Description:     "Enumerate running background services.",
+				Command:         "Get-Service | Where-Object Status -eq Running",
+				ExpectedOutcome: "All critical services are running.",
+				Action: func(ctx context.Context) (any, error) {
+					return api.devOps.GetServices(), nil
 				},
 			},
 		},
@@ -420,6 +632,7 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 		ID:          "ps-daily-ops",
 		Name:        "Daily Operations Snapshot",
 		Description: "Quick overview of OS, disk volumes, performance counters, and top processes.",
+		Category:    common.WorkflowCategorySystem,
 		Why:         "A single command that replaces four separate checks — ideal for a morning health check.",
 		Risks:       []string{"None", "Read-only, lightweight counters"},
 		TypicalVals: "CPU < 70%, Disk > 15% free",
@@ -440,6 +653,7 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 		ID:          "ps-system-review",
 		Name:        "System Review",
 		Description: "Comprehensive system information audit — OS, CPU, Memory, Disks, Volumes, BIOS, GPU, and uptime.",
+		Category:    common.WorkflowCategorySystem,
 		Why:         "One-shot inventory of every hardware and OS detail. Use before capacity planning or handoff.",
 		Risks:       []string{"None", "Read-only CIM queries"},
 		TypicalVals: "All components reported, no errors",
@@ -460,6 +674,7 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 		ID:          "ps-security-audit",
 		Name:        "Security Surface Audit",
 		Description: "Enumerate admin groups and verify Windows Defender protection status.",
+		Category:    common.WorkflowCategorySecurity,
 		Why:         "Quickly confirm who has admin access and whether real-time protection is active.",
 		Risks:       []string{"None", "Read-only enumeration"},
 		TypicalVals: "Defender ON, limited admin group membership",
@@ -480,6 +695,7 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 		ID:          "ps-network-diagnostics",
 		Name:        "Network Diagnostics",
 		Description: "Detailed adapter configuration and active TCP connections snapshot.",
+		Category:    common.WorkflowCategoryNetwork,
 		Why:         "Correlate IP, DNS, gateway, and live connections to pinpoint network misconfigurations.",
 		Risks:       []string{"Minimal", "Read-only netstat snapshot"},
 		TypicalVals: "All adapters have valid IP, no unexpected listeners",
@@ -500,6 +716,7 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 		ID:          "ps-threat-hunt",
 		Name:        "Threat Hunting Primer",
 		Description: "Surface suspicious listening sockets and recently modified system executables.",
+		Category:    common.WorkflowCategorySecurity,
 		Why:         "First-pass triage for compromised systems — unusual sockets and new binaries are strong indicators.",
 		Risks:       []string{"Minimal", "Read-only enumeration"},
 		TypicalVals: "No unexpected LISTENING sockets, System32 binaries unchanged",
@@ -520,6 +737,7 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 		ID:          "ps-change-audit",
 		Name:        "System Change Audit",
 		Description: "Review recently installed programs from the Windows registry.",
+		Category:    common.WorkflowCategorySystem,
 		Why:         "Detect unauthorized or unexpected software installations.",
 		Risks:       []string{"None", "Read-only registry query"},
 		TypicalVals: "Only known software in install history",
@@ -540,6 +758,7 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 		ID:          "ps-compliance-check",
 		Name:        "Compliance Check",
 		Description: "Audit password policy and account lockout settings.",
+		Category:    common.WorkflowCategorySecurity,
 		Why:         "Verify that domain or local password policies meet security baselines.",
 		Risks:       []string{"None", "Read-only policy query"},
 		TypicalVals: "Password complexity enforced, lockout after 5 attempts",
