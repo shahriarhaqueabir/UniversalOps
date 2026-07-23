@@ -26,7 +26,7 @@ func GetScheduledTasks() ([]ScheduledTask, error) {
 	if common.IsWindows() {
 		// Use HiddenCommand for Windows system tools because Get-ScheduledTask
 		// requires access often restricted by sandboxing.
-		cmd := common.HiddenCommand("powershell", "-Command",
+		cmd := common.HiddenCommand("powershell", "-NoProfile", "-Command",
 			"Get-ScheduledTask | Select-Object TaskName,State,NextRunTime,LastRunTime,Author,Triggers | ConvertTo-Json -Compress -Depth 1")
 		output, err := cmd.Output()
 		if err == nil {
@@ -36,7 +36,7 @@ func GetScheduledTasks() ([]ScheduledTask, error) {
 			}
 		}
 
-		cmd2 := common.HiddenCommand("powershell", "-Command",
+		cmd2 := common.HiddenCommand("powershell", "-NoProfile", "-Command",
 			"Get-ScheduledTask | Select-Object TaskName,State,NextRunTime,LastRunTime | ConvertTo-Json -Compress")
 		output2, err2 := cmd2.Output()
 		if err2 == nil {

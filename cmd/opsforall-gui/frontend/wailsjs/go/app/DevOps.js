@@ -42,10 +42,6 @@ export function GetLocalServers() {
   return window['go']['app']['DevOps']['GetLocalServers']();
 }
 
-export function GetPowerShellWorkflows() {
-  return window['go']['app']['DevOps']['GetPowerShellWorkflows']();
-}
-
 export function GetServiceCategories() {
   return window['go']['app']['DevOps']['GetServiceCategories']();
 }
@@ -74,6 +70,6 @@ export function RunDevOpsDiagnostics() {
   return window['go']['app']['DevOps']['RunDevOpsDiagnostics']();
 }
 
-export function RunPowerShell(arg1) {
-  return window['go']['app']['DevOps']['RunPowerShell'](arg1);
+export function RunPowerShellLive(arg1, arg2) {
+  return window['go']['app']['DevOps']['RunPowerShellLive'](arg1, arg2);
 }

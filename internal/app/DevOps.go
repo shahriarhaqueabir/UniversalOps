@@ -174,13 +174,28 @@ func (d *DevOps) ControlService(name, action string) bool {
 	return true
 }
 
-// RunPowerShell executes a PowerShell command using the OpsForAll hybrid profile.
-func (d *DevOps) RunPowerShell(cmd string) CommandResult {
+// RunPowerShellLive executes a PowerShell command with the user's default
+// profile loaded and streams each output line as a Wails event.
+// The `id` parameter allows the frontend to correlate lines to a specific command.
+func (d *DevOps) RunPowerShellLive(cmd string, id string) CommandResult {
 	start := time.Now()
-	result, err := devops.RunPowerShell(cmd)
+	lineCh := make(chan string, 100)
+
+	go func() {
+		defer common.RecoverPanic()
+		for line := range lineCh {
+			wailsruntime.EventsEmit(d.ctx, EventCmdLine, map[string]string{
+				"id":   id,
+				"line": line,
+			})
+		}
+		wailsruntime.EventsEmit(d.ctx, EventCmdDone, id)
+	}()
+
+	result, err := devops.RunPowerShellWithLiveOutput(cmd, lineCh)
 	dur := time.Since(start).Milliseconds()
 	if err != nil {
-		common.LogWarn("RunPowerShell failed: %v", err)
+		common.LogWarn("RunPowerShellLive failed: %v", err)
 		errMsg := sanitizeError(err)
 		if result != nil {
 			return CommandResult{
@@ -208,19 +223,6 @@ func (d *DevOps) GetDefaultPath() string {
 		return "."
 	}
 	return root
-}
-
-// GetPowerShellWorkflows returns a list of available PowerShell diagnostic workflows.
-func (d *DevOps) GetPowerShellWorkflows() []string {
-	return []string{
-		"Invoke-OpsDailyOps",
-		"Invoke-OpsSystemReview",
-		"Invoke-OpsSecurityAudit",
-		"Invoke-OpsNetworkDiagnostics",
-		"Invoke-OpsThreatHunt",
-		"Invoke-OpsChangeAudit",
-		"Invoke-OpsComplianceCheck",
-	}
 }
 
 // sanitizeError strips internal details from errors sent to the frontend.

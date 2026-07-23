@@ -404,3 +404,89 @@ func RunPowerShell(cmd string) (*ShellResult, error) {
 		Duration: time.Since(start),
 	}, nil
 }
+
+// RunPowerShellWithLiveOutput executes a PowerShell command with the user's
+// default profile loaded, and streams each line of output through the provided
+// channel. Unlike RunPowerShell, this does NOT enforce the workflow allowlist
+// so it is suitable for the interactive terminal where any PowerShell command
+// may be typed. The channel is closed when the command finishes.
+func RunPowerShellWithLiveOutput(cmd string, output chan string) (result *ShellResult, err error) {
+	defer func() {
+		if err != nil {
+			close(output)
+		}
+	}()
+
+	start := time.Now()
+	var stdoutBuf, stderrBuf strings.Builder
+
+	// Use pwsh (PowerShell 7) if available, otherwise powershell.exe
+	shell := "pwsh"
+	if _, lookErr := exec.LookPath("pwsh"); lookErr != nil {
+		shell = "powershell"
+	}
+
+	// Build the command that loads the user's $PROFILE then runs cmd.
+	// Using -NoProfile to skip system-wide profiles for a clean session,
+	// then manually dot-sourcing $PROFILE loads the user's personal profile.
+	psCmd := fmt.Sprintf(". $PROFILE; %s", cmd)
+
+	c := common.SandboxedCommand(shell, "-NoProfile", "-Command", psCmd)
+
+	stdout, pipeErr := c.StdoutPipe()
+	if pipeErr != nil {
+		return nil, pipeErr
+	}
+	stderr, pipeErr := c.StderrPipe()
+	if pipeErr != nil {
+		return nil, pipeErr
+	}
+
+	if startErr := c.Start(); startErr != nil {
+		return nil, startErr
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer common.RecoverPanic()
+		defer wg.Done()
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			line := scanner.Text()
+			stdoutBuf.WriteString(line + "\n")
+			output <- line
+		}
+	}()
+
+	go func() {
+		defer common.RecoverPanic()
+		defer wg.Done()
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			line := scanner.Text()
+			stderrBuf.WriteString(line + "\n")
+			output <- line
+		}
+	}()
+
+	waitErr := c.Wait()
+	wg.Wait()
+	close(output)
+
+	exitCode := 0
+	if waitErr != nil {
+		if exitErr, ok := waitErr.(*exec.ExitError); ok {
+			exitCode = exitErr.ExitCode()
+		}
+	}
+
+	result = &ShellResult{
+		Command:  cmd,
+		Output:   stdoutBuf.String() + stderrBuf.String(),
+		ExitCode: exitCode,
+		Duration: time.Since(start),
+	}
+	return
+}

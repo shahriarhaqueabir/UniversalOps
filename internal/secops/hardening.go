@@ -60,7 +60,7 @@ func getHardeningChecksWindows() ([]HardeningCheck, error) {
 	})
 
 	// SMBv1 check
-	out, err := common.HiddenCommand("powershell", "-Command",
+	out, err := common.HiddenCommand("powershell", "-NoProfile", "-Command",
 		"Get-SmbServerConfiguration | Select-Object -ExpandProperty EnableSMB1Protocol").Output()
 	smbv1Disabled := err != nil || !strings.Contains(strings.TrimSpace(string(out)), "True")
 	checks = append(checks, HardeningCheck{

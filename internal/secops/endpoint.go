@@ -40,7 +40,7 @@ func GetDiskEncryptionStatus() ([]DiskEncryption, error) {
 }
 
 func getDiskEncryptionWindows() ([]DiskEncryption, error) {
-	out, err := common.HiddenCommand("powershell", "-Command",
+	out, err := common.HiddenCommand("powershell", "-NoProfile", "-Command",
 		"Get-BitLockerVolume | Select-Object MountPoint,ProtectionStatus,EncryptionMethod | ConvertTo-Json -As Array -Depth 2").Output()
 	if err != nil {
 		return []DiskEncryption{{Volume: "C:", Encrypted: false, Method: "Unknown", Status: "Unavailable"}}, nil
