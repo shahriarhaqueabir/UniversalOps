@@ -72,7 +72,7 @@ func RunSystemAction(action SystemAction) (*ActionResult, error) {
 		}
 	case ActionClearTemp:
 		if runtime.GOOS == "windows" {
-			cmd = common.HiddenCommand("powershell", "-Command", "Remove-Item -Recurse -Force $env:TEMP\\* -ErrorAction SilentlyContinue")
+			cmd = common.HiddenCommand("powershell", "-NoProfile", "-Command", "Remove-Item -Recurse -Force $env:TEMP\\* -ErrorAction SilentlyContinue")
 		} else {
 			cmd = exec.Command("sudo", "rm", "-rf", "/tmp/*")
 		}

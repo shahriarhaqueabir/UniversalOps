@@ -88,7 +88,7 @@ func ControlService(name, action string) error {
 
 func listWindowsServices() ([]ServiceEntry, error) {
 	// Try PowerShell first (best detail)
-	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-Command",
+	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-NoProfile", "-Command",
 		"Get-Service -ErrorAction SilentlyContinue | Sort-Object Status,Name | Select-Object Name,DisplayName,Status,StartType | ConvertTo-Json -As Array -Depth 2")
 	output, err := cmd.Output()
 	if err == nil {

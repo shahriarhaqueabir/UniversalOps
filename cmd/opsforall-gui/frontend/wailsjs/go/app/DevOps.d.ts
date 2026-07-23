@@ -22,8 +22,6 @@ export function GetKubernetesStatus():Promise<app.KubernetesStatus>;
 
 export function GetLocalServers():Promise<Array<app.LocalServer>>;
 
-export function GetPowerShellWorkflows():Promise<Array<string>>;
-
 export function GetServiceCategories():Promise<Array<app.ServiceCategory>>;
 
 export function GetServiceGroupSummary():Promise<app.ServiceGroupSummary>;
@@ -38,4 +36,4 @@ export function RunCommandLive(arg1:string,arg2:string):Promise<app.CommandResul
 
 export function RunDevOpsDiagnostics():Promise<app.DevOpsDiagResult>;
 
-export function RunPowerShell(arg1:string):Promise<app.CommandResult>;
+export function RunPowerShellLive(arg1:string,arg2:string):Promise<app.CommandResult>;

@@ -2,6 +2,8 @@ package app
 
 import (
 	"testing"
+
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/devops"
 )
 
 func TestDevOps_RunCommand_Echo(t *testing.T) {
@@ -65,10 +67,10 @@ func TestDevOps_ControlService_EmptyName(t *testing.T) {
 }
 
 func TestDevOps_RunPowerShell_InvalidCmd(t *testing.T) {
-	a := NewApp()
-	d := NewDevOps(a.ctx, a.eventBus)
-	result := d.RunPowerShell("")
-	if result.Error == "" {
+	// Test the shell-level RunPowerShell function directly since the
+	// live-streaming facade requires a real Wails context.
+	_, err := devops.RunPowerShell("")
+	if err == nil {
 		t.Log("RunPowerShell with empty command returned no error (may be expected)")
 	}
 }
@@ -176,18 +178,6 @@ func TestDevOps_GetLocalServers(t *testing.T) {
 	servers := d.GetLocalServers()
 	if servers == nil {
 		t.Fatal("GetLocalServers returned nil, expected non-nil slice")
-	}
-}
-
-func TestDevOps_GetPowerShellWorkflows(t *testing.T) {
-	a := NewApp()
-	d := NewDevOps(a.ctx, a.eventBus)
-	workflows := d.GetPowerShellWorkflows()
-	if workflows == nil {
-		t.Fatal("GetPowerShellWorkflows returned nil, expected non-nil slice")
-	}
-	if len(workflows) == 0 {
-		t.Error("GetPowerShellWorkflows returned empty slice")
 	}
 }
 

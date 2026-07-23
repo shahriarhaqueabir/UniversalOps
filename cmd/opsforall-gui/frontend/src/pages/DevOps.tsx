@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   Terminal, Server, Play, Trash2,
-  PlayCircle, StopCircle, Zap, Activity, Globe,
+  PlayCircle, StopCircle, Activity, Globe,
   TerminalSquare, Box, Container, Variable,
   RefreshCw,
   Shield, Layers, RotateCcw,
@@ -33,7 +33,7 @@ function stripAnsi(text: string): string {
   return text.replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, '')
 }
 
-type TabId = 'overview' | 'terminal' | 'powershell-pro' | 'services' | 'docker' | 'servers' | 'environment' | 'kubernetes' | 'diagnostics'
+type TabId = 'overview' | 'terminal' | 'services' | 'docker' | 'servers' | 'environment' | 'kubernetes' | 'diagnostics'
 
 const ActionButton = memo(function ActionButton({ icon, label, onClick, variant, disabled }: { icon: React.ReactNode; label: string; onClick: () => void; variant?: string; disabled?: boolean }) {
   const colors: Record<string, string> = {
@@ -53,7 +53,6 @@ const ActionButton = memo(function ActionButton({ icon, label, onClick, variant,
 const TAB_LIST = [
   { id: 'overview', label: 'Overview', icon: <Activity size={20} className="text-accent" /> },
   { id: 'terminal', label: 'Terminal', icon: <Terminal size={20} /> },
-  { id: 'powershell-pro', label: 'PowerShell', icon: <Zap size={20} className="text-warning" /> },
   { id: 'docker', label: 'Docker', icon: <Container size={20} /> },
   { id: 'kubernetes', label: 'K8s', icon: <Layers size={20} /> },
   { id: 'diagnostics', label: 'Health', icon: <Shield size={20} /> },
@@ -105,7 +104,6 @@ export function DevOps() {
         <div className="flex-1 overflow-hidden">
           <Tabs.Content value="overview" className="h-full"><OverviewTab /></Tabs.Content>
           <Tabs.Content value="terminal" className="h-full"><TerminalTab /></Tabs.Content>
-          <Tabs.Content value="powershell-pro" className="h-full"><PowerShellProTab /></Tabs.Content>
           <Tabs.Content value="docker" className="h-full"><DockerTabExpanded /></Tabs.Content>
           <Tabs.Content value="kubernetes" className="h-full"><KubernetesTab /></Tabs.Content>
           <Tabs.Content value="diagnostics" className="h-full"><DiagnosticsTab /></Tabs.Content>
@@ -317,7 +315,7 @@ function OverviewTab() {
 function TerminalTab() {
   const { call } = useBackend()
   const [input, setInput] = useState('')
-  const [output, setOutput] = useState<string[]>([`Unified Terminal: Type a command...\n`])
+  const [output, setOutput] = useState<string[]>([`PowerShell Terminal: Enter a command...\n`])
   const [history, setHistory] = useState<string[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
   const [isRunning, setIsRunning] = useState(false)
@@ -341,7 +339,7 @@ function TerminalTab() {
     setHistory(prev => [...prev, cmd])
     setOutput(prev => [...prev, `$ ${cmd}`])
     try {
-      const res = await call('DevOps.RunCommandLive', cmd, id) as CommandResult
+      const res = await call('DevOps.RunPowerShellLive', cmd, id) as CommandResult
       if (res.error) setOutput(prev => [...prev, `\u001b[31mError: ${res.error}\u001b[0m`])
       else if (res.output) setOutput(prev => [...prev, res.output])
     } catch (err) {
@@ -401,9 +399,9 @@ function TerminalTab() {
       <div className="flex items-center gap-4">
         <div className="relative flex-1 group">
           <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown}
-            placeholder="Enter shell command..." disabled={isRunning}
+            placeholder="Enter PowerShell command..." disabled={isRunning}
             className="w-full bg-[var(--color-bg)] border border-[var(--color-border)] rounded-2xl pl-12 pr-6 py-4 text-sm font-mono text-text focus:outline-none focus:border-accent transition-all shadow-inner group-hover:border-accent/30" />
-          <span className="absolute left-5 top-1/2 -translate-y-1/2 text-success text-sm font-black font-mono opacity-60 group-focus-within:opacity-100 transition-opacity">$</span>
+          <span className="absolute left-5 top-1/2 -translate-y-1/2 text-success text-sm font-black font-mono opacity-60 group-focus-within:opacity-100 transition-opacity">PS&gt;</span>
         </div>
         <button onClick={handleImportScript} disabled={isRunning}
           className="p-4 bg-panel-3 border border-border text-text-dim hover:text-white rounded-2xl transition-all active:scale-95" title="Import Script">
@@ -411,9 +409,9 @@ function TerminalTab() {
         </button>
         <button onClick={() => { if (input.trim()) runCommand(input) }} disabled={isRunning || !input.trim()}
           className="flex items-center gap-2.5 px-8 py-4 text-xs font-black uppercase tracking-widest bg-accent text-white rounded-2xl hover:bg-accent/90 disabled:opacity-50 transition-all shadow-xl active:scale-95">
-          <Play size={16} /> Run Execution
+          <Play size={16} /> Run Command
         </button>
-        <button onClick={() => setOutput([`Unified Terminal: Type a command...\n`])} className="px-6 py-4 text-sm font-bold text-text-faint border border-border rounded-2xl hover:bg-panel-3 transition-all hover:text-danger">
+        <button onClick={() => setOutput([`PowerShell Terminal: Enter a command...\n`])} className="px-6 py-4 text-sm font-bold text-text-faint border border-border rounded-2xl hover:bg-panel-3 transition-all hover:text-danger">
           <Trash2 size={18} />
         </button>
       </div>
@@ -423,53 +421,6 @@ function TerminalTab() {
           {output.map((block, i) => <div key={i} className="mb-1">{stripAnsi(block)}</div>)}
           {isRunning && <div className="flex items-center gap-3 mt-4"><span className="inline-block w-2.5 h-5 bg-success animate-pulse" /><span className="text-[10px] font-black text-success uppercase tracking-[0.2em] animate-pulse">Processing Stream...</span></div>}
         </div>
-      </div>
-    </div>
-  )
-}
-
-function PowerShellProTab() {
-  const { call } = useBackend()
-  const [isRunning, setIsRunning] = useState(false)
-  const [output, setOutput] = useState('')
-  const [selectedWorkflow, setSelectedWorkflow] = useState('')
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const { data: workflows = [] } = useQuery<string[]>({
-    queryKey: ['devops-workflows'],
-    queryFn: async () => (await call('DevOps.GetPowerShellWorkflows') as string[]) || []
-  })
-  const runWorkflow = async (name: string) => {
-    setIsRunning(true); setOutput(`Running workflow: ${name}...\n`)
-    try {
-      const res = await call('DevOps.RunPowerShell', name) as CommandResult
-      if (res.error) setOutput(prev => prev + `Error: ${res.error}\n`)
-      else setOutput(prev => prev + res.output)
-    } catch (err) { setOutput(prev => prev + `Execution Error: ${String(err)}\n`) }
-    finally { setIsRunning(false) }
-  }
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 h-full gap-6 overflow-hidden p-6">
-      <ConfirmDialog open={confirmOpen} title="Execute PowerShell Workflow" description={`Run "${selectedWorkflow}"?`}
-        onConfirm={() => runWorkflow(selectedWorkflow)} onClose={() => setConfirmOpen(false)} />
-      <div className="col-span-1 space-y-3 overflow-y-auto pr-2">
-        <h3 className="text-sm font-bold text-text-dim uppercase tracking-widest mb-3">Diagnostic Workflows</h3>
-        {workflows.map(wf => (
-          <button key={wf} onClick={() => { setSelectedWorkflow(wf); setConfirmOpen(true) }} disabled={isRunning}
-            className="w-full text-left bg-panel border border-border rounded-xl p-5 transition-all hover:border-accent/50 hover:bg-accent/5 group disabled:opacity-50">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-panel-3 flex items-center justify-center text-text-dim group-hover:text-accent border border-border">
-                <Zap size={16} />
-              </div>
-              <span className="text-sm font-bold text-text group-hover:text-accent transition-colors">{wf.replace('Invoke-Hawk', '')}</span>
-            </div>
-          </button>
-        ))}
-      </div>
-      <div className="col-span-2 flex flex-col space-y-3">
-        <div className="flex-1 bg-[var(--color-terminal-bg)] border border-border rounded-2xl p-6 overflow-y-auto font-mono text-sm leading-relaxed whitespace-pre shadow-inner">
-          {stripAnsi(output) || 'Select a workflow to begin.'}
-        </div>
-        <button onClick={() => setOutput('')} className="self-end px-4 py-2 text-sm font-bold text-text-dim border border-border rounded-xl hover:bg-panel-3 transition-all">Clear</button>
       </div>
     </div>
   )
