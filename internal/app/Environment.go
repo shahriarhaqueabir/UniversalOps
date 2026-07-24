@@ -28,9 +28,7 @@ func (a *App) DiscoverEnvironment() (EnvReport, error) {
 
 	// 1. Basic System Info
 	sysInfo, err := sysops.GetSystemInfo()
-	if err != nil {
-		common.LogWarn("DiscoverEnvironment: GetSystemInfo failed: %v", err)
-	} else if sysInfo != nil {
+	if err == nil && sysInfo != nil {
 		report.Hostname = sysInfo.Hostname
 		if sysInfo.Platform != "" {
 			report.OS = sysInfo.Platform
@@ -43,7 +41,6 @@ func (a *App) DiscoverEnvironment() (EnvReport, error) {
 	// 2. CPU Info
 	cpuStats, err := sysops.GetCPUStats()
 	if err != nil {
-		common.LogWarn("DiscoverEnvironment: GetCPUStats failed: %v", err)
 		report.CPU = "Unknown CPU"
 	} else if cpuStats != nil {
 		report.CPU = cpuStats.ModelName
@@ -53,17 +50,14 @@ func (a *App) DiscoverEnvironment() (EnvReport, error) {
 	// 3. Memory Info
 	memStats, err := sysops.GetMemoryStats()
 	if err != nil {
-		common.LogWarn("DiscoverEnvironment: GetMemoryStats failed: %v", err)
 		report.Memory = "Unknown RAM"
 	} else if memStats != nil {
 		report.Memory = fmt.Sprintf("%.1f GB", float64(memStats.TotalBytes)/(1024*1024*1024))
 	}
 
 	// 4. Network Interfaces
-	ifaceResult, err := netops.GetInterfaces(nil, 0)
-	if err != nil {
-		common.LogWarn("DiscoverEnvironment: GetInterfaces failed: %v", err)
-	} else {
+	ifaceResult, err := netops.GetInterfaces(nil, 0, nil)
+	if err == nil {
 		for _, iface := range ifaceResult.Interfaces {
 			if iface.IsUp && len(iface.IPs) > 0 {
 				report.Interfaces = append(report.Interfaces, fmt.Sprintf("%s (%s)", iface.Name, strings.Join(iface.IPs, ", ")))

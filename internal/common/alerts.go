@@ -93,6 +93,9 @@ type Alert struct {
 	Resolved  bool
 }
 
+// AlertResolvedCallback is called when an alert transitions from active to resolved.
+type AlertResolvedCallback func(resolved Alert)
+
 // ── AlertEngine ─────────────────────────────────────────────────────────────
 
 // AlertEngine evaluates alert rules against the data pipeline with flap
@@ -105,6 +108,11 @@ type AlertEngine struct {
 	flapCount map[string]int // "metric:cond:threshold" -> consecutive hits
 	alertKeys map[string]int // active alert key -> index in alerts slice
 	nextID    int
+
+	// OnAlertResolved is called when an active alert transitions to resolved.
+	// The AlertEngine does NOT persist to DB — the caller is responsible for
+	// persisting the resolution (via UpdateAlertResolved or similar).
+	OnAlertResolved AlertResolvedCallback
 }
 
 // NewAlertEngine creates an alert engine attached to the given pipeline.
@@ -191,10 +199,10 @@ func (ae *AlertEngine) AddDefaultRules() {
 
 // Incident represents a group of correlated alerts occurring within a close time window.
 type Incident struct {
-	ID        string    `json:"id"`
-	Title     string    `json:"title"`
-	Metrics   []string  `json:"metrics"`
-	Timestamp time.Time `json:"timestamp"`
+	ID        string     `json:"id"`
+	Title     string     `json:"title"`
+	Metrics   []string   `json:"metrics"`
+	Timestamp time.Time  `json:"timestamp"`
 	Severity  AlertLevel `json:"severity"`
 }
 
@@ -308,9 +316,16 @@ func (ae *AlertEngine) Evaluate() []Alert {
 
 			alertKey := fmt.Sprintf("%s:%.4f:%d", rule.Metric, rule.Threshold, rule.Severity)
 			if idx, exists := ae.alertKeys[alertKey]; exists {
-				ae.alerts[idx].Resolved = true
-				ae.alerts[idx].Value = val
+				resolved := ae.alerts[idx]
+				resolved.Resolved = true
+				resolved.Value = val
+				ae.alerts[idx] = resolved
 				delete(ae.alertKeys, alertKey)
+
+				// Notify the caller so the resolution can be persisted to DB
+				if ae.OnAlertResolved != nil {
+					ae.OnAlertResolved(resolved)
+				}
 			}
 		}
 	}

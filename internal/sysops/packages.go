@@ -198,14 +198,73 @@ func getWingetPackages() PackageManagerInfo {
 	return PackageManagerInfo{Name: "winget", Found: true, Packages: parseWingetOutput(string(output))}
 }
 
-// parseWingetOutput parses "winget list" output (skips 3 header lines).
+// parseWingetOutput parses the fixed-width table emitted by "winget list".
+// Column offsets come from the header so application names containing spaces
+// are kept intact and the version column is not confused with the package ID.
 func parseWingetOutput(output string) []PackageInfo {
 	var pkgs []PackageInfo
 	lines := strings.Split(output, "\n")
-	if len(lines) < 4 {
+	headerIndex := -1
+	idOffset := -1
+	versionOffset := -1
+	versionEnd := -1
+	for i, line := range lines {
+		fields := strings.Fields(line)
+		if len(fields) < 3 {
+			continue
+		}
+		hasName, hasID, hasVersion := false, false, false
+		for _, field := range fields {
+			switch field {
+			case "Name":
+				hasName = true
+			case "Id":
+				hasID = true
+			case "Version":
+				hasVersion = true
+			}
+		}
+		if !hasName || !hasID || !hasVersion {
+			continue
+		}
+
+		headerIndex = i
+		idOffset = strings.Index(line, "Id")
+		versionOffset = strings.Index(line, "Version")
+		versionEnd = len(line)
+		for _, field := range fields {
+			if field == "Name" || field == "Id" || field == "Version" {
+				continue
+			}
+			pos := strings.Index(line[versionOffset+len("Version"):], field)
+			if pos >= 0 {
+				versionEnd = versionOffset + len("Version") + pos
+				break
+			}
+		}
+		break
+	}
+	if headerIndex < 0 || idOffset < 0 || versionOffset < 0 {
 		return pkgs
 	}
-	for _, line := range lines[3:] {
+
+	for _, line := range lines[headerIndex+1:] {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.Trim(trimmed, "- ") == "" {
+			continue
+		}
+
+		// Fixed-width output is the normal case. Fall back to token parsing for
+		// compact output used by older winget versions and test fixtures.
+		if len(line) > versionOffset {
+			name := strings.TrimSpace(line[:min(idOffset, len(line))])
+			version := strings.TrimSpace(line[versionOffset:min(versionEnd, len(line))])
+			if name != "" && version != "" && !strings.Contains(version, " ") {
+				pkgs = append(pkgs, PackageInfo{Name: name, Version: version})
+				continue
+			}
+		}
+
 		parts := strings.Fields(line)
 		if len(parts) >= 3 {
 			pkgs = append(pkgs, PackageInfo{Name: parts[0], Version: parts[2]})

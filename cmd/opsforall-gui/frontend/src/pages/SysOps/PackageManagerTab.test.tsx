@@ -17,7 +17,7 @@ type MockData = { name: string; version: string }[]
 
 let mockManagers: { name: string; found: boolean; packages: MockData }[]
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: ({ refetchInterval: _refetchInterval }: any) => {
+  useQuery: () => {
     return { data: mockManagers, isLoading: false, isSuccess: true }
   },
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
@@ -98,6 +98,14 @@ describe('PackageManagerTab', () => {
     const rows = screen.getAllByTestId('package-row')
     expect(rows).toHaveLength(5)
     expect(screen.getAllByTestId('row-number').map(el => el.textContent)).toEqual(['1', '2', '3', '4', '5'])
+  })
+
+  it('provides a positioned virtualized table body with total height', () => {
+    mockManagers = [{ name: 'winget', found: true, packages: mockPackages }]
+    render(<PackageManagerTab />)
+
+    const body = screen.getByRole('table').querySelector('tbody') as HTMLTableSectionElement
+    expect(body).toHaveStyle({ position: 'relative', height: '205px', width: '100%' })
   })
 
   it('shows search input and filters packages by name', async () => {

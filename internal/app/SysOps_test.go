@@ -49,3 +49,19 @@ func TestSysOps_GetSystemInfo(t *testing.T) {
 		t.Log("Hostname might be empty on this environment")
 	}
 }
+
+func TestSysOps_GetInstalledPackagesContract(t *testing.T) {
+	s := NewSysOps()
+	managers := s.GetInstalledPackages()
+	if managers == nil {
+		t.Fatal("GetInstalledPackages returned nil; frontend expects an array")
+	}
+	for _, manager := range managers {
+		if manager.Name == "" {
+			t.Error("package manager name is empty")
+		}
+		if manager.Packages == nil {
+			t.Errorf("manager %q returned nil packages; frontend expects an array", manager.Name)
+		}
+	}
+}

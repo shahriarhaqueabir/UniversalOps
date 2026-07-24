@@ -51,6 +51,8 @@ export function ListAllProcesses(arg1:number):Promise<Array<app.ProcessInfo>>;
 
 export function ListHistoricalHealthReports():Promise<Array<common.ReportRecord>>;
 
+export function RunDiagnostic():Promise<app.ExtendedDiagnosticResult>;
+
 export function RunExtendedDiagnostics():Promise<app.ExtendedDiagnosticResult>;
 
 export function RunSystemAction(arg1:string):Promise<common.ActionPreview>;

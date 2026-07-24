@@ -24,7 +24,6 @@ func NewSecOps(eventBus *common.EventBus) *SecOps {
 func (s *SecOps) GetFirewallRules() []FirewallRule {
 	rules, err := secops.GetFirewallRules()
 	if err != nil {
-		common.LogWarn("GetFirewallRules failed: %v", err)
 		return []FirewallRule{}
 	}
 	out := make([]FirewallRule, 0, len(rules))
@@ -49,7 +48,6 @@ func (s *SecOps) GetFirewallRules() []FirewallRule {
 func (s *SecOps) GetUsers() []UserInfo {
 	users, err := secops.GetUsers()
 	if err != nil {
-		common.LogWarn("GetUsers failed: %v", err)
 		return []UserInfo{}
 	}
 	out := make([]UserInfo, 0, len(users))
@@ -70,7 +68,6 @@ func (s *SecOps) GetUsers() []UserInfo {
 func (s *SecOps) GetListeningPorts() []ListeningPort {
 	ports, err := secops.GetListeningPorts()
 	if err != nil {
-		common.LogWarn("GetListeningPorts failed: %v", err)
 		return []ListeningPort{}
 	}
 	out := make([]ListeningPort, 0, len(ports))
@@ -93,7 +90,6 @@ func (s *SecOps) GetListeningPorts() []ListeningPort {
 func (s *SecOps) GetDefenderStatus() DefenderStatus {
 	status, err := secops.GetDefenderStatus()
 	if err != nil {
-		common.LogWarn("GetDefenderStatus failed: %v", err)
 		return DefenderStatus{}
 	}
 	return DefenderStatus{
@@ -116,7 +112,6 @@ func (s *SecOps) GetDefenderStatus() DefenderStatus {
 func (s *SecOps) GetScheduledTasks() []ScheduledTask {
 	tasks, err := secops.GetScheduledTasks()
 	if err != nil {
-		common.LogWarn("GetScheduledTasks failed: %v", err)
 		return []ScheduledTask{}
 	}
 	out := make([]ScheduledTask, 0, len(tasks))
@@ -137,7 +132,6 @@ func (s *SecOps) GetScheduledTasks() []ScheduledTask {
 func (s *SecOps) GetSecurityEvents() []SecurityEvent {
 	events, err := secops.GetSecurityEvents()
 	if err != nil {
-		common.LogWarn("GetSecurityEvents failed: %v", err)
 		return []SecurityEvent{}
 	}
 	out := make([]SecurityEvent, 0, len(events))
@@ -245,7 +239,6 @@ func (s *SecOps) GetSecurityScore() SecurityScore {
 func (s *SecOps) GetFirewallStatus() FirewallStatus {
 	profiles, err := secops.GetFirewallProfiles()
 	if err != nil {
-		common.LogWarn("GetFirewallStatus failed: %v", err)
 		return FirewallStatus{
 			Profiles: []FirewallProfile{},
 		}
@@ -404,7 +397,6 @@ func (s *SecOps) GetSecuritySummary() SecuritySummary {
 func (s *SecOps) GetPasswordPolicy() PasswordPolicy {
 	p, err := secops.GetPasswordPolicy()
 	if err != nil {
-		common.LogWarn("GetPasswordPolicy failed: %v", err)
 		return PasswordPolicy{}
 	}
 	return PasswordPolicy{
@@ -420,7 +412,6 @@ func (s *SecOps) GetPasswordPolicy() PasswordPolicy {
 func (s *SecOps) GetFailedLogins() []FailedLogin {
 	logins, err := secops.GetFailedLogins()
 	if err != nil {
-		common.LogWarn("GetFailedLogins failed: %v", err)
 		return []FailedLogin{}
 	}
 	out := make([]FailedLogin, 0, len(logins))
@@ -439,7 +430,6 @@ func (s *SecOps) GetFailedLogins() []FailedLogin {
 func (s *SecOps) GetAccountLockouts() []LockedAccount {
 	locked, err := secops.GetAccountLockouts()
 	if err != nil {
-		common.LogWarn("GetAccountLockouts failed: %v", err)
 		return []LockedAccount{}
 	}
 	out := make([]LockedAccount, 0, len(locked))
@@ -456,7 +446,6 @@ func (s *SecOps) GetAccountLockouts() []LockedAccount {
 func (s *SecOps) GetDiskEncryptionStatus() []DiskEncryption {
 	disks, err := secops.GetDiskEncryptionStatus()
 	if err != nil {
-		common.LogWarn("GetDiskEncryptionStatus failed: %v", err)
 		return []DiskEncryption{}
 	}
 	out := make([]DiskEncryption, 0, len(disks))
@@ -475,7 +464,6 @@ func (s *SecOps) GetDiskEncryptionStatus() []DiskEncryption {
 func (s *SecOps) GetSecureBootStatus() SecureBoot {
 	sb, err := secops.GetSecureBootStatus()
 	if err != nil {
-		common.LogWarn("GetSecureBootStatus failed: %v", err)
 		return SecureBoot{}
 	}
 	return SecureBoot{
@@ -488,7 +476,6 @@ func (s *SecOps) GetSecureBootStatus() SecureBoot {
 func (s *SecOps) GetRunningServices() []SystemService {
 	services, err := secops.GetRunningServices()
 	if err != nil {
-		common.LogWarn("GetRunningServices failed: %v", err)
 		return []SystemService{}
 	}
 	out := make([]SystemService, 0, len(services))
@@ -507,7 +494,6 @@ func (s *SecOps) GetRunningServices() []SystemService {
 func (s *SecOps) GetTLSCertificates() []TLSCertificate {
 	certs, err := secops.GetTLSCertificates()
 	if err != nil {
-		common.LogWarn("GetTLSCertificates failed: %v", err)
 		return []TLSCertificate{}
 	}
 	out := make([]TLSCertificate, 0, len(certs))
@@ -528,7 +514,6 @@ func (s *SecOps) GetTLSCertificates() []TLSCertificate {
 func (s *SecOps) GetPublicExposure() []PublicExposure {
 	exposed, err := secops.GetPublicExposure()
 	if err != nil {
-		common.LogWarn("GetPublicExposure failed: %v", err)
 		return []PublicExposure{}
 	}
 	out := make([]PublicExposure, 0, len(exposed))
@@ -547,7 +532,6 @@ func (s *SecOps) GetPublicExposure() []PublicExposure {
 func (s *SecOps) GetHardeningChecks() []HardeningCheck {
 	checks, err := secops.GetHardeningChecks()
 	if err != nil {
-		common.LogWarn("GetHardeningChecks failed: %v", err)
 		return []HardeningCheck{}
 	}
 	out := make([]HardeningCheck, 0, len(checks))
@@ -567,7 +551,6 @@ func (s *SecOps) GetHardeningChecks() []HardeningCheck {
 func (s *SecOps) GetSSHConfig() SSHConfig {
 	sc, err := secops.GetSSHConfig()
 	if err != nil {
-		common.LogWarn("GetSSHConfig failed: %v", err)
 		return SSHConfig{}
 	}
 	return SSHConfig{
@@ -583,7 +566,6 @@ func (s *SecOps) GetSSHConfig() SSHConfig {
 func (s *SecOps) GetPrivilegeEvents() []PrivilegeEvent {
 	events, err := secops.GetPrivilegeEvents()
 	if err != nil {
-		common.LogWarn("GetPrivilegeEvents failed: %v", err)
 		return []PrivilegeEvent{}
 	}
 	out := make([]PrivilegeEvent, 0, len(events))
@@ -602,7 +584,6 @@ func (s *SecOps) GetPrivilegeEvents() []PrivilegeEvent {
 func (s *SecOps) GetEventTimeline() []SecTimelineEvent {
 	events, err := secops.GetEventTimeline()
 	if err != nil {
-		common.LogWarn("GetEventTimeline failed: %v", err)
 		return []SecTimelineEvent{}
 	}
 	out := make([]SecTimelineEvent, 0, len(events))
@@ -617,11 +598,15 @@ func (s *SecOps) GetEventTimeline() []SecTimelineEvent {
 	return out
 }
 
+// RunAudit runs a comprehensive security audit and returns the result.
+func (s *SecOps) RunAudit() SecurityAuditResult {
+	return s.RunSecurityAuditChecklist()
+}
+
 // RunSecurityAuditChecklist runs a one-click security audit.
 func (s *SecOps) RunSecurityAuditChecklist() SecurityAuditResult {
 	result, err := secops.RunSecurityAuditChecklist()
 	if err != nil {
-		common.LogWarn("RunSecurityAuditChecklist failed: %v", err)
 		return SecurityAuditResult{}
 	}
 	items := make([]AuditCheckItem, 0, len(result.Items))

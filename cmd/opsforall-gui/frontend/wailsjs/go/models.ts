@@ -1991,6 +1991,54 @@ export namespace app {
 	        this.error = source["error"];
 	    }
 	}
+	export class PingResultMultiData {
+	    target: string;
+	    min_ms: number;
+	    avg_ms: number;
+	    max_ms: number;
+	    stddev_ms: number;
+	    packet_loss: number;
+	    jitter_ms: number;
+	    individual_rtts: number[];
+	    success: boolean;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PingResultMultiData(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.target = source["target"];
+	        this.min_ms = source["min_ms"];
+	        this.avg_ms = source["avg_ms"];
+	        this.max_ms = source["max_ms"];
+	        this.stddev_ms = source["stddev_ms"];
+	        this.packet_loss = source["packet_loss"];
+	        this.jitter_ms = source["jitter_ms"];
+	        this.individual_rtts = source["individual_rtts"];
+	        this.success = source["success"];
+	        this.error = source["error"];
+	    }
+	}
+	export class PingStatsData {
+	    avg_latency: number;
+	    max_latency: number;
+	    total_loss: number;
+	    worst_target: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PingStatsData(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.avg_latency = source["avg_latency"];
+	        this.max_latency = source["max_latency"];
+	        this.total_loss = source["total_loss"];
+	        this.worst_target = source["worst_target"];
+	    }
+	}
 	export class PortResult {
 	    port: number;
 	    open: boolean;
@@ -2121,6 +2169,44 @@ export namespace app {
 	        this.protocol = source["protocol"];
 	        this.process_name = source["process_name"];
 	        this.severity = source["severity"];
+	    }
+	}
+	export class ReportGenerationResult {
+	    report_id: string;
+	    type: string;
+	    timestamp: string;
+	    score: number;
+	    summary?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ReportGenerationResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.report_id = source["report_id"];
+	        this.type = source["type"];
+	        this.timestamp = source["timestamp"];
+	        this.score = source["score"];
+	        this.summary = source["summary"];
+	    }
+	}
+	export class ReportTypeMeta {
+	    type: string;
+	    label: string;
+	    description: string;
+	    available: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ReportTypeMeta(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.type = source["type"];
+	        this.label = source["label"];
+	        this.description = source["description"];
+	        this.available = source["available"];
 	    }
 	}
 	export class RiskInfo {
@@ -2806,6 +2892,38 @@ export namespace common {
 		    }
 		    return a;
 		}
+	}
+	export class AutoReportRule {
+	    id: string;
+	    name: string;
+	    description: string;
+	    metric: string;
+	    condition: string;
+	    threshold: number;
+	    report_type: string;
+	    schedule: string;
+	    enabled: boolean;
+	    created_at: string;
+	    last_triggered_at?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AutoReportRule(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.description = source["description"];
+	        this.metric = source["metric"];
+	        this.condition = source["condition"];
+	        this.threshold = source["threshold"];
+	        this.report_type = source["report_type"];
+	        this.schedule = source["schedule"];
+	        this.enabled = source["enabled"];
+	        this.created_at = source["created_at"];
+	        this.last_triggered_at = source["last_triggered_at"];
+	    }
 	}
 	export class CapabilityInfo {
 	    id: string;

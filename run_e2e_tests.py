@@ -33,5 +33,6 @@ if __name__ == "__main__":
     # Change directory to tests/e2e so it finds pytest.ini and local imports
     os.chdir(os.path.join(os.path.dirname(__file__), "tests", "e2e"))
 
-    # Run pytest (focusing on smoke tests to keep it basic/sandboxed)
-    sys.exit(pytest.main(["test_tabs.py", "-m", "smoke", "-v"]))
+    # Run the navigation and pipeline smoke suite. The tab tests are the
+    # desktop smoke gate even though they are not individually marker-tagged.
+    sys.exit(pytest.main(["test_tabs.py", "test_pipeline.py", "-v"]))

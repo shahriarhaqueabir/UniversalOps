@@ -39,7 +39,6 @@ func (d *DevOps) RunCommand(cmd string) CommandResult {
 	result, err := devops.RunCommand(cmd)
 	dur := time.Since(start).Milliseconds()
 	if err != nil {
-		common.LogWarn("RunCommand failed: %v", err)
 		errMsg := sanitizeError(err)
 		if result != nil {
 			return CommandResult{
@@ -80,7 +79,6 @@ func (d *DevOps) RunCommandLive(cmd string, id string) CommandResult {
 	result, err := devops.RunCommandWithLiveOutput(cmd, lineCh)
 	dur := time.Since(start).Milliseconds()
 	if err != nil {
-		common.LogWarn("RunCommandLive failed: %v", err)
 		errMsg := sanitizeError(err)
 		if result != nil {
 			return CommandResult{
@@ -105,7 +103,6 @@ func (d *DevOps) RunCommandLive(cmd string, id string) CommandResult {
 func (d *DevOps) GetDevProcesses() []ProcessInfo {
 	procs, err := sysopsPkg.GetTopProcesses(100)
 	if err != nil {
-		common.LogWarn("GetDevProcesses failed: %v", err)
 		return []ProcessInfo{}
 	}
 	out := make([]ProcessInfo, 0, len(procs))
@@ -138,7 +135,6 @@ func (d *DevOps) KillProcess(pid int) CommandResult {
 func (d *DevOps) GetServices() []ServiceEntry {
 	services, err := devops.ListServices(0)
 	if err != nil {
-		common.LogWarn("GetServices failed: %v", err)
 		return []ServiceEntry{}
 	}
 	out := make([]ServiceEntry, 0, len(services))
@@ -195,7 +191,6 @@ func (d *DevOps) RunPowerShellLive(cmd string, id string) CommandResult {
 	result, err := devops.RunPowerShellWithLiveOutput(cmd, lineCh)
 	dur := time.Since(start).Milliseconds()
 	if err != nil {
-		common.LogWarn("RunPowerShellLive failed: %v", err)
 		errMsg := sanitizeError(err)
 		if result != nil {
 			return CommandResult{
@@ -236,7 +231,6 @@ func (d *DevOps) RunGitBashLive(cmd string, id string) CommandResult {
 	result, err := devops.RunGitBashWithLiveOutput(cmd, lineCh)
 	dur := time.Since(start).Milliseconds()
 	if err != nil {
-		common.LogWarn("RunGitBashLive failed: %v", err)
 		errMsg := sanitizeError(err)
 		if result != nil {
 			return CommandResult{

@@ -23,6 +23,17 @@ type WorkflowInvoker interface {
 	TriggerWorkflow(id string) (string, error)
 }
 
+// ReportTrigger defines an interface for triggering report generation
+// from alert rule conditions or scheduled cycles.
+type ReportTrigger interface {
+	// TriggerReport generates a report of the given type and returns its ID.
+	TriggerReport(reportType string) (string, error)
+	// GetEnabledReportRules returns all enabled auto-report rules.
+	GetEnabledReportRules() ([]AutoReportRule, error)
+	// TouchRule updates the last-triggered timestamp for a rule.
+	TouchRule(ruleID string) error
+}
+
 // EngineLoop handles the periodic evaluation of system health, alerts, and metrics.
 type EngineLoop struct {
 	pipeline *DataPipeline
@@ -34,6 +45,9 @@ type EngineLoop struct {
 
 	// New: Autonomous workflow invocation
 	invoker WorkflowInvoker
+
+	// New: Report rule auto-generation
+	reportTrigger ReportTrigger
 
 	// Internal state for diagnostic isolation
 	auditRunning  bool
@@ -68,6 +82,11 @@ func NewEngineLoop(p *DataPipeline, a *AlertEngine, eb *EventBus, sl *sync.RWMut
 	}
 }
 
+// SetReportTrigger attaches the report rule evaluator to the engine loop.
+func (e *EngineLoop) SetReportTrigger(rt ReportTrigger) {
+	e.reportTrigger = rt
+}
+
 func (e *EngineLoop) Start(interval time.Duration) {
 	e.wg.Add(1)
 	go func() {
@@ -81,6 +100,10 @@ func (e *EngineLoop) Start(interval time.Duration) {
 		baseTicker := time.NewTicker(1 * time.Hour)
 		defer baseTicker.Stop()
 
+		// Write initial health score at startup (not just on 1h ticker)
+		e.DailyAnalysis()
+		e.checkScheduledReports()
+
 		for {
 			select {
 			case <-e.quit:
@@ -90,6 +113,7 @@ func (e *EngineLoop) Start(interval time.Duration) {
 			case <-baseTicker.C:
 				e.baselines.RecalculateBaselines()
 				e.DailyAnalysis()
+				e.checkScheduledReports()
 			}
 		}
 	}()
@@ -136,9 +160,9 @@ func (e *EngineLoop) Step() {
 	var snapshot MetricSnapshot
 
 	// 1. Capture Data (Lane 1 & 2)
-	{
-		// We only hold the storage lock while reading metrics and evaluating alerts
-		// to prevent blocking the rest of the 3s tick logic.
+	// Storage lock is held ONLY during the parallel capture phase, then released
+	// immediately. The anonymous function ensures defer fires at block end.
+	func() {
 		if e.storageLock != nil {
 			e.storageLock.RLock()
 			defer e.storageLock.RUnlock()
@@ -160,10 +184,7 @@ func (e *EngineLoop) Step() {
 		}()
 
 		wg.Wait()
-	}
-
-	// 2. Update External State (Prometheus, etc)
-	e.UpdatePrometheus(snapshot)
+	}()
 
 	// 3. Detect Spikes & Drift
 	e.DetectSpikes(snapshot)
@@ -188,6 +209,92 @@ func (e *EngineLoop) Step() {
 
 		if e.OnAlertsEmit != nil {
 			e.OnAlertsEmit(newAlerts)
+		}
+
+		// 5. Check report rules for on_alert triggers
+		e.checkReportRulesForAlerts(newAlerts)
+	}
+}
+
+// checkScheduledReports triggers reports for rules with hourly/daily schedules.
+func (e *EngineLoop) checkScheduledReports() {
+	if e.reportTrigger == nil {
+		return
+	}
+
+	rules, err := e.reportTrigger.GetEnabledReportRules()
+	if err != nil || len(rules) == 0 {
+		return
+	}
+
+	for _, rule := range rules {
+		if !rule.Enabled {
+			continue
+		}
+		// on_alert is handled in checkReportRulesForAlerts
+		if rule.Schedule != "hourly" && rule.Schedule != "daily" {
+			continue
+		}
+		ruleID := rule.ID
+		go func(rt ReportTrigger, rid, rtype string) {
+			defer RecoverPanic()
+			reportID, err := rt.TriggerReport(rtype)
+			if err != nil {
+				LogError("EngineLoop: scheduled report %s failed for rule %s: %v", rtype, rid, err)
+				return
+			}
+			_ = rt.TouchRule(rid)
+			LogInfo("EngineLoop: scheduled report %s generated (id=%s) from rule %s (schedule=%s)", rtype, reportID, rid, rule.Schedule)
+		}(e.reportTrigger, ruleID, rule.ReportType)
+	}
+}
+
+// checkReportRulesForAlerts evaluates enabled report rules against fired alerts
+// and auto-generates reports for matching rules.
+func (e *EngineLoop) checkReportRulesForAlerts(newAlerts []Alert) {
+	if e.reportTrigger == nil {
+		return
+	}
+
+	rules, err := e.reportTrigger.GetEnabledReportRules()
+	if err != nil || len(rules) == 0 {
+		return
+	}
+
+	for _, rule := range rules {
+		if rule.Schedule != "on_alert" || !rule.Enabled {
+			continue
+		}
+
+		// Check if any fired alert matches this rule's metric + condition
+		for _, alert := range newAlerts {
+			if alert.Metric != rule.Metric {
+				continue
+			}
+			matches := false
+			switch rule.Condition {
+			case "GT":
+				matches = alert.Value > rule.Threshold
+			case "LT":
+				matches = alert.Value < rule.Threshold
+			}
+			if !matches {
+				continue
+			}
+
+			// Rule matched — trigger report generation in background
+			ruleID := rule.ID
+			go func(rt ReportTrigger, rid, rtype string) {
+				defer RecoverPanic()
+				reportID, err := rt.TriggerReport(rtype)
+				if err != nil {
+					LogError("EngineLoop: auto-report %s failed for rule %s: %v", rtype, rid, err)
+					return
+				}
+				_ = rt.TouchRule(rid)
+				LogInfo("EngineLoop: auto-report %s generated (id=%s) from rule %s", rtype, reportID, rid)
+			}(e.reportTrigger, ruleID, rule.ReportType)
+			break // one report per rule per cycle
 		}
 	}
 }
@@ -233,14 +340,11 @@ func (e *EngineLoop) CaptureSnapshot() MetricSnapshot {
 	}
 }
 
-func (e *EngineLoop) UpdatePrometheus(s MetricSnapshot) {
-	SetCPUMetric(s.CPU)
-	SetMemoryMetric(s.Memory)
-	SetDiskMetric(s.Disk)
-	SetProcessCountMetric(float64(s.Processes))
-	SetAlertCountMetric(float64(e.alerts.AlertCount()))
-	IncPipelineTick()
-}
+// UpdatePrometheus is deliberately a no-op. Prometheus metrics were removed
+// to align with the 100% local / zero telemetry north star. If you need
+// Prometheus-style instrumentation in the future, wire it here behind a
+// //go:build prometheus tag and add prometheus/client_golang back to go.mod.
+func (e *EngineLoop) UpdatePrometheus(_ MetricSnapshot) {}
 
 func (e *EngineLoop) DetectSpikes(s MetricSnapshot) {
 	e.lastMu.Lock()

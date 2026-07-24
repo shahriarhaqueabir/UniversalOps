@@ -106,13 +106,13 @@ func NewApp() *App {
 	a.AlertAPI = NewAlertAPI(a.alerts)
 	a.Logs = NewLogs()
 	a.Knowledge = NewKnowledgeAPI()
-	a.Reports = NewReportsAPI()
 	a.Workflows = NewWorkflowAPI(a.workflowEngine, a.SysOps, a.SecOps, a.DevOps, a.AlertAPI)
 
 	// Initialize subsystems that might need context later
 	a.AIOps = NewAIOps(nil, a.pipeline, a.Knowledge, a.capabilities, a.PipelineAPI, a.SysOps, a.currentDataDir)
 	a.DevOps = NewDevOps(nil, a.eventBus)
 	a.Timeline = NewTimeline(a.eventBus, a.AIOps)
+	a.Reports = NewReportsAPI(a.SysOps, a.SecOps, a.AIOps)
 	a.Dash = NewDashboard(a.pipeline, a.alerts, a.SysOps, a.NetOps, a.Timeline, func() string {
 		return a.GetAppInfo().Uptime
 	})
@@ -172,6 +172,18 @@ func NewApp() *App {
 		go a.persistAlertsAsync(alerts)
 	}
 
+	a.alerts.OnAlertResolved = func(resolved common.Alert) {
+		// Persist resolution to DB asynchronously
+		go func() {
+			defer common.RecoverPanic()
+			if s := common.GetStorage(); s != nil {
+				if err := s.UpdateAlertResolved(resolved.ID, nil); err != nil {
+					common.LogWarn("App: failed to persist alert resolution %s: %v", resolved.ID, err)
+				}
+			}
+		}()
+	}
+
 	// Subscribe the event bus to persist events and emit to frontend
 	a.eventBus.Subscribe(func(evt common.TimelineEvent) {
 		// Persist to database
@@ -185,6 +197,10 @@ func NewApp() *App {
 			runtime.EventsEmit(a.ctx, EventTimeline, converted)
 		}
 	})
+
+	// Wire the ReportsAPI as the engine loop's report trigger so alert
+	// evaluation and scheduled intervals can auto-generate reports.
+	a.engineLoop.SetReportTrigger(a.Reports)
 
 	return a
 }
@@ -266,8 +282,9 @@ func (a *App) Startup(ctx context.Context) {
 	// Validate Ollama environment variables
 	validateOllamaEnv()
 
-	// Initialize Prometheus metrics exporter
-	common.InitMetricsExporter(0)
+	// Prometheus metrics exporter removed — 100% local, zero telemetry.
+	// If Prometheus-style instrumentation is needed, add it behind
+	// //go:build prometheus and restore the InitMetricsExporter call.
 
 	// Start the modular collector system
 	a.collectorRegistry = common.NewCollectorRegistry()
@@ -343,8 +360,6 @@ func (a *App) GetPerformanceProfile() PerformanceProfile {
 	totalMem := uint64(0)
 	if err == nil && v != nil {
 		totalMem = v.Total
-	} else {
-		common.LogWarn("GetPerformanceProfile: failed to get virtual memory: %v", err)
 	}
 
 	memGB := float64(totalMem) / 1024 / 1024 / 1024

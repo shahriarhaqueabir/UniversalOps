@@ -71,6 +71,8 @@ export function ListForensics():Promise<Array<common.ForensicRecord>>;
 
 export function ListHistoricalSecurityReports():Promise<Array<common.ReportRecord>>;
 
+export function RunAudit():Promise<app.SecurityAuditResult>;
+
 export function RunSecurityAuditChecklist():Promise<app.SecurityAuditResult>;
 
 export function SetFirewallRuleHandshake(arg1:string,arg2:boolean):Promise<common.ActionPreview>;

@@ -4,13 +4,14 @@ import {
   FileText, Shield, HeartPulse, Bot,
   Search, Trash2, Download, ChevronRight,
   AlertTriangle, CheckCircle, XCircle,
-  RefreshCw, EyeOff,
+  RefreshCw, EyeOff, Plus, Settings, Clock,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { toast } from 'sonner'
 import type { ReportRecord } from '@/types'
+import { app, common } from '../../wailsjs/go/models'
 
 const TYPE_META: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   health: {
@@ -74,6 +75,12 @@ export function ReportsCenter() {
   const [search, setSearch] = useState('')
   const [selectedReport, setSelectedReport] = useState<ReportRecord | null>(null)
   const [showDetail, setShowDetail] = useState(false)
+  const [showRules, setShowRules] = useState(false)
+  const [generateType, setGenerateType] = useState<string>('health')
+  const [showGenerateDropdown, setShowGenerateDropdown] = useState(false)
+
+  // Auto-report rule form state
+  const [ruleForm, setRuleForm] = useState({ name: '', description: '', metric: '', condition: 'GT', threshold: 0, reportType: 'health', schedule: 'on_alert' })
 
   const { data: reports = [], isLoading } = useQuery<ReportRecord[]>({
     queryKey: ['reports'],
@@ -97,6 +104,73 @@ export function ReportsCenter() {
       toast.success('Report deleted')
     },
     onError: () => toast.error('Failed to delete report'),
+  })
+
+  // Generate report mutation
+  const generateMutation = useMutation({
+    mutationFn: async (type: string) => {
+      const result = await call('Reports.GenerateReport', type)
+      return result as app.ReportGenerationResult
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+      if (result) {
+        toast.success(`${result.type} report generated (score: ${result.score})`)
+      } else {
+        toast.success('Report generated')
+      }
+    },
+    onError: (err: any) => toast.error(`Generation failed: ${err?.message ?? 'unknown error'}`),
+  })
+
+  // Report types (for the generate dropdown)
+  const { data: reportTypes = [] } = useQuery<app.ReportTypeMeta[]>({
+    queryKey: ['reportTypes'],
+    queryFn: async () => (await call('Reports.GetReportTypes')) as app.ReportTypeMeta[] || [],
+    staleTime: 60_000,
+  })
+
+  // Auto-report rules
+  const { data: rules = [] } = useQuery<common.AutoReportRule[]>({
+    queryKey: ['reportRules'],
+    queryFn: async () => (await call('Reports.GetReportRules')) as common.AutoReportRule[] || [],
+    refetchInterval: 30_000,
+  })
+
+  const addRuleMutation = useMutation({
+    mutationFn: async () => {
+      const r = ruleForm
+      await call('Reports.AddReportRule', r.name, r.description, r.metric, r.condition, r.threshold, r.reportType, r.schedule)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reportRules'] })
+      setRuleForm({ name: '', description: '', metric: '', condition: 'GT', threshold: 0, reportType: 'health', schedule: 'on_alert' })
+      toast.success('Auto-report rule created')
+    },
+    onError: (err: any) => toast.error(`Failed to create rule: ${err?.message ?? 'unknown error'}`),
+  })
+
+  const toggleRuleMutation = useMutation({
+    mutationFn: async (rule: common.AutoReportRule) => {
+      await call('Reports.UpdateReportRule', rule.id, rule.name, rule.description, !rule.enabled)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reportRules'] })
+      toast.success('Rule updated')
+    },
+    onError: (err: any) => toast.error(`Failed to update rule: ${err?.message ?? 'unknown error'}`),
+  })
+
+  const deleteRuleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const ok = await call('Reports.DeleteReportRule', id)
+      if (!ok) throw new Error('Delete failed')
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reportRules'] })
+      toast.success('Rule deleted')
+    },
+    onError: (err: any) => toast.error(`Failed to delete rule: ${err?.message ?? 'unknown error'}`),
   })
 
   const filtered = reports.filter((r) => {
@@ -179,6 +253,70 @@ export function ReportsCenter() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Generate Report dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowGenerateDropdown(!showGenerateDropdown)}
+              disabled={generateMutation.isPending}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-accent text-white text-xs font-bold hover:brightness-110 transition-all disabled:opacity-40"
+            >
+              {generateMutation.isPending ? (
+                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Plus size={14} />
+              )}
+              Generate Report
+            </button>
+            {showGenerateDropdown && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowGenerateDropdown(false)} />
+                <div className="absolute right-0 top-full mt-2 z-20 w-64 p-2 rounded-2xl bg-[var(--color-panel-2)] border border-[var(--color-border)] shadow-xl shadow-black/20">
+                  {reportTypes.length === 0 && (
+                    <p className="px-3 py-4 text-[10px] text-[var(--color-text-faint)] text-center">No report types available</p>
+                  )}
+                  {reportTypes.map((rt) => (
+                    <button
+                      key={rt.type}
+                      disabled={!rt.available}
+                      onClick={() => {
+                        setShowGenerateDropdown(false)
+                        generateMutation.mutate(rt.type)
+                      }}
+                      className={cn(
+                        'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all text-left',
+                        rt.available
+                          ? 'text-[var(--color-text)] hover:bg-accent/10'
+                          : 'text-[var(--color-text-faint)] opacity-40 cursor-not-allowed'
+                      )}
+                    >
+                      <span className={cn('p-1 rounded-lg border', getTypeMeta(rt.type).color)}>
+                        {getTypeMeta(rt.type).icon}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold">{rt.label}</p>
+                        <p className="text-[10px] text-[var(--color-text-faint)] truncate">{rt.description}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Rules toggle */}
+          <button
+            onClick={() => setShowRules(!showRules)}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-bold transition-all',
+              showRules
+                ? 'bg-accent/10 border-accent/30 text-accent'
+                : 'bg-[var(--color-panel-2)] border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-panel-hover)]'
+            )}
+          >
+            <Clock size={14} />
+            Rules
+          </button>
+
           <button
             onClick={handleExportAll}
             disabled={filtered.length === 0}
@@ -235,6 +373,161 @@ export function ReportsCenter() {
           )
         })}
       </div>
+
+      {/* Auto-Report Rules panel */}
+      <AnimatePresence>
+        {showRules && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="overflow-hidden border-b border-[var(--color-border)] bg-[var(--color-panel-1)]/20"
+          >
+            <div className="px-10 py-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Clock size={14} className="text-accent" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-text)]">Auto-Report Rules</span>
+                  <span className="text-[10px] text-[var(--color-text-faint)] ml-2">
+                    {rules.filter((r) => r.enabled).length} enabled &middot; {rules.length} total
+                  </span>
+                </div>
+              </div>
+
+              {/* Existing rules */}
+              {rules.length > 0 && (
+                <div className="space-y-2">
+                  {rules.map((rule) => (
+                    <div key={rule.id} className="flex items-center gap-4 px-4 py-3 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]">
+                      <button
+                        onClick={() => toggleRuleMutation.mutate(rule)}
+                        className={cn(
+                          'p-1 rounded-lg transition-colors',
+                          rule.enabled
+                            ? 'text-emerald-500 hover:bg-emerald-500/10'
+                            : 'text-[var(--color-text-faint)] hover:bg-[var(--color-panel-hover)]'
+                        )}
+                        title={rule.enabled ? 'Disable rule' : 'Enable rule'}
+                      >
+                        {rule.enabled ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-bold text-[var(--color-text)]">{rule.name}</p>
+                          <span className={cn(
+                            'px-1.5 py-0.5 rounded text-[9px] font-bold uppercase',
+                            getTypeMeta(rule.report_type).color
+                          )}>
+                            {rule.report_type}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-[var(--color-panel-1)] text-[var(--color-text-faint)]">
+                            {rule.schedule}
+                          </span>
+                        </div>
+                        {rule.description && (
+                          <p className="text-[10px] text-[var(--color-text-faint)] mt-0.5 truncate">{rule.description}</p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => deleteRuleMutation.mutate(rule.id)}
+                        className="p-1.5 rounded-lg text-[var(--color-text-faint)] hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                        title="Delete rule"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* New rule form */}
+              <div className="grid grid-cols-7 gap-3 items-end">
+                <div className="col-span-2">
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-faint)] mb-1">Name</label>
+                  <input
+                    value={ruleForm.name}
+                    onChange={(e) => setRuleForm((f) => ({ ...f, name: e.target.value }))}
+                    placeholder="e.g. High CPU alert"
+                    className="w-full px-3 py-2 rounded-lg bg-[var(--color-panel-2)] border border-[var(--color-border)] text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] outline-none focus:border-accent/40 transition-colors"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-faint)] mb-1">Metric</label>
+                  <input
+                    value={ruleForm.metric}
+                    onChange={(e) => setRuleForm((f) => ({ ...f, metric: e.target.value }))}
+                    placeholder="e.g. cpu_usage"
+                    className="w-full px-3 py-2 rounded-lg bg-[var(--color-panel-2)] border border-[var(--color-border)] text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] outline-none focus:border-accent/40 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-faint)] mb-1">Condition</label>
+                  <select
+                    value={ruleForm.condition}
+                    onChange={(e) => setRuleForm((f) => ({ ...f, condition: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg bg-[var(--color-panel-2)] border border-[var(--color-border)] text-xs text-[var(--color-text)] outline-none focus:border-accent/40 transition-colors"
+                  >
+                    <option value="GT">&gt; (above)</option>
+                    <option value="LT">&lt; (below)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-faint)] mb-1">Threshold</label>
+                  <input
+                    type="number"
+                    value={ruleForm.threshold}
+                    onChange={(e) => setRuleForm((f) => ({ ...f, threshold: parseFloat(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 rounded-lg bg-[var(--color-panel-2)] border border-[var(--color-border)] text-xs text-[var(--color-text)] outline-none focus:border-accent/40 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-faint)] mb-1">Report Type</label>
+                  <select
+                    value={ruleForm.reportType}
+                    onChange={(e) => setRuleForm((f) => ({ ...f, reportType: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg bg-[var(--color-panel-2)] border border-[var(--color-border)] text-xs text-[var(--color-text)] outline-none focus:border-accent/40 transition-colors"
+                  >
+                    <option value="health">Health</option>
+                    <option value="security">Security</option>
+                    <option value="auto_diag">Auto-Diagnostic</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-faint)] mb-1">Schedule</label>
+                  <select
+                    value={ruleForm.schedule}
+                    onChange={(e) => setRuleForm((f) => ({ ...f, schedule: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg bg-[var(--color-panel-2)] border border-[var(--color-border)] text-xs text-[var(--color-text)] outline-none focus:border-accent/40 transition-colors"
+                  >
+                    <option value="on_alert">On Alert</option>
+                    <option value="hourly">Hourly</option>
+                    <option value="daily">Daily</option>
+                  </select>
+                </div>
+                <div>
+                  <button
+                    onClick={() => addRuleMutation.mutate()}
+                    disabled={!ruleForm.name || addRuleMutation.isPending}
+                    className="w-full flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-accent text-white text-xs font-bold hover:brightness-110 transition-all disabled:opacity-40"
+                  >
+                    {addRuleMutation.isPending ? (
+                      <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <Plus size={12} />
+                    )}
+                    Add Rule
+                  </button>
+                </div>
+              </div>
+              <p className="text-[9px] text-[var(--color-text-faint)] leading-relaxed">
+                Rules with <strong className="text-[var(--color-text)]">on_alert</strong> schedule trigger a report when an alert fires.
+                <strong className="text-[var(--color-text)]"> Hourly</strong> and <strong className="text-[var(--color-text)]">daily</strong> rules generate reports on a timer.
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Search + content */}
       <div className="flex-1 flex overflow-hidden">

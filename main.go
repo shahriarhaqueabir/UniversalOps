@@ -3,8 +3,6 @@ package main
 import (
 	"embed"
 	"log"
-	"net/http"
-	_ "net/http/pprof"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -24,13 +22,8 @@ func main() {
 	// On Windows this verifies the WebView2 Runtime is installed.
 	checkWindowsPrereqs()
 
-	// Start pprof server for Phase 0 instrumentation
-	go func() {
-		log.Println("pprof server starting on :6060")
-		if err := http.ListenAndServe("localhost:6060", nil); err != nil {
-			log.Printf("pprof server failed: %v", err)
-		}
-	}()
+	// pprof server removed — violates 100% local / zero telemetry north star.
+	// Re-enable with -tags debug if needed for profiling sessions.
 
 	application := app.NewApp()
 

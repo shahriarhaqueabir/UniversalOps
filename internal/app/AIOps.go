@@ -725,10 +725,7 @@ func (a *AIOps) WithTimeout(d time.Duration) (context.Context, context.CancelFun
 
 // QuerySystemState answers a natural-language system-state question using live metrics.
 func (a *AIOps) QuerySystemState(query string) string {
-	stats, err := a.sysOps.collector.CollectAllStats()
-	if err != nil {
-		common.LogWarn("QuerySystemState: CollectAllStats failed: %v", err)
-	}
+	stats, _ := a.sysOps.collector.CollectAllStats()
 
 	return aiops.AnswerSystemStateQuery(query, stats, nil, nil)
 }
@@ -984,7 +981,6 @@ func (a *AIOps) GetMessages(sessionID string) []ConversationMessage {
 	}
 	msgs, err := storage.GetMessages(sessionID)
 	if err != nil {
-		common.LogWarn("GetMessages: %v", err)
 		return []ConversationMessage{}
 	}
 	result := make([]ConversationMessage, len(msgs))
@@ -1008,7 +1004,6 @@ func (a *AIOps) ListSessions() []map[string]interface{} {
 	}
 	sessions, err := storage.ListSessions()
 	if err != nil {
-		common.LogWarn("ListSessions: %v", err)
 		return []map[string]interface{}{}
 	}
 	return sessions

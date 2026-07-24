@@ -14,8 +14,16 @@ export function GetInterfaces() {
   return window['go']['app']['NetOps']['GetInterfaces']();
 }
 
+export function GetPingStats(arg1) {
+  return window['go']['app']['NetOps']['GetPingStats'](arg1);
+}
+
 export function Ping(arg1, arg2) {
   return window['go']['app']['NetOps']['Ping'](arg1, arg2);
+}
+
+export function PingMultiTarget(arg1, arg2) {
+  return window['go']['app']['NetOps']['PingMultiTarget'](arg1, arg2);
 }
 
 export function PortScan(arg1, arg2) {
