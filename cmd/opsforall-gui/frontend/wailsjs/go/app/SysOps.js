@@ -38,6 +38,10 @@ export function GetHistoricalHealthReport(arg1) {
   return window['go']['app']['SysOps']['GetHistoricalHealthReport'](arg1);
 }
 
+export function GetInstalledPackages() {
+  return window['go']['app']['SysOps']['GetInstalledPackages']();
+}
+
 export function GetLHMAuthorization() {
   return window['go']['app']['SysOps']['GetLHMAuthorization']();
 }

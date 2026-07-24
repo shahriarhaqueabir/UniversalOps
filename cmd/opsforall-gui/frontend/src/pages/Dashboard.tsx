@@ -106,7 +106,13 @@ function healthColor(pct: number) {
   return 'var(--color-success)'
 }
 
-// function formatBytes removed — unused
+function formatThroughput(bps: number): string {
+  if (bps <= 0) return '0'
+  const units = ['', 'K', 'M', 'G', 'T']
+  const magnitude = Math.min(units.length - 1, Math.floor(Math.log10(bps) / 3))
+  const scaled = bps / Math.pow(10, magnitude * 3)
+  return scaled >= 10 ? `${Math.round(scaled)}${units[magnitude]}` : `${scaled.toFixed(1)}${units[magnitude]}`
+}
 
 /* ───────────────────────────────────────────
    Enhanced Components
@@ -290,11 +296,13 @@ const variantStyles = {
   };
 
   const val = data?.value != null ? Math.round(data.value).toString() : '0'
-  const displayVal = (metricKey === 'gpu' || metricKey === 'battery')
-    ? (data?.detected ? (metricKey === 'gpu' ? data.vendor : val) : 'N/A')
-    : val
+  const displayVal = (metricKey === 'network')
+    ? formatThroughput((data?.rx_rate ?? 0) + (data?.tx_rate ?? 0))
+    : (metricKey === 'gpu' || metricKey === 'battery')
+      ? (data?.detected ? (metricKey === 'gpu' ? data.vendor : val) : 'N/A')
+      : val
 
-  const status = (data?.value > 80) ? 'warning' : 'healthy'
+  const status = (data?.value != null && data.value > 80) ? 'warning' : 'healthy'
 
   return (
     <div
@@ -319,11 +327,25 @@ const variantStyles = {
       </div>
       <div className="flex items-baseline gap-1.5 mb-3">
         <span className="text-3xl font-bold text-[var(--color-text)] tabular-nums">{displayVal}</span>
-        {unit && <span className="text-lg font-semibold text-[var(--color-text-faint)]">{unit}</span>}
+        {unit && !(metricKey === 'network') && <span className="text-lg font-semibold text-[var(--color-text-faint)]">{unit}</span>}
       </div>
-      <p className="text-xs text-[var(--color-text-faint)] leading-relaxed border-t border-[var(--color-border)]/50 pt-3">
-        {description}
-      </p>
+      {metricKey === 'network' ? (
+        <div className="flex flex-col gap-1 border-t border-[var(--color-border)]/50 pt-3">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-[var(--color-text-faint)]">↓ RX</span>
+            <span className="font-bold text-[var(--color-text)] tabular-nums">{formatThroughput(data?.rx_rate ?? 0)}<span className="font-semibold text-[var(--color-text-faint)] ml-1">bps</span></span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-[var(--color-text-faint)]">↑ TX</span>
+            <span className="font-bold text-[var(--color-text)] tabular-nums">{formatThroughput(data?.tx_rate ?? 0)}<span className="font-semibold text-[var(--color-text-faint)] ml-1">bps</span></span>
+          </div>
+          <p className="text-xs text-[var(--color-text-faint)] leading-relaxed mt-1">{description}</p>
+        </div>
+      ) : (
+        <p className="text-xs text-[var(--color-text-faint)] leading-relaxed border-t border-[var(--color-border)]/50 pt-3">
+          {description}
+        </p>
+      )}
     </div>
   )
 })

@@ -1,6 +1,6 @@
 # Universal-Ops: High-Performance Native Operations Dashboard
 
-[![Version](https://img.shields.io/badge/version-v1.3.1-7c6cff)](https://github.com/shahriarhaqueabir/AllOpsFull/releases)
+[![Version](https://img.shields.io/badge/version-v1.4.0-7c6cff)](https://github.com/shahriarhaqueabir/AllOpsFull/releases)
 [![License](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
 [![Local-First](https://img.shields.io/badge/Privacy-100%25%20Local-blue)](docs/ARCHITECTURE.md)
 [![AI-Powered](https://img.shields.io/badge/AI-Ollama%20Integrated-orange)](docs/INSTALL.md)

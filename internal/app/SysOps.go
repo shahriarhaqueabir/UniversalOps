@@ -764,6 +764,24 @@ func (s *SysOps) GetHistoricalHealthReport(id string) (ExtendedDiagnosticResult,
 	return res, err
 }
 
+// GetInstalledPackages returns detected package managers and their installed packages.
+func (s *SysOps) GetInstalledPackages() []PackageManagerData {
+	sysPkgs := sysops.GetInstalledPackages()
+	out := make([]PackageManagerData, 0, len(sysPkgs))
+	for _, p := range sysPkgs {
+		pkgs := make([]PackageInfo, 0, len(p.Packages))
+		for _, pi := range p.Packages {
+			pkgs = append(pkgs, PackageInfo{Name: pi.Name, Version: pi.Version})
+		}
+		out = append(out, PackageManagerData{
+			Name:     p.Name,
+			Found:    p.Found,
+			Packages: pkgs,
+		})
+	}
+	return out
+}
+
 // executeRestartService restarts a system service (internal use for handshake).
 func (s *SysOps) executeRestartService(name string) common.SecActionResult {
 	result, err := sysops.RestartService(name)
