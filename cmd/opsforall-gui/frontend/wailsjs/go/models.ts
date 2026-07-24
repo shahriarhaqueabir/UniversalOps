@@ -2869,6 +2869,7 @@ export namespace common {
 	    id: string;
 	    name: string;
 	    description: string;
+	    category: string;
 	    why: string;
 	    risks: string[];
 	    typical_values: string;
@@ -2883,6 +2884,7 @@ export namespace common {
 	        this.id = source["id"];
 	        this.name = source["name"];
 	        this.description = source["description"];
+	        this.category = source["category"];
 	        this.why = source["why"];
 	        this.risks = source["risks"];
 	        this.typical_values = source["typical_values"];
