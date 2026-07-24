@@ -39,12 +39,12 @@ export function WorkflowCenter() {
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState<string>('all')
 
-  const categories = ['all', ...new Set(workflows.map(w => w.category))]
-
   const { data: workflows = [], isLoading } = useQuery<Workflow[]>({
     queryKey: ['workflows'],
     queryFn: async () => (await call('WorkflowAPI.ListWorkflows')) as Workflow[] || []
   })
+
+  const categories = ['all', ...new Set(workflows.map(w => w.category))]
 
   const handleExecute = async () => {
     if (!selectedWf) return
