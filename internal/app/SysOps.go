@@ -39,7 +39,6 @@ func NewSysOps() *SysOps {
 func (s *SysOps) GetCPUInfo() CPUInfo {
 	stats, err := sysops.GetCPUStats()
 	if err != nil {
-		common.LogWarn("GetCPUStats failed: %v", err)
 		return CPUInfo{}
 	}
 	return CPUInfo{
@@ -59,7 +58,6 @@ func (s *SysOps) GetCPUInfo() CPUInfo {
 func (s *SysOps) GetMemoryInfo() MemoryInfo {
 	stats, err := sysops.GetMemoryStats()
 	if err != nil {
-		common.LogWarn("GetMemoryStats failed: %v", err)
 		return MemoryInfo{}
 	}
 	return MemoryInfo{
@@ -80,7 +78,6 @@ func (s *SysOps) GetMemoryInfo() MemoryInfo {
 func (s *SysOps) GetDiskInfo() DiskInfo {
 	stats, err := sysops.GetDiskStats()
 	if err != nil {
-		common.LogWarn("GetDiskStats failed: %v", err)
 		return DiskInfo{}
 	}
 	parts := make([]DiskPartition, 0, len(stats.Usage))
@@ -102,7 +99,6 @@ func (s *SysOps) GetDiskInfo() DiskInfo {
 func (s *SysOps) GetTopProcesses(n int) []ProcessInfo {
 	procs, err := sysops.GetTopProcesses(n)
 	if err != nil {
-		common.LogWarn("GetTopProcesses failed: %v", err)
 		return []ProcessInfo{}
 	}
 	result := make([]ProcessInfo, 0, len(procs))
@@ -127,7 +123,6 @@ func (s *SysOps) GetTopProcesses(n int) []ProcessInfo {
 func (s *SysOps) GetSystemInfo() SystemInfo {
 	info, err := sysops.GetSystemInfo()
 	if err != nil {
-		common.LogWarn("GetSystemInfo failed: %v", err)
 		return SystemInfo{}
 	}
 	return SystemInfo{
@@ -360,7 +355,6 @@ func (s *SysOps) GetRecommendations() []SystemRecommendation {
 func (s *SysOps) GetDiskIO() DiskIOData {
 	stats, err := sysops.GetDiskIO()
 	if err != nil {
-		common.LogWarn("GetDiskIO failed: %v", err)
 		return DiskIOData{}
 	}
 	disks := make([]DiskIOEntry, 0, len(stats.Disks))
@@ -384,7 +378,6 @@ func (s *SysOps) GetDiskIO() DiskIOData {
 func (s *SysOps) GetLoggedInUsers() []LoggedInUserData {
 	users, err := sysops.GetLoggedInUsers()
 	if err != nil {
-		common.LogWarn("GetLoggedInUsers failed: %v", err)
 		return []LoggedInUserData{}
 	}
 	var result []LoggedInUserData
@@ -403,7 +396,6 @@ func (s *SysOps) GetLoggedInUsers() []LoggedInUserData {
 func (s *SysOps) GetPerformanceStats() PerformanceData {
 	stats, err := sysops.GetPerformanceStats()
 	if err != nil {
-		common.LogWarn("GetPerformanceStats failed: %v", err)
 		return PerformanceData{}
 	}
 	return PerformanceData{
@@ -545,7 +537,6 @@ func (s *SysOps) GetCPUExtended() (out CPUExtendedInfo) {
 
 	stats, err := sysops.GetCPUExtended()
 	if err != nil {
-		common.LogWarn("GetCPUExtended failed: %v", err)
 		return CPUExtendedInfo{}
 	}
 	perCPU := make([]PerCPUInfoData, 0, len(stats.PerCPUInfo))
@@ -614,7 +605,7 @@ func (s *SysOps) DownloadLHM() LHMStatusResult {
 
 	ctx := context.Background()
 	err := mgr.Download(ctx, func(downloaded int64, total int64) {
-		common.LogInfo("LHM: Download progress %d / %d", downloaded, total)
+		common.LogDebug("LHM: Download progress %d / %d", downloaded, total)
 	})
 	if err != nil {
 		st := s.GetLHMStatus()
@@ -655,7 +646,6 @@ func (s *SysOps) StopLHM() LHMStatusResult {
 func (s *SysOps) GetSystemLogs(n int, source string) SystemLogsResultData {
 	result, err := sysops.GetSystemLogs(n, source)
 	if err != nil {
-		common.LogWarn("GetSystemLogs failed: %v", err)
 		return SystemLogsResultData{}
 	}
 	entries := make([]SystemLogEntry, 0, len(result.Entries))
@@ -678,7 +668,6 @@ func (s *SysOps) GetSystemLogs(n int, source string) SystemLogsResultData {
 func (s *SysOps) GetScheduledTasks() []ScheduledTaskData {
 	tasks, err := sysops.GetScheduledTasks()
 	if err != nil {
-		common.LogWarn("GetScheduledTasks failed: %v", err)
 		return []ScheduledTaskData{}
 	}
 	var result []ScheduledTaskData
@@ -694,11 +683,15 @@ func (s *SysOps) GetScheduledTasks() []ScheduledTaskData {
 	return result
 }
 
+// RunDiagnostic runs a comprehensive system diagnostic and returns the result.
+func (s *SysOps) RunDiagnostic() ExtendedDiagnosticResult {
+	return s.RunExtendedDiagnostics()
+}
+
 // RunExtendedDiagnostics runs a set of system health checks and returns a score from 0-100.
 func (s *SysOps) RunExtendedDiagnostics() ExtendedDiagnosticResult {
 	result, err := sysops.RunExtendedDiagnostics()
 	if err != nil {
-		common.LogWarn("RunExtendedDiagnostics failed: %v", err)
 		return ExtendedDiagnosticResult{}
 	}
 	checks := make([]DiagnosticCheckData, 0, len(result.Checks))

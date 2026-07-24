@@ -293,6 +293,19 @@ func (s *Storage) migrate() error {
 			report_ids TEXT,
 			severity TEXT NOT NULL
 		)`,
+		`CREATE TABLE IF NOT EXISTS report_rules (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			description TEXT NOT NULL DEFAULT '',
+			metric TEXT NOT NULL DEFAULT '',
+			condition TEXT NOT NULL DEFAULT 'GT',
+			threshold REAL NOT NULL DEFAULT 0,
+			report_type TEXT NOT NULL DEFAULT 'health',
+			schedule TEXT NOT NULL DEFAULT 'on_alert',
+			enabled INTEGER NOT NULL DEFAULT 1,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			last_triggered_at DATETIME
+		)`,
 	}
 
 	for _, q := range queries {
@@ -1612,6 +1625,100 @@ func (s *Storage) ListSettings() (map[string]string, error) {
 		res[k] = v
 	}
 	return res, nil
+}
+
+// ── Report Rules Persistence ──────────────────────────────────────────────
+
+// AutoReportRule defines a rule that auto-generates a report when triggered.
+type AutoReportRule struct {
+	ID             string     `json:"id"`
+	Name           string     `json:"name"`
+	Description    string     `json:"description"`
+	Metric         string     `json:"metric"`
+	Condition      string     `json:"condition"` // "GT", "LT"
+	Threshold      float64    `json:"threshold"`
+	ReportType     string     `json:"report_type"` // "health", "security", "auto_diag"
+	Schedule       string     `json:"schedule"`    // "on_alert", "hourly", "daily"
+	Enabled        bool       `json:"enabled"`
+	CreatedAt      string     `json:"created_at"`
+	LastTriggeredAt *string   `json:"last_triggered_at,omitempty"`
+}
+
+// InsertReportRule stores a new auto-report rule.
+func (s *Storage) InsertReportRule(r AutoReportRule) error {
+	_, err := s.db.Exec(
+		`INSERT INTO report_rules (id, name, description, metric, condition, threshold, report_type, schedule, enabled)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		r.ID, r.Name, r.Description, r.Metric, r.Condition, r.Threshold, r.ReportType, r.Schedule, boolToInt(r.Enabled),
+	)
+	return err
+}
+
+// ListReportRules returns all auto-report rules.
+func (s *Storage) ListReportRules() ([]AutoReportRule, error) {
+	rows, err := s.db.Query(`SELECT id, name, description, metric, condition, threshold, report_type, schedule, enabled, created_at, last_triggered_at FROM report_rules ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var res []AutoReportRule
+	for rows.Next() {
+		var r AutoReportRule
+		var enabledInt int
+		var lastTriggered sql.NullString
+		if err := rows.Scan(&r.ID, &r.Name, &r.Description, &r.Metric, &r.Condition, &r.Threshold, &r.ReportType, &r.Schedule, &enabledInt, &r.CreatedAt, &lastTriggered); err != nil {
+			return nil, err
+		}
+		r.Enabled = enabledInt != 0
+		if lastTriggered.Valid {
+			r.LastTriggeredAt = &lastTriggered.String
+		}
+		res = append(res, r)
+	}
+	return res, nil
+}
+
+// GetReportRule retrieves a single auto-report rule by ID.
+func (s *Storage) GetReportRule(id string) (*AutoReportRule, error) {
+	var r AutoReportRule
+	var enabledInt int
+	var lastTriggered sql.NullString
+	err := s.db.QueryRow(
+		`SELECT id, name, description, metric, condition, threshold, report_type, schedule, enabled, created_at, last_triggered_at FROM report_rules WHERE id = ?`, id,
+	).Scan(&r.ID, &r.Name, &r.Description, &r.Metric, &r.Condition, &r.Threshold, &r.ReportType, &r.Schedule, &enabledInt, &r.CreatedAt, &lastTriggered)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	r.Enabled = enabledInt != 0
+	if lastTriggered.Valid {
+		r.LastTriggeredAt = &lastTriggered.String
+	}
+	return &r, nil
+}
+
+// UpdateReportRule modifies an existing report rule.
+func (s *Storage) UpdateReportRule(r AutoReportRule) error {
+	_, err := s.db.Exec(
+		`UPDATE report_rules SET name=?, description=?, metric=?, condition=?, threshold=?, report_type=?, schedule=?, enabled=? WHERE id=?`,
+		r.Name, r.Description, r.Metric, r.Condition, r.Threshold, r.ReportType, r.Schedule, boolToInt(r.Enabled), r.ID,
+	)
+	return err
+}
+
+// DeleteReportRule removes a report rule by ID.
+func (s *Storage) DeleteReportRule(id string) error {
+	_, err := s.db.Exec(`DELETE FROM report_rules WHERE id = ?`, id)
+	return err
+}
+
+// TouchReportRule updates the last_triggered_at timestamp for a rule.
+func (s *Storage) TouchReportRule(id string) error {
+	_, err := s.db.Exec(`UPDATE report_rules SET last_triggered_at = CURRENT_TIMESTAMP WHERE id = ?`, id)
+	return err
 }
 
 func boolToInt(b bool) int {

@@ -105,7 +105,7 @@ func RunNetworkDiagnostics() (*NetworkReport, error) {
 	go func() {
 		defer wg.Done()
 		defer common.RecoverPanic()
-		ifacesRes, err := GetInterfaces(nil, 0)
+		ifacesRes, err := GetInterfaces(nil, 0, nil)
 		if err != nil {
 			errsMu.Lock()
 			errs = append(errs, fmt.Sprintf("Interfaces: %v", err))

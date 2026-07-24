@@ -100,6 +100,7 @@ export function CategoryGroup<T extends string>({
             <button
               key={cat.id}
               onClick={() => onSelect(cat.id)}
+              data-automation-id={`${page}-tab-${cat.id}`}
               className={cn(
                 'w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-sm font-bold transition-all active:scale-[0.97]',
                 isActive

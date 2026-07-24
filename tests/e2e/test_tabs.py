@@ -1,10 +1,12 @@
-"""E2E tests: tab navigation across all sections of Universal-Ops."""
+"""E2E tests: tab navigation across all sections of Universal-Ops.
+
+Tests use the conftest.py app() fixture (isolated data dirs per test).
+"""
 
 import os
 import sys
 
 import pytest
-from pywinauto import Application
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -15,75 +17,8 @@ from config import (
 )
 from pages import (
     MainWindow, NetOpsPage, SecOpsPage, SysOpsPage,
-    LogsPage, DevOpsPage, AIOpsPage,
+    LogsPage, DevOpsPage, AIOpsPage, dismiss_onboarding,
 )
-
-
-# ── Fixture (test-local) ────────────────────────────────────────────
-
-@pytest.fixture(scope="function")
-def app():
-    """Launch fresh app instance per test with isolated user data dirs."""
-    if not APP_PATH:
-        pytest.exit("APP_PATH environment variable not set", returncode=1)
-    if not APP_TITLE:
-        pytest.exit("APP_TITLE environment variable not set", returncode=1)
-
-    import tempfile
-    import shutil
-    import subprocess
-    import shlex
-    import time
-
-    tmpdir = tempfile.mkdtemp(prefix="opsforall_e2e_")
-    user_data = os.path.join(tmpdir, "AppData", "Roaming")
-    os.makedirs(user_data, exist_ok=True)
-
-    env = os.environ.copy()
-    env["QT_ACCESSIBILITY"] = "1"
-    for var in ["APPDATA", "LOCALAPPDATA", "TEMP", "TMP"]:
-        env[var] = (
-            os.path.join(tmpdir, "AppData", "Local")
-            if var == "LOCALAPPDATA"
-            else tmpdir
-        )
-
-    proc = subprocess.Popen(
-        shlex.split(APP_PATH),
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-
-    try:
-        deadline = time.time() + LAUNCH_TIMEOUT
-        while time.time() < deadline:
-            try:
-                app = Application(backend="uia").connect(process=proc.pid)
-                break
-            except Exception:
-                time.sleep(1)
-        else:
-            raise TimeoutError(f"Could not connect to app (PID {proc.pid})")
-
-        app.window(title=APP_TITLE).wait("visible", timeout=LAUNCH_TIMEOUT)
-        app.window(title=APP_TITLE).set_focus()
-
-        yield app
-
-    finally:
-        try:
-            app.window(title=APP_TITLE).close()
-        except Exception:
-            pass
-        try:
-            proc.kill()
-        except Exception:
-            pass
-        try:
-            shutil.rmtree(tmpdir, ignore_errors=True)
-        except Exception:
-            pass
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

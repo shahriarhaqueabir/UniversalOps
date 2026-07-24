@@ -1,84 +1,89 @@
-"""E2E test configuration — auto_id strings and timeouts."""
+"""E2E test configuration for the current Universal-Ops navigation model."""
 
 import os
 
-# ── Application paths ──
-
 APP_PATH = os.environ.get(
     'APP_PATH',
-    'E:\\Projects\\projectx\\UniversalOps\\build\\bin\\universal-ops.exe',
+    os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        '..', '..', 'build', 'bin', 'universal-ops.exe',
+    ),
 )
 APP_TITLE = os.environ.get('APP_TITLE', 'Universal-Ops Operations Platform')
-
-# ── Timeouts (seconds) ──
-
 LAUNCH_TIMEOUT = int(os.environ.get('LAUNCH_TIMEOUT', '45'))
 ACTION_TIMEOUT = int(os.environ.get('ACTION_TIMEOUT', '15'))
-
-# ── Artifact directory ──
-
 ARTIFACT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'artifacts')
 
-# ── Main tab auto-id map ──
-
-MAIN_TABS: dict[str, str] = {
-    'dashboard': 'main-tab-dashboard',
-    'sysops':    'main-tab-sysops',
-    'netops':    'main-tab-netops',
-    'secops':    'main-tab-secops',
-    'devops':    'main-tab-devops',
-    'aiops':     'main-tab-aiops',
-    'logs':      'main-tab-logs',
-    'settings':  'main-tab-settings',
+MAIN_TABS = {
+    'dashboard': 'main-tab-dashboard', 'sysops': 'main-tab-sysops',
+    'workflows': 'main-tab-workflows', 'netops': 'main-tab-netops',
+    'secops': 'main-tab-secops', 'devops': 'main-tab-devops',
+    'aiops': 'main-tab-aiops', 'reports': 'main-tab-reports',
+    'alerts': 'main-tab-alerts', 'logs': 'main-tab-logs',
+    'settings': 'main-tab-settings',
 }
 
-# ── Sub-tab auto-id maps ──
-
-NETOPS_SUBTABS: dict[str, str] = {
-    'overview':     'netops-tab-overview',
-    'ping':         'netops-tab-ping',
-    'dns':          'netops-tab-dns',
-    'connections':  'netops-tab-connections',
-    'interfaces':   'netops-tab-interfaces',
-    'traceroute':   'netops-tab-traceroute',
-    'portscan':     'netops-tab-portscan',
-    'bandwidth':    'netops-tab-bandwidth',
+MAIN_TAB_LABELS = {
+    'dashboard': 'Dashboard', 'sysops': 'System Ops', 'workflows': 'Workflow Library',
+    'netops': 'Network Ops', 'secops': 'Security Ops', 'devops': 'DevOps',
+    'aiops': 'AI Ops', 'reports': 'Reports', 'alerts': 'Alerts',
+    'logs': 'Logs', 'settings': 'Settings',
 }
 
-SECOPS_SUBTABS: dict[str, str] = {
-    'firewall':   'secops-tab-firewall',
-    'users':      'secops-tab-users',
-    'listening':  'secops-tab-listening',
-    'defender':   'secops-tab-defender',
-    'events':     'secops-tab-events',
+NETOPS_SUBTABS = {
+    key: f'netops-tab-{key}' for key in (
+        'overview', 'connections', 'interfaces', 'arp', 'ping', 'dns',
+        'traceroute', 'portscan', 'bandwidth', 'dns-advanced', 'multi-ping',
+        'health', 'vpn', 'discovery', 'actions',
+    )
+}
+NETOPS_SUBTAB_LABELS = {
+    'overview': 'Overview', 'connections': 'Connections', 'interfaces': 'Interfaces',
+    'arp': 'ARP Table', 'ping': 'Ping', 'dns': 'DNS', 'traceroute': 'Traceroute',
+    'portscan': 'Port Scan', 'bandwidth': 'Bandwidth', 'dns-advanced': 'DNS Advanced',
+    'multi-ping': 'Multi-Ping', 'health': 'Health Check', 'vpn': 'VPN',
+    'discovery': 'Discovery', 'actions': 'Actions',
 }
 
-SYSOP_SUBTABS: dict[str, str] = {
-    'overview':     'sysops-tab-overview',
-    'processes':    'sysops-tab-processes',
-    'system-info':  'sysops-tab-system-info',
+SECOPS_SUBTABS = {
+    key: f'secops-tab-{key}' for key in (
+        'overview', 'identity', 'perimeter', 'endpoint', 'events', 'hardening',
+        'audit', 'response',
+    )
+}
+SECOPS_SUBTAB_LABELS = {
+    'overview': 'Overview', 'identity': 'Identity & Access', 'perimeter': 'Perimeter Security',
+    'endpoint': 'Endpoint Security', 'events': 'Log & Events', 'hardening': 'Security Hardening',
+    'audit': 'Security Audit', 'response': 'Incident Response',
 }
 
-LOGS_SUBTABS: dict[str, str] = {
-    'overview':  'logs-tab-overview',
-    'live':      'logs-tab-live',
+SYSOP_SUBTABS = {
+    key: f'sysops-tab-{key}' for key in (
+        'system-info', 'hardware', 'cpu', 'memory', 'disk', 'packages', 'processes',
+        'services', 'scheduler', 'logs', 'users', 'diagnostics', 'actions',
+    )
+}
+SYSOP_SUBTAB_LABELS = {
+    'system-info': 'System Info', 'hardware': 'Hardware', 'cpu': 'CPU', 'memory': 'Memory',
+    'disk': 'Disk', 'packages': 'Installed Apps', 'processes': 'Processes',
+    'services': 'Services', 'scheduler': 'Scheduler', 'logs': 'Logs', 'users': 'Users',
+    'diagnostics': 'Diagnostics', 'actions': 'Actions',
 }
 
-DEVOPS_SUBTABS: dict[str, str] = {
-    'overview':         'devops-tab-overview',
-    'terminal':         'devops-tab-terminal',
-    'powershell-pro':   'devops-tab-powershell-pro',
-    'services':         'devops-tab-services',
-    'containers':       'devops-tab-containers',
-    'git':              'devops-tab-git',
-    'servers':          'devops-tab-servers',
-    'environment':      'devops-tab-environment',
-    'file-browser':     'devops-tab-file-browser',
-    'toolbox':          'devops-tab-toolbox',
+LOGS_SUBTABS = {key: f'logs-tab-{key}' for key in ('overview', 'live', 'audit')}
+LOGS_SUBTAB_LABELS = {'overview': 'Overview', 'live': 'Live Stream', 'audit': 'Audit'}
+
+DEVOPS_SUBTABS = {
+    key: f'devops-tab-{key}' for key in (
+        'overview', 'powershell', 'bash', 'docker', 'kubernetes', 'diagnostics',
+        'services', 'servers', 'environment',
+    )
+}
+DEVOPS_SUBTAB_LABELS = {
+    'overview': 'Overview', 'powershell': 'PS', 'bash': 'Bash', 'docker': 'Docker',
+    'kubernetes': 'K8s', 'diagnostics': 'Health', 'services': 'Services',
+    'servers': 'Servers', 'environment': 'Env',
 }
 
-AIOPS_SUBTABS: dict[str, str] = {
-    'ai-chat':     'aiops-tab-ai-chat',
-    'anomalies':   'aiops-tab-anomalies',
-    'insights':    'aiops-tab-insights',
-}
+AIOPS_SUBTABS = {key: f'aiops-tab-{key}' for key in ('ai-chat', 'anomalies', 'insights')}
+AIOPS_SUBTAB_LABELS = {'ai-chat': 'Analyst Chat', 'anomalies': 'Anomaly Detection', 'insights': 'AI Insights'}

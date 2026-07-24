@@ -108,9 +108,10 @@ func TestParseWingetOutput(t *testing.T) {
 	}{
 		{"empty", "", 0},
 		{"header only", "Name Id Version\n--- -- -------\n\n", 0},
-		{"single package", "Name Id Version\n--- -- -------\n\ncurl Curl.Curl 7.76.1\n", 1},
-		{"multiple packages", "Name Id Version\n--- -- -------\n\ncurl Curl.Curl 7.76.1\ngit Git.Git 2.35.1\n", 2},
-		{"skips short rows (only 2 fields)", "Name Id Version\n--- -- -------\n\ncurl Curl.Curl 7.76.1\nfoo Bar\n", 1},
+		{"single package", "Name                Id                Version\n--------------------------------------------------\ncurl                Curl.Curl         7.76.1\n", 1},
+		{"multiple packages", "Name                Id                Version\n--------------------------------------------------\ncurl                Curl.Curl         7.76.1\ngit                 Git.Git           2.35.1\n", 2},
+		{"skips short rows", "Name                Id                Version\n--------------------------------------------------\ncurl                Curl.Curl         7.76.1\nfoo\n", 1},
+		{"handles preamble and source column", "\nName                         Id                         Version        Source\n--------------------------------------------------------------------------------\nMicrosoft Edge               Microsoft.Edge              138.0.3351.83 winget\n", 1},
 	}
 
 	for _, tt := range tests {
@@ -123,8 +124,15 @@ func TestParseWingetOutput(t *testing.T) {
 	}
 
 	t.Run("parses name and version", func(t *testing.T) {
-		pkgs := parseWingetOutput("Name Id Version\n--- -- -------\n\ncurl Curl.Curl 7.76.1\n")
+		pkgs := parseWingetOutput("Name                Id                Version\n--------------------------------------------------\ncurl                Curl.Curl         7.76.1\n")
 		if len(pkgs) != 1 || pkgs[0].Name != "curl" || pkgs[0].Version != "7.76.1" {
+			t.Errorf("got %+v", pkgs)
+		}
+	})
+
+	t.Run("preserves names containing spaces", func(t *testing.T) {
+		pkgs := parseWingetOutput("Name                         Id                         Version        Source\n--------------------------------------------------------------------------------\nMicrosoft Edge               Microsoft.Edge              138.0.3351.83 winget\n")
+		if len(pkgs) != 1 || pkgs[0].Name != "Microsoft Edge" || pkgs[0].Version != "138.0.3351.83" {
 			t.Errorf("got %+v", pkgs)
 		}
 	})

@@ -98,6 +98,10 @@ export function ListHistoricalHealthReports() {
   return window['go']['app']['SysOps']['ListHistoricalHealthReports']();
 }
 
+export function RunDiagnostic() {
+  return window['go']['app']['SysOps']['RunDiagnostic']();
+}
+
 export function RunExtendedDiagnostics() {
   return window['go']['app']['SysOps']['RunExtendedDiagnostics']();
 }

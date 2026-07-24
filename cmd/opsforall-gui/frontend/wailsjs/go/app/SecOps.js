@@ -138,6 +138,10 @@ export function ListHistoricalSecurityReports() {
   return window['go']['app']['SecOps']['ListHistoricalSecurityReports']();
 }
 
+export function RunAudit() {
+  return window['go']['app']['SecOps']['RunAudit']();
+}
+
 export function RunSecurityAuditChecklist() {
   return window['go']['app']['SecOps']['RunSecurityAuditChecklist']();
 }

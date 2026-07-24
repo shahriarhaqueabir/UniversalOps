@@ -3,10 +3,26 @@
 import os
 import sys
 import subprocess
-import shlex
 import shutil
 import tempfile
 import time
+
+# ── pywin32 DLL path (Windows) — MUST be set before pywinauto imports ──
+
+if sys.platform == "nt":
+    # Dynamically locate pywin32 DLL directory (workstation-agnostic)
+    try:
+        import importlib.util
+        for mod_name in ("win32api", "win32file"):
+            spec = importlib.util.find_spec(mod_name)
+            if spec and spec.origin:
+                pywin32_site = os.path.dirname(os.path.dirname(spec.origin))
+                dll_dir = os.path.join(pywin32_site, "pywin32_system32")
+                if os.path.exists(dll_dir):
+                    os.add_dll_directory(dll_dir)
+                    break
+    except Exception:
+        pass  # pywinauto will surface its own ImportError if DLLs are missing
 
 import pytest
 from pywinauto import Application
@@ -14,24 +30,7 @@ from pywinauto import Application
 from config import (
     APP_PATH, APP_TITLE, LAUNCH_TIMEOUT, ACTION_TIMEOUT, ARTIFACT_DIR,
 )
-
-
-# ── pywin32 DLL path (Windows CI) ───────────────────────────────────
-
-if sys.platform == "nt":
-    extra_paths = [
-        "E:\\pip-packages",
-        "E:\\pip-packages\\win32",
-        "E:\\pip-packages\\win32\\lib",
-        "E:\\pip-packages\\Pythonwin",
-    ]
-    for p in extra_paths:
-        if os.path.exists(p):
-            sys.path.insert(0, p)
-
-    dll_dir = "E:\\pip-packages\\pywin32_system32"
-    if os.path.exists(dll_dir):
-        os.add_dll_directory(dll_dir)
+from pages import dismiss_onboarding
 
 
 # ── Fixtures ────────────────────────────────────────────────────────
@@ -46,6 +45,9 @@ def app():
 
     # Isolated data dir
     tmpdir = tempfile.mkdtemp(prefix="opsforall_e2e_")
+    portable_data = os.path.join(tmpdir, "data")
+    os.makedirs(portable_data, exist_ok=True)
+    open(os.path.join(portable_data, ".onboarded"), "w", encoding="utf-8").close()
     user_data = os.path.join(tmpdir, "AppData", "Roaming")
     os.makedirs(user_data, exist_ok=True)
 
@@ -55,7 +57,8 @@ def app():
         env[var] = os.path.join(tmpdir, "AppData", "Local") if var == "LOCALAPPDATA" else tmpdir
 
     proc = subprocess.Popen(
-        shlex.split(APP_PATH),
+        [APP_PATH],
+        cwd=tmpdir,
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -75,6 +78,7 @@ def app():
 
         app.window(title=APP_TITLE).wait("visible", timeout=LAUNCH_TIMEOUT)
         app.window(title=APP_TITLE).set_focus()
+        dismiss_onboarding(app)
 
         yield app
 

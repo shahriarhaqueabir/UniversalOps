@@ -53,8 +53,6 @@ func (n *NetOps) Ping(host string, count int) PingResult {
 	}
 	result, err := netops.Ping(host, count)
 	if err != nil {
-		common.LogWarn("Ping failed: %v", err)
-
 		if n.eventBus != nil {
 			n.eventBus.Emit(common.NewEvent(
 				common.CatNetwork,
@@ -115,8 +113,6 @@ func (n *NetOps) DNSLookup(hostname string, server string, timeoutMs int) DNSRes
 
 	result, err := netops.LookupDNSWithContext(ctx, hostname, servers...)
 	if err != nil {
-		common.LogWarn("DNSLookup failed: %v", err)
-
 		if n.eventBus != nil {
 			n.eventBus.Emit(common.NewEvent(
 				common.CatNetwork,
@@ -147,7 +143,6 @@ func (n *NetOps) PortScan(host string, ports []int) []PortResult {
 	}
 	results, err := netops.ScanPorts(host, ports)
 	if err != nil {
-		common.LogWarn("PortScan failed: %v", err)
 		return []PortResult{}
 	}
 	out := make([]PortResult, 0, len(results))
@@ -168,7 +163,6 @@ func (n *NetOps) Traceroute(host string) TraceResult {
 
 	result, err := netops.TraceRouteWithContext(ctx, host)
 	if err != nil {
-		common.LogWarn("Traceroute failed: %v", err)
 		return TraceResult{Target: host, Error: err.Error()}
 	}
 	hops := make([]TraceHop, 0, len(result.Hops))
@@ -195,7 +189,6 @@ func (n *NetOps) Traceroute(host string) TraceResult {
 func (n *NetOps) GetConnections() []ConnectionInfo {
 	conns, err := netops.GetConnections()
 	if err != nil {
-		common.LogWarn("GetConnections failed: %v", err)
 		return []ConnectionInfo{}
 	}
 	out := make([]ConnectionInfo, 0, len(conns))
@@ -215,10 +208,10 @@ func (n *NetOps) GetConnections() []ConnectionInfo {
 }
 
 // GetInterfaces returns network interface information.
+// (no speed cache — falls back to PowerShell for link speeds)
 func (n *NetOps) GetInterfaces() []InterfaceInfo {
-	ifaces, err := n.collectInterfaces()
+	ifaces, err := n.collectInterfaces(nil)
 	if err != nil {
-		common.LogWarn("GetInterfaces failed: %v", err)
 		return []InterfaceInfo{}
 	}
 	return ifaces
@@ -226,11 +219,12 @@ func (n *NetOps) GetInterfaces() []InterfaceInfo {
 
 // collectInterfaces gathers interface data with bandwidth rate calculation
 // and diffs against the previous snapshot to detect state changes.
-func (n *NetOps) collectInterfaces() ([]InterfaceInfo, error) {
+func (n *NetOps) collectInterfaces(cachedSpeeds map[string]int64) ([]InterfaceInfo, error) {
 	elapsed := time.Since(n.model.lastCapture)
 
 	// Use gopsutil counters directly via our netops wrapper
-	result, err := netops.GetInterfaces(n.model.lastCounters, elapsed)
+	// Pass cached link speeds to avoid PowerShell on every tick
+	result, err := netops.GetInterfaces(n.model.lastCounters, elapsed, cachedSpeeds)
 	if err != nil {
 		return nil, err
 	}
@@ -282,5 +276,62 @@ func (n *NetOps) RunNetworkHealthCheck() NetworkHealthReport {
 		Checks:   checks,
 		Summary:  report.Summary,
 		Duration: report.Duration,
+	}
+}
+
+// PingMultiTarget pings multiple targets concurrently and returns results.
+func (n *NetOps) PingMultiTarget(targets []string, count int) []PingResultMultiData {
+	if len(targets) == 0 {
+		return []PingResultMultiData{}
+	}
+	if count <= 0 {
+		count = 4
+	}
+	results := netops.PingMultiTarget(targets, count)
+	out := make([]PingResultMultiData, 0, len(results))
+	for _, r := range results {
+		out = append(out, PingResultMultiData{
+			Target:         r.Target,
+			MinMs:          r.MinMs,
+			AvgMs:          r.AvgMs,
+			MaxMs:          r.MaxMs,
+			StdDevMs:       r.StdDevMs,
+			PacketLoss:     r.PacketLoss,
+			JitterMs:       r.JitterMs,
+			IndividualRTTs: r.IndividualRTTs,
+			Success:        r.Success,
+			Error:          r.Error,
+		})
+	}
+	return out
+}
+
+// GetPingStats computes aggregate stats across multiple ping results.
+func (n *NetOps) GetPingStats(results []PingResultMultiData) PingStatsData {
+	if len(results) == 0 {
+		return PingStatsData{}
+	}
+	// Convert to netops.PingResultMulti for the domain function
+	domain := make([]netops.PingResultMulti, 0, len(results))
+	for _, r := range results {
+		domain = append(domain, netops.PingResultMulti{
+			Target:         r.Target,
+			MinMs:          r.MinMs,
+			AvgMs:          r.AvgMs,
+			MaxMs:          r.MaxMs,
+			StdDevMs:       r.StdDevMs,
+			PacketLoss:     r.PacketLoss,
+			JitterMs:       r.JitterMs,
+			IndividualRTTs: r.IndividualRTTs,
+			Success:        r.Success,
+			Error:          r.Error,
+		})
+	}
+	stats := netops.GetPingStats(domain)
+	return PingStatsData{
+		AvgLatency:  stats.AvgLatency,
+		MaxLatency:  stats.MaxLatency,
+		TotalLoss:   stats.TotalLoss,
+		WorstTarget: stats.WorstTarget,
 	}
 }

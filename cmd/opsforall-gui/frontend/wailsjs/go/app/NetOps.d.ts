@@ -8,7 +8,11 @@ export function GetConnections():Promise<Array<app.ConnectionInfo>>;
 
 export function GetInterfaces():Promise<Array<app.InterfaceInfo>>;
 
+export function GetPingStats(arg1:Array<app.PingResultMultiData>):Promise<app.PingStatsData>;
+
 export function Ping(arg1:string,arg2:number):Promise<app.PingResult>;
+
+export function PingMultiTarget(arg1:Array<string>,arg2:number):Promise<Array<app.PingResultMultiData>>;
 
 export function PortScan(arg1:string,arg2:Array<number>):Promise<Array<app.PortResult>>;
 

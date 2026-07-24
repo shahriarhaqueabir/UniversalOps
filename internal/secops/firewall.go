@@ -92,9 +92,34 @@ func getFirewallStatusFallback() ([]FirewallProfile, error) {
 	outputStr := string(output)
 	profiles := []FirewallProfile{}
 	for _, name := range []string{"Domain", "Private", "Public"} {
+		// netsh output on English Windows:
+		//   Domain Profile Settings:
+		//   State                                 ON
 		if strings.Contains(outputStr, name+" Profile") {
-			enabled := strings.Contains(outputStr, name+" Profile\nState") &&
-				strings.Contains(strings.ToLower(outputStr), strings.ToLower(name)+" profile\nstate                  ON")
+			enabled := false
+			// Find the profile section and check the State line beneath it
+			normalized := strings.ReplaceAll(outputStr, "\r\n", "\n")
+			lines := strings.Split(normalized, "\n")
+			inProfile := false
+			for _, line := range lines {
+				trimmed := strings.TrimSpace(line)
+				if strings.Contains(trimmed, name+" Profile") {
+					inProfile = true
+					continue
+				}
+				if inProfile && strings.HasPrefix(trimmed, "State") {
+					fields := strings.Fields(trimmed)
+					if len(fields) >= 2 && strings.EqualFold(fields[len(fields)-1], "ON") {
+						enabled = true
+					}
+					inProfile = false
+				} else if inProfile && trimmed == "" {
+					// still in the profile section, keep looking
+					continue
+				} else if inProfile {
+					inProfile = false
+				}
+			}
 			profiles = append(profiles, FirewallProfile{Name: name, Enabled: enabled})
 		}
 	}

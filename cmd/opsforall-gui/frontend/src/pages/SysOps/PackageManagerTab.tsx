@@ -53,7 +53,7 @@ export function PackageManagerTab() {
 
   const filteredPackages = useMemo(() => {
     if (!activeManager) return []
-    let list = activeManager.packages.filter(p =>
+    const list = activeManager.packages.filter(p =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.version?.toLowerCase().includes(search.toLowerCase())
     )
@@ -157,7 +157,13 @@ export function PackageManagerTab() {
                     <th className="px-2 py-3" />
                   </tr>
                 </thead>
-                <tbody>
+                <tbody
+                  style={{
+                    height: `${rowVirtualizer.getTotalSize()}px`,
+                    width: '100%',
+                    position: 'relative',
+                  }}
+                >
                   {filteredPackages.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="px-4 py-16 text-center">
@@ -188,6 +194,7 @@ export function PackageManagerTab() {
                             top: 0,
                             left: 0,
                             width: '100%',
+                            height: `${virtualRow.size}px`,
                             transform: `translateY(${virtualRow.start}px)`,
                           }}
                           className={cn(

@@ -2,12 +2,14 @@ package app
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/shirou/gopsutil/v4/load"
 	"github.com/shirou/gopsutil/v4/sensors"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/AllOpsFull/internal/netops"
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/sysops"
 )
 
@@ -102,7 +104,10 @@ func primaryDiskUsage(stats *sysops.DiskStats) (float64, uint64) {
 // ── Network Collector ─────────────────────────────────────────────────────────
 
 type networkCollector struct {
-	netOps *NetOps
+	netOps         *NetOps
+	speedCache     map[string]int64
+	speedCacheTime time.Time
+	speedCacheMu   sync.Mutex
 }
 
 func (c *networkCollector) Info() common.CollectorInfo {
@@ -110,13 +115,23 @@ func (c *networkCollector) Info() common.CollectorInfo {
 		ID:              common.CollectorNet,
 		Name:            "Network Traffic",
 		Description:     "Interface bandwidth rates (RX/TX)",
-		DefaultInterval: 5 * time.Second,
+		DefaultInterval: 15 * time.Second, // Bumped from 5s to 15s — each collect takes 1.1-1.6s
 		DefaultEnabled:  true,
 	}
 }
 
 func (c *networkCollector) Collect(ctx context.Context) ([]common.MetricSample, error) {
-	ifaces, err := c.netOps.collectInterfaces()
+	// Refresh speed cache every 5 minutes to keep link speed changes in view
+	c.speedCacheMu.Lock()
+	if c.speedCache == nil || time.Since(c.speedCacheTime) > 5*time.Minute {
+		fresh := netops.GetLinkSpeeds()
+		c.speedCache = fresh
+		c.speedCacheTime = time.Now()
+	}
+	cache := c.speedCache
+	c.speedCacheMu.Unlock()
+
+	ifaces, err := c.netOps.collectInterfaces(cache)
 	if err != nil {
 		return nil, err
 	}
@@ -329,7 +344,7 @@ func RegisterCollectors(registry *common.CollectorRegistry, app *App) {
 	registry.Register(&cpuCollector{})
 	registry.Register(&memoryCollector{})
 	registry.Register(&diskCollector{})
-	registry.Register(&networkCollector{netOps: app.NetOps})
+	registry.Register(&networkCollector{netOps: app.NetOps, speedCache: make(map[string]int64)})
 	registry.Register(&gpuCollector{sysOps: app.SysOps})
 	registry.Register(&temperatureCollector{})
 	registry.Register(&processCountCollector{})

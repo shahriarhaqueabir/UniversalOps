@@ -70,7 +70,10 @@ func parseNetAccounts(output string) *PasswordPolicy {
 				p.LockoutDuration = v
 			}
 		} else if strings.Contains(lower, "password complexity") {
-			p.Complexity = strings.Contains(strings.ToLower(line), "enabled")
+			// Windows "net accounts" says "is enforced" (ON) or "not enforced" (OFF)
+			p.Complexity = strings.Contains(strings.ToLower(line), "enabled") ||
+				(strings.Contains(strings.ToLower(line), "enforced") &&
+					!strings.Contains(strings.ToLower(line), "not enforced"))
 		}
 	}
 	return p

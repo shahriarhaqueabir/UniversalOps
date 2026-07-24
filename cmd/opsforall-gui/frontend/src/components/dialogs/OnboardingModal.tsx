@@ -340,6 +340,7 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
             {/* Skip / close button */}
             <button
               onClick={handleSkipAll}
+              data-automation-id="onboarding-skip"
               className="ml-2 p-2.5 min-h-[40px] min-w-[40px] rounded-lg text-[var(--color-text-faint)] hover:text-[var(--color-text)] hover:bg-[var(--color-panel-2)] transition-colors flex items-center justify-center"
               aria-label="Skip setup and use defaults"
               title="Skip setup (Esc)"

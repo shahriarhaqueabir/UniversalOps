@@ -35,7 +35,8 @@ type BandwidthResult struct {
 
 // GetInterfaces returns information about all network interfaces without blocking.
 // It uses the provided lastCounters and elapsed duration to calculate rates.
-func GetInterfaces(lastCounters map[string]BandwidthCounter, elapsed time.Duration) (BandwidthResult, error) {
+// If cachedSpeeds is non-nil, it is used instead of spawning PowerShell for Get-NetAdapter.
+func GetInterfaces(lastCounters map[string]BandwidthCounter, elapsed time.Duration, cachedSpeeds map[string]int64) (BandwidthResult, error) {
 	current, err := GetBandwidthCounters()
 	if err != nil {
 		return BandwidthResult{}, err
@@ -52,8 +53,13 @@ func GetInterfaces(lastCounters map[string]BandwidthCounter, elapsed time.Durati
 		rates = calculateBandwidthRates(lastCounters, current, elapsed)
 	}
 
-	// Get link speeds via PowerShell (gopsutil doesn't expose speed on all platforms)
-	speeds := getLinkSpeeds()
+	// Get link speeds — use cache if provided, otherwise fall back to PowerShell
+	var speeds map[string]int64
+	if cachedSpeeds != nil {
+		speeds = cachedSpeeds
+	} else {
+		speeds = GetLinkSpeeds() // PowerShell Get-NetAdapter (~100ms per call)
+	}
 
 	var result []InterfaceInfo
 	for _, iface := range gopsIfaces {
@@ -179,9 +185,9 @@ func counterDelta(before, after uint64) uint64 {
 	return after - before
 }
 
-// getLinkSpeeds returns a map of interface name → link speed in bits/sec
+// GetLinkSpeeds returns a map of interface name → link speed in bits/sec
 // by querying Windows PowerShell Get-NetAdapter. Returns empty map on non-Windows or error.
-func getLinkSpeeds() map[string]int64 {
+func GetLinkSpeeds() map[string]int64 {
 	speeds := make(map[string]int64)
 	if runtime.GOOS != "windows" {
 		return speeds

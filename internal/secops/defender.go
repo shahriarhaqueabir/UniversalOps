@@ -300,6 +300,12 @@ func getJSONString(data map[string]interface{}, key string) (string, bool) {
 		switch val := v.(type) {
 		case string:
 			return val, true
+		case bool:
+			// PowerShell ConvertTo-Json serialises booleans as JSON true/false
+			if val {
+				return "True", true
+			}
+			return "False", true
 		case map[string]interface{}:
 			// Handle {"Value": "something"} objects from PowerShell
 			if inner, ok := val["Value"]; ok {
