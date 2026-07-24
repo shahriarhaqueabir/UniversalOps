@@ -41,7 +41,7 @@
     "motion": "^12.42.2",
     "nanoid": "^5.1.16",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "react-dom": "^19.2.8",
     "recharts": "^3.9.2",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
