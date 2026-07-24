@@ -6,9 +6,9 @@ import os
 
 APP_PATH = os.environ.get(
     'APP_PATH',
-    'E:\\Projects\\projectx\\AllOpsFull\\build\\bin\\OpsForAll.exe',
+    'E:\\Projects\\projectx\\UniversalOps\\build\\bin\\universal-ops.exe',
 )
-APP_TITLE = os.environ.get('APP_TITLE', 'OpsForAll')
+APP_TITLE = os.environ.get('APP_TITLE', 'Universal-Ops Operations Platform')
 
 # ── Timeouts (seconds) ──
 

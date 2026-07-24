@@ -20,6 +20,10 @@ import (
 var assets embed.FS
 
 func main() {
+	// Check OS-level prerequisites before initialising the UI.
+	// On Windows this verifies the WebView2 Runtime is installed.
+	checkWindowsPrereqs()
+
 	// Start pprof server for Phase 0 instrumentation
 	go func() {
 		log.Println("pprof server starting on :6060")
@@ -44,7 +48,7 @@ func main() {
 		Windows: &windows.Options{
 			WebviewIsTransparent: true,
 			WindowIsTranslucent:  true,
-			BackdropType:         windows.Mica,
+			BackdropType:         backdropType(),
 			DisableWindowIcon:    false,
 
 			Theme:                windows.Dark,

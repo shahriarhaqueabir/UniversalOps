@@ -198,14 +198,29 @@ func (a *AIOps) Chat(sessionID, message string) ChatResponse {
 	messages = append(messages, chatHistory...)
 	messages = append(messages, aiops.ChatMessage{Role: "user", Content: wrappedMessage})
 
-	// 2. Execute Chat
+	// 2. Execute Chat with per-request timeout
+	// Use context.Background() fallback when a.ctx is nil (e.g. in tests)
+	chatParent := a.ctx
+	if chatParent == nil {
+		chatParent = context.Background()
+	}
+	chatCtx, cancel := context.WithTimeout(chatParent, 120*time.Second)
+	defer cancel()
+
+	chatStart := time.Now()
+
 	// CRITICAL: We pass the locally resolved activeModel to ensure session isolation
 	// and prevent background diagnostics from changing the user's preferred model.
-	rawResponse, err := aiops.ChatWithModelAndContext(a.ctx, messages, activeModel)
+	rawResponse, err := aiops.ChatWithModelAndContext(chatCtx, messages, activeModel)
+
+	chatElapsed := time.Since(chatStart)
+
 	if err != nil {
-		common.LogWarn("AI Chat failed: %v", err)
+		common.LogWarn("AI Chat failed after %v: %v", chatElapsed, err)
 		return ChatResponse{Content: "Error: " + err.Error()}
 	}
+
+	common.LogInfo("AI Chat completed in %v (session=%s)", chatElapsed, sessionID)
 
 	// 3. Parse for Action Requests
 	content, actions := aiops.ParseActions(rawResponse)
@@ -357,8 +372,11 @@ func (a *AIOps) ChatStream(sessionID, message string) ChatResponse {
 	}
 
 	// Decide whether to load heavy context
+	// NOTE: isTrivialMessage returns true for short/greeting messages.
+	// When trivial, we want to use the cached context (forceRefresh=false)
+	// to reduce first-token latency. When non-trivial, force a fresh snapshot.
 	trivial := isTrivialMessage(message)
-	historyContext := a.buildSystemContextSnapshot(trivial)
+	historyContext := a.buildSystemContextSnapshot(!trivial)
 
 	// Load chat history (must happen on this goroutine; storage is not
 	// guaranteed goroutine-safe for sequential access patterns).
@@ -388,24 +406,41 @@ func (a *AIOps) ChatStream(sessionID, message string) ChatResponse {
 		"sessionId": sessionID,
 	})
 
+	// Apply a per-request timeout so a hung Ollama process doesn't
+	// block the facade indefinitely. The underlying HTTP client has its
+	// own 60s timeout, but this gives us an extra layer of protection.
+	// Use context.Background() fallback when a.ctx is nil (e.g. in tests).
+	chatParent := a.ctx
+	if chatParent == nil {
+		chatParent = context.Background()
+	}
+	chatCtx, cancel := context.WithTimeout(chatParent, 120*time.Second)
+	defer cancel()
+
+	chatStart := time.Now()
+
 	// Execute streaming chat — the onToken callback emits events inline
 	// while the Ollama API delivers chunks. Events reach the frontend
 	// immediately because Wails processes them asynchronously.
-	rawResponse, err := aiops.ChatStreamWithModelAndContext(a.ctx, messages, activeModel, func(token string) {
+	rawResponse, err := aiops.ChatStreamWithModelAndContext(chatCtx, messages, activeModel, func(token string) {
 		wailsruntime.EventsEmit(a.ctx, "chat:token", map[string]string{
 			"sessionId": sessionID,
 			"token":     token,
 		})
 	})
 
+	chatElapsed := time.Since(chatStart)
+
 	if err != nil {
-		common.LogWarn("AI ChatStream failed: %v", err)
+		common.LogWarn("AI ChatStream failed after %v: %v", chatElapsed, err)
 		wailsruntime.EventsEmit(a.ctx, "chat:error", map[string]string{
 			"sessionId": sessionID,
 			"error":     err.Error(),
 		})
 		return ChatResponse{Content: "Error: " + err.Error()}
 	}
+
+	common.LogInfo("AI ChatStream completed in %v (session=%s, tokens=%d)", chatElapsed, sessionID, len(strings.Fields(rawResponse)))
 
 	content, actions := aiops.ParseActions(rawResponse)
 
@@ -420,8 +455,9 @@ func (a *AIOps) ChatStream(sessionID, message string) ChatResponse {
 	}
 
 	wailsruntime.EventsEmit(a.ctx, "chat:done", map[string]string{
-		"sessionId": sessionID,
-		"content":   content,
+		"sessionId":  sessionID,
+		"content":    content,
+		"latency_ms": fmt.Sprintf("%.0f", chatElapsed.Seconds()*1000),
 	})
 
 	// Also save actions as JSON payload
@@ -443,11 +479,23 @@ func (a *AIOps) GenerateReport(sections []string) string {
 		title = aiops.SanitizeInput(title)
 		prompt := "Generate a brief operations report section for: " + title +
 			". Include key metrics and observations based on recent system data."
-		resp, err := aiops.ChatWithContext(a.ctx, []aiops.ChatMessage{
+		genParent := a.ctx
+		if genParent == nil {
+			genParent = context.Background()
+		}
+		genCtx, cancel := context.WithTimeout(genParent, 120*time.Second)
+		defer cancel()
+		genStart := time.Now()
+		resp, err := aiops.ChatWithContext(genCtx, []aiops.ChatMessage{
 			{Role: "system", Content: "You are a system operations analyst. Be concise and factual."},
 			{Role: "user", Content: prompt},
 		})
-
+		genElapsed := time.Since(genStart)
+		if err != nil {
+			common.LogWarn("GenerateReport section %q failed after %v: %v", title, genElapsed, err)
+		} else {
+			common.LogInfo("GenerateReport section %q completed in %v", title, genElapsed)
+		}
 		content := ""
 		if err == nil {
 			content = resp
@@ -1001,15 +1049,27 @@ If no changes are needed, return the current settings in the payload.`,
 		knowledge.CPUUsage, knowledge.MemoryUsage, knowledge.DiskUsage, knowledge.Anomalies,
 		settings["refreshInterval"], settings["pingCount"], settings["dnsTimeout"])
 
-	// 2. Call AI with Optimizer model override
-	resp, err := aiops.ChatWithModelAndContext(a.ctx, []aiops.ChatMessage{
+	// 2. Call AI with Optimizer model override (with per-request timeout)
+	optParent := a.ctx
+	if optParent == nil {
+		optParent = context.Background()
+	}
+	optCtx, cancel := context.WithTimeout(optParent, 120*time.Second)
+	defer cancel()
+
+	optStart := time.Now()
+	resp, err := aiops.ChatWithModelAndContext(optCtx, []aiops.ChatMessage{
 		{Role: "system", Content: "You are the Universal-Ops Engine Optimizer. Output JSON only."},
 		{Role: "user", Content: prompt},
 	}, a.OptimizerModel)
+	optElapsed := time.Since(optStart)
 
 	if err != nil {
+		common.LogWarn("RequestOptimization failed after %v: %v", optElapsed, err)
 		return ChatResponse{Content: "Optimization analysis failed: " + err.Error()}
 	}
+
+	common.LogInfo("RequestOptimization completed in %v", optElapsed)
 
 	// 3. Simple JSON Extraction
 	// (AI might wrap JSON in markdown blocks)

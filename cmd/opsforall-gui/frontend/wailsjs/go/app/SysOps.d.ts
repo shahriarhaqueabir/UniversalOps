@@ -21,6 +21,8 @@ export function GetHardwareInfo():Promise<app.HardwareInfo>;
 
 export function GetHistoricalHealthReport(arg1:string):Promise<app.ExtendedDiagnosticResult>;
 
+export function GetInstalledPackages():Promise<Array<app.PackageManagerData>>;
+
 export function GetLHMAuthorization():Promise<app.LHMAuthorization>;
 
 export function GetLHMStatus():Promise<app.LHMStatusResult>;
