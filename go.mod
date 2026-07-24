@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/miekg/dns v1.1.63
-	github.com/ollama/ollama v0.31.2
+	github.com/ollama/ollama v0.32.3
 	github.com/prometheus/client_golang v1.23.2
 	github.com/rs/zerolog v1.35.1
 	github.com/shirou/gopsutil/v4 v4.26.6
