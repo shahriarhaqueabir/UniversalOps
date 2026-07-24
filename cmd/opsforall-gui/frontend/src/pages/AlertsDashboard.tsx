@@ -266,13 +266,13 @@ export function AlertsDashboard() {
       <div className="flex-1 overflow-y-auto">
         {tab === 'alerts' && (
           <div className="p-6 space-y-2">
-            {(_activeLoading || historyLoading) && (
+            {historyLoading && (
               <div className="flex items-center justify-center py-20">
                 <div className="w-6 h-6 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
               </div>
             )}
 
-            {!(_activeLoading || historyLoading) && filteredAlerts.length === 0 && (
+            {!historyLoading && filteredAlerts.length === 0 && (
               <div className="flex flex-col items-center justify-center py-20 text-[var(--color-text-faint)]">
                 <Bell size={40} className="mb-3 opacity-30" />
                 <p className="text-xs font-bold uppercase tracking-wider">No alerts</p>
