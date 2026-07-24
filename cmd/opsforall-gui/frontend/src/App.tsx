@@ -95,7 +95,7 @@ function App() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [])
+  }, [navigate])
 
   // Subscribe to Wails alert events → sonner toasts
   const handleAlertEvent = useCallback((...args: unknown[]) => {
