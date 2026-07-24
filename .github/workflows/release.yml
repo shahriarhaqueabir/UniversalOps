@@ -161,13 +161,31 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
 
+      - name: Generate checksums
+        run: |
+          echo "## Checksums" > checksums.txt
+          sha256sum windows-release/* linux-release/* macos-release/* >> checksums.txt
+          cat checksums.txt
+
+      - name: Prepare package manifests
+        run: |
+          WINDOWS_HASH=$(sha256sum windows-release/*.exe | cut -d' ' -f1)
+          LINUX_HASH=$(sha256sum linux-release/* | cut -d' ' -f1)
+          MACOS_HASH=$(sha256sum macos-release/* | cut -d' ' -f1)
+          echo "Windows SHA256: $WINDOWS_HASH"
+          echo "Linux SHA256: $LINUX_HASH"
+          echo "macOS SHA256: $MACOS_HASH"
+          echo "Use these hashes to update scripts/package-homebrew.ps1 and scripts/package-scoop.ps1"
+
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           files: |
+            checksums.txt
             windows-release/*
             linux-release/*
             macos-release/*
+          generate_release_notes: true
           generate_release_notes: true
         env:
           # Note: on private repos, the built-in GITHUB_TOKEN cannot create releases.

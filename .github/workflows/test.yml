@@ -48,6 +48,13 @@ jobs:
         run: go vet ./...
         shell: bash
 
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v2.1
+          args: --timeout=5m ./...
+        shell: bash
+
       - name: Go test
         run: go test -race ./internal/... -coverprofile=coverage.out -covermode=atomic -count=1
         shell: bash
@@ -78,3 +85,14 @@ jobs:
           files: coverage.out,cmd/opsforall-gui/frontend/coverage/lcov.info
           flags: unittests
           verbose: true
+
+      - name: Archive test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: |
+            coverage.out
+            cmd/opsforall-gui/frontend/coverage/lcov.info
+            cmd/opsforall-gui/frontend/coverage/
+          retention-days: 7

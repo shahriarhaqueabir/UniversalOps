@@ -64,12 +64,6 @@ export function AlertsDashboard() {
 
   // ── Queries ──
 
-  const { data: _activeAlerts = [], isLoading: _activeLoading } = useQuery<AlertInfo[]>({
-    queryKey: ['activeAlerts'],
-    queryFn: async () => (await call('AlertAPI.GetActiveAlerts')) as AlertInfo[] || [],
-    refetchInterval: 10_000,
-  })
-
   const { data: allAlerts = [], isLoading: historyLoading } = useQuery<AlertInfo[]>({
     queryKey: ['alertHistory'],
     queryFn: async () => (await call('AlertAPI.GetAlertHistory')) as AlertInfo[] || [],
@@ -86,7 +80,6 @@ export function AlertsDashboard() {
   const resolveMutation = useMutation({
     mutationFn: async (id: string) => { await call('AlertAPI.ResolveAlert', id) },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['activeAlerts'] })
       queryClient.invalidateQueries({ queryKey: ['alertHistory'] })
       toast.success('Alert resolved')
     },
@@ -96,7 +89,6 @@ export function AlertsDashboard() {
   const evaluateMutation = useMutation({
     mutationFn: async () => { await call('AlertAPI.EvaluateNow') },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['activeAlerts'] })
       queryClient.invalidateQueries({ queryKey: ['alertHistory'] })
       toast.success('Evaluation complete')
     },
@@ -167,7 +159,6 @@ export function AlertsDashboard() {
           </button>
           <button
             onClick={() => {
-              queryClient.invalidateQueries({ queryKey: ['activeAlerts'] })
               queryClient.invalidateQueries({ queryKey: ['alertHistory'] })
               queryClient.invalidateQueries({ queryKey: ['alertRules'] })
             }}

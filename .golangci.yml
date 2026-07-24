@@ -1,0 +1,48 @@
+# golangci-lint configuration for Universal-Ops
+# Docs: https://golangci-lint.run/usage/configuration/
+
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    # High-signal defaults
+    - errcheck       # detect unchecked errors
+    - govet          # go vet
+    - staticcheck    # extensive static analysis
+    - gosimple       # simplify code
+    - unused         # detect unused code
+    - ineffassign    # detect ineffective assignments
+
+    # Additional useful checks
+    - errorlint      # error wrapping ( %w vs %s )
+    - revive         # replacement for golint
+    - bodyclose       # ensure HTTP response bodies are closed
+    - prealloc        # pre-allocate slices when size is known
+    - gocritic        # lint checks from Go team
+    - misspell        # detect common typos
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    gocritic:
+      enabled-tags:
+        - performance
+        - diagnostic
+        - style
+
+issues:
+  max-same-issues: 0
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - bodyclose
+        - errcheck
+        - gosec
+    - path: internal/common/
+      text: "ST1003"  # allow common package naming quirks
