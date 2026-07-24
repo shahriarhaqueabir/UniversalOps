@@ -1,0 +1,8 @@
+# Universal-Ops default code owners
+* @shahriarhaqueabir
+
+# CI/CD configuration
+.github/workflows/* @shahriarhaqueabir
+
+# Documentation
+docs/* @shahriarhaqueabir

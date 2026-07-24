@@ -116,18 +116,9 @@ describe('DevOps Page', () => {
 
   it('shows tabs', () => {
     render(<DevOps />)
-    expect(screen.getByText(/Terminal/i)).toBeInTheDocument()
-    expect(screen.getByText(/Services/i)).toBeInTheDocument()
-    expect(screen.getByText(/Git/i)).toBeInTheDocument()
-  })
-
-  it('switches to Git tab', async () => {
-    const user = userEvent.setup()
-    render(<DevOps />)
-    await user.click(screen.getByRole('tab', { name: /Git/i }))
-    await waitFor(() => {
-      expect(screen.getByText(/main \*/)).toBeInTheDocument()
-    })
+    expect(screen.getByRole('tab', { name: /Overview/i })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /Services/i })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /Docker/i })).toBeInTheDocument()
   })
 
   it('switches to Services tab and shows services', async () => {
@@ -162,12 +153,12 @@ describe('DevOps Page', () => {
     })
   })
 
-  it('switches to Terminal tab', async () => {
+  it('switches to PS tab', async () => {
     const user = userEvent.setup()
     render(<DevOps />)
-    await user.click(screen.getByRole('tab', { name: /Terminal/i }))
+    await user.click(screen.getByRole('tab', { name: /^PS$/i }))
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/Enter shell command/i)).toBeInTheDocument()
+      expect(screen.getByPlaceholderText(/Enter PowerShell command/i)).toBeInTheDocument()
     })
   })
 
