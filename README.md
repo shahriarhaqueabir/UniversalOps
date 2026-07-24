@@ -1,4 +1,4 @@
-# Universal-Ops: High-Performance Native Operations Dashboard for Windows
+# Universal-Ops: High-Performance Native Operations Dashboard
 
 [![Version](https://img.shields.io/badge/version-v1.3.1-7c6cff)](https://github.com/shahriarhaqueabir/AllOpsFull/releases)
 [![License](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
@@ -28,15 +28,32 @@ Universal-Ops replaces fragmented CLI tools with a unified, high-performance das
 ---
 
 ## 🚀 Quick Start
-Ready to build your observation command center? 
 
-### One-Line Setup (For Developers)
-Run this in your terminal to clone, install, and build the entire project:
+### 🖱️ For End Users (Just Want to Run It)
+1. Go to the **[Releases page](https://github.com/shahriarhaqueabir/AllOpsFull/releases)**.
+2. Download the latest `universal-ops-*-windows-amd64.exe`.
+3. Create a folder on your Desktop named `UniversalOps`, move the `.exe` there.
+4. Double-click the `.exe` to launch.
+
+> **No installation required.** The app is fully portable. An NSIS installer is also available on the Releases page if you prefer a proper install.
+
+**Optional — Extras:** Install [Ollama](https://ollama.com) for AI-powered analysis, and [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) for temperature/fan sensors. The app works without them — it just shows *N/A* for those features.
+
+### 🛠️ For Developers (Building from Source)
+Clone, install dependencies, and build:
+
 ```powershell
-git clone https://github.com/shahriarhaqueabir/AllOpsFull.git UniversalOps; cd UniversalOps; New-Item -ItemType Directory -Path data,logs,bin -Force; cd cmd/opsforall-gui/frontend; npm install; cd ../../../; go mod tidy; wails build
+git clone https://github.com/shahriarhaqueabir/AllOpsFull.git UniversalOps
+cd UniversalOps
+New-Item -ItemType Directory -Path data,logs,bin -Force
+cd cmd/opsforall-gui/frontend
+npm install
+cd ../../../
+go mod tidy
+wails build
 ```
 
-**Detailed Installation Guide**: [Read the Manual](./docs/INSTALL.md)
+**Detailed installation & troubleshooting**: [Installation Manual](./docs/INSTALL.md)
 
 ---
 
