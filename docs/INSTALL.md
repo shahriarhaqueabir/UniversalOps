@@ -1,13 +1,13 @@
 # Installation & Quick Start Manual
 
-Welcome to **Universal-Ops**. This guide will get you from zero to a fully lit-up Operations Command Center in less than 5 minutes.
+Welcome to **UniversalOps**. This guide will get you from zero to a fully lit-up Operations Command Center in less than 5 minutes.
 
 ---
 
 ## 🖱️ Easy Setup (For Non-Technical Users)
 
 ### 1. Download the App
-Go to the **[Releases page](https://github.com/shahriarhaqueabir/AllOpsFull/releases)** and download the latest version:
+Go to the **[Releases page](https://github.com/shahriarhaqueabir/UniversalOps/releases)** and download the latest version:
 
 - **Windows portable (recommended):** `universal-ops-*-windows-amd64.exe`
 - **Windows installer:** `universal-ops-*-windows-amd64-installer.exe` (if you prefer a proper install)
@@ -32,7 +32,7 @@ That's it. Everything else works automatically.
 ## 🛠️ Advanced Setup (From Source)
 
 ### Prerequisites
-- **Go 1.26+**: [Download](https://go.dev/dl/)
+- **Go 1.22+**: [Download](https://go.dev/dl/)
 - **Node.js 22+**: [Download](https://nodejs.org/)
 - **Wails v2**: Install via `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
 - **GCC (Windows)**: [MinGW](https://www.mingw-w64.org/) or TDM-GCC
@@ -41,7 +41,7 @@ That's it. Everything else works automatically.
 
 ### Build
 ```powershell
-git clone https://github.com/shahriarhaqueabir/AllOpsFull.git UniversalOps
+git clone https://github.com/shahriarhaqueabir/UniversalOps.git
 cd UniversalOps
 New-Item -ItemType Directory -Path data,logs,bin -Force
 cd cmd/opsforall-gui/frontend
@@ -56,7 +56,7 @@ The binary will be at `build/bin/universal-ops.exe`.
 ---
 
 ## External Tool Detection
-Universal-Ops works out-of-the-box for core functionality. Some features require external tools that the app detects automatically on launch.
+UniversalOps works out-of-the-box for core functionality. Some features require external tools that the app detects automatically on launch.
 
 | Tool | Required For | Status |
 |------|-------------|--------|
@@ -72,7 +72,7 @@ Universal-Ops works out-of-the-box for core functionality. Some features require
 ---
 
 ## First Launch Checklist
-When you first open Universal-Ops, follow the **Enhanced Onboarding Wizard**:
+When you first open UniversalOps, follow the **Enhanced Onboarding Wizard**:
 
 1.  **Welcome**: Review the local-first privacy policy.
 2.  **System Check**: The app scans for tools and shows their detection status.

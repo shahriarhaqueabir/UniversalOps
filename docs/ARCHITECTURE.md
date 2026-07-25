@@ -1,11 +1,11 @@
-# Universal-Ops — Architecture Document
+# UniversalOps — Architecture Document
 
 > A high-performance native desktop operations platform built with Go and Wails v2.
 
 ---
 
 ## 1. Overview
-Universal-Ops provides a unified command center for system administrators, security professionals, and SREs. It bridges the gap between low-level kernel telemetry and actionable operational intelligence.
+UniversalOps provides a unified command center for system administrators, security professionals, and SREs. It bridges the gap between low-level kernel telemetry and actionable operational intelligence.
 
 ### Goals
 - **100% Local**: Zero telemetry, zero cloud sync.
@@ -154,7 +154,7 @@ sequenceDiagram
 ## Directory Layout
 
 ```
-AllOpsFull/
+UniversalOps/
 ├── main.go                    # Wails entry point (//go:embed frontend)
 ├── internal/
 │   ├── app/                   # Wails bindings (Dashboard, SysOps, NetOps, etc.)
@@ -220,7 +220,7 @@ To handle frequent metric writes from the `DataPipeline` without blocking read q
 - **Resilient Ingestion**: `InsertMetric` utilizes a 500ms resilient window to handle transient disk I/O spikes without telemetry loss.
 
 ### Why Local-First AI?
-Universal-Ops integrates with **Ollama** locally. 
+UniversalOps integrates with **Ollama** locally.
 - **Portable Sovereignty**: All data (DB, logs, markers) is stored strictly in the application root (`./data`, `./logs`).
 - **Request Isolation**: AI state is instance-based via `OllamaClient`, ensuring zero state-leakage between concurrent user sessions and background diagnostics.
 

@@ -127,6 +127,11 @@ func GetDetailedBatteryHealth() (*BatteryHealth, error) {
 	return health, nil
 }
 
+// getLoggedInUsersPlatform returns logged-in users on Windows via `query user` with WMI fallback.
+func getLoggedInUsersPlatform() ([]LoggedInUser, error) {
+	return getLoggedInUsersWindows()
+}
+
 // getLoggedInUsersWindows uses the Windows `query user` command to list logged-in users.
 // Falls back to WMI if the command is not available (e.g. Windows Home edition).
 func getLoggedInUsersWindows() ([]LoggedInUser, error) {

@@ -1,6 +1,6 @@
-# Contributing to Universal-Ops
+# Contributing to UniversalOps
 
-Thank you for your interest in making Universal-Ops better! We aim to build the most robust, local-first operations platform for Windows workstation telemetry.
+Thank you for your interest in making UniversalOps better! We aim to build the most robust, local-first operations platform for Windows workstation telemetry.
 
 ## Core Philosophy
 1.  **Local-First**: No data leaves the machine. No telemetry to us, no cloud sync.
@@ -8,7 +8,7 @@ Thank you for your interest in making Universal-Ops better! We aim to build the 
 3.  **High Density**: Information-rich, professional UIs. No "padding" or wasted space.
 
 ## Development Environment
-- **Go**: 1.26.5+
+- **Go**: 1.22.5+
 - **Node.js**: 20+ (using npm)
 - **Wails CLI**: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
 
@@ -46,7 +46,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 ## Project Structure
 
 ```
-AllOpsFull/
+UniversalOps/
 ├── main.go                  ← Entry point (Wails)
 ├── internal/
 │   ├── app/                 ← Wails bound facades

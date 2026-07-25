@@ -4,9 +4,93 @@ import (
 	"fmt"
 	"os/exec"
 	"runtime"
+	"strings"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
+
+// actionErrorHints maps common exit code patterns to user-friendly messages per action.
+func actionErrorHint(action SystemAction, err error, output string) string {
+	errMsg := err.Error()
+	lower := strings.ToLower(errMsg + " " + output)
+
+	// Access denied — most common for privileged operations
+	if strings.Contains(lower, "access denied") || strings.Contains(lower, "permission denied") ||
+		strings.Contains(lower, "required privilege") || strings.Contains(lower, "elevated") {
+		switch action {
+		case ActionFlushDNS:
+			return "DNS cache flush requires administrator privileges. Run Universal-Ops as Administrator."
+		case ActionClearTemp:
+			return "Clearing temp files needs administrator rights for some system folders. Run as Administrator."
+		case ActionDiskCleanup:
+			return "Disk Cleanup requires administrator privileges. Run Universal-Ops as Administrator."
+		case ActionDefrag:
+			return "Defragmentation requires administrator privileges. Run Universal-Ops as Administrator."
+		case ActionRestartService:
+			return "Restarting services requires administrator privileges. Run Universal-Ops as Administrator."
+		default:
+			return "This action requires administrator privileges. Run Universal-Ops as Administrator."
+		}
+	}
+
+	// File not found
+	if strings.Contains(lower, "not found") || strings.Contains(lower, "no such file") ||
+		strings.Contains(lower, "cannot find") {
+		switch action {
+		case ActionFlushDNS:
+			return "ipconfig command not found — ensure System32 is in your PATH"
+		case ActionClearTemp:
+			return "PowerShell not found or TEMP path inaccessible"
+		case ActionDiskCleanup:
+			return "cleanmgr.exe not found — Windows System32 directory may be missing"
+		case ActionDefrag:
+			return "defrag.exe not found — ensure System32 is in your PATH"
+		default:
+			return "Required system utility not found. Check your system PATH."
+		}
+	}
+
+	// Exit code 1 — generic failure
+	if strings.Contains(errMsg, "exit status 1") {
+		switch action {
+		case ActionFlushDNS:
+			if strings.Contains(lower, "unrecognized") || strings.Contains(lower, "bad") {
+				return "ipconfig /flushdns failed — network stack may be corrupted. Try 'netsh winsock reset'"
+			}
+			return "DNS cache flush failed. Try running as Administrator."
+		case ActionClearTemp:
+			return "Temp file cleanup encountered locked files — some files may be in use. Try again after a reboot."
+		case ActionCleanPkgCache:
+			return "Package cache update failed — check your internet connection and try again"
+		case ActionSystemUpdate:
+			return "System update check failed — ensure internet connectivity and try again"
+		case ActionDiskCleanup:
+			return "Disk cleanup encountered an error — some files may be in use"
+		case ActionDefrag:
+			return "Defragmentation failed — check drive health with 'chkdsk C:'"
+		default:
+			return "Action failed with exit code 1 — check the Output tab for details"
+		}
+	}
+
+	// Timeout / did not respond
+	if strings.Contains(lower, "timeout") || strings.Contains(lower, "timed out") {
+		return "Action timed out — the system may be unresponsive or the command hung. Try again."
+	}
+
+	// Service-specific
+	if action == ActionRestartService {
+		if strings.Contains(lower, "not exist") || strings.Contains(lower, "not found") {
+			return "Service name not recognized — verify the service name in Services.msc"
+		}
+		if strings.Contains(lower, "not start") || strings.Contains(lower, "failed to start") {
+			return "Service exists but failed to restart — check the service configuration or Event Viewer for details"
+		}
+	}
+
+	// Fallback
+	return fmt.Sprintf("Action failed: %s. Check the Output tab for full details.", errMsg)
+}
 
 // SystemAction represents a system action type.
 type SystemAction string
@@ -108,8 +192,8 @@ func RunSystemAction(action SystemAction) (*ActionResult, error) {
 	result.Output = string(output)
 	if err != nil {
 		result.Success = false
-		result.Message = fmt.Sprintf("Action failed: %v", err)
-		return result, err
+		result.Message = actionErrorHint(action, err, string(output))
+		return result, fmt.Errorf("%s: %w", result.Message, err)
 	}
 
 	result.Success = true
@@ -138,8 +222,8 @@ func RestartService(name string) (*ActionResult, error) {
 	result.Output = string(output)
 	if err != nil {
 		result.Success = false
-		result.Message = fmt.Sprintf("Restart failed: %v", err)
-		return result, err
+		result.Message = actionErrorHint(ActionRestartService, err, string(output))
+		return result, fmt.Errorf("%s: %w", result.Message, err)
 	}
 
 	result.Success = true

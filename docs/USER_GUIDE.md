@@ -1,6 +1,6 @@
-# Universal-Ops User Guide
+# UniversalOps User Guide
 
-Welcome to Universal-Ops, the premium native GUI operations platform. This guide covers setup, usage, and customization.
+Welcome to UniversalOps, the premium native GUI operations platform. This guide covers setup, usage, and customization.
 
 ## Table of Contents
 1. [Installation & Setup](#1-installation--setup)
@@ -14,15 +14,15 @@ Welcome to Universal-Ops, the premium native GUI operations platform. This guide
 ## 1. Installation & Setup
 
 ### Prerequisites
-- **Go 1.26+**: Required for building from source.
+- **Go 1.22+**: Required for building from source.
 - **Wails v2 CLI**: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
 - **Node.js**: Required for frontend builds.
-- **Windows / Linux / macOS**: Universal-Ops is cross-platform.
+- **Windows / Linux / macOS**: UniversalOps is cross-platform.
 
 ### Building from Source
 ```bash
-git clone https://github.com/youruser/opsforall.git
-cd opsforall
+git clone https://github.com/shahriarhaqueabir/UniversalOps.git
+cd UniversalOps
 wails build
 ```
 The compiled binary will be located in the `build/bin/` directory.
@@ -34,7 +34,7 @@ Each page is accessible from the sidebar. The five ops layers (SysOps, NetOps, S
 
 ## 2. AI Operations Setup
 
-Universal-Ops uses **Ollama** by default for local, private AI operations.
+UniversalOps uses **Ollama** by default for local, private AI operations.
 
 ### Installing Ollama
 1. Download Ollama from [ollama.com](https://ollama.com/).
@@ -45,7 +45,7 @@ Universal-Ops uses **Ollama** by default for local, private AI operations.
    ```
 
 ### Customizing the AI Model
-By default, Universal-Ops looks for `universalops` (based on Qwythos-9B) at `http://localhost:11434`.
+By default, UniversalOps looks for `universalops` (based on Qwythos-9B) at `http://localhost:11434`.
  Falls back to the first available model if the default is not found. You can override this using environment variables or the **Settings** page within the application.
 
 - `OLLAMA_HOST`: The URL of your Ollama server (e.g., `http://192.168.1.50:11434`).
@@ -54,11 +54,11 @@ By default, Universal-Ops looks for `universalops` (based on Qwythos-9B) at `htt
 **Example (Windows PowerShell):**
 ```powershell
 $env:OLLAMA_MODEL = "mistral"
-./build/bin/Universal-Ops.exe
+./build/bin/UniversalOps.exe
 ```
 
 ### Using External AI (OpenAI/Anthropic)
-Currently, Universal-Ops
+Currently, UniversalOps
  focuses on local AI for privacy and offline capability. Integration with external APIs is planned for a future release. For now, you can use **LiteLLM** or a similar proxy to expose OpenAI-compatible endpoints as an Ollama-like service if needed.
 
 ---

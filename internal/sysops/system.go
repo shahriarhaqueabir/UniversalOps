@@ -99,21 +99,18 @@ type LoggedInUser struct {
 	Started  string `json:"started"`
 }
 
-// GetLoggedInUsers returns all currently logged-in users (cross-platform via gopsutil).
+// GetLoggedInUsers returns all currently logged-in users (platform-aware).
+// Delegates to platform-specific implementations (WMI on Windows, gopsutil elsewhere).
 func GetLoggedInUsers() ([]LoggedInUser, error) {
-	users, err := host.Users()
-	if err != nil {
-		return nil, err
-	}
+	return getLoggedInUsersPlatform()
+}
 
-	var result []LoggedInUser
-	for _, u := range users {
-		result = append(result, LoggedInUser{
-			User:     u.User,
-			Terminal: u.Terminal,
-			Host:     u.Host,
-			Started:  fmt.Sprintf("%d", u.Started),
-		})
+// LoggedInUserFromHost converts a gopsutil host.UserInfo to a LoggedInUser.
+func LoggedInUserFromHost(u host.UserInfo) LoggedInUser {
+	return LoggedInUser{
+		User:     u.User,
+		Terminal: u.Terminal,
+		Host:     u.Host,
+		Started:  fmt.Sprintf("%d", u.Started),
 	}
-	return result, nil
 }
