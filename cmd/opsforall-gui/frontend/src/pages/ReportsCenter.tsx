@@ -4,7 +4,7 @@ import {
   FileText, Shield, HeartPulse, Bot,
   Search, Trash2, Download, ChevronRight,
   AlertTriangle, CheckCircle, XCircle,
-  RefreshCw, EyeOff, Plus, Settings, Clock,
+  RefreshCw, EyeOff, Plus, Clock,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { cn } from '@/lib/utils'
@@ -76,7 +76,6 @@ export function ReportsCenter() {
   const [selectedReport, setSelectedReport] = useState<ReportRecord | null>(null)
   const [showDetail, setShowDetail] = useState(false)
   const [showRules, setShowRules] = useState(false)
-  const [generateType, setGenerateType] = useState<string>('health')
   const [showGenerateDropdown, setShowGenerateDropdown] = useState(false)
 
   // Auto-report rule form state
