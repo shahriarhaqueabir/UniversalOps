@@ -1,11 +1,11 @@
-# Universal-Ops: High-Performance Native Operations Dashboard
+# UniversalOps: High-Performance Native Operations Dashboard
 
-[![Version](https://img.shields.io/badge/version-v1.4.0-7c6cff)](https://github.com/shahriarhaqueabir/AllOpsFull/releases)
+[![Version](https://img.shields.io/badge/version-v1.3.0-7c6cff)](https://github.com/shahriarhaqueabir/UniversalOps/releases)
 [![License](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
 [![Local-First](https://img.shields.io/badge/Privacy-100%25%20Local-blue)](docs/ARCHITECTURE.md)
 [![AI-Powered](https://img.shields.io/badge/AI-Ollama%20Integrated-orange)](docs/INSTALL.md)
 
-**Universal-Ops** is a native desktop studio designed for SREs, developers, and security enthusiasts who require instant, high-density telemetry without the latency or privacy risks of cloud-based monitoring.
+**UniversalOps** is a native desktop studio designed for SREs, developers, and security enthusiasts who require instant, high-density telemetry without the latency or privacy risks of cloud-based monitoring.
 
 > [!IMPORTANT]
 > **100% Private. 100% Local. Zero Cloud.** Your data never leaves your hardware.
@@ -13,7 +13,7 @@
 ---
 
 ## 🖥️ The Command Center Experience
-Universal-Ops replaces fragmented CLI tools with a unified, high-performance dashboard. It bridges the gap between raw kernel metrics and actionable intelligence using integrated local AI.
+UniversalOps replaces fragmented CLI tools with a unified, high-performance dashboard. It bridges the gap between raw kernel metrics and actionable intelligence using integrated local AI.
 
 ### 🧩 Core Substrates
 
@@ -43,7 +43,7 @@ Universal-Ops replaces fragmented CLI tools with a unified, high-performance das
 Clone, install dependencies, and build:
 
 ```powershell
-git clone https://github.com/shahriarhaqueabir/AllOpsFull.git UniversalOps
+git clone https://github.com/shahriarhaqueabir/UniversalOps.git
 cd UniversalOps
 New-Item -ItemType Directory -Path data,logs,bin -Force
 cd cmd/opsforall-gui/frontend
@@ -58,7 +58,7 @@ wails build
 ---
 
 ## 🧠 Local Intelligence (Hawk)
-Universal-Ops features **Hawk**, a built-in AI analyst powered by local LLMs.
+UniversalOps features **Hawk**, a built-in AI analyst powered by local LLMs.
 - **Statistical Grounding**: No hallucination. Hawk analyzes summarized telemetry data.
 - **Root Cause Analysis**: Jump from a CPU spike anomaly directly to a technical briefing.
 - **Contextual Awareness**: 32k context window for long-horizon system event correlation.
