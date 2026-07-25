@@ -316,15 +316,13 @@ func (ae *AlertEngine) Evaluate() []Alert {
 
 			alertKey := fmt.Sprintf("%s:%.4f:%d", rule.Metric, rule.Threshold, rule.Severity)
 			if idx, exists := ae.alertKeys[alertKey]; exists {
-				resolved := ae.alerts[idx]
-				resolved.Resolved = true
-				resolved.Value = val
-				ae.alerts[idx] = resolved
+				ae.alerts[idx].Resolved = true
+				ae.alerts[idx].Value = val
 				delete(ae.alertKeys, alertKey)
 
 				// Notify the caller so the resolution can be persisted to DB
 				if ae.OnAlertResolved != nil {
-					ae.OnAlertResolved(resolved)
+					ae.OnAlertResolved(ae.alerts[idx])
 				}
 			}
 		}

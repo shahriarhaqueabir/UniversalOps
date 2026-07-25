@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
@@ -16,9 +17,12 @@ type NetOps struct {
 }
 
 type netOpsModel struct {
+	mu            sync.RWMutex
 	lastCounters  map[string]netops.BandwidthCounter
 	lastCapture   time.Time
 	lastIfaces    []InterfaceInfo
+	speedCache    map[string]int64 // caches link speeds to avoid PowerShell on every call
+	speedCacheAge time.Time
 	recentChanges []NetworkChange
 }
 
@@ -40,8 +44,10 @@ func NewNetOps(eventBus *common.EventBus) *NetOps {
 	// Seed initial counters so the first GetInterfaces() call can compute rates
 	counters, err := netops.GetBandwidthCounters()
 	if err == nil {
+		n.model.mu.Lock()
 		n.model.lastCounters = counters
 		n.model.lastCapture = time.Now()
+		n.model.mu.Unlock()
 	}
 	return n
 }
@@ -53,6 +59,7 @@ func (n *NetOps) Ping(host string, count int) PingResult {
 	}
 	result, err := netops.Ping(host, count)
 	if err != nil {
+		common.LogDebug("NetOps: Ping(%q) failed: %v", host, err)
 		if n.eventBus != nil {
 			n.eventBus.Emit(common.NewEvent(
 				common.CatNetwork,
@@ -113,6 +120,7 @@ func (n *NetOps) DNSLookup(hostname string, server string, timeoutMs int) DNSRes
 
 	result, err := netops.LookupDNSWithContext(ctx, hostname, servers...)
 	if err != nil {
+		common.LogDebug("NetOps: DNSLookup(%q) failed: %v", hostname, err)
 		if n.eventBus != nil {
 			n.eventBus.Emit(common.NewEvent(
 				common.CatNetwork,
@@ -143,6 +151,7 @@ func (n *NetOps) PortScan(host string, ports []int) []PortResult {
 	}
 	results, err := netops.ScanPorts(host, ports)
 	if err != nil {
+		common.LogDebug("NetOps: PortScan(%q) failed: %v", host, err)
 		return []PortResult{}
 	}
 	out := make([]PortResult, 0, len(results))
@@ -163,6 +172,7 @@ func (n *NetOps) Traceroute(host string) TraceResult {
 
 	result, err := netops.TraceRouteWithContext(ctx, host)
 	if err != nil {
+		common.LogDebug("NetOps: Traceroute(%q) failed: %v", host, err)
 		return TraceResult{Target: host, Error: err.Error()}
 	}
 	hops := make([]TraceHop, 0, len(result.Hops))
@@ -189,6 +199,7 @@ func (n *NetOps) Traceroute(host string) TraceResult {
 func (n *NetOps) GetConnections() []ConnectionInfo {
 	conns, err := netops.GetConnections()
 	if err != nil {
+		common.LogDebug("NetOps: GetConnections failed: %v", err)
 		return []ConnectionInfo{}
 	}
 	out := make([]ConnectionInfo, 0, len(conns))
@@ -208,10 +219,21 @@ func (n *NetOps) GetConnections() []ConnectionInfo {
 }
 
 // GetInterfaces returns network interface information.
-// (no speed cache — falls back to PowerShell for link speeds)
+// Maintains an internal speed cache (refreshed every 5 min) to avoid
+// spawning PowerShell for link speeds on every frontend poll.
 func (n *NetOps) GetInterfaces() []InterfaceInfo {
-	ifaces, err := n.collectInterfaces(nil)
+	n.model.mu.Lock()
+	defer n.model.mu.Unlock()
+
+	// Refresh speed cache every 5 minutes
+	if n.model.speedCache == nil || time.Since(n.model.speedCacheAge) > 5*time.Minute {
+		fresh := netops.GetLinkSpeeds()
+		n.model.speedCache = fresh
+		n.model.speedCacheAge = time.Now()
+	}
+	ifaces, err := n.collectInterfaces(n.model.speedCache)
 	if err != nil {
+		common.LogDebug("NetOps: collectInterfaces failed: %v", err)
 		return []InterfaceInfo{}
 	}
 	return ifaces

@@ -1,13 +1,29 @@
 package app
 
 import (
+	"net"
 	"testing"
+	"time"
 
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/aiops"
 	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
 )
 
+// skipIfOllamaUnavailable checks if Ollama is reachable on localhost:11434.
+// If not, it skips the test with a clear message. This prevents tests that
+// call ai.Chat() from hanging for the full 60s HTTP timeout when no Ollama
+// instance is running (CI, dev machines without Ollama, etc.).
+func skipIfOllamaUnavailable(t *testing.T) {
+	t.Helper()
+	conn, err := net.DialTimeout("tcp", "127.0.0.1:11434", 500*time.Millisecond)
+	if err != nil {
+		t.Skip("Ollama not running on localhost:11434 — skipping test")
+	}
+	conn.Close()
+}
+
 func TestAIOps_Chat_NoOllama(t *testing.T) {
+	skipIfOllamaUnavailable(t)
 	a := NewApp()
 	ai := NewAIOps(a.ctx, a.pipeline, a.Knowledge, a.capabilities, a.PipelineAPI, a.SysOps, a.currentDataDir)
 	response := ai.Chat("test-session", "say hello")

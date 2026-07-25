@@ -430,6 +430,20 @@ func (s *SysOps) RunSystemAction(action string) common.ActionPreview {
 	case "clear_arp":
 		command = "arp -d *"
 		description = "Clear the system ARP table"
+	case "sleep":
+		command = "rundll32.exe powrprof.dll,SetSuspendState 0,1,0"
+		description = "Put the system into sleep/low-power state"
+		risks = []string{"Active network connections will be suspended", "Remote access will be unavailable until wake"}
+		rollback = "Move the mouse or press a key/power button to wake the system"
+	case "hibernate":
+		command = "rundll32.exe powrprof.dll,SetSuspendState 1,1,0"
+		description = "Hibernate the system (save state to disk and power off)"
+		risks = []string{"Active sessions will be saved and restored on next boot", "Remote access will be unavailable until wake"}
+		rollback = "Press the power button to resume from hibernation"
+	case "clear_temp":
+		command = "powershell Remove-Item -Recurse -Force $env:TEMP\\* -ErrorAction SilentlyContinue"
+		description = "Clear all temporary files from the system temp directory"
+		risks = []string{"May clear in-use temporary files silently"}
 	case "disk_cleanup":
 		command = "cleanmgr /sagerun:1"
 		description = "Run Windows Disk Cleanup utility"
@@ -447,6 +461,14 @@ func (s *SysOps) RunSystemAction(action string) common.ActionPreview {
 		command = "shutdown /s /t 0"
 		description = "Shutdown the workstation immediately"
 		risks = []string{"Unsaved data will be lost", "Remote access will be terminated"}
+	case "clean_pkg_cache":
+		command = "winget source update"
+		description = "Update and clean Windows package manager (winget) source cache"
+		risks = []string{"Package source metadata will be refreshed"}
+	case "system_update":
+		command = "winget upgrade --all --accept-package-agreements --accept-source-agreements"
+		description = "Run system updates via Windows package manager (winget)"
+		risks = []string{"May install multiple updates and take significant time", "Some updates may require a reboot afterwards"}
 	default:
 		command = fmt.Sprintf("Action: %s", action)
 		description = fmt.Sprintf("Execute system action: %s", action)
