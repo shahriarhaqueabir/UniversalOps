@@ -27,6 +27,8 @@ wails dev
 3.  **Test** thoroughly (see Testing section).
 4.  **Submit** a PR with a clear description of the value added.
 
+> 📖 **New to the codebase?** Read the [Developing Guide](docs/developing.md) for the full annotated project tree, git strategy, debugging tips, and environment reference.
+
 ## Testing Standards
 Every PR must pass existing tests and include new ones for added features.
 ```bash
