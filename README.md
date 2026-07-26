@@ -1,9 +1,31 @@
 # UniversalOps: High-Performance Native Operations Dashboard
 
-[![Version](https://img.shields.io/badge/version-v1.3.0-7c6cff)](https://github.com/shahriarhaqueabir/UniversalOps/releases)
-[![License](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
-[![Local-First](https://img.shields.io/badge/Privacy-100%25%20Local-blue)](docs/ARCHITECTURE.md)
-[![AI-Powered](https://img.shields.io/badge/AI-Ollama%20Integrated-orange)](docs/INSTALL.md)
+<p align="center">
+  <a href="https://github.com/shahriarhaqueabir/UniversalOps/releases">
+    <img src="https://img.shields.io/badge/version-v1.3.0-7c6cff?style=flat-square" alt="Version">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-2ea44f?style=flat-square" alt="License">
+  </a>
+  <a href="https://github.com/shahriarhaqueabir/UniversalOps/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/shahriarhaqueabir/UniversalOps/.github/workflows/test.yml?branch=main&style=flat-square&label=CI" alt="CI">
+  </a>
+  <a href="https://github.com/shahriarhaqueabir/UniversalOps/blob/main/go.mod">
+    <img src="https://img.shields.io/github/go-mod/go-version/shahriarhaqueabir/UniversalOps?style=flat-square&label=Go" alt="Go">
+  </a>
+  <a href="docs/ARCHITECTURE.md">
+    <img src="https://img.shields.io/badge/Privacy-100%25%20Local-0066ff?style=flat-square" alt="Local-First">
+  </a>
+  <a href="docs/INSTALL.md">
+    <img src="https://img.shields.io/badge/AI-Ollama%20Integrated-orange?style=flat-square" alt="AI-Powered">
+  </a>
+  <a href="https://github.com/shahriarhaqueabir/UniversalOps/issues">
+    <img src="https://img.shields.io/badge/PRs-Welcome-brightgreen?style=flat-square" alt="PRs Welcome">
+  </a>
+  <a href="https://github.com/shahriarhaqueabir/UniversalOps/releases">
+    <img src="https://img.shields.io/github/downloads/shahriarhaqueabir/UniversalOps/total?style=flat-square&label=Downloads" alt="Downloads">
+  </a>
+</p>
 
 **UniversalOps** is a native desktop studio designed for SREs, developers, and security enthusiasts who require instant, high-density telemetry without the latency or privacy risks of cloud-based monitoring.
 
@@ -78,6 +100,14 @@ Service orchestration and sandboxed terminal diagnostics.
 Autonomous Root Cause Analysis (RCA) via Ollama integration.
 ![AIOps](./docs/screenshots/final_execution_7_aiops.png)
 
+### **Logs Viewer**
+Structured log browsing with filtering, severity highlighting, and real-time tailing.
+![Logs](./docs/screenshots/final_execution_8_logs.png)
+
+### **Workflow Library**
+Pre-built automation workflows with one-click execution and customizable parameters.
+![Workflows](./docs/screenshots/final_execution_9_workflowlibrary.png)
+
 ---
 
 ## 🛠️ Architecture
@@ -93,7 +123,10 @@ Built for performance and portability.
 ## 🤝 Contributing
 We welcome contributions to enhance the Command Center.
 - Review our [Contributing Guide](CONTRIBUTING.md).
+- Read the [Development Guide](docs/developing.md) for setup, debugging, and the annotated project tree.
+- Browse the [Documentation Hub](docs/readme.md) for all docs in one place.
 - Join the discussion in [Issues](https://github.com/shahriarhaqueabir/UniversalOps/issues).
+- This project adheres to the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).
 
 ---
 
