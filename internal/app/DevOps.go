@@ -67,6 +67,11 @@ func (d *DevOps) RunCommandLive(cmd string, id string) CommandResult {
 
 	go func() {
 		defer common.RecoverPanic()
+		if d.ctx == nil {
+			for range lineCh {
+			}
+			return
+		}
 		for line := range lineCh {
 			wailsruntime.EventsEmit(d.ctx, EventCmdLine, map[string]string{
 				"id":   id,
@@ -185,6 +190,11 @@ func (d *DevOps) RunPowerShellLive(cmd string, id string) CommandResult {
 
 	go func() {
 		defer common.RecoverPanic()
+		if d.ctx == nil {
+			for range lineCh {
+			}
+			return
+		}
 		for line := range lineCh {
 			wailsruntime.EventsEmit(d.ctx, EventCmdLine, map[string]string{
 				"id":   id,
@@ -232,6 +242,11 @@ func (d *DevOps) RunGitBashLive(cmd string, id string) CommandResult {
 
 	go func() {
 		defer common.RecoverPanic()
+		if d.ctx == nil {
+			for range lineCh {
+			}
+			return
+		}
 		for line := range lineCh {
 			wailsruntime.EventsEmit(d.ctx, EventCmdLine, map[string]string{
 				"id":   id,

@@ -3443,6 +3443,21 @@ export namespace common {
 	    anomalies: number;
 	    "system.uptime": string;
 	    security_grade: string;
+	    "system.network.rx": number;
+	    net_rx_trend: string;
+	    "system.network.tx": number;
+	    net_tx_trend: string;
+	    "system.load.1m": number;
+	    "system.load.5m": number;
+	    "system.load.15m": number;
+	    "system.swap.usage": number;
+	    swap_trend: string;
+	    "system.disk.io.read": number;
+	    disk_io_read_trend: string;
+	    "system.disk.io.write": number;
+	    disk_io_write_trend: string;
+	    "process.count": number;
+	    "connection.count": number;
 	
 	    static createFrom(source: any = {}) {
 	        return new SystemKnowledge(source);
@@ -3460,6 +3475,21 @@ export namespace common {
 	        this.anomalies = source["anomalies"];
 	        this["system.uptime"] = source["system.uptime"];
 	        this.security_grade = source["security_grade"];
+	        this["system.network.rx"] = source["system.network.rx"];
+	        this.net_rx_trend = source["net_rx_trend"];
+	        this["system.network.tx"] = source["system.network.tx"];
+	        this.net_tx_trend = source["net_tx_trend"];
+	        this["system.load.1m"] = source["system.load.1m"];
+	        this["system.load.5m"] = source["system.load.5m"];
+	        this["system.load.15m"] = source["system.load.15m"];
+	        this["system.swap.usage"] = source["system.swap.usage"];
+	        this.swap_trend = source["swap_trend"];
+	        this["system.disk.io.read"] = source["system.disk.io.read"];
+	        this.disk_io_read_trend = source["disk_io_read_trend"];
+	        this["system.disk.io.write"] = source["system.disk.io.write"];
+	        this.disk_io_write_trend = source["disk_io_write_trend"];
+	        this["process.count"] = source["process.count"];
+	        this["connection.count"] = source["connection.count"];
 	    }
 	}
 	export class WorkflowDefinition {
@@ -3505,6 +3535,27 @@ export namespace common {
 		    }
 		    return a;
 		}
+	}
+
+}
+
+export namespace mcp {
+	
+	export class Tool {
+	    name: string;
+	    description: string;
+	    inputSchema: number[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Tool(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.description = source["description"];
+	        this.inputSchema = source["inputSchema"];
+	    }
 	}
 
 }

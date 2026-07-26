@@ -23,10 +23,10 @@ type SystemStats struct {
 // TrendInfo describes the direction and magnitude of a trend.
 type TrendInfo struct {
 	Direction   TrendDirection `json:"direction"`
-	ChangePct   float64        `json:"change_pct"`   // percent change over the window
-	Slope       float64        `json:"slope"`        // linear regression slope
-	Intercept   float64        `json:"intercept"`    // linear regression intercept
-	Correlation float64        `json:"correlation"`  // Pearson R (how well the line fits)
+	ChangePct   float64        `json:"change_pct"`  // percent change over the window
+	Slope       float64        `json:"slope"`       // linear regression slope
+	Intercept   float64        `json:"intercept"`   // linear regression intercept
+	Correlation float64        `json:"correlation"` // Pearson R (how well the line fits)
 }
 
 // TrendDirection indicates the direction of movement.
@@ -51,7 +51,6 @@ type ActionPreview struct {
 	Steps       []WorkflowStep `json:"steps,omitempty"`
 }
 
-
 // SystemKnowledge represents the unified "Current Truth" of the system.
 type SystemKnowledge struct {
 	SystemCPUUtilization float64 `json:"system.cpu.utilization"`
@@ -64,6 +63,23 @@ type SystemKnowledge struct {
 	Anomalies            int     `json:"anomalies"`
 	SystemUptime         string  `json:"system.uptime"`
 	SecurityGrade        string  `json:"security_grade"`
+
+	// ── Expanded metrics (Tier 1) ─────────────────────────────────────────
+	SystemNetRX       float64 `json:"system.network.rx"`
+	NetRXTrend        string  `json:"net_rx_trend"`
+	SystemNetTX       float64 `json:"system.network.tx"`
+	NetTXTrend        string  `json:"net_tx_trend"`
+	SystemLoad1       float64 `json:"system.load.1m"`
+	SystemLoad5       float64 `json:"system.load.5m"`
+	SystemLoad15      float64 `json:"system.load.15m"`
+	SystemSwapUsage   float64 `json:"system.swap.usage"`
+	SwapTrend         string  `json:"swap_trend"`
+	SystemDiskIORead  float64 `json:"system.disk.io.read"`
+	DiskIOReadTrend   string  `json:"disk_io_read_trend"`
+	SystemDiskIOWrite float64 `json:"system.disk.io.write"`
+	DiskIOWriteTrend  string  `json:"disk_io_write_trend"`
+	ProcessCount      int     `json:"process.count"`
+	ConnectionCount   int     `json:"connection.count"`
 }
 
 // SecActionResult holds the result of a security action.

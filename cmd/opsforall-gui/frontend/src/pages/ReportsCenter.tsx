@@ -32,6 +32,195 @@ const TYPE_META: Record<string, { label: string; icon: React.ReactNode; color: s
   },
 }
 
+// ── Human-Readable Report Formatters ─────────────────────────────────────────
+
+interface HealthCheckData {
+  name: string
+  status: string
+  message: string
+  value: string
+}
+
+interface HealthReportData {
+  id: string
+  checks: HealthCheckData[]
+  score: number
+  timestamp: string
+}
+
+interface SecAuditItem {
+  category: string
+  check: string
+  passed: boolean
+  description: string
+  remediation: string
+}
+
+interface SecurityReportData {
+  id: string
+  score: number
+  total: number
+  passed: number
+  failed: number
+  items: SecAuditItem[]
+  timestamp: string
+}
+
+interface AutoDiagReportData {
+  sections: string[]
+  content: string
+  generated_by: string
+}
+
+/** Render a health report in human-readable format. */
+function HealthReportView({ data }: { data: HealthReportData }) {
+  const statusIcon = (s: string) => {
+    switch (s) {
+      case 'pass': return <CheckCircle size={12} className="text-emerald-500 shrink-0" />
+      case 'warn': return <AlertTriangle size={12} className="text-amber-500 shrink-0" />
+      default: return <XCircle size={12} className="text-red-500 shrink-0" />
+    }
+  }
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3 mb-4">
+        <span className="text-lg font-black">{data.score}</span>
+        <span className="text-[10px] text-text-dim font-medium">/ 100 — {data.checks.length} checks</span>
+      </div>
+      {data.checks.map((c, i) => (
+        <div key={i} className="flex items-start gap-3 px-3 py-2.5 rounded-lg bg-black/20 border border-white/5">
+          {statusIcon(c.status)}
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-bold text-white">{c.name}</p>
+            <p className="text-[10px] text-text-dim mt-0.5 leading-relaxed">{c.message}</p>
+          </div>
+          {c.value && (
+            <span className="text-[10px] font-mono font-bold text-accent shrink-0">{c.value}</span>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Render a security audit report in human-readable format. */
+function SecurityReportView({ data }: { data: SecurityReportData }) {
+  const byCategory = data.items.reduce<Record<string, SecAuditItem[]>>((acc, item) => {
+    (acc[item.category] ??= []).push(item)
+    return acc
+  }, {})
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-4 mb-4">
+        <span className="text-lg font-black">{data.score}</span>
+        <span className="text-[10px] text-text-dim font-medium">/ 100</span>
+        <span className="text-[10px] font-bold text-emerald-500">{data.passed} passed</span>
+        <span className="text-[10px] font-bold text-red-500">{data.failed} failed</span>
+      </div>
+      {Object.entries(byCategory).map(([category, items]) => (
+        <div key={category}>
+          <p className="text-[9px] font-black uppercase tracking-widest text-text-faint mb-2">{category}</p>
+          <div className="space-y-1.5">
+            {items.map((item, i) => (
+              <div key={i} className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-black/20 border border-white/5">
+                {item.passed
+                  ? <CheckCircle size={11} className="text-emerald-500 shrink-0 mt-0.5" />
+                  : <XCircle size={11} className="text-red-500 shrink-0 mt-0.5" />
+                }
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-bold text-white">{item.check}</p>
+                  {item.description && (
+                    <p className="text-[9px] text-text-dim mt-0.5">{item.description}</p>
+                  )}
+                  {!item.passed && item.remediation && (
+                    <p className="text-[9px] text-amber-400/80 mt-0.5 italic">
+                      Fix: {item.remediation}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Render an auto-diagnostic report in human-readable format. */
+function AutoDiagReportView({ data }: { data: AutoDiagReportData }) {
+  // Split content on section headers (## ...)
+  const parts = data.content.split(/(?=## )/).filter(Boolean)
+  // If content has markdown sections, render them; otherwise show sections list
+  return (
+    <div className="space-y-4">
+      {parts.length > 1 ? (
+        parts.map((part, i) => {
+          // Extract the header line (## Title) from the part
+          const headerMatch = part.match(/^##\s+(.+)/m)
+          const title = headerMatch?.[1] ?? `Section ${i + 1}`
+          const body = part.replace(/^##\s+.+/, '').trim()
+          return (
+            <div key={i}>
+              <p className="text-[10px] font-bold text-white uppercase tracking-wider mb-1.5">{title}</p>
+              <div className="text-[10px] text-text-dim leading-relaxed whitespace-pre-wrap font-sans">
+                {body || 'No content'}
+              </div>
+            </div>
+          )
+        })
+      ) : (
+        <>
+          <p className="text-[9px] font-black uppercase tracking-widest text-text-faint mb-2">Sections</p>
+          {data.sections.map((s, i) => (
+            <div key={i} className="px-3 py-2 rounded-lg bg-black/20 border border-white/5">
+              <p className="text-[10px] font-bold text-white">{s}</p>
+            </div>
+          ))}
+          {data.content && (
+            <>
+              <p className="text-[9px] font-black uppercase tracking-widest text-text-faint mt-4 mb-2">Analysis</p>
+              <div className="px-3 py-3 rounded-lg bg-black/20 border border-white/5 text-[10px] text-text-dim leading-relaxed whitespace-pre-wrap font-sans">
+                {data.content}
+              </div>
+            </>
+          )}
+        </>
+      )}
+      <div className="pt-2 text-[8px] text-text-faint font-mono">
+        Generated by {data.generated_by}
+      </div>
+    </div>
+  )
+}
+
+/** Parse raw data_json string into a human-readable component based on report type. */
+function ReportHumanReadable({ type, rawJson }: { type: string; rawJson: string }) {
+  if (!rawJson || rawJson === 'No data available') {
+    return <p className="text-[10px] text-text-faint italic">No data available</p>
+  }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(rawJson)
+  } catch {
+    return <p className="text-[10px] text-text-dim italic">{rawJson}</p>
+  }
+  switch (type) {
+    case 'health':
+      return <HealthReportView data={parsed as HealthReportData} />
+    case 'security':
+      return <SecurityReportView data={parsed as SecurityReportData} />
+    case 'auto_diag':
+      return <AutoDiagReportView data={parsed as AutoDiagReportData} />
+    default:
+      return (
+        <pre className="text-[10px] leading-relaxed text-text-dim font-mono whitespace-pre-wrap">
+          {JSON.stringify(parsed, null, 2)}
+        </pre>
+      )
+  }
+}
+
 function getTypeMeta(type: string) {
   return TYPE_META[type] ?? {
     label: type,
@@ -162,7 +351,8 @@ export function ReportsCenter() {
   }, {})
 
   // Handle template selection: auto-fill rule form fields
-  const handleTemplateSelect = useCallback((templateId: string) => {
+  // Using regular function — React Compiler handles optimization automatically
+  const handleTemplateSelect = (templateId: string) => {
     if (!templateId) {
       setRuleForm((f) => ({ ...f, templateId: '', name: '', description: '', metric: '' }))
       return
@@ -179,7 +369,7 @@ export function ReportsCenter() {
       schedule: t.schedule,
       templateId: t.id,
     })
-  }, [templates])
+  }
 
   const addRuleMutation = useMutation({
     mutationFn: async () => {
@@ -768,21 +958,16 @@ export function ReportsCenter() {
                   </div>
                 </div>
 
-                {/* Raw data */}
+                {/* Report data — human readable */}
                 <div className="space-y-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-text-faint)]">Raw Data</p>
-                  <div className="p-4 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)] overflow-x-auto">
-                    <pre className="text-[10px] leading-relaxed text-[var(--color-text-dim)] font-mono whitespace-pre-wrap max-h-[400px] overflow-y-auto">
-                      {(() => {
-                        const raw = fullReport?.data_json ?? selectedReport?.data_json ?? ''
-                        if (!raw) return 'No data available'
-                        try {
-                          return JSON.stringify(JSON.parse(raw), null, 2)
-                        } catch {
-                          return raw
-                        }
-                      })()}
-                    </pre>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-text-faint)]">
+                    {getTypeMeta(selectedReport.type).label} Report Data
+                  </p>
+                  <div className="p-4 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)] max-h-[400px] overflow-y-auto">
+                    <ReportHumanReadable
+                      type={selectedReport.type}
+                      rawJson={fullReport?.data_json ?? selectedReport?.data_json ?? ''}
+                    />
                   </div>
                 </div>
 

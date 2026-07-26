@@ -15,7 +15,7 @@ function extractPercent(value: string): number {
 }
 
 /** Determine check status color classes with smooth gradient for near-threshold states */
-function statusVisuals(status: string, _value: number) {
+function statusVisuals(status: string) {
   if (status === 'pass') return {
     text: 'text-success',
     bg: 'bg-success/5',
@@ -110,7 +110,7 @@ export function DiagnosticsTab() {
         <div className="space-y-3">
           {diagnostics?.checks.map((check, i) => {
             const pct = extractPercent(check.value)
-            const v = statusVisuals(check.status, pct)
+            const v = statusVisuals(check.status)
             const Icon = check.status === 'pass' ? CheckCircle : check.status === 'warn' ? AlertTriangle : XCircle
 
             return (

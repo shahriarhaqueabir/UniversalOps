@@ -19,6 +19,7 @@ const (
 	CollectorSwap   CollectorID = "swap"
 	CollectorDiskIO CollectorID = "diskio"
 	CollectorOpenFD CollectorID = "openfds"
+	CollectorConn   CollectorID = "connections"
 )
 
 type MetricSample struct {

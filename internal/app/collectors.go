@@ -331,10 +331,33 @@ func (c *gpuCollector) Info() common.CollectorInfo {
 func (c *gpuCollector) Collect(ctx context.Context) ([]common.MetricSample, error) {
 	gpu := c.sysOps.GetGPUInfo()
 	if !gpu.Detected {
-		return nil, nil
+		return []common.MetricSample{}, nil
 	}
 	return []common.MetricSample{
 		{Name: "gpu.memory.total", Unit: "GB", Value: gpu.MemoryGB},
+	}, nil
+}
+
+// ── Connection Count Collector ───────────────────────────────────────────────
+
+type connectionCountCollector struct {
+	netOps *NetOps
+}
+
+func (c *connectionCountCollector) Info() common.CollectorInfo {
+	return common.CollectorInfo{
+		ID:              common.CollectorConn,
+		Name:            "Network Connections",
+		Description:     "Total active network connections",
+		DefaultInterval: 15 * time.Second,
+		DefaultEnabled:  true,
+	}
+}
+
+func (c *connectionCountCollector) Collect(ctx context.Context) ([]common.MetricSample, error) {
+	conns := c.netOps.GetConnections()
+	return []common.MetricSample{
+		{Name: "connection.count", Unit: "count", Value: float64(len(conns))},
 	}, nil
 }
 
@@ -353,4 +376,5 @@ func RegisterCollectors(registry *common.CollectorRegistry, app *App) {
 	registry.Register(&swapCollector{})
 	registry.Register(&diskIOCollector{})
 	registry.Register(&openFDCollector{})
+	registry.Register(&connectionCountCollector{netOps: app.NetOps})
 }

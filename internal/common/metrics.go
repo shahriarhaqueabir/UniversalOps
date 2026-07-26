@@ -3,14 +3,20 @@ package common
 // ── Standard Metric Identifiers ─────────────────────────────────────────────
 
 const (
-	MetricCPU     = "cpu.percent"
-	MetricMem     = "memory.percent"
-	MetricDisk    = "disk.percent"
-	MetricNetRX   = "network.rx.rate"
-	MetricNetTX   = "network.tx.rate"
-	MetricProcCnt = "process.count"
-	MetricConnCnt = "connection.count"
-	MetricCPUTemp = "cpu.temperature"
+	MetricCPU         = "cpu.percent"
+	MetricMem         = "memory.percent"
+	MetricDisk        = "disk.percent"
+	MetricNetRX       = "network.rx.rate"
+	MetricNetTX       = "network.tx.rate"
+	MetricProcCnt     = "process.count"
+	MetricConnCnt     = "connection.count"
+	MetricCPUTemp     = "cpu.temperature"
+	MetricLoad1       = "load.1m"
+	MetricLoad5       = "load.5m"
+	MetricLoad15      = "load.15m"
+	MetricSwap        = "swap.percent"
+	MetricDiskIORead  = "disk.io.read"
+	MetricDiskIOWrite = "disk.io.write"
 )
 
 // MetricDef describes a trackable metric.
@@ -30,6 +36,12 @@ var DefaultMetrics = []MetricDef{
 	{Name: MetricProcCnt, Unit: "count", Label: "Processes"},
 	{Name: MetricConnCnt, Unit: "count", Label: "Connections"},
 	{Name: MetricCPUTemp, Unit: "°C", Label: "CPU Temp"},
+	{Name: MetricLoad1, Unit: "load", Label: "Load 1m"},
+	{Name: MetricLoad5, Unit: "load", Label: "Load 5m"},
+	{Name: MetricLoad15, Unit: "load", Label: "Load 15m"},
+	{Name: MetricSwap, Unit: "%", Label: "Swap"},
+	{Name: MetricDiskIORead, Unit: "bytes", Label: "Disk IO Read"},
+	{Name: MetricDiskIOWrite, Unit: "bytes", Label: "Disk IO Write"},
 }
 
 // DefaultAlertThresholds returns standard warning/critical thresholds
