@@ -86,7 +86,7 @@ func ComputeSecurityScore() SecurityScore {
 	score += firewallScore
 
 	// ── Users ──
-	userScore := 10
+	userScore := 0
 	users, uErr := GetUsers()
 	if uErr == nil {
 		adminCount := 0
@@ -109,7 +109,7 @@ func ComputeSecurityScore() SecurityScore {
 	score += userScore
 
 	// ── Listening Ports ──
-	portScore := 10
+	portScore := 0
 	dangerousPorts := map[int]string{3389: "RDP", 445: "SMB", 23: "Telnet"}
 	ports, pErr := GetListeningPorts()
 	if pErr == nil {
@@ -135,7 +135,7 @@ func ComputeSecurityScore() SecurityScore {
 	score += portScore
 
 	// ── Security Events ──
-	eventScore := 10
+	eventScore := 0
 	events, eErr := GetSecurityEvents()
 	if eErr == nil {
 		failedLogins := 0

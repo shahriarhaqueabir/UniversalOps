@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // actionErrorHints maps common exit code patterns to user-friendly messages per action.
@@ -170,7 +170,7 @@ func RunSystemAction(action SystemAction) (*ActionResult, error) {
 		if runtime.GOOS == "windows" {
 			cmd = common.HiddenCommand("powershell", "-Command", "winget upgrade --all --accept-package-agreements --accept-source-agreements")
 		} else {
-			cmd = exec.Command("sudo", "apt-get", "update", "&&", "sudo", "apt-get", "upgrade", "-y")
+			cmd = exec.Command("sh", "-c", "sudo apt-get update && sudo apt-get upgrade -y")
 		}
 	case ActionDiskCleanup:
 		if runtime.GOOS == "windows" {

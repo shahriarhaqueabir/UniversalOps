@@ -26,6 +26,7 @@ import * as Slider from '@radix-ui/react-slider'
 import * as Dialog from '@radix-ui/react-dialog'
 import { useBackend } from '@/hooks/useBackend'
 import { useThemeStore, useSettingsStore } from '@/stores'
+import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import type { AlertRuleInfo, CollectorStatus } from '@/types'
@@ -218,6 +219,8 @@ export function Settings() {
   }
 
   const [optimizing, setOptimizing] = useState(false)
+  const [resetConfirm, setResetConfirm] = useState(false)
+  const [onboardingConfirm, setOnboardingConfirm] = useState(false)
   const handleHawkOptimize = async () => {
     if (optimizing) return
     setOptimizing(true)
@@ -420,10 +423,10 @@ export function Settings() {
                 </div>
               </div>
               <div className="pt-6 border-t border-[var(--color-border)]/50 mt-6 flex gap-6">
-                <a href="https://github.com/shahriarhaqueabir/AllOpsFull" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-[var(--color-accent)] hover:opacity-80 transition-colors">
+                <a href="https://github.com/shahriarhaqueabir/UniversalOps" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-[var(--color-accent)] hover:opacity-80 transition-colors">
                   <ExternalLink size={14} /> SOURCE CODE
                 </a>
-                <a href="https://github.com/shahriarhaqueabir/AllOpsFull#readme" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-[var(--color-accent)] hover:opacity-80 transition-colors">
+                <a href="https://github.com/shahriarhaqueabir/UniversalOps#readme" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-[var(--color-accent)] hover:opacity-80 transition-colors">
                   <ExternalLink size={14} /> DOCUMENTATION
                 </a>
               </div>
@@ -767,16 +770,7 @@ export function Settings() {
                       <p className="text-xs text-[var(--color-text-dim)] mt-1">Restore all settings to original defaults.</p>
                     </div>
                     <button
-                      onClick={() => {
-                        if (confirm('Reset all settings to defaults?')) {
-                          setRefreshInterval(DEFAULT_SETTINGS.refreshInterval)
-                          setPingCount(DEFAULT_SETTINGS.pingCount)
-                          setDnsTimeout(DEFAULT_SETTINGS.dnsTimeout)
-                          setCompanionName('Hawk')
-                          call('PipelineAPI.UpdateSettings', DEFAULT_SETTINGS.refreshInterval, 0, DEFAULT_SETTINGS.pingCount, DEFAULT_SETTINGS.dnsTimeout)
-                          toast.success('All settings reset')
-                        }
-                      }}
+                      onClick={() => setResetConfirm(true)}
                       className="px-4 py-2 bg-danger/10 hover:bg-danger/20 text-danger text-xs font-bold rounded-xl border border-danger/30 transition-all"
                     >
                       <RotateCcw size={14} className="inline mr-2" />
@@ -790,14 +784,7 @@ export function Settings() {
                       <p className="text-xs text-[var(--color-text-dim)] mt-1">Re-run the initial setup wizard.</p>
                     </div>
                     <button
-                      onClick={async () => {
-                        if (confirm('Re-run onboarding? The app will reload.')) {
-                          try {
-                            await call('App.ClearOnboarded')
-                            window.location.reload()
-                          } catch { toast.error('Failed to reset onboarding') }
-                        }
-                      }}
+                      onClick={() => setOnboardingConfirm(true)}
                       className="px-4 py-2 bg-[var(--color-accent)]/10 hover:bg-[var(--color-accent)]/20 text-[var(--color-accent)] text-xs font-bold rounded-xl border border-[var(--color-accent)]/30 transition-all"
                     >
                       <RefreshCw size={14} className="inline mr-2" />
@@ -813,6 +800,38 @@ export function Settings() {
 
       <ContextPreview />
       <DeploymentBar />
+
+      <ConfirmDialog
+        open={resetConfirm}
+        title="Factory Reset"
+        description="Reset all settings to defaults? This will restore refresh intervals, ping counts, DNS timeouts, and companion name to their original values."
+        type="warning"
+        confirmText="Reset All"
+        onConfirm={() => {
+          setRefreshInterval(DEFAULT_SETTINGS.refreshInterval)
+          setPingCount(DEFAULT_SETTINGS.pingCount)
+          setDnsTimeout(DEFAULT_SETTINGS.dnsTimeout)
+          setCompanionName('Hawk')
+          call('PipelineAPI.UpdateSettings', DEFAULT_SETTINGS.refreshInterval, 0, DEFAULT_SETTINGS.pingCount, DEFAULT_SETTINGS.dnsTimeout)
+          toast.success('All settings reset')
+        }}
+        onClose={() => setResetConfirm(false)}
+      />
+
+      <ConfirmDialog
+        open={onboardingConfirm}
+        title="Re-run Onboarding"
+        description="Re-run the initial setup wizard? The application will reload after clearing the onboarding state."
+        type="info"
+        confirmText="Re-run Wizard"
+        onConfirm={async () => {
+          try {
+            await call('App.ClearOnboarded')
+            window.location.reload()
+          } catch { toast.error('Failed to reset onboarding') }
+        }}
+        onClose={() => setOnboardingConfirm(false)}
+      />
 
       {/* Alert Rule Dialog (Legacy) */}
       <Dialog.Root open={addOpen} onOpenChange={setAddOpen}>

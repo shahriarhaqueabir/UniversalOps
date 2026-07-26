@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // AutoExpireWG tracks background goroutines for auto-expire isolation.
@@ -103,13 +104,13 @@ func CaptureEvidence() (*common.SecActionResult, error) {
 	defer cancel()
 
 	// 1. Collect Data
-	// Process List
-	procs, _ := common.HiddenCommandContext(ctx, "powershell", "-Command", "Get-Process | Select-Object Id,ProcessName,CPU,WorkingSet,Path | ConvertTo-Json").Output()
+	// Process List (Enhanced: including Path for diff integrity)
+	procs, _ := common.HiddenCommandContext(ctx, "powershell", "-Command", "Get-Process | Select-Object Id,ProcessName,Path,CPU,WorkingSet | ConvertTo-Json").Output()
 	if runtime.GOOS != "windows" {
 		procs, _ = exec.CommandContext(ctx, "ps", "aux", "--json").Output()
 	}
 
-	// Connections
+	// Connections (Enhanced: focus on external endpoints)
 	conns, _ := common.HiddenCommandContext(ctx, "powershell", "-Command", "Get-NetTCPConnection | Select-Object LocalAddress,LocalPort,RemoteAddress,RemotePort,State,OwningProcess | ConvertTo-Json").Output()
 
 	// Env
@@ -156,10 +157,10 @@ func ExportForensicBundle(id string) (*common.SecActionResult, error) {
 
 	// Export the forensic snapshot to a JSON file in data/forensics/
 	dataDir, _ := common.ConfigDir()
-	exportDir := fmt.Sprintf("%s/forensics", dataDir)
-	_ = common.HiddenCommand("cmd", "/c", "mkdir", exportDir).Run()
+	exportDir := filepath.Join(dataDir, "forensics")
+	_ = os.MkdirAll(exportDir, 0755)
 
-	filename := fmt.Sprintf("%s/%s.json", exportDir, id)
+	filename := filepath.Join(exportDir, id+".json")
 	err = os.WriteFile(filename, []byte(record.DataJSON), 0644)
 	if err != nil {
 		return &common.SecActionResult{Success: false, Error: err.Error()}, nil

@@ -31,7 +31,7 @@ type OllamaStatus struct {
 const (
 	defaultOllamaURL   = "http://127.0.0.1:11434"
 	defaultOllamaModel = "universalops"
-	defaultHttpTimeout = 60 * time.Second
+	defaultHttpTimeout = 120 * time.Second
 )
 
 func getOllamaURL() string {

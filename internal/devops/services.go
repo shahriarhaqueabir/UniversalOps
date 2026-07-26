@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // ServiceEntry holds service status information.

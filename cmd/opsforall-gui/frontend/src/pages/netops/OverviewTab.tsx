@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
@@ -196,21 +195,13 @@ export function OverviewTab() {
 
   // ── Section 4: Network Quality (Ping) ──
 
-  const [pingRunning, setPingRunning] = useState(false)
-  const [pingResult, setPingResult] = useState<any>(null)
+  const pingMutation = useMutation({
+    mutationFn: async () => {
+      return await call('NetOps.Ping', '8.8.8.8', 4) as PingStats & { error?: string }
+    },
+  })
 
-  const runPingTest = async () => {
-    setPingRunning(true)
-    setPingResult(null)
-    try {
-      const res = await call('NetOps.Ping', '8.8.8.8', 4) as PingStats & { error?: string }
-      setPingResult(res)
-    } catch { /* ignore */
-      setPingResult({ error: 'Ping test failed' })
-    } finally {
-      setPingRunning(false)
-    }
-  }
+  const runPingTest = () => pingMutation.mutate()
 
   // ── Section 5: DNS Summary ──
 
@@ -365,31 +356,31 @@ export function OverviewTab() {
         <div className="flex items-center gap-8">
           <button
             onClick={runPingTest}
-            disabled={pingRunning}
+            disabled={pingMutation.isPending}
             className={cn(
               'flex items-center gap-3 px-8 py-4 text-base font-black uppercase tracking-widest rounded-2xl transition-all shadow-xl active:scale-95',
-              pingRunning
+              pingMutation.isPending
                 ? 'bg-panel-3 text-text-faint border border-border cursor-not-allowed'
                 : 'bg-accent text-white hover:bg-accent/90 shadow-accent/20 hover:shadow-accent/30',
             )}
           >
-            {pingRunning ? <RefreshCw size={20} className="animate-spin" /> : <Play size={20} fill="currentColor" />}
-            {pingRunning ? 'PROBING...' : 'RUN PING DIAGNOSTIC'}
+            {pingMutation.isPending ? <RefreshCw size={20} className="animate-spin" /> : <Play size={20} fill="currentColor" />}
+            {pingMutation.isPending ? 'PROBING...' : 'RUN PING DIAGNOSTIC'}
           </button>
-          {!pingRunning && !pingResult && (
+          {!pingMutation.isPending && !pingMutation.data && !pingMutation.isError && (
             <p className="text-xs font-bold text-text-faint uppercase tracking-widest">Target: ICMP ECHO (8.8.8.8)</p>
           )}
         </div>
 
-        {pingResult && !pingResult.error && (
+        {pingMutation.data && !pingMutation.data.error && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
             {(() => {
               // The backend never sends lost_pct (H12) — derive the
               // percentage from sent/lost instead of a phantom field.
-              const lostPct = pingResult.sent > 0 ? (pingResult.lost / pingResult.sent) * 100 : null;
+              const lostPct = pingMutation.data.sent > 0 ? (pingMutation.data.lost / pingMutation.data.sent) * 100 : null;
               return [
-                { label: 'Latency', value: pingResult.avg_ms != null ? `${pingResult.avg_ms.toFixed(1)}ms` : 'N/A', color: 'var(--color-success)' },
-                { label: 'Jitter', value: pingResult.avg_ms != null && pingResult.min_ms != null ? `${(pingResult.avg_ms - pingResult.min_ms).toFixed(1)}ms` : 'N/A', color: 'var(--color-warning)' },
+                { label: 'Latency', value: pingMutation.data.avg_ms != null ? `${pingMutation.data.avg_ms.toFixed(1)}ms` : 'N/A', color: 'var(--color-success)' },
+                { label: 'Jitter', value: pingMutation.data.avg_ms != null && pingMutation.data.min_ms != null ? `${(pingMutation.data.avg_ms - pingMutation.data.min_ms).toFixed(1)}ms` : 'N/A', color: 'var(--color-warning)' },
                 { label: 'Packet Loss', value: lostPct != null ? `${lostPct.toFixed(1)}%` : 'N/A', color: lostPct != null && lostPct > 0 ? 'var(--color-danger)' : 'var(--color-success)' },
               ];
             })().map(card => (
@@ -401,10 +392,10 @@ export function OverviewTab() {
           </div>
         )}
 
-        {pingResult?.error && (
+        {pingMutation.isError && (
           <div className="mt-4 flex items-center gap-3 bg-danger/10 border border-danger/30 rounded-xl p-4">
             <AlertTriangle size={16} className="text-danger shrink-0" />
-            <p className="text-sm font-medium text-danger">{pingResult.error}</p>
+            <p className="text-sm font-medium text-danger">Ping test failed</p>
           </div>
         )}
       </Panel>

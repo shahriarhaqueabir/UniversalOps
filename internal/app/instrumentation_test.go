@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/sysops"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/sysops"
 )
 
 func TestCollectTelemetry(t *testing.T) {

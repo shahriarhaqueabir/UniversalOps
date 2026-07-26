@@ -19,14 +19,11 @@ import type { DiscoveryResultData } from '@/types'
 export function DiscoveryTab() {
   const { call } = useBackend()
   const [subnet, setSubnet] = useState('')
-  const [hasRun, setHasRun] = useState(false)
 
-  const { data: result, isLoading, refetch } = useQuery<DiscoveryResultData>({
+  const { data: result, isFetching, refetch } = useQuery<DiscoveryResultData>({
     queryKey: ['netops-discovery', subnet],
     queryFn: async () => {
-      const res = (await call('NetOps.RunNetworkDiscovery', subnet)) as DiscoveryResultData
-      setHasRun(true)
-      return res
+      return (await call('NetOps.RunNetworkDiscovery', subnet)) as DiscoveryResultData
     },
     enabled: false,
     retry: false,
@@ -36,6 +33,8 @@ export function DiscoveryTab() {
     if (!subnet.trim()) return
     refetch()
   }
+
+  const hasRun = result !== undefined
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -64,26 +63,26 @@ export function DiscoveryTab() {
           </div>
           <button
             onClick={runDiscovery}
-            disabled={isLoading || !subnet.trim()}
+            disabled={isFetching || !subnet.trim()}
             className={cn(
               'flex items-center gap-3 px-6 py-3 text-sm font-semibold rounded-xl transition-all shadow-xl',
-              isLoading || !subnet.trim()
+              isFetching || !subnet.trim()
                 ? 'bg-panel-3 text-text-faint border border-border cursor-not-allowed'
                 : 'bg-accent text-white hover:bg-accent/90',
             )}
           >
-            {isLoading ? (
+            {isFetching ? (
               <RefreshCw size={16} className="animate-spin" />
             ) : (
               <Wifi size={16} />
             )}
-            {isLoading ? 'Scanning...' : 'Discover'}
+            {isFetching ? 'Scanning...' : 'Discover'}
           </button>
         </div>
       </div>
 
       {/* ── Loading State ── */}
-      {isLoading && (
+      {isFetching && (
         <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-16 shadow-xl flex flex-col items-center justify-center">
           <div className="w-12 h-12 rounded-xl bg-panel-3 flex items-center justify-center border border-border mb-4">
             <Radio size={24} className="text-accent animate-pulse" />
@@ -96,7 +95,7 @@ export function DiscoveryTab() {
       )}
 
       {/* ── Results ── */}
-      {result && !isLoading && (
+      {result && !isFetching && (
         <>
           {/* ── Summary Bar ── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -206,7 +205,7 @@ export function DiscoveryTab() {
       )}
 
       {/* ── Empty State ── */}
-      {!hasRun && !isLoading && !result && (
+      {!hasRun && !isFetching && !result && (
         <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-16 shadow-xl flex flex-col items-center justify-center text-center">
           <div className="w-16 h-16 rounded-2xl bg-panel-3 flex items-center justify-center border border-border mb-4">
             <Search size={32} className="text-text-faint" />

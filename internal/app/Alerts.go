@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // AlertAPI exposes alert management bindings to the frontend.

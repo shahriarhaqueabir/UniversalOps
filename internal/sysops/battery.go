@@ -5,7 +5,7 @@ package sysops
 import (
 	"time"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 	"github.com/yusufpapurcu/wmi"
 )
 

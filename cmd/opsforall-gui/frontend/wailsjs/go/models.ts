@@ -22,6 +22,7 @@ export namespace app {
 	    title: string;
 	    message: string;
 	    action: string;
+	    actionPage: string;
 	    timestamp: string;
 	
 	    static createFrom(source: any = {}) {
@@ -35,6 +36,7 @@ export namespace app {
 	        this.title = source["title"];
 	        this.message = source["message"];
 	        this.action = source["action"];
+	        this.actionPage = source["actionPage"];
 	        this.timestamp = source["timestamp"];
 	    }
 	}
@@ -1054,6 +1056,7 @@ export namespace app {
 		}
 	}
 	export class ExtendedDiagnosticResult {
+	    id: string;
 	    checks: DiagnosticCheckData[];
 	    score: number;
 	    timestamp: string;
@@ -1064,6 +1067,7 @@ export namespace app {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
 	        this.checks = this.convertValues(source["checks"], DiagnosticCheckData);
 	        this.score = source["score"];
 	        this.timestamp = source["timestamp"];
@@ -1184,6 +1188,7 @@ export namespace app {
 	export class ForensicDiff {
 	    new_processes: string[];
 	    gone_processes: string[];
+	    new_connections: string[];
 	    snapshot_a: string;
 	    snapshot_b: string;
 	
@@ -1195,6 +1200,7 @@ export namespace app {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.new_processes = source["new_processes"];
 	        this.gone_processes = source["gone_processes"];
+	        this.new_connections = source["new_connections"];
 	        this.snapshot_a = source["snapshot_a"];
 	        this.snapshot_b = source["snapshot_b"];
 	    }
@@ -2055,6 +2061,34 @@ export namespace app {
 	        this.service = source["service"];
 	    }
 	}
+	export class PrebuiltReportTemplate {
+	    id: string;
+	    category: string;
+	    preset_name: string;
+	    description: string;
+	    metric: string;
+	    condition: string;
+	    threshold: number;
+	    report_type: string;
+	    schedule: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PrebuiltReportTemplate(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.category = source["category"];
+	        this.preset_name = source["preset_name"];
+	        this.description = source["description"];
+	        this.metric = source["metric"];
+	        this.condition = source["condition"];
+	        this.threshold = source["threshold"];
+	        this.report_type = source["report_type"];
+	        this.schedule = source["schedule"];
+	    }
+	}
 	export class PrivilegeEvent {
 	    time: string;
 	    username: string;
@@ -2324,6 +2358,7 @@ export namespace app {
 	    }
 	}
 	export class SecurityAuditResult {
+	    id: string;
 	    score: number;
 	    total: number;
 	    passed: number;
@@ -2337,6 +2372,7 @@ export namespace app {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
 	        this.score = source["score"];
 	        this.total = source["total"];
 	        this.passed = source["passed"];

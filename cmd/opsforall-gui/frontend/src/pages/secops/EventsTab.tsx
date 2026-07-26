@@ -8,7 +8,7 @@ import { MiniStat } from '@/components/ui/MiniStat'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Panel } from '@/components/ui/Panel'
-import type { SecurityEvent, ScheduledTask, PrivilegeEvent, SecTimelineEvent } from '@/types'
+import type { SecurityEvent, ScheduledTask, PrivilegeEvent } from '@/types'
 import { cn } from '@/lib/utils'
 import { useVirtualizer } from '@tanstack/react-virtual'
 
@@ -35,11 +35,12 @@ export function EventsTab() {
     refetchInterval: refreshInterval,
   })
 
-  useQuery<SecTimelineEvent[]>({
-    queryKey: ['secops-timeline'],
-    queryFn: async () => (await call('SecOps.GetEventTimeline') as SecTimelineEvent[]) || [],
-    refetchInterval: refreshInterval,
-  })
+  // Timeline query reserved for future event timeline visualization
+  // useQuery<SecTimelineEvent[]>({
+  //   queryKey: ['secops-timeline'],
+  //   queryFn: async () => (await call('SecOps.GetEventTimeline') as SecTimelineEvent[]) || [],
+  //   refetchInterval: refreshInterval,
+  // })
 
   const categories = [
     { id: 'all', label: 'All', ids: null },

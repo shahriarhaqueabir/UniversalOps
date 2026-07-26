@@ -10,18 +10,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // dotNetDateRe matches .NET JSON date format: /Date(1704067200000)/
 var dotNetDateRe = regexp.MustCompile(`/Date\((\d+)\)/`)
 
-// PowerShellEventLogEntry maps the fields from Get-EventLog | ConvertTo-Json output.
+// PowerShellEventLogEntry maps the fields from Get-EventLog / Get-WinEvent output.
+// TimeGenerated uses json.RawMessage to handle DateTime serialisation from both
+// classic Get-EventLog (string) and Get-WinEvent (object or null).
 type PowerShellEventLogEntry struct {
-	TimeGenerated string `json:"TimeGenerated"`
-	EntryType     string `json:"EntryType"`
-	Source        string `json:"Source"`
-	Message       string `json:"Message"`
+	TimeGenerated json.RawMessage `json:"TimeGenerated"`
+	EntryType     string          `json:"EntryType"`
+	Source        string          `json:"Source"`
+	Message       string          `json:"Message"`
 }
 
 // LogEntry holds a single log line.
@@ -64,8 +66,20 @@ func GetSystemLogs(n int, source string) (*SystemLogsResult, error) {
 			logName = source // Allow raw log names like "Setup", "Windows PowerShell"
 		}
 		logSource = logName
+
+		// Try Get-EventLog first (classic API, works on most systems)
+		output, cmdErr := common.HiddenCommand("powershell", "-Command",
+			fmt.Sprintf("Get-EventLog -LogName '%s' -Newest %d | Select-Object TimeGenerated, EntryType, Source, Message | ConvertTo-Json -Depth 5", logName, n)).CombinedOutput()
+		if cmdErr == nil && len(strings.TrimSpace(string(output))) > 0 && !strings.HasPrefix(strings.TrimSpace(string(output)), "[]") {
+			entries := parseLogOutput(string(output), logSource, "windows")
+			return &SystemLogsResult{Entries: entries, Source: logSource, Total: len(entries)}, nil
+		}
+
+		// Fallback: Get-WinEvent (modern cmdlet, works on PowerShell 3+/Windows 8+).
+		// Calculated properties map Get-WinEvent fields to Get-EventLog-compatible JSON
+		// names so the same parseLogOutput code handles both.
 		cmd = common.HiddenCommand("powershell", "-Command",
-			fmt.Sprintf("Get-EventLog -LogName '%s' -Newest %d | Select-Object TimeGenerated, EntryType, Source, Message | ConvertTo-Json -Depth 5", logName, n))
+			fmt.Sprintf("Get-WinEvent -LogName '%s' -MaxEvents %d -ErrorAction SilentlyContinue | Select-Object @{N='TimeGenerated';E={$_.TimeCreated}}, @{N='EntryType';E={$_.LevelDisplayName}}, @{N='Source';E={$_.ProviderName}}, Message | ConvertTo-Json -Depth 5", logName, n))
 	case "linux":
 		if source == "dmesg" {
 			logSource = "dmesg"
@@ -155,10 +169,12 @@ func parseLogOutput(output, source, goos string) []LogEntry {
 			Message:   pe.Message,
 		}
 		switch strings.ToLower(pe.EntryType) {
-		case "error":
+		case "error", "critical":
 			entry.Level = "error"
 		case "warning":
 			entry.Level = "warning"
+		case "verbose", "debug":
+			entry.Level = "debug"
 		case "information", "successaudit", "failureaudit":
 			entry.Level = "info"
 		default:
@@ -169,19 +185,28 @@ func parseLogOutput(output, source, goos string) []LogEntry {
 	return entries
 }
 
-// parseDotNetDate converts .NET JSON date format (/Date(millis)/) to ISO 8601.
-// Returns the original string if it doesn't match the pattern.
-func parseDotNetDate(s string) string {
+// parseDotNetDate converts a .NET JSON date (/Date(millis)/) or an ISO‑8601
+// string from a json.RawMessage to ISO 8601. Returns "" on empty / null input.
+func parseDotNetDate(raw json.RawMessage) string {
+	if len(raw) == 0 || string(raw) == "null" {
+		return ""
+	}
+	// Unquote the JSON string value.
+	var s string
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return ""
+	}
 	if s == "" {
 		return ""
 	}
+	// Try .NET /Date(millis)/ format first
 	matches := dotNetDateRe.FindStringSubmatch(s)
-	if len(matches) < 2 {
-		return s
+	if len(matches) >= 2 {
+		millis, err := strconv.ParseInt(matches[1], 10, 64)
+		if err == nil {
+			return time.UnixMilli(millis).UTC().Format(time.RFC3339)
+		}
 	}
-	millis, err := strconv.ParseInt(matches[1], 10, 64)
-	if err != nil {
-		return s
-	}
-	return time.UnixMilli(millis).UTC().Format(time.RFC3339)
+	// ISO‑8601 or whatever the string contains — return as-is
+	return s
 }

@@ -17,9 +17,9 @@ import (
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/secops"
-	sysopsPkg "github.com/shahriarhaqueabir/AllOpsFull/internal/sysops"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/secops"
+	sysopsPkg "github.com/shahriarhaqueabir/UniversalOps/internal/sysops"
 )
 
 // App is the main application struct bound to the Wails frontend.
@@ -73,6 +73,9 @@ type App struct {
 
 	currentDataDir string
 	currentLogsDir string
+
+	// processWorkerQuit signals the background process worker goroutine to stop
+	processWorkerQuit chan struct{}
 }
 
 // NewApp creates a new App with initialized subsystems.
@@ -325,6 +328,11 @@ func (a *App) Shutdown(ctx context.Context) {
 	// Stop the engine loop
 	if a.engineLoop != nil {
 		a.engineLoop.Stop()
+	}
+
+	// Signal the process worker to stop
+	if a.processWorkerQuit != nil {
+		close(a.processWorkerQuit)
 	}
 
 	// Close persistent storage
@@ -671,7 +679,7 @@ func (a *App) SaveFileDialog(title string, filename string, filters []string) (s
 // This decouples the per-tick collectors from the multi-millisecond cost
 // of a full system process enumeration.
 func (a *App) startProcessWorker() {
-	// Process worker doesn't use WaitGroup directly for loop but we can use background task
+	a.processWorkerQuit = make(chan struct{})
 	go func() {
 		defer common.RecoverPanic()
 
@@ -703,6 +711,9 @@ func (a *App) startProcessWorker() {
 				goruntime.ReadMemStats(&m)
 				common.LogInfo("Engine Memory: Alloc=%vMB, TotalAlloc=%vMB, Sys=%vMB, NumGC=%v",
 					m.Alloc/1024/1024, m.TotalAlloc/1024/1024, m.Sys/1024/1024, m.NumGC)
+			case <-a.processWorkerQuit:
+				common.LogInfo("Process worker goroutine stopped")
+				return
 			}
 		}
 	}()
@@ -898,6 +909,17 @@ func (a *App) ConfirmAction(handshakeID string) common.SecActionResult {
 	pending, err := common.GetHandshakeRegistry().Consume(handshakeID)
 	if err != nil {
 		return common.SecActionResult{Success: false, Error: err.Error()}
+	}
+
+	// Compliance: Log the user's approval of the AI-suggested action
+	if storage := common.GetStorage(); storage != nil {
+		argsJSON, _ := json.Marshal(pending.Params)
+		ctxSnap := ""
+		if knowledge := common.GetKnowledge(); knowledge != nil {
+			snap, _ := json.Marshal(knowledge.GetSnapshot())
+			ctxSnap = string(snap)
+		}
+		_ = storage.LogDecision(pending.SessionID, pending.Action, string(argsJSON), ctxSnap, true)
 	}
 
 	// Helper to safely extract string params

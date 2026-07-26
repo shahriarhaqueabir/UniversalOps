@@ -13,7 +13,7 @@ sequenceDiagram
     participant HW as OS / Hardware
     participant COLL as Collectors (internal/sysops)
     participant PIPE as DataPipeline (internal/common)
-    participant DB as SQLite WAL (ops_core.db)
+    participant DB as SQLite WAL (universalops.db)
     participant AI as Hawk AI (internal/aiops)
     participant UI as React Frontend (Zustand)
 

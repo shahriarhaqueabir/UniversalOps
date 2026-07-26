@@ -69,9 +69,8 @@ func RunExtendedDiagnostics() (*DiagnosticResult, error) {
 	disk, err := GetDiskStats()
 	if err == nil {
 		for _, p := range disk.Usage {
-			usedGB := float64(p.Total-p.Free) / (1024 * 1024 * 1024)
-			freeGB := float64(p.Free) / (1024 * 1024 * 1024)
-			totalGB := float64(p.Total) / (1024 * 1024 * 1024)
+			freeGB := float64(p.FreeBytes) / (1024 * 1024 * 1024)
+			totalGB := float64(p.TotalBytes) / (1024 * 1024 * 1024)
 			check := DiagnosticCheck{
 				Name:  fmt.Sprintf("Disk %s", p.Mountpoint),
 				Value: fmt.Sprintf("%.1f%%", p.UsedPercent),

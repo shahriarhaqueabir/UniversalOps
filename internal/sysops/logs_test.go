@@ -1,6 +1,7 @@
 package sysops
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -27,14 +28,15 @@ func TestParseDotNetDate(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{input: "", expected: ""},
-		{input: "raw string", expected: "raw string"},
-		{input: `/Date(1784892277000)/`, expected: "2026-07-24T11:24:37Z"},
-		{input: `/Date(1704067200000)/`, expected: "2024-01-01T00:00:00Z"},
-		{input: `/Date(0)/`, expected: "1970-01-01T00:00:00Z"},
+		{input: `""`, expected: ""},
+		{input: `null`, expected: ""},
+		{input: `"raw string"`, expected: "raw string"},
+		{input: `"/Date(1784892277000)/"`, expected: "2026-07-24T11:24:37Z"},
+		{input: `"/Date(1704067200000)/"`, expected: "2024-01-01T00:00:00Z"},
+		{input: `"/Date(0)/"`, expected: "1970-01-01T00:00:00Z"},
 	}
 	for _, tt := range tests {
-		got := parseDotNetDate(tt.input)
+		got := parseDotNetDate(json.RawMessage(tt.input))
 		if got != tt.expected {
 			t.Errorf("parseDotNetDate(%q) = %q; want %q", tt.input, got, tt.expected)
 		}

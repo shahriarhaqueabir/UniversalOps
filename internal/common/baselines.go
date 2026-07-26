@@ -112,7 +112,8 @@ func (e *BaselinesEngine) checkDrift(baseline BaselineEntry, currentAvg float64)
 }
 
 // RecalculateBaselines performs a deep-dive into historical data to update norms.
-// Intended to be called every 1-4 hours.
+// PERFORMANCE ENHANCEMENT: Uses a "Steady-State Filter" to prevent baseline
+// pollution during transient heavy load (e.g. gaming, rendering, backups).
 func (e *BaselinesEngine) RecalculateBaselines() {
 	s := GetStorage()
 	if s == nil {
@@ -121,18 +122,47 @@ func (e *BaselinesEngine) RecalculateBaselines() {
 
 	metrics := []string{MetricCPU, MetricMem, MetricDisk, MetricNetRX, MetricNetTX}
 	for _, m := range metrics {
-		// Retrieve longer window (e.g., 2000 samples)
+		// Retrieve longer window (e.g., 2000 samples ≈ 100 mins at 3s)
 		history, err := s.GetMetricHistory(m, 2000)
-		if err != nil || len(history) < 100 {
+		if err != nil || len(history) < 200 {
 			continue
 		}
 
-		stats := ComputeWindowStats(history)
+		// STEADY-STATE FILTER:
+		// Divide history into 10-sample segments (~30s).
+		// Only keep segments where StdDev is low (relative to segment mean).
+		var stableSamples []float64
+		segmentSize := 10
+
+		for i := 0; i+segmentSize <= len(history); i += segmentSize {
+			segment := history[i : i+segmentSize]
+			segStats := ComputeWindowStats(segment)
+			segStdDev := calculateStdDev(segment, segStats.Avg)
+
+			// If segment variance is < 15% of its mean, consider it "Steady State"
+			// (Special case for near-zero values to avoid division by zero)
+			threshold := math.Max(2.0, segStats.Avg*0.15)
+			if segStdDev < threshold {
+				stableSamples = append(stableSamples, segment...)
+			}
+		}
+
+		// If we couldn't find enough "Stable" data, fallback to the full window
+		// but with a higher weight on the median.
+		targetData := stableSamples
+		if len(stableSamples) < 100 {
+			targetData = history
+		}
+
+		finalStats := ComputeWindowStats(targetData)
 		_ = s.UpsertBaseline(BaselineEntry{
 			Metric: m,
-			Avg:    stats.Avg,
-			StdDev: calculateStdDev(history, stats.Avg),
+			Avg:    finalStats.Avg,
+			StdDev: calculateStdDev(targetData, finalStats.Avg),
 		})
+
+		LogDebug("BASELINE_SYNC | metric=%s | samples=%d (stable=%d) | avg=%.1f | stddev=%.1f",
+			m, len(history), len(stableSamples), finalStats.Avg, calculateStdDev(targetData, finalStats.Avg))
 	}
 }
 

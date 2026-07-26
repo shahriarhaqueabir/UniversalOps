@@ -1,7 +1,9 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { useBackend } from '@/hooks/useBackend'
 import { cn } from '@/lib/utils'
 import {
+  AlertTriangle,
   Globe,
   Map,
   RefreshCw,
@@ -14,21 +16,14 @@ import { SearchInput } from '@/components/ui/SearchInput'
 export function TracerouteTab() {
   const { call } = useBackend()
   const [traceTarget, setTraceTarget] = useState('8.8.8.8')
-  const [traceResult, setTraceResult] = useState<TraceResult | null>(null)
-  const [traceRunning, setTraceRunning] = useState(false)
 
-  const executeTrace = useCallback(async () => {
-    setTraceRunning(true)
-    setTraceResult(null)
-    try {
-      const res = await call('NetOps.Traceroute', traceTarget) as TraceResult
-      setTraceResult(res)
-    } catch {
-      setTraceResult({ target: traceTarget, hops: [], error: 'Trace failed' })
-    } finally {
-      setTraceRunning(false)
-    }
-  }, [call, traceTarget])
+  const traceMutation = useMutation({
+    mutationFn: async () => {
+      return await call('NetOps.Traceroute', traceTarget) as TraceResult
+    },
+  })
+
+  const executeTrace = () => traceMutation.mutate()
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -51,24 +46,50 @@ export function TracerouteTab() {
             className="shadow-xl"
           />
         </div>
-        <button onClick={executeTrace} disabled={traceRunning} className="flex items-center gap-3 px-8 py-3.5 bg-[var(--color-accent)] text-white text-sm font-black uppercase tracking-widest rounded-xl hover:bg-accent/90 shadow-xl transition-all disabled:opacity-50 active:scale-95 h-12">
-          {traceRunning ? <RefreshCw size={18} className="animate-spin" /> : <Map size={18} />}
-          {traceRunning ? 'TRACING...' : 'TRACE ROUTE'}
+        <button onClick={executeTrace} disabled={traceMutation.isPending} className="flex items-center gap-3 px-8 py-3.5 bg-[var(--color-accent)] text-white text-sm font-black uppercase tracking-widest rounded-xl hover:bg-accent/90 shadow-xl transition-all disabled:opacity-50 active:scale-95 h-12">
+          {traceMutation.isPending ? <RefreshCw size={18} className="animate-spin" /> : <Map size={18} />}
+          {traceMutation.isPending ? 'TRACING...' : 'TRACE ROUTE'}
         </button>
       </div>
 
+      {/* Loading skeleton */}
+      {traceMutation.isPending && (
+        <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-8 shadow-2xl">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-8 h-8 rounded-full bg-panel-3 animate-pulse" />
+            <div className="h-6 w-48 bg-panel-3 rounded animate-pulse" />
+          </div>
+          <div className="space-y-4">
+            {[1,2,3,4,5].map((i) => (
+              <div key={i} className="flex items-center gap-6">
+                <div className="h-4 w-16 bg-panel-3 rounded animate-pulse" />
+                <div className="h-4 w-40 bg-panel-3 rounded animate-pulse" />
+                <div className="h-4 w-20 bg-panel-3 rounded animate-pulse ml-auto" />
+                <div className="h-6 w-24 bg-panel-3 rounded animate-pulse ml-auto" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Error state */}
+      {traceMutation.isError && (
+        <div className="bg-danger/10 border border-danger/30 rounded-[var(--radius-lg)] p-6 flex items-start gap-3">
+          <AlertTriangle size={20} className="text-danger shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-danger">Trace failed</p>
+            <p className="text-sm text-[var(--color-text-dim)] mt-1">{String(traceMutation.error)}</p>
+          </div>
+        </div>
+      )}
+
       {/* Results Table */}
-      {traceResult && !traceRunning && (
+      {traceMutation.data && !traceMutation.isPending && !traceMutation.data.error && (
         <div className="bg-panel border border-border rounded-[var(--radius-lg)] overflow-hidden shadow-2xl">
           <div className="px-8 py-6 bg-panel-2 border-b border-border flex items-center justify-between">
             <h3 className="text-xl font-bold text-text uppercase tracking-widest flex items-center gap-3">
-              <Globe size={20} className="text-accent" /> {traceResult.target}
+              <Globe size={20} className="text-accent" /> {traceMutation.data.target}
             </h3>
-            {traceResult.error && (
-              <span className="px-4 py-1.5 text-sm font-bold text-danger bg-danger/10 rounded-full border border-danger/30 uppercase tracking-widest">
-                FAILED
-              </span>
-            )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -81,7 +102,7 @@ export function TracerouteTab() {
                 </tr>
               </thead>
               <tbody>
-                {traceResult.hops.map((hop) => (
+                {traceMutation.data.hops.map((hop) => (
                   <tr key={hop.number} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all group">
                     <td className="px-8 py-5 text-sm font-semibold text-[var(--color-accent)] tabular-nums">{hop.number}</td>
                     <td className="px-8 py-5">

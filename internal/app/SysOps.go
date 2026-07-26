@@ -8,8 +8,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/sysops"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/sysops"
 )
 
 // safeFloat guards against NaN and Inf values that would break JSON serialization
@@ -474,7 +474,7 @@ func (s *SysOps) RunSystemAction(action string) common.ActionPreview {
 		description = fmt.Sprintf("Execute system action: %s", action)
 	}
 
-	id := common.GetHandshakeRegistry().Register(action, command, map[string]interface{}{"action": action})
+	id := common.GetHandshakeRegistry().Register("", action, command, map[string]interface{}{"action": action})
 	return common.ActionPreview{
 		HandshakeID: id,
 		Action:      action,
@@ -602,7 +602,7 @@ func (s *SysOps) GetLHMAuthorization() LHMAuthorization {
 			"which reads low-level hardware sensor data (CPU temperature, GPU " +
 			"temperature, fan speeds, voltages). These sensors are restricted to " +
 			"admin-level processes by Windows for security reasons.",
-		Capabil: []string{
+		Capabilities: []string{
 			"Real-time CPU package temperature",
 			"GPU temperature, utilization, and fan speed",
 			"Motherboard fan speeds and voltages",
@@ -727,6 +727,7 @@ func (s *SysOps) RunExtendedDiagnostics() ExtendedDiagnosticResult {
 	}
 
 	out := ExtendedDiagnosticResult{
+		ID:        fmt.Sprintf("health-%d", time.Now().Unix()),
 		Checks:    checks,
 		Score:     result.Score,
 		Timestamp: result.Timestamp,
@@ -739,9 +740,8 @@ func (s *SysOps) RunExtendedDiagnostics() ExtendedDiagnosticResult {
 		if marshalErr != nil {
 			common.LogError("SysOps: failed to marshal health report: %v", marshalErr)
 		}
-		id := fmt.Sprintf("health-%d", time.Now().Unix())
 		if err := storage.InsertReport(common.ReportRecord{
-			ID:        id,
+			ID:        out.ID,
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Type:      "health",
 			Score:     out.Score,

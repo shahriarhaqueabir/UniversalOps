@@ -86,6 +86,7 @@ type Alert struct {
 	ID        string
 	Level     AlertLevel
 	Metric    string
+	Condition AlertCondition
 	Message   string
 	Value     float64
 	Threshold float64
@@ -285,7 +286,7 @@ func (ae *AlertEngine) Evaluate() []Alert {
 		if violates {
 			ae.flapCount[flapKey]++
 
-			alertKey := fmt.Sprintf("%s:%.4f:%d", rule.Metric, rule.Threshold, rule.Severity)
+			alertKey := fmt.Sprintf("%s:%s:%.4f:%d", rule.Metric, rule.Condition, rule.Threshold, rule.Severity)
 			if _, exists := ae.alertKeys[alertKey]; exists {
 				// Already fired – update value, keep firing
 				idx := ae.alertKeys[alertKey]
@@ -299,6 +300,7 @@ func (ae *AlertEngine) Evaluate() []Alert {
 					ID:        fmt.Sprintf("alert-%d", ae.nextID),
 					Level:     rule.Severity,
 					Metric:    rule.Metric,
+					Condition: rule.Condition,
 					Message:   rule.evalMessage(val),
 					Value:     val,
 					Threshold: rule.Threshold,
@@ -314,7 +316,7 @@ func (ae *AlertEngine) Evaluate() []Alert {
 			// Violation cleared
 			delete(ae.flapCount, flapKey)
 
-			alertKey := fmt.Sprintf("%s:%.4f:%d", rule.Metric, rule.Threshold, rule.Severity)
+			alertKey := fmt.Sprintf("%s:%s:%.4f:%d", rule.Metric, rule.Condition, rule.Threshold, rule.Severity)
 			if idx, exists := ae.alertKeys[alertKey]; exists {
 				ae.alerts[idx].Resolved = true
 				ae.alerts[idx].Value = val
@@ -354,7 +356,7 @@ func (ae *AlertEngine) trimLocked() {
 	}
 	for i, a := range ae.alerts {
 		if !a.Resolved {
-			alertKey := fmt.Sprintf("%s:%.4f:%d", a.Metric, a.Threshold, a.Level)
+			alertKey := fmt.Sprintf("%s:%s:%.4f:%d", a.Metric, a.Condition, a.Threshold, a.Level)
 			ae.alertKeys[alertKey] = i
 		}
 	}

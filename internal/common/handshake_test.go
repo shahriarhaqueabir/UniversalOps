@@ -8,7 +8,7 @@ func TestHandshakeRegistry(t *testing.T) {
 	reg := GetHandshakeRegistry()
 
 	params := map[string]interface{}{"pid": 1234}
-	id := reg.Register("kill_process", "taskkill /F /PID 1234", params)
+	id := reg.Register("", "kill_process", "taskkill /F /PID 1234", params)
 
 	if len(id) != 32 {
 		t.Errorf("expected 32-char hex ID, got %d", len(id))
@@ -36,7 +36,7 @@ func TestHandshakeRegistry(t *testing.T) {
 func TestHandshakeCreatePreview(t *testing.T) {
 	reg := GetHandshakeRegistry()
 	params := map[string]interface{}{"ip": "1.1.1.1"}
-	preview := reg.CreatePreview("block_ip", params)
+	preview := reg.CreatePreview("", "block_ip", params)
 
 	if preview.Action != "block_ip" {
 		t.Errorf("expected block_ip, got %s", preview.Action)

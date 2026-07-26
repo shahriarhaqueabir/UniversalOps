@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { useBackend } from '@/hooks/useBackend'
 import { cn } from '@/lib/utils'
 import {
@@ -16,23 +17,15 @@ export function PortScanTab() {
   const { call } = useBackend()
   const [portScanTarget, setPortScanTarget] = useState('127.0.0.1')
   const [portScanPorts, setPortScanPorts] = useState('21,22,23,25,53,80,110,143,443,445,993,1433,1521,3306,3389,5432,6379,8080,8443,27017')
-  const [portScanResults, setPortScanResults] = useState<PortResult[]>([])
-  const [portScanLoading, setPortScanLoading] = useState(false)
-  const [portScanError, setPortScanError] = useState<string | null>(null)
 
-  const handlePortScan = useCallback(async () => {
-    setPortScanLoading(true); setPortScanResults([]); setPortScanError(null)
-    try {
+  const portScanMutation = useMutation({
+    mutationFn: async () => {
       const ports = portScanPorts.split(',').map(p => parseInt(p.trim(), 10)).filter(p => !isNaN(p))
-      const res = await call('NetOps.PortScan', portScanTarget, ports) as PortResult[]
-      setPortScanResults(res || [])
-    } catch (err: unknown) {
-      console.error('Port scan failed:', err)
-      setPortScanError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setPortScanLoading(false)
-    }
-  }, [call, portScanTarget, portScanPorts])
+      return await call('NetOps.PortScan', portScanTarget, ports) as PortResult[]
+    },
+  })
+
+  const handlePortScan = () => portScanMutation.mutate()
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -66,21 +59,21 @@ export function PortScanTab() {
           placeholder="Ports (e.g. 80,443,8080)"
           className="w-80"
         />
-        <button onClick={handlePortScan} disabled={portScanLoading} className="flex items-center gap-2 px-5 py-2.5 bg-[var(--color-accent)] text-white text-sm font-bold rounded-xl hover:bg-[var(--color-accent)]/90 transition-all h-12 shrink-0 disabled:opacity-50">
-          {portScanLoading ? <RefreshCw size={16} className="animate-spin" /> : <Search size={16} />}
-          {portScanLoading ? 'SCANNING...' : 'SCAN'}
+        <button onClick={handlePortScan} disabled={portScanMutation.isPending} className="flex items-center gap-2 px-5 py-2.5 bg-[var(--color-accent)] text-white text-sm font-bold rounded-xl hover:bg-[var(--color-accent)]/90 transition-all h-12 shrink-0 disabled:opacity-50">
+          {portScanMutation.isPending ? <RefreshCw size={16} className="animate-spin" /> : <Search size={16} />}
+          {portScanMutation.isPending ? 'SCANNING...' : 'SCAN'}
         </button>
       </div>
 
       {/* Results Table */}
-      {portScanResults.length > 0 && !portScanLoading && (
+      {portScanMutation.data && portScanMutation.data.length > 0 && !portScanMutation.isPending && (
         <div className="bg-panel border border-border rounded-[var(--radius-lg)] overflow-hidden shadow-2xl">
           <div className="px-8 py-6 bg-panel-2 border-b border-border flex items-center justify-between">
             <h3 className="text-xl font-bold text-text uppercase tracking-widest flex items-center gap-3">
               <Globe size={20} className="text-accent" /> {portScanTarget}
             </h3>
             <span className="px-4 py-1.5 text-sm font-bold text-text-dim bg-panel-3 rounded-full border border-border/30 uppercase tracking-widest">
-              {portScanResults.filter(p => p.open).length}/{portScanResults.length} OPEN
+              {portScanMutation.data.filter(p => p.open).length}/{portScanMutation.data.length} OPEN
             </span>
           </div>
           <div className="overflow-x-auto">
@@ -93,7 +86,7 @@ export function PortScanTab() {
                 </tr>
               </thead>
               <tbody>
-                {portScanResults.map((p, i) => (
+                {portScanMutation.data.map((p, i) => (
                   <tr key={i} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all group">
                     <td className="px-8 py-5">
                       <span className="text-2xl font-bold text-accent tabular-nums">{p.port}</span>
@@ -120,18 +113,18 @@ export function PortScanTab() {
       )}
 
       {/* Error state */}
-      {portScanError && !portScanLoading && (
+      {portScanMutation.isError && !portScanMutation.isPending && (
         <div className="bg-danger/10 border border-danger/30 rounded-[var(--radius-lg)] p-6 flex items-start gap-3">
           <AlertTriangle size={20} className="text-danger shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-danger">Port scan failed</p>
-            <p className="text-sm text-[var(--color-text-dim)] mt-1">{portScanError}</p>
+            <p className="text-sm text-[var(--color-text-dim)] mt-1">{String(portScanMutation.error)}</p>
           </div>
         </div>
       )}
 
       {/* Empty state */}
-      {portScanResults.length === 0 && !portScanLoading && !portScanError && (
+      {!portScanMutation.data && !portScanMutation.isPending && !portScanMutation.isError && (
         <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-12 shadow-xl text-center">
           <Search size={48} className="mx-auto mb-4 text-text-faint" />
           <p className="text-sm font-medium text-[var(--color-text-dim)]">

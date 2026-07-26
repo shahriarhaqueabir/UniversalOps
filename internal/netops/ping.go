@@ -13,21 +13,22 @@ import (
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
-// PingResult holds the results of a ping operation.
+// PingResult holds the results of a ping operation aligned with RFC 9951.
 type PingResult struct {
-	Target   string
-	IP       string
-	Sent     int
-	Received int
-	Lost     int
-	Min      time.Duration
-	Max      time.Duration
-	Avg      time.Duration
-	Jitter   time.Duration
-	TTL      int
+	Target            string
+	IP                string
+	Sent              int
+	Received          int
+	Lost              int
+	Min               time.Duration
+	Max               time.Duration
+	Avg               time.Duration
+	Jitter            time.Duration // RFC 3393 / 9951 Inter-Packet Delay Variation
+	StandardDeviation time.Duration
+	TTL               int
 }
 
 // JitterWindow size for long-term tracking

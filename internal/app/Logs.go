@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // Logs exposes log management bindings to the frontend.

@@ -17,9 +17,9 @@ import (
 	"golang.org/x/text/language"
 
 	"github.com/ollama/ollama/api"
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/aiops"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/aiops"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // titleCaser replaces the deprecated strings.Title (removed guidance since
@@ -223,7 +223,7 @@ func (a *AIOps) Chat(sessionID, message string) ChatResponse {
 	common.LogInfo("AI Chat completed in %v (session=%s)", chatElapsed, sessionID)
 
 	// 3. Parse for Action Requests
-	content, actions := aiops.ParseActions(rawResponse)
+	content, actions := aiops.ParseActions(sessionID, rawResponse)
 
 	return ChatResponse{
 		Content: content,
@@ -442,7 +442,7 @@ func (a *AIOps) ChatStream(sessionID, message string) ChatResponse {
 
 	common.LogInfo("AI ChatStream completed in %v (session=%s, tokens=%d)", chatElapsed, sessionID, len(strings.Fields(rawResponse)))
 
-	content, actions := aiops.ParseActions(rawResponse)
+	content, actions := aiops.ParseActions(sessionID, rawResponse)
 
 	// Persist messages
 	if storage != nil && sessionID != "" {
@@ -595,9 +595,21 @@ func (a *AIOps) DeleteModel(modelName string) error {
 	return aiops.DeleteModelWithContext(a.ctx, modelName)
 }
 
-// CreateOpsPersona creates the specialized 'universalops' model from the local modelfile.
+// CreateOpsPersona creates or activates the specialized 'universalops' model from the local modelfile.
+// If the model already exists in Ollama, it simply activates it without re-creating.
 func (a *AIOps) CreateOpsPersona() error {
-	common.LogInfo("AIOps: Creating universalops persona")
+	common.LogInfo("AIOps: Creating/activating universalops persona")
+
+	// 0. Check if the model already exists in Ollama — just activate it
+	if status, err := aiops.CheckOllamaWithContext(a.ctx); err == nil && status.Available {
+		for _, m := range status.AvailableModels {
+			if strings.HasPrefix(m, "universalops") || strings.HasPrefix(m, "universalops:") {
+				common.LogInfo("AIOps: universalops model already exists (%s). Activating it.", m)
+				aiops.SetModel(m)
+				return nil
+			}
+		}
+	}
 
 	modelfilePath := filepath.Join(a.dataDir, "universalops.modelfile")
 
@@ -612,7 +624,7 @@ func (a *AIOps) CreateOpsPersona() error {
 		}
 	}
 
-	// 2. Ensure allopsfull.modelfile exists in data/
+	// 2. Ensure universalops.modelfile exists in data/
 	if _, err := os.Stat(modelfilePath); os.IsNotExist(err) {
 		common.LogInfo("AIOps: universalops.modelfile missing in data/. Creating default (MiniCPM-Thinking).")
 		content := `FROM hf.co/GnLOLot/MiniCPM5-1B-Claude-Opus-Fable5-V2-Thinking-GGUF:Q8_0
@@ -647,7 +659,7 @@ PARAMETER stop "──"
 		}
 	}
 
-	// 2. Parse Modelfile
+	// 3. Parse Modelfile
 	config, err := aiops.ParseModelfile(modelfilePath)
 	if err != nil {
 		common.LogWarn("AIOps: Failed to parse Modelfile: %v. Using hardcoded defaults (MiniCPM).", err)
@@ -665,7 +677,7 @@ PARAMETER stop "──"
 		common.LogInfo("AIOps: Successfully parsed Modelfile from %s (Base: %s)", modelfilePath, config.From)
 	}
 
-	// 3. Create Model via SDK
+	// 4. Create Model via SDK
 	common.LogInfo("AIOps: Requesting model creation for 'universalops' (Base: %s)", config.From)
 
 	// Note: Ollama's Create API handles pulling the base model automatically
@@ -683,10 +695,12 @@ PARAMETER stop "──"
 
 	if err != nil {
 		common.LogWarn("AIOps: CreateModel failed: %v", err)
-		return err
+		return fmt.Errorf("persona creation failed after pulling base model: %w", err)
 	}
 
-	common.LogInfo("AIOps: Successfully created universalops persona")
+	// 5. Activate the newly-created model
+	aiops.SetModel("universalops")
+	common.LogInfo("AIOps: Successfully created and activated universalops persona")
 	return nil
 }
 
@@ -739,12 +753,13 @@ func (a *AIOps) GetAIInsights() []AIInsight {
 	anomalies := a.DetectAnomalies()
 	for _, anom := range anomalies {
 		insights = append(insights, AIInsight{
-			Category:  a.metricCategory(anom.Metric),
-			Severity:  anom.Severity,
-			Title:     fmt.Sprintf("%s anomaly detected", titleCaser.String(anom.Metric)),
-			Message:   fmt.Sprintf("%s is at %.1f (expected ~%.1f, %.1fσ deviation)", anom.Metric, anom.Value, anom.Expected, anom.Deviation),
-			Action:    fmt.Sprintf("Investigate %s usage for runaway processes or resource leaks.", anom.Metric),
-			Timestamp: now,
+			Category:   a.metricCategory(anom.Metric),
+			Severity:   anom.Severity,
+			Title:      fmt.Sprintf("%s anomaly detected", titleCaser.String(anom.Metric)),
+			Message:    fmt.Sprintf("%s is at %.1f (expected ~%.1f, %.1fσ deviation)", anom.Metric, anom.Value, anom.Expected, anom.Deviation),
+			Action:     fmt.Sprintf("Investigate %s usage for runaway processes or resource leaks.", anom.Metric),
+			ActionPage: "aiops",
+			Timestamp:  now,
 		})
 	}
 
@@ -793,22 +808,24 @@ func (a *AIOps) GetAIInsights() []AIInsight {
 		}
 		if activeCritical > 0 {
 			insights = append(insights, AIInsight{
-				Category:  "alerts",
-				Severity:  "critical",
-				Title:     fmt.Sprintf("%d active critical alert(s)", activeCritical),
-				Message:   "There are unresolved critical alerts that require immediate attention.",
-				Action:    "Review and resolve critical alerts in the Alerts dashboard.",
-				Timestamp: now,
+				Category:   "alerts",
+				Severity:   "critical",
+				Title:      fmt.Sprintf("%d active critical alert(s)", activeCritical),
+				Message:    "There are unresolved critical alerts that require immediate attention.",
+				Action:     "Review and resolve critical alerts in the Alerts dashboard.",
+				ActionPage: "alerts",
+				Timestamp:  now,
 			})
 		}
 		if activeWarning > 0 {
 			insights = append(insights, AIInsight{
-				Category:  "alerts",
-				Severity:  "warning",
-				Title:     fmt.Sprintf("%d active warning alert(s)", activeWarning),
-				Message:   "There are unresolved warnings that should be reviewed.",
-				Action:    "Check warning-level alerts for emerging issues.",
-				Timestamp: now,
+				Category:   "alerts",
+				Severity:   "warning",
+				Title:      fmt.Sprintf("%d active warning alert(s)", activeWarning),
+				Message:    "There are unresolved warnings that should be reviewed.",
+				Action:     "Check warning-level alerts for emerging issues.",
+				ActionPage: "alerts",
+				Timestamp:  now,
 			})
 		}
 	}
@@ -1027,7 +1044,7 @@ func (a *AIOps) RequestOptimization() ChatResponse {
 	settings := a.pipelineAPI.GetCurrentSettings()
 
 	prompt := fmt.Sprintf(`Analyze the current workstation load and engine settings.
-Metrics: CPU=%.1f%%, RAM=%.1f%%, Disk=%.1f%%, Anomalies=%d.
+Metrics: CPU (system.cpu.utilization)=%.1f%%, RAM (system.memory.usage)=%.1f%%, Disk (system.disk.usage)=%.1f%%, Anomalies=%d.
 Current Settings: refreshInterval=%vms, pingCount=%v, dnsTimeout=%vms.
 
 Propose optimizations to balance telemetry density and system performance.
@@ -1041,7 +1058,7 @@ Your response MUST be a valid JSON object with this exact structure:
   }
 }
 If no changes are needed, return the current settings in the payload.`,
-		knowledge.CPUUsage, knowledge.MemoryUsage, knowledge.DiskUsage, knowledge.Anomalies,
+		knowledge.SystemCPUUtilization, knowledge.SystemMemoryUsage, knowledge.SystemDiskUsage, knowledge.Anomalies,
 		settings["refreshInterval"], settings["pingCount"], settings["dnsTimeout"])
 
 	// 2. Call AI with Optimizer model override (with per-request timeout)
@@ -1066,24 +1083,22 @@ If no changes are needed, return the current settings in the payload.`,
 
 	common.LogInfo("RequestOptimization completed in %v", optElapsed)
 
-	// 3. Simple JSON Extraction
-	// (AI might wrap JSON in markdown blocks)
-	jsonStr := resp
-	if strings.Contains(resp, "```json") {
-		parts := strings.Split(resp, "```json")
-		if len(parts) > 1 {
-			jsonStr = strings.Split(parts[1], "```")[0]
-		}
-	} else if strings.Contains(resp, "```") {
-		parts := strings.Split(resp, "```")
-		if len(parts) > 1 {
-			jsonStr = parts[1]
-		}
+	// 3. Robust JSON Extraction
+	// (AI might wrap JSON in markdown blocks or output Thought blocks first)
+	jsonStr := ""
+	startIdx := strings.Index(resp, "{")
+	endIdx := strings.LastIndex(resp, "}")
+
+	if startIdx >= 0 && endIdx > startIdx {
+		jsonStr = resp[startIdx : endIdx+1]
+	} else {
+		common.LogWarn("AIOps: Could not find JSON block in AI response. Raw: %q", resp)
+		return ChatResponse{Content: "Hawk generated an invalid response format. Please try again."}
 	}
 
 	var result ChatResponse
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
-		common.LogWarn("AIOps: Failed to parse optimization JSON: %v", err)
+		common.LogWarn("AIOps: Failed to parse optimization JSON: %v. Raw: %q", err, jsonStr)
 		return ChatResponse{Content: "Hawk generated an invalid optimization payload. Please try again."}
 	}
 
@@ -1091,7 +1106,25 @@ If no changes are needed, return the current settings in the payload.`,
 }
 
 // NotifyActionResult informs the AI of an action outcome and returns its response.
-func (a *AIOps) NotifyActionResult(sessionID, actionName, status, details string) ChatResponse {
+// handshakeID is used for DORA compliance logging on rejected actions.
+func (a *AIOps) NotifyActionResult(sessionID, actionName, status, details, handshakeID string) ChatResponse {
+	// DORA compliance: Log rejected (aborted) actions to decisions_audit
+	if status == "ABORTED" && handshakeID != "" {
+		if reg := common.GetHandshakeRegistry(); reg != nil {
+			if pending, ok := reg.Peek(handshakeID); ok {
+				if storage := common.GetStorage(); storage != nil {
+					argsJSON, _ := json.Marshal(pending.Params)
+					ctxSnap := ""
+					if a.knowledge != nil {
+						snap, _ := json.Marshal(a.knowledge.GetSnapshot())
+						ctxSnap = string(snap)
+					}
+					_ = storage.LogDecision(sessionID, actionName, string(argsJSON), ctxSnap, false)
+				}
+			}
+		}
+	}
+
 	message := fmt.Sprintf("SYSTEM_NOTIFICATION: Action %q finished with status %q. Details: %s", actionName, status, details)
 	a.SaveMessage(sessionID, "user", message)
 	resp := a.Chat(sessionID, message)
@@ -1107,10 +1140,10 @@ func (a *AIOps) VerifyRemediation(sessionID, workflowID string, beforeMetrics ma
 
 	prompt := fmt.Sprintf(`Verify the outcome of workflow '%s'.
 Baseline before execution: %v
-Current metrics: CPU=%.1f%%, RAM=%.1f%%, Disk=%.1f%%.
+Current metrics: CPU (system.cpu.utilization)=%.1f%%, RAM (system.memory.usage)=%.1f%%, Disk (system.disk.usage)=%.1f%%.
 
 Determine if the remediation was successful and provide a brief technical assessment.`,
-		workflowID, beforeMetrics, knowledge.CPUUsage, knowledge.MemoryUsage, knowledge.DiskUsage)
+		workflowID, beforeMetrics, knowledge.SystemCPUUtilization, knowledge.SystemMemoryUsage, knowledge.SystemDiskUsage)
 
 	a.SaveMessage(sessionID, "user", prompt)
 	resp := a.Chat(sessionID, prompt)

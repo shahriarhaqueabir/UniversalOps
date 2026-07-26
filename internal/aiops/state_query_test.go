@@ -3,15 +3,16 @@ package aiops
 import (
 	"strings"
 	"testing"
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 func TestDetectAnomalies(t *testing.T) {
 	// Test case: Elevated CPU
 	history := []common.SystemStats{
-		{CPUPercent: 10.0},
-		{CPUPercent: 15.0},
-		{CPUPercent: 85.0}, // Elevated
+		{SystemCPUUtilization: 10.0},
+		{SystemCPUUtilization: 15.0},
+		{SystemCPUUtilization: 85.0}, // Elevated
 	}
 	anomalies := DetectAnomalies(history)
 	found := false
@@ -27,9 +28,9 @@ func TestDetectAnomalies(t *testing.T) {
 
 	// Test case: CPU Spike
 	history = []common.SystemStats{
-		{CPUPercent: 10.0},
-		{CPUPercent: 10.0},
-		{CPUPercent: 75.0}, // Spike
+		{SystemCPUUtilization: 10.0},
+		{SystemCPUUtilization: 10.0},
+		{SystemCPUUtilization: 75.0}, // Spike
 	}
 	anomalies = DetectAnomalies(history)
 	found = false
@@ -45,9 +46,9 @@ func TestDetectAnomalies(t *testing.T) {
 
 	// Test case: Sustained Memory Pressure
 	history = []common.SystemStats{
-		{MemoryUsed: 82.0},
-		{MemoryUsed: 85.0},
-		{MemoryUsed: 81.0},
+		{SystemMemoryUsage: 82.0},
+		{SystemMemoryUsage: 85.0},
+		{SystemMemoryUsage: 81.0},
 	}
 	anomalies = DetectAnomalies(history)
 	found = false
@@ -63,7 +64,7 @@ func TestDetectAnomalies(t *testing.T) {
 
 	// Test case: Recent Reboot
 	history = []common.SystemStats{
-		{Uptime: "45 seconds"},
+		{SystemUptime: "45 seconds"},
 	}
 	anomalies = DetectAnomalies(history)
 	found = false
@@ -80,9 +81,9 @@ func TestDetectAnomalies(t *testing.T) {
 
 func TestAnswerSystemStateQuery(t *testing.T) {
 	stats := &common.SystemStats{
-		CPUPercent: 45.0,
-		MemoryUsed: 60.0,
-		DiskUsed:   30.0,
+		SystemCPUUtilization: 45.0,
+		SystemMemoryUsage:    60.0,
+		SystemDiskUsage:      30.0,
 	}
 
 	answer := AnswerSystemStateQuery("cpu usage", stats, nil, nil)
@@ -126,7 +127,7 @@ func TestDetectAnomalies_EmptyHistory(t *testing.T) {
 
 func TestDetectAnomalies_DiskPressure(t *testing.T) {
 	history := []common.SystemStats{
-		{DiskUsed: 96.0},
+		{SystemDiskUsage: 96.0},
 	}
 	anomalies := DetectAnomalies(history)
 	found := false

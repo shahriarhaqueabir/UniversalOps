@@ -952,6 +952,7 @@ export interface AIInsight {
   title: string
   message: string
   action: string
+  actionPage?: string
   timestamp: string
 }
 
@@ -1174,6 +1175,18 @@ export interface ReportRecord {
   data_json: string
 }
 
+export interface PrebuiltTemplate {
+  id: string
+  category: string
+  preset_name: string
+  description: string
+  metric: string
+  condition: string
+  threshold: number
+  report_type: string
+  schedule: string
+}
+
 // ── NetOps Extended Types ──
 
 export interface ARPEntryData {
@@ -1214,6 +1227,20 @@ export interface DoHResultData {
   latency_ms: number
   success: boolean
   resolved_ip: string
+}
+
+export interface PingResult {
+  target: string
+  ip: string
+  sent: number
+  received: number
+  lost: number
+  min_ms: number
+  max_ms: number
+  avg_ms: number
+  jitter_ms: number
+  ttl: number
+  error?: string
 }
 
 export interface PingResultMultiData {

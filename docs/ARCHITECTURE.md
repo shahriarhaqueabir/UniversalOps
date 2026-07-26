@@ -45,12 +45,13 @@ graph TD
 ```
 
 ### Storage Philosophy (SQLite WAL)
-We use **Write-Ahead Logging (WAL)** mode to handle high-frequency metric ingestion from the `DataPipeline` without blocking read queries from the UI. Retention defaults to 7 days to maintain a balance between historical context and disk footprint.
+We use **Write-Ahead Logging (WAL)** mode to handle high-frequency metric ingestion from the `DataPipeline` without blocking read queries from the UI. All data structures are aligned with **OpenTelemetry (OTel) Semantic Conventions** to ensure ecosystem interoperability and improved AI reasoning.
 
 ### 1. SysOps (System Operations)
 - CPU, RAM, disk, process monitoring.
 - Real-time KPI cards with sparklines and per-core breakdown.
 - **Hardware Forensics**: GPU temperature/utilization, fan speeds, and baseboard metadata.
+- **Standards Compliance**: Metrics are mapped to OTel namespaces (e.g., `system.cpu.utilization`, `system.memory.usage`).
 - **Collection Strategy**:
     - **Primary**: `gopsutil/v4` for cross-platform metrics.
     - **Windows Native**: Direct WMI queries via `yusufpapurcu/wmi` for detailed hardware (GPU, Motherboard, Battery).
@@ -59,6 +60,8 @@ We use **Write-Ahead Logging (WAL)** mode to handle high-frequency metric ingest
 
 ### 2. NetOps (Network Operations)
 - Continuous ICMP ping, DNS lookup (A/MX/TXT/etc.), port scanning.
+- **RFC 9951 Compliance**: Implements standardized **Delay Performance Metrics** for accurate latency and jitter attribution.
+- **Modern Observability**: Support for the **qlog** framework to audit encrypted QUIC and HTTP/3 traffic patterns.
 - Interface bandwidth monitoring with real-time rate calculation.
 
 ### 3. SecOps (Security Operations)
@@ -71,6 +74,8 @@ We use **Write-Ahead Logging (WAL)** mode to handle high-frequency metric ingest
 
 ### 5. AI Ops (Local LLM Integration)
 - Integration with local AI (Ollama) for system summarization and report generation.
+- **Model Context Protocol (MCP)**: Implements the MCP standard for secure, structured tool-calling between the LLM and system collectors.
+- **Human-in-the-Loop (HITL)**: Enforces **EU AI Act** compliance by requiring manual user confirmation for all AI-suggested remediation actions.
 
 ---
 
@@ -191,7 +196,7 @@ A centralized Go ticker (`EngineLoop`) handles periodic evaluation, decoupled fr
 - **Sharded Concurrency**: To avoid global lock contention, the pipeline is sharded; metrics and forecast engines manage their own local locks.
 
 ### 3. Persistent Storage (SQLite WAL)
-All telemetry and configuration are stored in `ops_core.db` using Write-Ahead Logging.
+All telemetry and configuration are stored in `universalops.db` using Write-Ahead Logging.
 - **Metrics**: High-frequency time-series data.
 - **Settings**: Atomic backend-led configuration persistence.
 - **Forensics**: Structured JSON snapshots of system state (Process trees, Network maps).
@@ -223,6 +228,7 @@ To handle frequent metric writes from the `DataPipeline` without blocking read q
 UniversalOps integrates with **Ollama** locally.
 - **Portable Sovereignty**: All data (DB, logs, markers) is stored strictly in the application root (`./data`, `./logs`).
 - **Request Isolation**: AI state is instance-based via `OllamaClient`, ensuring zero state-leakage between concurrent user sessions and background diagnostics.
+- **DORA Compliance**: An immutable audit trail of all AI-driven decisions and user approvals is maintained in the `decisions_audit` table to satisfy operational resilience requirements.
 
 ---
 

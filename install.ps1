@@ -1,12 +1,12 @@
-# Universal-Ops Installation Script for Windows (Portable Mode)
-# Usage: irm https://raw.githubusercontent.com/shahriarhaqueabir/AllOpsFull/main/install.ps1 | iex
+# UniversalOps Installation Script for Windows (Portable Mode)
+# Usage: irm https://raw.githubusercontent.com/shahriarhaqueabir/UniversalOps/main/install.ps1 | iex
 
-$Version = "1.4.0"
-$Url = "https://github.com/shahriarhaqueabir/AllOpsFull/releases/download/v$Version/universal-ops-v$Version-windows-amd64.exe"
+$Version = "1.3.0"
+$Url = "https://github.com/shahriarhaqueabir/UniversalOps/releases/download/v$Version/UniversalOps-v$Version-windows-amd64.exe"
 $Dest = "$HOME\Desktop\UniversalOps"
-$Exe = "$Dest\universal-ops.exe"
+$Exe = "$Dest\UniversalOps.exe"
 
-Write-Host "Setting up Universal-Ops Portable v$Version..." -ForegroundColor Cyan
+Write-Host "Setting up UniversalOps Portable v$Version..." -ForegroundColor Cyan
 
 # --- Prerequisites check ---
 $webView2 = $null
@@ -44,5 +44,5 @@ $Shortcut.Save()
 
 Write-Host "Setup complete. The app is located at $Dest" -ForegroundColor Green
 Write-Host "All data and logs will remain inside this folder."
-Write-Host "Starting Universal-Ops..."
+Write-Host "Starting UniversalOps..."
 Start-Process $Exe -WorkingDirectory $Dest

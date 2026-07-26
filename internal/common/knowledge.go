@@ -51,14 +51,28 @@ func (k *KnowledgeManager) GetSnapshot() SystemKnowledge {
 		SecurityGrade: k.securityGrade,
 		Anomalies:     k.anomalies,
 		ActiveConns:   k.activeConns,
-		Uptime:        k.uptime,
+		SystemUptime:  k.uptime,
 	}
 
 	if k.pipeline != nil {
-		sk.CPUUsage = k.pipeline.GetLastValue(MetricCPU)
-		sk.MemoryUsage = k.pipeline.GetLastValue(MetricMem)
-		sk.DiskUsage = k.pipeline.GetLastValue(MetricDisk)
+		sk.SystemCPUUtilization = k.pipeline.GetLastValue(MetricCPU)
+		sk.CPUTrend = k.pipeline.GetTrend(MetricCPU).Direction.String()
+		sk.SystemMemoryUsage = k.pipeline.GetLastValue(MetricMem)
+		sk.MemoryTrend = k.pipeline.GetTrend(MetricMem).Direction.String()
+		sk.SystemDiskUsage = k.pipeline.GetLastValue(MetricDisk)
+		sk.DiskTrend = k.pipeline.GetTrend(MetricDisk).Direction.String()
 	}
 
 	return sk
+}
+
+func (d TrendDirection) String() string {
+	switch d {
+	case TrendRising:
+		return "rising"
+	case TrendFalling:
+		return "falling"
+	default:
+		return "stable"
+	}
 }

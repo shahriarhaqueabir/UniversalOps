@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // ScheduledTask represents a scheduled task.
@@ -251,9 +251,11 @@ func findCSVColumn(headers []string, name string) int {
 			return i
 		}
 	}
-	// Try partial match for locale variations
+	// Try case-insensitive partial match for locale variations
 	for i, h := range headers {
-		if strings.Contains(h, name) || strings.Contains(name, h) {
+		hl := strings.ToLower(h)
+		nl := strings.ToLower(name)
+		if strings.Contains(hl, nl) || strings.Contains(nl, hl) {
 			return i
 		}
 	}

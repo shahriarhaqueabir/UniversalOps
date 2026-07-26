@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
@@ -70,16 +69,11 @@ function StatusIcon({ status }: { status: 'pass' | 'warn' | 'fail' }) {
 
 export function HealthCheckTab() {
   const { call } = useBackend()
-  const [report, setReport] = useState<HealthReportData | null>(null)
-  const [hasRun, setHasRun] = useState(false)
 
-  const { isLoading, refetch } = useQuery({
+  const { data: report, isFetching, refetch } = useQuery({
     queryKey: ['netops-health-check'],
     queryFn: async () => {
-      const res = (await call('NetOps.RunNetworkHealthCheck')) as HealthReportData
-      setReport(res)
-      setHasRun(true)
-      return res
+      return (await call('NetOps.RunNetworkHealthCheck')) as HealthReportData
     },
     enabled: false,
     retry: false,
@@ -103,6 +97,8 @@ export function HealthCheckTab() {
         ? 'Degraded Performance'
         : 'Significant Issues'
 
+  const hasRun = report !== undefined
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <SectionBriefing
@@ -121,22 +117,22 @@ export function HealthCheckTab() {
         <div className="flex items-center gap-4">
           <button
             onClick={runCheck}
-            disabled={isLoading}
+            disabled={isFetching}
             className={cn(
               'flex items-center gap-3 px-6 py-3 text-sm font-semibold rounded-xl transition-all shadow-xl',
-              isLoading
+              isFetching
                 ? 'bg-panel-3 text-text-faint border border-border cursor-not-allowed'
                 : 'bg-accent text-white hover:bg-accent/90',
             )}
           >
-            {isLoading ? (
+            {isFetching ? (
               <RefreshCw size={16} className="animate-spin" />
             ) : (
               <Play size={16} fill="currentColor" />
             )}
-            {isLoading ? 'Running...' : 'Run Health Check'}
+            {isFetching ? 'Running...' : 'Run Health Check'}
           </button>
-          {!hasRun && !isLoading && (
+          {!hasRun && !isFetching && (
             <p className="text-xs font-medium text-text-faint flex items-center gap-2">
               <Stethoscope size={14} className="text-accent" />
               Click Run Health Check to begin
@@ -239,7 +235,7 @@ export function HealthCheckTab() {
       )}
 
       {/* ── Empty State ── */}
-      {!hasRun && !isLoading && !report && (
+      {!hasRun && !isFetching && !report && (
         <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-16 shadow-xl flex flex-col items-center justify-center text-center">
           <div className="w-16 h-16 rounded-2xl bg-panel-3 flex items-center justify-center border border-border mb-4">
             <Stethoscope size={32} className="text-text-faint" />

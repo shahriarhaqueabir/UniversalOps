@@ -3,7 +3,7 @@ package app
 import (
 	"testing"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 func TestTimeline_GetTimelineEvents_DefaultFilter(t *testing.T) {

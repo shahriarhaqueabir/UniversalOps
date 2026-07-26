@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // PackageInfo holds info about a single installed package.

@@ -14,9 +14,9 @@ import (
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/devops"
-	sysopsPkg "github.com/shahriarhaqueabir/AllOpsFull/internal/sysops"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/devops"
+	sysopsPkg "github.com/shahriarhaqueabir/UniversalOps/internal/sysops"
 )
 
 // DevOps exposes development operations bindings to the frontend.
@@ -170,10 +170,16 @@ func (d *DevOps) ControlService(name, action string) bool {
 	return true
 }
 
-// RunPowerShellLive executes a PowerShell command with the user's default
-// profile loaded and streams each output line as a Wails event.
-// The `id` parameter allows the frontend to correlate lines to a specific command.
+// RunPowerShellLive executes a PowerShell command and streams output.
+// Enforces safety policies before execution.
 func (d *DevOps) RunPowerShellLive(cmd string, id string) CommandResult {
+	if devops.ContainsShellMetachar(cmd) {
+		return CommandResult{Command: cmd, Error: sanitizeError(devops.ErrShellMetachar)}
+	}
+	if devops.IsDangerousCommand(cmd) {
+		return CommandResult{Command: cmd, Error: sanitizeError(devops.ErrDangerousCommand)}
+	}
+
 	start := time.Now()
 	lineCh := make(chan string, 100)
 
@@ -211,9 +217,16 @@ func (d *DevOps) RunPowerShellLive(cmd string, id string) CommandResult {
 	}
 }
 
-// RunGitBashLive executes a command via Git Bash and streams each output line
-// as a Wails event. The `id` parameter allows the frontend to correlate lines.
+// RunGitBashLive executes a command via Git Bash and streams output.
+// Enforces safety policies before execution.
 func (d *DevOps) RunGitBashLive(cmd string, id string) CommandResult {
+	if devops.ContainsShellMetachar(cmd) {
+		return CommandResult{Command: cmd, Error: sanitizeError(devops.ErrShellMetachar)}
+	}
+	if devops.IsDangerousCommand(cmd) {
+		return CommandResult{Command: cmd, Error: sanitizeError(devops.ErrDangerousCommand)}
+	}
+
 	start := time.Now()
 	lineCh := make(chan string, 100)
 

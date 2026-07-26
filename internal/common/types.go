@@ -1,16 +1,16 @@
 package common
 
-// SystemStats holds a snapshot of system metrics.
+// SystemStats holds a snapshot of system metrics following OTel semantic conventions.
 type SystemStats struct {
-	CPUPercent    float64
-	MemoryUsed    float64 // percentage
-	MemoryTotal   uint64  // bytes
-	MemoryUsedGB  float64
-	MemoryTotalGB float64
-	DiskUsed      float64 // percentage
-	DiskFree      uint64  // bytes
-	Uptime        string
-	ProcessCount  int
+	SystemCPUUtilization float64
+	SystemMemoryUsage    float64 // percentage
+	SystemMemoryTotal    uint64  // bytes
+	SystemMemoryUsedGB   float64
+	SystemMemoryTotalGB  float64
+	SystemDiskUsage      float64 // percentage
+	SystemDiskFree       uint64  // bytes
+	SystemUptime         string
+	ProcessCount         int
 
 	// History for sparklines
 	CPUHistory []float64
@@ -54,13 +54,16 @@ type ActionPreview struct {
 
 // SystemKnowledge represents the unified "Current Truth" of the system.
 type SystemKnowledge struct {
-	CPUUsage      float64 `json:"cpu_usage"`
-	MemoryUsage   float64 `json:"memory_usage"`
-	DiskUsage     float64 `json:"disk_usage"`
-	ActiveConns   int     `json:"active_conns"`
-	Anomalies     int     `json:"anomalies"`
-	Uptime        string  `json:"uptime"`
-	SecurityGrade string  `json:"security_grade"`
+	SystemCPUUtilization float64 `json:"system.cpu.utilization"`
+	CPUTrend             string  `json:"cpu_trend"` // "rising", "falling", "stable"
+	SystemMemoryUsage    float64 `json:"system.memory.usage"`
+	MemoryTrend          string  `json:"memory_trend"`
+	SystemDiskUsage      float64 `json:"system.disk.usage"`
+	DiskTrend            string  `json:"disk_trend"`
+	ActiveConns          int     `json:"active_conns"`
+	Anomalies            int     `json:"anomalies"`
+	SystemUptime         string  `json:"system.uptime"`
+	SecurityGrade        string  `json:"security_grade"`
 }
 
 // SecActionResult holds the result of a security action.

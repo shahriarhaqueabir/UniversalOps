@@ -9,10 +9,11 @@ import (
 )
 
 type PendingAction struct {
-	Action  string
-	Command string
-	Params  map[string]interface{}
-	Expiry  time.Time
+	SessionID string
+	Action    string
+	Command   string
+	Params    map[string]interface{}
+	Expiry    time.Time
 }
 
 type HandshakeRegistry struct {
@@ -52,17 +53,18 @@ func (r *HandshakeRegistry) Cleanup() {
 	}
 }
 
-func (r *HandshakeRegistry) Register(action string, command string, params map[string]interface{}) string {
+func (r *HandshakeRegistry) Register(sessionID, action string, command string, params map[string]interface{}) string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
 	id := hex.EncodeToString(b)
 
 	r.mu.Lock()
 	r.pending[id] = PendingAction{
-		Action:  action,
-		Command: command,
-		Params:  params,
-		Expiry:  time.Now().Add(5 * time.Minute),
+		SessionID: sessionID,
+		Action:    action,
+		Command:   command,
+		Params:    params,
+		Expiry:    time.Now().Add(5 * time.Minute),
 	}
 	r.mu.Unlock()
 	return id
@@ -85,7 +87,18 @@ func (r *HandshakeRegistry) Consume(id string) (PendingAction, error) {
 }
 
 // CreatePreview generates an ActionPreview for an action and registers it.
-func (r *HandshakeRegistry) CreatePreview(action string, params map[string]interface{}) ActionPreview {
+// Peek returns a pending action without consuming it (read-only access for logging/review).
+func (r *HandshakeRegistry) Peek(id string) (PendingAction, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	p, ok := r.pending[id]
+	if !ok || time.Now().After(p.Expiry) {
+		return PendingAction{}, false
+	}
+	return p, true
+}
+
+func (r *HandshakeRegistry) CreatePreview(sessionID, action string, params map[string]interface{}) ActionPreview {
 	command := ""
 	switch action {
 	case "kill_process":
@@ -99,9 +112,15 @@ func (r *HandshakeRegistry) CreatePreview(action string, params map[string]inter
 		command = fmt.Sprintf("powershell -Command \"Restart-Service -Name '%v' -Force\"", params["name"])
 	case "kill_process_tree":
 		command = fmt.Sprintf("Get-Process -Id %v | Stop-Process -Force -ErrorAction SilentlyContinue", params["pid"])
+	case "analyze_network":
+		target := params["target"]
+		if target == "" {
+			target = "8.8.8.8"
+		}
+		command = fmt.Sprintf("ping -n 4 %v", target)
 	}
 
-	id := r.Register(action, command, params)
+	id := r.Register(sessionID, action, command, params)
 
 	preview := ActionPreview{
 		HandshakeID: id,
@@ -110,6 +129,12 @@ func (r *HandshakeRegistry) CreatePreview(action string, params map[string]inter
 	}
 
 	switch action {
+	case "get_system_telemetry":
+		preview.Description = "Retrieve detailed OTel-aligned system metrics."
+		preview.Risks = []string{"Near-zero risk; read-only operation"}
+	case "analyze_network":
+		preview.Description = fmt.Sprintf("Analyze network path to %v", params["target"])
+		preview.Risks = []string{"ICMP traffic may trigger IDS alerts on some networks"}
 	case "kill_process":
 		pid := params["pid"]
 		preview.Description = fmt.Sprintf("Terminate process with PID %v", pid)

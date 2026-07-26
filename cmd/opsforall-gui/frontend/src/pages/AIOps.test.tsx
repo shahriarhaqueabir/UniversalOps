@@ -18,6 +18,7 @@ vi.mock('@/hooks/useBackend', () => ({
 
 vi.mock('@/stores/useSettingsStore', () => ({
   useSettingsStore: () => ({ refreshInterval: 5000 }),
+  useNavigationStore: () => ({ navigate: vi.fn(), currentPage: 'aiops', targetTab: null, goBack: vi.fn(), clearTargetTab: vi.fn() }),
 }))
 
 vi.mock('@/stores/useOllamaStore', () => ({
@@ -61,15 +62,15 @@ describe('AIOps Page', () => {
     mockCall.mockResolvedValue(null)
   })
 
-  it('renders page header', () => {
+  it('renders page header', async () => {
     render(<AIOps />)
-    expect(screen.getByText(/AI Operations Analyst/i)).toBeInTheDocument()
+    expect(await screen.findByText(/AI Operations Analyst/i)).toBeInTheDocument()
   })
 
-  it('shows ollama status', () => {
+  it('shows ollama status', async () => {
     render(<AIOps />)
-    expect(screen.getByText(/Ollama Online/i)).toBeInTheDocument()
-    expect(screen.getByText(/universalops/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Ollama Online/i)).toBeInTheDocument()
+    expect(await screen.findByText(/universalops/i)).toBeInTheDocument()
   })
 
   it('switches to AI Insights tab', async () => {
@@ -101,7 +102,7 @@ describe('AIOps Page', () => {
     })
   })
 
-  it('shows empty state when ollama is offline', () => {
+  it('shows empty state when ollama is offline', async () => {
     vi.mocked(useQuery).mockImplementation((opts: any) => {
       const key = opts.queryKey[0]
       if (key === 'ollama-status') {
@@ -111,7 +112,7 @@ describe('AIOps Page', () => {
       return { data: null, isLoading: false } as any
     })
     render(<AIOps />)
-    expect(screen.getByText(/Ollama Offline/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Ollama Offline/i)).toBeInTheDocument()
   })
 
   it('switches chat session when session is clicked', async () => {

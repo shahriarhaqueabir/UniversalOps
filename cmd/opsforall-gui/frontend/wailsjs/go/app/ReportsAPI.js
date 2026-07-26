@@ -6,6 +6,10 @@ export function AddReportRule(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
   return window['go']['app']['ReportsAPI']['AddReportRule'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 }
 
+export function AddRuleFromTemplate(arg1) {
+  return window['go']['app']['ReportsAPI']['AddRuleFromTemplate'](arg1);
+}
+
 export function DeleteReport(arg1) {
   return window['go']['app']['ReportsAPI']['DeleteReport'](arg1);
 }
@@ -20,6 +24,10 @@ export function GenerateReport(arg1) {
 
 export function GetEnabledReportRules() {
   return window['go']['app']['ReportsAPI']['GetEnabledReportRules']();
+}
+
+export function GetPrebuiltTemplates() {
+  return window['go']['app']['ReportsAPI']['GetPrebuiltTemplates']();
 }
 
 export function GetReport(arg1) {

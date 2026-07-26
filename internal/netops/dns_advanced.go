@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // DoHResult holds the result of a DNS-over-HTTPS test.

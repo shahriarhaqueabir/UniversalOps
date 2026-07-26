@@ -5,6 +5,8 @@ import {app} from '../models';
 
 export function AddReportRule(arg1:string,arg2:string,arg3:string,arg4:string,arg5:number,arg6:string,arg7:string):Promise<common.AutoReportRule>;
 
+export function AddRuleFromTemplate(arg1:string):Promise<common.AutoReportRule>;
+
 export function DeleteReport(arg1:string):Promise<boolean>;
 
 export function DeleteReportRule(arg1:string):Promise<boolean>;
@@ -12,6 +14,8 @@ export function DeleteReportRule(arg1:string):Promise<boolean>;
 export function GenerateReport(arg1:string):Promise<app.ReportGenerationResult>;
 
 export function GetEnabledReportRules():Promise<Array<common.AutoReportRule>>;
+
+export function GetPrebuiltTemplates():Promise<Array<app.PrebuiltReportTemplate>>;
 
 export function GetReport(arg1:string):Promise<common.ReportRecord>;
 

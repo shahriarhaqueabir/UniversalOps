@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // GatewayInfo holds information about the default gateway.

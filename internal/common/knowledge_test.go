@@ -11,8 +11,8 @@ func TestKnowledgeManager(t *testing.T) {
 
 	// Test Initial State
 	s := km.GetSnapshot()
-	if s.CPUUsage != 0 {
-		t.Errorf("expected 0 CPU, got %f", s.CPUUsage)
+	if s.SystemCPUUtilization != 0 {
+		t.Errorf("expected 0 CPU, got %f", s.SystemCPUUtilization)
 	}
 
 	// Test Update

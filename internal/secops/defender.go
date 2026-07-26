@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // DefenderStatus represents the Windows Defender health status.
@@ -45,7 +45,7 @@ func GetDefenderStatus() (*DefenderStatus, error) {
 	// Approach 1: Standard Get-MpComputerStatus. Using direct exec.Command instead of Sandboxed
 	// because Defender WMI/registry access often requires privileges stripped in the sandbox.
 	cmd := common.HiddenCommand("powershell", "-NoProfile", "-Command",
-		"$r=Get-MpComputerStatus -ErrorAction SilentlyContinue; if($r){$r|ConvertTo-Json -Depth 2}else{echo '{}'}}")
+		"$r=Get-MpComputerStatus -ErrorAction SilentlyContinue; if($r){$r|ConvertTo-Json -Depth 2}else{echo '{}'}")
 	output, err := cmd.Output()
 	if err != nil {
 		errs = append(errs, fmt.Errorf("Get-MpComputerStatus: %w", err))

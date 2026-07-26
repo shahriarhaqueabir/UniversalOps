@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // NetworkReport is a combined network diagnostic report.
