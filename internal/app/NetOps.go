@@ -8,6 +8,7 @@ import (
 
 	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 	"github.com/shahriarhaqueabir/UniversalOps/internal/netops"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/secops"
 )
 
 // NetOps exposes network operations bindings to the frontend.
@@ -356,4 +357,189 @@ func (n *NetOps) GetPingStats(results []PingResultMultiData) PingStatsData {
 		TotalLoss:   stats.TotalLoss,
 		WorstTarget: stats.WorstTarget,
 	}
+}
+
+// ── NetOps Extended Methods ──────────────────────────────────────────────────
+
+// GetARPTable returns the system ARP table.
+func (n *NetOps) GetARPTable() []netops.ARPEntry {
+	entries, err := netops.GetARPTable()
+	if err != nil {
+		return []netops.ARPEntry{}
+	}
+	if entries == nil {
+		return []netops.ARPEntry{}
+	}
+	return entries
+}
+
+// GetRoutingTable returns the system routing table.
+func (n *NetOps) GetRoutingTable() []netops.RouteEntry {
+	entries, err := netops.GetRoutingTable()
+	if err != nil {
+		return []netops.RouteEntry{}
+	}
+	if entries == nil {
+		return []netops.RouteEntry{}
+	}
+	return entries
+}
+
+// GetFirewallRules returns firewall rules for the NetOps frontend.
+// Converts from secops.FirewallRule to NetOpsFirewallRuleData.
+func (n *NetOps) GetFirewallRules() []NetOpsFirewallRuleData {
+	rules, err := secops.GetFirewallRules()
+	if err != nil {
+		return []NetOpsFirewallRuleData{}
+	}
+	out := make([]NetOpsFirewallRuleData, 0, len(rules))
+	for _, r := range rules {
+		ports := r.LocalPort
+		if r.RemotePort != "" && r.RemotePort != r.LocalPort {
+			ports = r.LocalPort + "->" + r.RemotePort
+		}
+		out = append(out, NetOpsFirewallRuleData{
+			Name:        r.Name,
+			Direction:   r.Direction,
+			Action:      r.Action,
+			Protocol:    r.Protocol,
+			Ports:       ports,
+			Enabled:     r.Enabled,
+			Source:      r.RemoteIP,
+			Destination: "",
+		})
+	}
+	return out
+}
+
+// GetVPNStatus returns the current VPN connection status.
+func (n *NetOps) GetVPNStatus() VPNStatusData {
+	active := netops.IsVPNActive()
+	return VPNStatusData{
+		Active:    active,
+		Type:      "",
+		Interface: "",
+		RemoteIP:  "",
+		LocalIP:   "",
+		Protocol:  "",
+	}
+}
+
+// FlushDNSCache flushes the system DNS resolver cache.
+func (n *NetOps) FlushDNSCache() map[string]any {
+	err := netops.FlushDNSCache()
+	if err != nil {
+		return map[string]any{"success": false, "message": "", "error": err.Error()}
+	}
+	return map[string]any{"success": true, "message": "DNS cache flushed successfully", "error": ""}
+}
+
+// ReverseLookup performs a reverse DNS PTR lookup for the given IP address.
+func (n *NetOps) ReverseLookup(ip string) map[string]any {
+	hostname, err := netops.ReverseLookup(ip)
+	if err != nil {
+		return map[string]any{"hostname": "", "error": err.Error()}
+	}
+	return map[string]any{"hostname": hostname, "error": ""}
+}
+
+// TestDoH tests DNS-over-HTTPS connectivity to the specified server.
+func (n *NetOps) TestDoH(server string) DoHResultData {
+	result := netops.TestDoH(server)
+	return DoHResultData{
+		Server:     result.Server,
+		LatencyMs:  result.LatencyMs,
+		Success:    result.Success,
+		ResolvedIP: result.ResolvedIP,
+	}
+}
+
+// GetRecentChanges returns recent network interface state changes.
+func (n *NetOps) GetRecentChanges() []NetworkChange {
+	n.model.mu.RLock()
+	defer n.model.mu.RUnlock()
+	if len(n.model.recentChanges) == 0 {
+		return []NetworkChange{}
+	}
+	out := make([]NetworkChange, len(n.model.recentChanges))
+	copy(out, n.model.recentChanges)
+	return out
+}
+
+// ScanWiFiNetworks scans for visible WiFi access points.
+func (n *NetOps) ScanWiFiNetworks() []netops.WiFiNetwork {
+	networks, err := netops.ScanWiFiNetworks()
+	if err != nil {
+		return []netops.WiFiNetwork{}
+	}
+	if networks == nil {
+		return []netops.WiFiNetwork{}
+	}
+	return networks
+}
+
+// GetWiFiInfo returns the current WiFi adapter connection state.
+func (n *NetOps) GetWiFiInfo() netops.WiFiInfo {
+	info, err := netops.GetWiFiInfo()
+	if err != nil {
+		return netops.WiFiInfo{}
+	}
+	return info
+}
+
+// RunNetworkDiscovery performs a network discovery scan on the given subnet.
+func (n *NetOps) RunNetworkDiscovery(subnet string) netops.DiscoveryResult {
+	return netops.RunNetworkDiscovery(subnet)
+}
+
+// RunNetworkAction executes a named network action with the given parameters.
+func (n *NetOps) RunNetworkAction(action string, params map[string]string) NetworkActionResult {
+	err := netops.RunNetworkAction(action, params)
+	if err != nil {
+		return NetworkActionResult{
+			Action:  action,
+			Message: err.Error(),
+			Success: false,
+		}
+	}
+	return NetworkActionResult{
+		Action:  action,
+		Message: "Action completed successfully",
+		Success: true,
+	}
+}
+
+// GetDefaultGateway returns the system default gateway information.
+func (n *NetOps) GetDefaultGateway() GatewayInfo {
+	gw := netops.GetDefaultGateway()
+	return GatewayInfo{
+		IP:        gw.IP,
+		Interface: gw.Interface,
+		Reachable: gw.Reachable,
+	}
+}
+
+// GetNetworkSummary returns an aggregated summary of the current network state.
+func (n *NetOps) GetNetworkSummary() NetworkSummary {
+	ifaces := n.GetInterfaces()
+	changes := n.GetRecentChanges()
+	summary := NetworkSummary{
+		SummaryText:  "Network is operational",
+		TopInterface: "",
+		Issues:       []string{},
+	}
+	if len(ifaces) > 0 {
+		summary.TopInterface = ifaces[0].Name
+	}
+	var issueStrs []string
+	for _, ch := range changes {
+		if ch.Type == ChangeDown || ch.Type == ChangeDisappeared {
+			issueStrs = append(issueStrs, ch.Interface+": "+string(ch.Type))
+		}
+	}
+	if len(issueStrs) > 0 {
+		summary.Issues = issueStrs
+		summary.SummaryText = "Network has active issues"
+	}
+	return summary
 }

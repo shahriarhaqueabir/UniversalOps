@@ -452,6 +452,7 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 	})
 
 	// ── Workflow: AI System Auditor ──
+	var auditCollectedData map[string]any
 	engine.Register(common.WorkflowDefinition{
 		ID:          "ai-audit",
 		Name:        "AI System Auditor",
@@ -499,6 +500,7 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 					if len(errs) > 0 {
 						result["warnings"] = strings.Join(errs, "; ")
 					}
+					auditCollectedData = result
 					return result, nil
 				},
 			},
@@ -508,37 +510,24 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 				Description:     "Send aggregated data to Hawk for cross-layer risk correlation.",
 				ExpectedOutcome: "Hawk identification of security risks or performance bottlenecks.",
 				Action: func(ctx context.Context) (any, error) {
-					var errs []string
-					h, err := sysops.RunHealthCheck()
-					if err != nil {
-						errs = append(errs, fmt.Sprintf("Health: %v", err))
-					}
-					s, err := secops.RunSecurityAudit()
-					if err != nil {
-						errs = append(errs, fmt.Sprintf("Security: %v", err))
-					}
-					n, err := netops.RunNetworkDiagnostics()
-					if err != nil {
-						errs = append(errs, fmt.Sprintf("Network: %v", err))
-					}
 					data := map[string]string{}
-					if h != nil {
-						data["System Health"] = h.String()
+					if h, ok := auditCollectedData["health"].(string); ok && h != "" {
+						data["System Health"] = h
 					} else {
 						data["System Health"] = "Unavailable"
 					}
-					if s != nil {
-						data["Security Posture"] = s.String()
+					if s, ok := auditCollectedData["security"].(string); ok && s != "" {
+						data["Security Posture"] = s
 					} else {
 						data["Security Posture"] = "Unavailable"
 					}
-					if n != nil {
-						data["Network Status"] = n.String()
+					if n, ok := auditCollectedData["network"].(string); ok && n != "" {
+						data["Network Status"] = n
 					} else {
 						data["Network Status"] = "Unavailable"
 					}
-					if len(errs) > 0 {
-						data["Warnings"] = strings.Join(errs, "; ")
+					if w, ok := auditCollectedData["warnings"].(string); ok && w != "" {
+						data["Warnings"] = w
 					}
 					report := aiops.GenerateEnhancedReport("Full System Audit", data)
 					return report.OllamaReport()

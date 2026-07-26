@@ -1145,3 +1145,113 @@ type NetworkActionResult struct {
 	Message string `json:"message"`
 	Success bool   `json:"success"`
 }
+
+// NetOpsFirewallRuleData holds a firewall rule entry for the NetOps facade.
+type NetOpsFirewallRuleData struct {
+	Name        string `json:"name"`
+	Direction   string `json:"direction"`
+	Action      string `json:"action"`
+	Protocol    string `json:"protocol"`
+	Ports       string `json:"ports"`
+	Enabled     bool   `json:"enabled"`
+	Source      string `json:"source"`
+	Destination string `json:"destination"`
+}
+
+// ── DevOps Extended Types ──
+
+// DockerStatsEntry holds a single container's stats.
+type DockerStatsEntry struct {
+	ContainerID   string `json:"container_id"`
+	Name          string `json:"name"`
+	CPUPercent    string `json:"cpu_percent"`
+	MemoryUsage   string `json:"memory_usage"`
+	MemoryLimit   string `json:"memory_limit"`
+	MemoryPercent string `json:"memory_percent"`
+	NetIO         string `json:"net_io"`
+	BlockIO       string `json:"block_io"`
+	PIDCount      string `json:"pid_count"`
+}
+
+// DockerComposeService holds a single compose service entry for serialization.
+type DockerComposeService struct {
+	Name  string `json:"name"`
+	State string `json:"state"`
+	Ports string `json:"ports"`
+}
+
+// DockerComposeProject holds a compose project summary for serialization.
+type DockerComposeProject struct {
+	Project  string                 `json:"project"`
+	Status   string                 `json:"status"`
+	WorkDir  string                 `json:"work_dir"`
+	Services []DockerComposeService `json:"services"`
+}
+
+// DockerNetworkInfo holds a Docker network entry for serialization.
+type DockerNetworkInfo struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Driver     string `json:"driver"`
+	Scope      string `json:"scope"`
+	Subnet     string `json:"subnet"`
+	Gateway    string `json:"gateway"`
+	Containers int    `json:"containers"`
+}
+
+// DockerVolumeInfo holds a Docker volume entry for serialization.
+type DockerVolumeInfo struct {
+	Driver     string `json:"driver"`
+	Name       string `json:"name"`
+	Mountpoint string `json:"mountpoint"`
+	Size       string `json:"size"`
+}
+
+// K8sResourceItem holds a generic Kubernetes resource entry for serialization.
+type K8sResourceItem struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Status    string `json:"status"`
+	Age       string `json:"age"`
+	Details   string `json:"details"`
+}
+
+// K8sRolloutStatus holds the rollout status of a Kubernetes resource for serialization.
+type K8sRolloutStatus struct {
+	Name      string `json:"name"`
+	Kind      string `json:"kind"`
+	Ready     bool   `json:"ready"`
+	Replicas  string `json:"replicas"`
+	Updated   string `json:"updated"`
+	Available string `json:"available"`
+}
+
+// K8sEvent holds a Kubernetes event entry for serialization.
+type K8sEvent struct {
+	LastSeen string `json:"last_seen"`
+	Type     string `json:"type"`
+	Reason   string `json:"reason"`
+	Object   string `json:"object"`
+	Message  string `json:"message"`
+}
+
+// K8sNamespaceInfo holds a Kubernetes namespace entry for serialization.
+type K8sNamespaceInfo struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
+	Age    string `json:"age"`
+}
+
+// DockerActionResult holds the result of a docker action.
+type DockerActionResult struct {
+	Action  string `json:"action"`
+	Message string `json:"message"`
+	Success bool   `json:"success"`
+}
+
+// K8sActionResult holds the result of a kubernetes action.
+type K8sActionResult struct {
+	Action  string `json:"action"`
+	Message string `json:"message"`
+	Success bool   `json:"success"`
+}

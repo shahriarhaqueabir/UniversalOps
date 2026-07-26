@@ -1300,3 +1300,332 @@ func (d *DevOps) GetServiceGroupSummary() ServiceGroupSummary {
 
 	return summary
 }
+
+// ── DevOps Extended Methods: Docker ──────────────────────────────────────────
+
+// GetDockerStats returns real-time stats for all running containers.
+func (d *DevOps) GetDockerStats() []DockerStatsEntry {
+	entries, err := devops.GetDockerStats()
+	if err != nil {
+		return []DockerStatsEntry{}
+	}
+	out := make([]DockerStatsEntry, 0, len(entries))
+	for _, e := range entries {
+		out = append(out, DockerStatsEntry{
+			ContainerID:   e.ContainerID,
+			Name:          e.Name,
+			CPUPercent:    e.CPUPercent,
+			MemoryUsage:   e.MemoryUsage,
+			MemoryLimit:   e.MemoryLimit,
+			MemoryPercent: e.MemoryPercent,
+			NetIO:         e.NetIO,
+			BlockIO:       e.BlockIO,
+			PIDCount:      e.PIDCount,
+		})
+	}
+	return out
+}
+
+// DockerComposeList returns all Docker Compose projects with their services.
+func (d *DevOps) DockerComposeList() []DockerComposeProject {
+	projects, err := devops.DockerComposeList()
+	if err != nil {
+		return []DockerComposeProject{}
+	}
+	out := make([]DockerComposeProject, 0, len(projects))
+	for _, p := range projects {
+		proj := DockerComposeProject{
+			Project: p.Project,
+			Status:  p.Status,
+			WorkDir: p.WorkDir,
+		}
+		// Populate services for each project
+		services, svcErr := devops.DockerComposePS(p.WorkDir)
+		if svcErr == nil {
+			svcOut := make([]DockerComposeService, 0, len(services))
+			for _, s := range services {
+				svcOut = append(svcOut, DockerComposeService{
+					Name:  s.Name,
+					State: s.State,
+					Ports: s.Ports,
+				})
+			}
+			proj.Services = svcOut
+		}
+		out = append(out, proj)
+	}
+	return out
+}
+
+// GetDockerNetworks returns all Docker networks.
+func (d *DevOps) GetDockerNetworks() []DockerNetworkInfo {
+	networks, err := devops.GetDockerNetworks()
+	if err != nil {
+		return []DockerNetworkInfo{}
+	}
+	out := make([]DockerNetworkInfo, 0, len(networks))
+	for _, n := range networks {
+		out = append(out, DockerNetworkInfo{
+			ID:         n.ID,
+			Name:       n.Name,
+			Driver:     n.Driver,
+			Scope:      n.Scope,
+			Subnet:     n.Subnet,
+			Gateway:    n.Gateway,
+			Containers: n.Containers,
+		})
+	}
+	return out
+}
+
+// GetDockerVolumes returns all Docker volumes.
+func (d *DevOps) GetDockerVolumes() []DockerVolumeInfo {
+	volumes, err := devops.GetDockerVolumes()
+	if err != nil {
+		return []DockerVolumeInfo{}
+	}
+	out := make([]DockerVolumeInfo, 0, len(volumes))
+	for _, v := range volumes {
+		out = append(out, DockerVolumeInfo{
+			Driver:     v.Driver,
+			Name:       v.Name,
+			Mountpoint: v.Mountpoint,
+			Size:       v.Size,
+		})
+	}
+	return out
+}
+
+// DockerPrune prunes unused Docker resources.
+func (d *DevOps) DockerPrune() DockerActionResult {
+	msg, err := devops.DockerPrune()
+	if err != nil {
+		return DockerActionResult{
+			Action:  "prune",
+			Message: err.Error(),
+			Success: false,
+		}
+	}
+	return DockerActionResult{
+		Action:  "prune",
+		Message: msg,
+		Success: true,
+	}
+}
+
+// DockerKill forcefully stops a container.
+func (d *DevOps) DockerKill(id string) DockerActionResult {
+	msg, err := devops.DockerKill(id)
+	if err != nil {
+		return DockerActionResult{
+			Action:  "kill",
+			Message: err.Error(),
+			Success: false,
+		}
+	}
+	return DockerActionResult{
+		Action:  "kill",
+		Message: msg,
+		Success: true,
+	}
+}
+
+// DockerPause pauses a container.
+func (d *DevOps) DockerPause(id string) DockerActionResult {
+	msg, err := devops.DockerPause(id)
+	if err != nil {
+		return DockerActionResult{
+			Action:  "pause",
+			Message: err.Error(),
+			Success: false,
+		}
+	}
+	return DockerActionResult{
+		Action:  "pause",
+		Message: msg,
+		Success: true,
+	}
+}
+
+// DockerUnpause unpauses a paused container.
+func (d *DevOps) DockerUnpause(id string) DockerActionResult {
+	msg, err := devops.DockerUnpause(id)
+	if err != nil {
+		return DockerActionResult{
+			Action:  "unpause",
+			Message: err.Error(),
+			Success: false,
+		}
+	}
+	return DockerActionResult{
+		Action:  "unpause",
+		Message: msg,
+		Success: true,
+	}
+}
+
+// DockerRename renames a container.
+func (d *DevOps) DockerRename(id string, newName string) DockerActionResult {
+	msg, err := devops.DockerRename(id, newName)
+	if err != nil {
+		return DockerActionResult{
+			Action:  "rename",
+			Message: err.Error(),
+			Success: false,
+		}
+	}
+	return DockerActionResult{
+		Action:  "rename",
+		Message: msg,
+		Success: true,
+	}
+}
+
+// ── DevOps Extended Methods: Kubernetes ──────────────────────────────────────
+
+// GetK8sNamespaces returns all Kubernetes namespaces.
+func (d *DevOps) GetK8sNamespaces() []K8sNamespaceInfo {
+	items, err := devops.GetK8sNamespaces()
+	if err != nil {
+		return []K8sNamespaceInfo{}
+	}
+	out := make([]K8sNamespaceInfo, 0, len(items))
+	for _, item := range items {
+		out = append(out, K8sNamespaceInfo{
+			Name:   item.Name,
+			Status: item.Status,
+			Age:    item.Age,
+		})
+	}
+	return out
+}
+
+// GetK8sDeployments returns Kubernetes deployments in the given namespace.
+func (d *DevOps) GetK8sDeployments(namespace string) []K8sResourceItem {
+	items, err := devops.GetK8sDeployments(namespace)
+	if err != nil {
+		return []K8sResourceItem{}
+	}
+	out := make([]K8sResourceItem, 0, len(items))
+	for _, item := range items {
+		out = append(out, K8sResourceItem{
+			Name:      item.Name,
+			Namespace: item.Namespace,
+			Status:    item.Status,
+			Age:       item.Age,
+			Details:   item.Details,
+		})
+	}
+	return out
+}
+
+// GetK8sServices returns Kubernetes services in the given namespace.
+func (d *DevOps) GetK8sServices(namespace string) []K8sResourceItem {
+	items, err := devops.GetK8sServices(namespace)
+	if err != nil {
+		return []K8sResourceItem{}
+	}
+	out := make([]K8sResourceItem, 0, len(items))
+	for _, item := range items {
+		out = append(out, K8sResourceItem{
+			Name:      item.Name,
+			Namespace: item.Namespace,
+			Status:    item.Status,
+			Age:       item.Age,
+			Details:   item.Details,
+		})
+	}
+	return out
+}
+
+// GetK8sPods returns Kubernetes pods in the given namespace.
+func (d *DevOps) GetK8sPods(namespace string) []K8sResourceItem {
+	items, err := devops.GetK8sPods(namespace)
+	if err != nil {
+		return []K8sResourceItem{}
+	}
+	out := make([]K8sResourceItem, 0, len(items))
+	for _, item := range items {
+		out = append(out, K8sResourceItem{
+			Name:      item.Name,
+			Namespace: item.Namespace,
+			Status:    item.Status,
+			Age:       item.Age,
+			Details:   item.Details,
+		})
+	}
+	return out
+}
+
+// GetK8sEvents returns Kubernetes events in the given namespace with a limit.
+func (d *DevOps) GetK8sEvents(namespace string, limit int) []K8sEvent {
+	items, err := devops.GetK8sEvents(namespace, limit)
+	if err != nil {
+		return []K8sEvent{}
+	}
+	out := make([]K8sEvent, 0, len(items))
+	for _, item := range items {
+		out = append(out, K8sEvent{
+			LastSeen: item.LastSeen,
+			Type:     item.Type,
+			Reason:   item.Reason,
+			Object:   item.Object,
+			Message:  item.Message,
+		})
+	}
+	return out
+}
+
+// GetK8sRollouts returns Kubernetes rollout status in the given namespace.
+func (d *DevOps) GetK8sRollouts(namespace string) []K8sRolloutStatus {
+	items, err := devops.GetK8sRollouts(namespace)
+	if err != nil {
+		return []K8sRolloutStatus{}
+	}
+	out := make([]K8sRolloutStatus, 0, len(items))
+	for _, item := range items {
+		out = append(out, K8sRolloutStatus{
+			Name:      item.Name,
+			Kind:      item.Kind,
+			Ready:     item.Ready,
+			Replicas:  item.Replicas,
+			Updated:   item.Updated,
+			Available: item.Available,
+		})
+	}
+	return out
+}
+
+// K8sRestartDeployment restarts a Kubernetes deployment.
+func (d *DevOps) K8sRestartDeployment(name, namespace string) K8sActionResult {
+	msg, err := devops.K8sRestartDeployment(name, namespace)
+	if err != nil {
+		return K8sActionResult{
+			Action:  "restart",
+			Message: err.Error(),
+			Success: false,
+		}
+	}
+	return K8sActionResult{
+		Action:  "restart",
+		Message: msg,
+		Success: true,
+	}
+}
+
+// K8sRollbackDeployment rolls back a Kubernetes deployment to a previous revision.
+func (d *DevOps) K8sRollbackDeployment(name, namespace string, revision int) K8sActionResult {
+	msg, err := devops.K8sRollbackDeployment(name, namespace, revision)
+	if err != nil {
+		return K8sActionResult{
+			Action:  "rollback",
+			Message: err.Error(),
+			Success: false,
+		}
+	}
+	return K8sActionResult{
+		Action:  "rollback",
+		Message: msg,
+		Success: true,
+	}
+}
