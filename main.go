@@ -77,6 +77,7 @@ func main() {
 			application.Timeline,
 			application.Workflows,
 			application.Reports,
+			application.Knowledge,
 		},
 	})
 

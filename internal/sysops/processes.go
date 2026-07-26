@@ -52,7 +52,7 @@ var (
 	lastSnapshotAt time.Time
 
 	// New: Async Trust Worker
-	trustQueue   = make(chan string, 500)
+	trustQueue      = make(chan string, 500)
 	trustWorkerOnce sync.Once
 )
 
@@ -91,7 +91,10 @@ func UpdateProcessSnapshot() error {
 	now := time.Now()
 
 	// 1. Prune old cache entries (every 5 minutes or so)
-	if now.Sub(lastSnapshotAt) > 5*time.Minute {
+	lastSnapshotMu.RLock()
+	sinceLastSnapshot := now.Sub(lastSnapshotAt)
+	lastSnapshotMu.RUnlock()
+	if sinceLastSnapshot > 5*time.Minute {
 		pruneCaches(now)
 	}
 
