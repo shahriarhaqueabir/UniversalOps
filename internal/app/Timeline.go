@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"time"
@@ -178,7 +179,7 @@ func (t *Timeline) ExplainEvents(eventIDs []string) string {
 	// Try AI analysis
 	if t.aiOps != nil {
 		prompt := buildTimelineAnalysisPrompt(events)
-		ctx, cancel := t.aiOps.WithTimeout(30 * time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		analysis, err := t.aiOps.AskAI(ctx, prompt)
 		if err == nil && analysis != "" {

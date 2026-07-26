@@ -171,7 +171,7 @@ func (n *NetOps) Traceroute(host string) TraceResult {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	result, err := netops.TraceRouteWithContext(ctx, host)
+	result, err := netops.TraceRouteWithContext(ctx, host, 0)
 	if err != nil {
 		common.LogDebug("NetOps: Traceroute(%q) failed: %v", host, err)
 		return TraceResult{Target: host, Error: err.Error()}

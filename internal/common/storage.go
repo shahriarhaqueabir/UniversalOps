@@ -391,6 +391,22 @@ func (s *Storage) migrate() error {
 		}
 	}
 
+	// Version 3: Add timestamp indexes on forensics, incidents, and custom_workflows.
+	// These tables are queried with ORDER BY timestamp/updated_at DESC.
+	if currentVersion < 3 {
+		v3Queries := []string{
+			`INSERT OR IGNORE INTO schema_versions (version) VALUES (3)`,
+			`CREATE INDEX IF NOT EXISTS idx_forensics_time ON forensics(timestamp)`,
+			`CREATE INDEX IF NOT EXISTS idx_incidents_time ON incidents(timestamp)`,
+			`CREATE INDEX IF NOT EXISTS idx_custom_workflows_updated ON custom_workflows(updated_at)`,
+		}
+		for _, q := range v3Queries {
+			if _, err := s.db.Exec(q); err != nil {
+				return fmt.Errorf("migration v3: %w", err)
+			}
+		}
+	}
+
 	return nil
 }
 

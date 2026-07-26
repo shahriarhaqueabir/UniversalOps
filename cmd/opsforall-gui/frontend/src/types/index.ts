@@ -45,6 +45,9 @@ export interface GPUData {
   memory_gb: number
   driver: string
   detected: boolean
+  temperature: number
+  utilization: number
+  fan_speed: number
 }
 
 export interface GPUInfo {

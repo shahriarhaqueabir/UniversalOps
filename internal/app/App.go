@@ -125,33 +125,6 @@ func NewApp() *App {
 		if a.ctx == nil {
 			return
 		}
-		// Convert common snapshot to UI event format
-		event := MetricsEvent{
-			CPU: GaugeMetric{
-				Value: s.CPU,
-				Unit:  "%",
-				Trend: a.getTrendString(common.MetricCPU),
-			},
-			Memory: GaugeMetric{
-				Value: s.Memory,
-				Unit:  "%",
-				Trend: a.getTrendString(common.MetricMem),
-			},
-			Disk: GaugeMetric{
-				Value: s.Disk,
-				Unit:  "%",
-				Trend: a.getTrendString(common.MetricDisk),
-			},
-			Network: NetworkMetric{
-				RXRate: s.RXRate,
-				TXRate: s.TXRate,
-				Unit:   "bps",
-			},
-			Processes:   s.Processes,
-			Connections: len(a.NetOps.GetConnections()),
-		}
-		runtime.EventsEmit(a.ctx, EventMetrics, event)
-
 		// Sync Truth to Knowledge Layer (AI context)
 		grade := ""
 		a.lastMu.Lock()
@@ -161,7 +134,7 @@ func NewApp() *App {
 		common.GetKnowledge().UpdateSecurityState(
 			grade,
 			a.alerts.AlertCount(),
-			event.Connections,
+			s.Connections,
 			a.GetAppInfo().Uptime,
 		)
 	}
@@ -194,11 +167,9 @@ func NewApp() *App {
 			s.InsertEvent(evt, nil)
 		}
 
-		// Emit to frontend via Wails runtime
-		if a.ctx != nil {
-			converted := convertTimelineEvent(evt)
-			runtime.EventsEmit(a.ctx, EventTimeline, converted)
-		}
+		// Future: emit to frontend via dedicated subscription channel if needed
+		// Currently frontend uses TanStack Query polling — EventsEmit removed
+		// to avoid unnecessary IPC overhead.
 	})
 
 	// Wire the ReportsAPI as the engine loop's report trigger so alert
@@ -206,11 +177,6 @@ func NewApp() *App {
 	a.engineLoop.SetReportTrigger(a.Reports)
 
 	return a
-}
-
-func (a *App) getTrendString(metric string) string {
-	t := a.pipeline.GetTrend(metric)
-	return trendDirectionString(t.Direction)
 }
 
 // TriggerWorkflow implements common.WorkflowInvoker.
@@ -778,46 +744,6 @@ func (a *App) persistAlertsAsync(newAlerts []common.Alert) {
 	}
 	if err := tx.Commit(); err != nil {
 		common.LogError("App: failed to commit alert transaction: %v", err)
-	}
-}
-
-// buildMetricsEvent gathers the latest snapshot from the pipeline.
-// IPC-OPTIMIZED: We only send history if requested or on first load.
-// Regular ticks should be lightweight deltas.
-func (a *App) buildMetricsEvent() MetricsEvent {
-	cpuMF := a.pipeline.GetMetricWithForecast(common.MetricCPU)
-	memMF := a.pipeline.GetMetricWithForecast(common.MetricMem)
-	diskMF := a.pipeline.GetMetricWithForecast(common.MetricDisk)
-	netRXMF := a.pipeline.GetMetricWithForecast(common.MetricNetRX)
-	netTXMF := a.pipeline.GetMetricWithForecast(common.MetricNetTX)
-	procMF := a.pipeline.GetMetricWithForecast(common.MetricProcCnt)
-
-	return MetricsEvent{
-		CPU: GaugeMetric{
-			Value:    cpuMF.LastValue,
-			Unit:     cpuMF.Unit,
-			Forecast: cpuMF.Forecast,
-			Trend:    trendDirectionString(cpuMF.Trend.Direction),
-		},
-		Memory: GaugeMetric{
-			Value:    memMF.LastValue,
-			Unit:     memMF.Unit,
-			Forecast: memMF.Forecast,
-			Trend:    trendDirectionString(memMF.Trend.Direction),
-		},
-		Disk: GaugeMetric{
-			Value:    diskMF.LastValue,
-			Unit:     diskMF.Unit,
-			Forecast: diskMF.Forecast,
-			Trend:    trendDirectionString(diskMF.Trend.Direction),
-		},
-		Network: NetworkMetric{
-			RXRate: lastValue(netRXMF.Values),
-			TXRate: lastValue(netTXMF.Values),
-			Unit:   "bps",
-		},
-		Processes:   int(procMF.LastValue),
-		Connections: 0,
 	}
 }
 

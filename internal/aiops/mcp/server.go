@@ -6,6 +6,9 @@ import (
 	"fmt"
 
 	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/netops"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/secops"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/sysops"
 )
 
 // Tool represents an MCP Tool definition.
@@ -15,7 +18,13 @@ type Tool struct {
 	InputSchema json.RawMessage `json:"inputSchema"`
 }
 
-// Server handles MCP protocol requests.
+// Server provides internal MCP-compatible tool definitions for the local AI.
+// This is NOT a network-accessible MCP server — it is a programmatic abstraction
+// used by the Ollama chat handler (analyst.go) to offer structured tool-calling
+// to the local LLM. No transport layer is needed; all calls are in-process.
+//
+// To expose these tools externally (e.g., for MCP-compatible clients), add
+// an HTTP/WebSocket transport in a separate package.
 type Server struct {
 	pipeline *common.DataPipeline
 }
@@ -24,18 +33,130 @@ func NewServer(pipeline *common.DataPipeline) *Server {
 	return &Server{pipeline: pipeline}
 }
 
-// ListTools returns the available tools for the AI.
+// ListTools returns all available MCP tools for the AI.
 func (s *Server) ListTools() ([]Tool, error) {
 	return []Tool{
+		// ── System Tools ──────────────────────────────────────────────────────
 		{
 			Name:        "get_system_telemetry",
-			Description: "Get high-density OTel-aligned system metrics including CPU, RAM, and Disk pressure.",
+			Description: "Return a full SystemKnowledge snapshot with CPU, RAM, Disk, Network, Load, Swap, Disk I/O, Process count, and Security grade.",
 			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
 		},
 		{
-			Name:        "analyze_network",
-			Description: "Perform RFC 9951 compliant network delay and jitter analysis.",
-			InputSchema: json.RawMessage(`{"type":"object","properties":{"target":{"type":"string","description":"Host or IP to analyze"}}}`),
+			Name:        "get_process_list",
+			Description: "Return the top-N processes sorted by CPU usage.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{"n":{"type":"integer","description":"Number of processes to return (default 20)","default":20}}}`),
+		},
+		{
+			Name:        "get_system_logs",
+			Description: "Retrieve recent system logs from a given source (e.g. 'Application', 'System', 'Security').",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{"n":{"type":"integer","description":"Number of log entries","default":50},"source":{"type":"string","description":"Log source (Application, System, Security, etc.)","default":"Application"}}}`),
+		},
+		{
+			Name:        "get_scheduled_tasks",
+			Description: "List all scheduled tasks / cron jobs on the system.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+		},
+		{
+			Name:        "get_hardware_info",
+			Description: "Return system hardware & platform details (OS, kernel, hostname, arch, uptime).",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+		},
+		{
+			Name:        "get_disk_usage",
+			Description: "Return per-partition disk usage statistics.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+		},
+		{
+			Name:        "get_baseboard_info",
+			Description: "Return motherboard / baseboard hardware info (manufacturer, product, serial).",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+		},
+
+		// ── Network Tools ─────────────────────────────────────────────────────
+		{
+			Name:        "ping",
+			Description: "Ping a target host or IP address.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{"target":{"type":"string","description":"Hostname or IP to ping"},"count":{"type":"integer","description":"Number of pings (default 4)","default":4}},"required":["target"]}`),
+		},
+		{
+			Name:        "dns_lookup",
+			Description: "Perform a DNS lookup for a hostname.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{"hostname":{"type":"string","description":"Hostname to resolve"},"server":{"type":"string","description":"Optional DNS server to query"}},"required":["hostname"]}`),
+		},
+		{
+			Name:        "port_scan",
+			Description: "Scan specific ports on a remote host.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{"host":{"type":"string","description":"Host to scan"},"ports":{"type":"array","items":{"type":"integer"},"description":"List of ports to scan (e.g. [22,80,443])"}},"required":["host","ports"]}`),
+		},
+		{
+			Name:        "traceroute",
+			Description: "Trace the network path to a target host.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{"target":{"type":"string","description":"Hostname or IP to trace"},"max_ttl":{"type":"integer","description":"Maximum TTL (default 30)","default":30}},"required":["target"]}`),
+		},
+		{
+			Name:        "get_network_connections",
+			Description: "List all active network connections with process association.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+		},
+		{
+			Name:        "get_network_health",
+			Description: "Run a comprehensive network health check (gateway, DNS, internet).",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+		},
+
+		// ── Security Tools ────────────────────────────────────────────────────
+		{
+			Name:        "get_firewall_rules",
+			Description: "List all active firewall rules.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+		},
+		{
+			Name:        "get_listening_ports",
+			Description: "List all ports currently in LISTEN state with process info.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+		},
+		{
+			Name:        "get_defender_status",
+			Description: "Return Windows Defender / antivirus status and signature age. (Windows only)",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+		},
+		{
+			Name:        "run_security_audit",
+			Description: "Execute a comprehensive security audit checklist.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+		},
+		{
+			Name:        "get_failed_logins",
+			Description: "List recent failed login / authentication attempts.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+		},
+		{
+			Name:        "get_security_summary",
+			Description: "Return the computed security summary and posture score.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+		},
+
+		// ── Database / Storage Tools ──────────────────────────────────────────
+		{
+			Name:        "query_metric_history",
+			Description: "Retrieve historical metric values for a named metric from the SQLite store.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{"metric":{"type":"string","description":"Metric name (e.g. cpu.percent, memory.percent, disk.percent, network.rx.rate, load.1m, swap.percent)"},"limit":{"type":"integer","description":"Number of data points (default 50)","default":50}},"required":["metric"]}`),
+		},
+		{
+			Name:        "query_events",
+			Description: "Query recent timeline events by category and severity level.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{"category":{"type":"string","description":"Event category filter (system, network, security, pipeline, etc.)"},"level":{"type":"string","description":"Minimum severity level (info, warning, error, critical)"},"limit":{"type":"integer","description":"Max events to return (default 50)","default":50}},"required":[]}`),
+		},
+		{
+			Name:        "query_logs",
+			Description: "Search application logs by level and text pattern.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{"level":{"type":"string","description":"Log level filter (info, warn, error, debug)"},"search":{"type":"string","description":"Text to search for in log messages"},"limit":{"type":"integer","description":"Max entries (default 50)","default":50}},"required":[]}`),
+		},
+		{
+			Name:        "query_alerts",
+			Description: "Return recent alert history from the alert engine.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{"limit":{"type":"integer","description":"Number of alerts (default 50)","default":50}},"required":[]}`),
 		},
 	}, nil
 }
@@ -43,27 +164,387 @@ func (s *Server) ListTools() ([]Tool, error) {
 // CallTool executes a tool call from the AI.
 func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMessage) (interface{}, error) {
 	switch name {
+	// ── System ──────────────────────────────────────────────────────────
 	case "get_system_telemetry":
-		return s.handleGetTelemetry()
-	case "analyze_network":
+		return handleGetTelemetry()
+	case "get_process_list":
 		var args struct {
-			Target string `json:"target"`
+			N int `json:"n"`
 		}
 		if err := json.Unmarshal(arguments, &args); err != nil {
 			return nil, err
 		}
-		return s.handleAnalyzeNetwork(args.Target)
+		if args.N <= 0 {
+			args.N = 20
+		}
+		return handleGetProcessList(args.N)
+	case "get_system_logs":
+		var args struct {
+			N      int    `json:"n"`
+			Source string `json:"source"`
+		}
+		if err := json.Unmarshal(arguments, &args); err != nil {
+			return nil, err
+		}
+		if args.N <= 0 {
+			args.N = 50
+		}
+		if args.Source == "" {
+			args.Source = "Application"
+		}
+		return handleGetSystemLogs(args.N, args.Source)
+	case "get_scheduled_tasks":
+		return handleGetScheduledTasks()
+	case "get_hardware_info":
+		return handleGetHardwareInfo()
+	case "get_disk_usage":
+		return handleGetDiskUsage()
+	case "get_baseboard_info":
+		return handleGetBaseboardInfo()
+
+	// ── Network ─────────────────────────────────────────────────────────
+	case "ping":
+		var args struct {
+			Target string `json:"target"`
+			Count  int    `json:"count"`
+		}
+		if err := json.Unmarshal(arguments, &args); err != nil {
+			return nil, err
+		}
+		if args.Count <= 0 {
+			args.Count = 4
+		}
+		return handlePing(args.Target, args.Count)
+	case "dns_lookup":
+		var args struct {
+			Hostname string `json:"hostname"`
+			Server   string `json:"server"`
+		}
+		if err := json.Unmarshal(arguments, &args); err != nil {
+			return nil, err
+		}
+		return handleDNSSLookup(args.Hostname, args.Server)
+	case "port_scan":
+		var args struct {
+			Host  string `json:"host"`
+			Ports []int  `json:"ports"`
+		}
+		if err := json.Unmarshal(arguments, &args); err != nil {
+			return nil, err
+		}
+		return handlePortScan(args.Host, args.Ports)
+	case "traceroute":
+		var args struct {
+			Target string `json:"target"`
+			MaxTTL int    `json:"max_ttl"`
+		}
+		if err := json.Unmarshal(arguments, &args); err != nil {
+			return nil, err
+		}
+		if args.MaxTTL <= 0 {
+			args.MaxTTL = 30
+		}
+		return handleTraceRoute(args.Target, args.MaxTTL)
+	case "get_network_connections":
+		return handleGetConnections()
+	case "get_network_health":
+		return handleGetNetworkHealth()
+
+	// ── Security ────────────────────────────────────────────────────────
+	case "get_firewall_rules":
+		return handleGetFirewallRules()
+	case "get_listening_ports":
+		return handleGetListeningPorts()
+	case "get_defender_status":
+		return handleGetDefenderStatus()
+	case "run_security_audit":
+		return handleRunSecurityAudit()
+	case "get_failed_logins":
+		return handleGetFailedLogins()
+	case "get_security_summary":
+		return handleGetSecuritySummary()
+
+	// ── Database / Storage ──────────────────────────────────────────────
+	case "query_metric_history":
+		var args struct {
+			Metric string `json:"metric"`
+			Limit  int    `json:"limit"`
+		}
+		if err := json.Unmarshal(arguments, &args); err != nil {
+			return nil, err
+		}
+		if args.Limit <= 0 {
+			args.Limit = 50
+		}
+		return handleQueryMetricHistory(args.Metric, args.Limit)
+	case "query_events":
+		var args struct {
+			Category string `json:"category"`
+			Level    string `json:"level"`
+			Limit    int    `json:"limit"`
+		}
+		if err := json.Unmarshal(arguments, &args); err != nil {
+			return nil, err
+		}
+		if args.Limit <= 0 {
+			args.Limit = 50
+		}
+		return handleQueryEvents(args.Category, args.Level, args.Limit)
+	case "query_logs":
+		var args struct {
+			Level  string `json:"level"`
+			Search string `json:"search"`
+			Limit  int    `json:"limit"`
+		}
+		if err := json.Unmarshal(arguments, &args); err != nil {
+			return nil, err
+		}
+		if args.Limit <= 0 {
+			args.Limit = 50
+		}
+		return handleQueryLogs(args.Level, args.Search, args.Limit)
+	case "query_alerts":
+		var args struct {
+			Limit int `json:"limit"`
+		}
+		if err := json.Unmarshal(arguments, &args); err != nil {
+			return nil, err
+		}
+		if args.Limit <= 0 {
+			args.Limit = 50
+		}
+		return handleQueryAlerts(args.Limit)
+
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", name)
 	}
 }
 
-func (s *Server) handleGetTelemetry() (interface{}, error) {
-	knowledge := common.GetKnowledge().GetSnapshot()
-	return knowledge, nil
+// ══════════════════════════════════════════════════════════════════════════
+// System Tool Handlers
+// ══════════════════════════════════════════════════════════════════════════
+
+func handleGetTelemetry() (interface{}, error) {
+	km := common.GetKnowledge()
+	if km == nil {
+		return nil, fmt.Errorf("knowledge manager not initialized")
+	}
+	return km.GetSnapshot(), nil
 }
 
-func (s *Server) handleAnalyzeNetwork(target string) (interface{}, error) {
-	// Logic to call NetOps.Ping with RFC 9951 metrics (Tier 2)
-	return fmt.Sprintf("Network analysis for %s initiated...", target), nil
+func handleGetProcessList(n int) (interface{}, error) {
+	procs, err := sysops.GetTopProcesses(n)
+	if err != nil {
+		return nil, fmt.Errorf("get processes: %w", err)
+	}
+	return procs, nil
 }
+
+func handleGetSystemLogs(n int, source string) (interface{}, error) {
+	result, err := sysops.GetSystemLogs(n, source)
+	if err != nil {
+		return nil, fmt.Errorf("get logs: %w", err)
+	}
+	return result, nil
+}
+
+func handleGetScheduledTasks() (interface{}, error) {
+	tasks, err := sysops.GetScheduledTasks()
+	if err != nil {
+		return nil, fmt.Errorf("get scheduled tasks: %w", err)
+	}
+	return tasks, nil
+}
+
+func handleGetHardwareInfo() (interface{}, error) {
+	info, err := sysops.GetSystemInfo()
+	if err != nil {
+		return nil, fmt.Errorf("get system info: %w", err)
+	}
+	return info, nil
+}
+
+func handleGetDiskUsage() (interface{}, error) {
+	stats, err := sysops.GetDiskStats()
+	if err != nil {
+		return nil, fmt.Errorf("get disk stats: %w", err)
+	}
+	return stats, nil
+}
+
+func handleGetBaseboardInfo() (interface{}, error) {
+	return sysops.GetBaseboardInfo(), nil
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Network Tool Handlers
+// ══════════════════════════════════════════════════════════════════════════
+
+func handlePing(target string, count int) (interface{}, error) {
+	result, err := netops.Ping(target, count)
+	if err != nil {
+		return nil, fmt.Errorf("ping %s: %w", target, err)
+	}
+	return result, nil
+}
+
+func handleDNSSLookup(hostname, server string) (interface{}, error) {
+	var result *netops.DNSResult
+	var err error
+	if server != "" {
+		result, err = netops.LookupDNS(hostname, server)
+	} else {
+		result, err = netops.LookupDNS(hostname)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("dns lookup %s: %w", hostname, err)
+	}
+	return result, nil
+}
+
+func handlePortScan(host string, ports []int) (interface{}, error) {
+	result, err := netops.ScanPorts(host, ports)
+	if err != nil {
+		return nil, fmt.Errorf("port scan %s: %w", host, err)
+	}
+	return result, nil
+}
+
+func handleTraceRoute(target string, maxTTL int) (interface{}, error) {
+	result, err := netops.TraceRouteWithMaxHops(target, maxTTL)
+	if err != nil {
+		return nil, fmt.Errorf("traceroute %s: %w", target, err)
+	}
+	return result, nil
+}
+
+func handleGetConnections() (interface{}, error) {
+	conns, err := netops.GetConnections()
+	if err != nil {
+		return nil, fmt.Errorf("get connections: %w", err)
+	}
+	return conns, nil
+}
+
+func handleGetNetworkHealth() (interface{}, error) {
+	// RunNetworkHealthCheck returns a value type (no error).
+	return netops.RunNetworkHealthCheck(), nil
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Security Tool Handlers
+// ══════════════════════════════════════════════════════════════════════════
+
+func handleGetFirewallRules() (interface{}, error) {
+	rules, err := secops.GetFirewallRules()
+	if err != nil {
+		return nil, fmt.Errorf("get firewall rules: %w", err)
+	}
+	return rules, nil
+}
+
+func handleGetListeningPorts() (interface{}, error) {
+	ports, err := secops.GetListeningPorts()
+	if err != nil {
+		return nil, fmt.Errorf("get listening ports: %w", err)
+	}
+	return ports, nil
+}
+
+func handleGetDefenderStatus() (interface{}, error) {
+	status, err := secops.GetDefenderStatus()
+	if err != nil {
+		return nil, fmt.Errorf("get defender status: %w", err)
+	}
+	return status, nil
+}
+
+func handleRunSecurityAudit() (interface{}, error) {
+	result, err := secops.RunSecurityAuditChecklist()
+	if err != nil {
+		return nil, fmt.Errorf("security audit: %w", err)
+	}
+	return result, nil
+}
+
+func handleGetFailedLogins() (interface{}, error) {
+	logins, err := secops.GetFailedLogins()
+	if err != nil {
+		return nil, fmt.Errorf("get failed logins: %w", err)
+	}
+	return logins, nil
+}
+
+func handleGetSecuritySummary() (interface{}, error) {
+	// GetSecuritySummary returns a value type (no error).
+	return secops.GetSecuritySummary(), nil
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Storage / Database Handlers
+// ══════════════════════════════════════════════════════════════════════════
+
+func getStorageOrError() (*common.Storage, error) {
+	s := common.GetStorage()
+	if s == nil {
+		return nil, fmt.Errorf("storage not initialized")
+	}
+	return s, nil
+}
+
+func handleQueryMetricHistory(metric string, limit int) (interface{}, error) {
+	s, err := getStorageOrError()
+	if err != nil {
+		return nil, err
+	}
+
+	// Also fetch timestamps if available for richer output
+	values, err := s.GetMetricHistory(metric, limit)
+	if err != nil {
+		return nil, fmt.Errorf("query metric %s: %w", metric, err)
+	}
+	return map[string]interface{}{
+		"metric": metric,
+		"count":  len(values),
+		"values": values,
+	}, nil
+}
+
+func handleQueryEvents(category, level string, limit int) (interface{}, error) {
+	s, err := getStorageOrError()
+	if err != nil {
+		return nil, err
+	}
+	events, err := s.QueryEvents(category, level, limit, 0)
+	if err != nil {
+		return nil, fmt.Errorf("query events: %w", err)
+	}
+	return events, nil
+}
+
+func handleQueryLogs(level, search string, limit int) (interface{}, error) {
+	s, err := getStorageOrError()
+	if err != nil {
+		return nil, err
+	}
+	entries, err := s.QueryLogs(level, search, limit)
+	if err != nil {
+		return nil, fmt.Errorf("query logs: %w", err)
+	}
+	return entries, nil
+}
+
+func handleQueryAlerts(limit int) (interface{}, error) {
+	s, err := getStorageOrError()
+	if err != nil {
+		return nil, err
+	}
+	alerts, err := s.QueryAlertHistory(limit)
+	if err != nil {
+		return nil, fmt.Errorf("query alerts: %w", err)
+	}
+	return alerts, nil
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+// (reserved for future response-wrapping helpers)

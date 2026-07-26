@@ -66,6 +66,10 @@ export function GetOllamaStatus() {
   return window['go']['app']['AIOps']['GetOllamaStatus']();
 }
 
+export function ListMCPTools() {
+  return window['go']['app']['AIOps']['ListMCPTools']();
+}
+
 export function ListSessions() {
   return window['go']['app']['AIOps']['ListSessions']();
 }
@@ -120,8 +124,4 @@ export function SetOllamaModel(arg1) {
 
 export function VerifyRemediation(arg1, arg2, arg3) {
   return window['go']['app']['AIOps']['VerifyRemediation'](arg1, arg2, arg3);
-}
-
-export function WithTimeout(arg1) {
-  return window['go']['app']['AIOps']['WithTimeout'](arg1);
 }

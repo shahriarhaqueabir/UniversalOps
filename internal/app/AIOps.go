@@ -18,6 +18,7 @@ import (
 
 	"github.com/ollama/ollama/api"
 	"github.com/shahriarhaqueabir/UniversalOps/internal/aiops"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/aiops/mcp"
 
 	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
@@ -48,6 +49,10 @@ type AIOps struct {
 	AnalystModel   string
 	OptimizerModel string
 
+	// MCP Server: exposes 24 on-demand system/network/security/storage tools
+	// to the AI model via <function name="...">...</function> tags.
+	mcpServer *mcp.Server
+
 	contextCache *systemContextCache
 }
 
@@ -61,6 +66,7 @@ func NewAIOps(ctx context.Context, pipeline *common.DataPipeline, knowledge *Kno
 		pipelineAPI:  pipelineAPI,
 		sysOps:       sysOps,
 		dataDir:      dataDir,
+		mcpServer:    mcp.NewServer(pipeline),
 		contextCache: &systemContextCache{},
 	}
 }
@@ -142,6 +148,14 @@ func (a *AIOps) Chat(sessionID, message string) ChatResponse {
 		cpuHistory, _ := storage.GetMetricHistory(common.MetricCPU, 100)
 		memHistory, _ := storage.GetMetricHistory(common.MetricMem, 100)
 		diskHistory, _ := storage.GetMetricHistory(common.MetricDisk, 100)
+		netRxHistory, _ := storage.GetMetricHistory(common.MetricNetRX, 100)
+		netTxHistory, _ := storage.GetMetricHistory(common.MetricNetTX, 100)
+		load1History, _ := storage.GetMetricHistory(common.MetricLoad1, 100)
+		load5History, _ := storage.GetMetricHistory(common.MetricLoad5, 100)
+		load15History, _ := storage.GetMetricHistory(common.MetricLoad15, 100)
+		swapHistory, _ := storage.GetMetricHistory(common.MetricSwap, 100)
+		diskIOReadHistory, _ := storage.GetMetricHistory(common.MetricDiskIORead, 100)
+		diskIOWriteHistory, _ := storage.GetMetricHistory(common.MetricDiskIOWrite, 100)
 
 		// Load recent system events (last 50)
 		events, _ := storage.QueryEvents("", "", 50, 0)
@@ -163,7 +177,15 @@ func (a *AIOps) Chat(sessionID, message string) ChatResponse {
 		historyContext = fmt.Sprintf("\n--- SYSTEM HISTORY (Snapshot: %s) ---\n"+
 			"CPU Summary: %s\n"+
 			"RAM Summary: %s\n"+
-			"Disk Summary: %s\n\n"+
+			"Disk Summary: %s\n"+
+			"Net RX Summary: %s\n"+
+			"Net TX Summary: %s\n"+
+			"Load 1m Summary: %s\n"+
+			"Load 5m Summary: %s\n"+
+			"Load 15m Summary: %s\n"+
+			"Swap Summary: %s\n"+
+			"Disk IO Read Summary: %s\n"+
+			"Disk IO Write Summary: %s\n\n"+
 			"Recent System Events:\n%s\n\n"+
 			"Recent Anomalies:\n%s\n"+
 			"------------------------------------\n",
@@ -171,6 +193,14 @@ func (a *AIOps) Chat(sessionID, message string) ChatResponse {
 			a.summarizeMetrics("CPU", cpuHistory),
 			a.summarizeMetrics("RAM", memHistory),
 			a.summarizeMetrics("Disk", diskHistory),
+			a.summarizeMetrics("NetRX", netRxHistory),
+			a.summarizeMetrics("NetTX", netTxHistory),
+			a.summarizeMetrics("Load1m", load1History),
+			a.summarizeMetrics("Load5m", load5History),
+			a.summarizeMetrics("Load15m", load15History),
+			a.summarizeMetrics("Swap", swapHistory),
+			a.summarizeMetrics("DiskIORead", diskIOReadHistory),
+			a.summarizeMetrics("DiskIOWrite", diskIOWriteHistory),
 			strings.Join(eventStrings, "\n"),
 			strings.Join(anomStrings, "\n"))
 
@@ -222,13 +252,85 @@ func (a *AIOps) Chat(sessionID, message string) ChatResponse {
 
 	common.LogInfo("AI Chat completed in %v (session=%s)", chatElapsed, sessionID)
 
-	// 3. Parse for Action Requests
-	content, actions := aiops.ParseActions(sessionID, rawResponse)
+	// 3. Parse and auto-execute MCP function calls
+	content, actions := a.resolveMCPCalls(chatCtx, rawResponse, systemPrompt, chatHistory, wrappedMessage, sessionID, activeModel)
 
 	return ChatResponse{
 		Content: content,
 		Actions: actions,
 	}
+}
+
+// resolveMCPCalls extracts MCP <function> tags from the raw AI response,
+// executes them via the MCP server, feeds results back to the AI for
+// synthesis, and returns the final parsed content and HITL action requests.
+// If no function calls are present, it falls through to ParseActions.
+func (a *AIOps) resolveMCPCalls(ctx context.Context, rawResponse, systemPrompt string, chatHistory []aiops.ChatMessage, wrappedMessage, sessionID, activeModel string) (string, []common.ActionPreview) {
+	mcpCalls, cleanResponse := aiops.ExtractMCPFunctionCalls(rawResponse)
+
+	// No MCP calls — parse for HITL action_requests only
+	if len(mcpCalls) == 0 || a.mcpServer == nil {
+		return aiops.ParseActions(sessionID, rawResponse)
+	}
+
+	// Execute all MCP functions and collect results
+	common.LogInfo("MCP: executing %d function call(s) from session %s", len(mcpCalls), sessionID)
+
+	var resultsBuilder strings.Builder
+	resultsBuilder.WriteString("SYSTEM: Function call results:\n\n")
+
+	for _, call := range mcpCalls {
+		var argsJSON json.RawMessage
+		if call.Arguments != "" {
+			argsJSON = json.RawMessage(call.Arguments)
+		}
+
+		result, err := a.mcpServer.CallTool(ctx, call.Name, argsJSON)
+		if err != nil {
+			fmt.Fprintf(&resultsBuilder, "[%s] Error: %v\n\n", call.Name, err)
+			common.LogWarn("MCP: tool %q failed: %v", call.Name, err)
+			continue
+		}
+		resultBytes, err := json.MarshalIndent(result, "", "  ")
+		if err != nil {
+			fmt.Fprintf(&resultsBuilder, "[%s] Result (marshal error: %v)\n\n", call.Name, err)
+			continue
+		}
+		// Truncate very large responses (e.g. full process lists) to avoid
+		// blowing the LLM context window.
+		if len(resultBytes) > 4000 {
+			fmt.Fprintf(&resultsBuilder, "[%s] Result (%d bytes, truncated):\n%s\n\n", call.Name, len(resultBytes), string(resultBytes[:4000]))
+		} else {
+			fmt.Fprintf(&resultsBuilder, "[%s] Result:\n%s\n\n", call.Name, string(resultBytes))
+		}
+	}
+
+	// Build continuation messages: original context + AI's first response + tool results
+	contMessages := []aiops.ChatMessage{
+		{Role: "system", Content: systemPrompt},
+	}
+	contMessages = append(contMessages, chatHistory...)
+	contMessages = append(contMessages, aiops.ChatMessage{Role: "user", Content: wrappedMessage})
+
+	// Only include the non-function parts of the AI's first response
+	if trimmed := strings.TrimSpace(cleanResponse); trimmed != "" {
+		contMessages = append(contMessages, aiops.ChatMessage{Role: "assistant", Content: trimmed})
+	}
+
+	// Feed tool results as a user message
+	contMessages = append(contMessages, aiops.ChatMessage{Role: "user", Content: resultsBuilder.String()})
+
+	// Get final synthesized response from the AI
+	common.LogInfo("MCP: synthesizing %d tool result(s) with LLM", len(mcpCalls))
+	finalResponse, err := aiops.ChatWithModelAndContext(ctx, contMessages, activeModel)
+	if err != nil {
+		common.LogWarn("MCP: synthesis failed: %v — falling back to clean response", err)
+		content, actions := aiops.ParseActions(sessionID, cleanResponse)
+		return content, actions
+	}
+
+	// Parse the synthesis for any remaining <action_request> tags (HITL)
+	return aiops.ParseActions(sessionID, finalResponse)
 }
 
 // ── Context Cache Helpers ──────────────────────────────────────────────
@@ -442,21 +544,91 @@ func (a *AIOps) ChatStream(sessionID, message string) ChatResponse {
 
 	common.LogInfo("AI ChatStream completed in %v (session=%s, tokens=%d)", chatElapsed, sessionID, len(strings.Fields(rawResponse)))
 
-	content, actions := aiops.ParseActions(sessionID, rawResponse)
+	// ── MCP Tool Resolution (Auto-Execute & Re-Synthesize) ──────────
+	mcpCalls, cleanResponse := aiops.ExtractMCPFunctionCalls(rawResponse)
 
-	// Persist messages
+	var finalContent string
+	var actions []common.ActionPreview
+
+	if len(mcpCalls) > 0 && a.mcpServer != nil {
+		common.LogInfo("MCP: executing %d function call(s) from streaming session %s", len(mcpCalls), sessionID)
+
+		// Execute all MCP functions
+		var resultsBuilder strings.Builder
+		resultsBuilder.WriteString("SYSTEM: Function call results:\n\n")
+
+		for _, call := range mcpCalls {
+			var argsJSON json.RawMessage
+			if call.Arguments != "" {
+				argsJSON = json.RawMessage(call.Arguments)
+			}
+
+			result, err := a.mcpServer.CallTool(chatCtx, call.Name, argsJSON)
+			if err != nil {
+				fmt.Fprintf(&resultsBuilder, "[%s] Error: %v\n\n", call.Name, err)
+				common.LogWarn("MCP: tool %q failed: %v", call.Name, err)
+				continue
+			}
+			resultBytes, err := json.MarshalIndent(result, "", "  ")
+			if err != nil {
+				fmt.Fprintf(&resultsBuilder, "[%s] Result (marshal error: %v)\n\n", call.Name, err)
+				continue
+			}
+			if len(resultBytes) > 4000 {
+				fmt.Fprintf(&resultsBuilder, "[%s] Result (%d bytes, truncated):\n%s\n\n", call.Name, len(resultBytes), string(resultBytes[:4000]))
+			} else {
+				fmt.Fprintf(&resultsBuilder, "[%s] Result:\n%s\n\n", call.Name, string(resultBytes))
+			}
+		}
+
+		// Build continuation messages
+		contMessages := []aiops.ChatMessage{
+			{Role: "system", Content: systemPrompt},
+		}
+		contMessages = append(contMessages, chatHistory...)
+		contMessages = append(contMessages, aiops.ChatMessage{Role: "user", Content: wrappedMessage})
+		if trimmed := strings.TrimSpace(cleanResponse); trimmed != "" {
+			contMessages = append(contMessages, aiops.ChatMessage{Role: "assistant", Content: trimmed})
+		}
+		contMessages = append(contMessages, aiops.ChatMessage{Role: "user", Content: resultsBuilder.String()})
+
+		// Emit a brief status token so the frontend indicates work is happening
+		wailsruntime.EventsEmit(a.ctx, "chat:token", map[string]string{
+			"sessionId": sessionID,
+			"token":     "\n\n*Analyzing tool results...*\n\n",
+		})
+
+		// Stream the synthesis (short, typically <200 tokens)
+		synthesis, err := aiops.ChatStreamWithModelAndContext(chatCtx, contMessages, activeModel, func(token string) {
+			wailsruntime.EventsEmit(a.ctx, "chat:token", map[string]string{
+				"sessionId": sessionID,
+				"token":     token,
+			})
+		})
+		if err != nil {
+			common.LogWarn("MCP: streaming synthesis failed: %v — falling back to clean response", err)
+			finalContent, actions = aiops.ParseActions(sessionID, cleanResponse)
+		} else {
+			finalContent, actions = aiops.ParseActions(sessionID, synthesis)
+		}
+	} else {
+		// No MCP calls — standard ParseActions only
+		finalContent, actions = aiops.ParseActions(sessionID, rawResponse)
+	}
+
+	// Persist messages (save the clean, final content)
 	if storage != nil && sessionID != "" {
 		if err := storage.InsertMessage(sessionID, "user", message); err != nil {
 			common.LogError("AIOps: failed to persist user message: %v", err)
 		}
-		if err := storage.InsertMessage(sessionID, "assistant", content); err != nil {
+		if err := storage.InsertMessage(sessionID, "assistant", finalContent); err != nil {
 			common.LogError("AIOps: failed to persist assistant message: %v", err)
 		}
 	}
 
 	wailsruntime.EventsEmit(a.ctx, "chat:done", map[string]string{
 		"sessionId":  sessionID,
-		"content":    content,
+		"content":    finalContent,
 		"latency_ms": fmt.Sprintf("%.0f", chatElapsed.Seconds()*1000),
 	})
 
@@ -467,7 +639,7 @@ func (a *AIOps) ChatStream(sessionID, message string) ChatResponse {
 	}
 
 	return ChatResponse{
-		Content: content,
+		Content: finalContent,
 		Actions: actions,
 	}
 }
@@ -508,6 +680,20 @@ func (a *AIOps) GenerateReport(sections []string) string {
 		})
 	}
 	return aiops.GenerateReport(reportSections)
+}
+
+// ListMCPTools returns the full list of available MCP tool definitions for
+// the frontend to display or introspect.
+func (a *AIOps) ListMCPTools() []mcp.Tool {
+	if a.mcpServer == nil {
+		return nil
+	}
+	tools, err := a.mcpServer.ListTools()
+	if err != nil {
+		common.LogWarn("AIOps: ListMCPTools failed: %v", err)
+		return nil
+	}
+	return tools
 }
 
 // GetOllamaStatus returns the current Ollama service status.
@@ -730,11 +916,6 @@ func (a *AIOps) AskAI(ctx context.Context, prompt string) (string, error) {
 		{Role: "user", Content: prompt},
 	}
 	return aiops.ChatWithContext(ctx, messages)
-}
-
-// WithTimeout returns a context with the given timeout.
-func (a *AIOps) WithTimeout(d time.Duration) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), d)
 }
 
 // QuerySystemState answers a natural-language system-state question using live metrics.
