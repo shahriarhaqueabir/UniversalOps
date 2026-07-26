@@ -41,8 +41,8 @@ import (
     "github.com/wailsapp/wails/v2/pkg/runtime"
 
     // Internal packages
-    "github.com/shahriarhaqueabir/AllOpsFull/internal/common"
-    "github.com/shahriarhaqueabir/AllOpsFull/internal/app"
+    "github.com/shahriarhaqueabir/UniversalOps/internal/common"
+    "github.com/shahriarhaqueabir/UniversalOps/internal/app"
 )
 ```
 

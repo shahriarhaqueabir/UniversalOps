@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback, useEffect, memo } from 'react'
 import { motion } from 'motion/react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   Terminal, Server, Play, Trash2,
+  AlertTriangle,
   PlayCircle, StopCircle, Activity, Globe,
   TerminalSquare, Box, Container, Variable,
   RefreshCw,
@@ -120,21 +121,16 @@ export function DevOps() {
 
 function DiagnosticsTab() {
   const { call } = useBackend()
-  const [isRunning, setIsRunning] = useState(false)
-  const [result, setResult] = useState<DevOpsDiagResult | null>(null)
 
-  const runCheck = async () => {
-    setIsRunning(true)
-    try {
-      const res = await call('DevOps.RunDevOpsDiagnostics') as DevOpsDiagResult
-      setResult(res)
-      toast.success('Health check completed')
-    } catch {
-      toast.error('Health check failed')
-    } finally {
-      setIsRunning(false)
-    }
-  }
+  const diagnosticsMutation = useMutation({
+    mutationFn: async () => {
+      return await call('DevOps.RunDevOpsDiagnostics') as DevOpsDiagResult
+    },
+    onSuccess: () => toast.success('Health check completed'),
+    onError: () => toast.error('Health check failed'),
+  })
+
+  const runCheck = () => diagnosticsMutation.mutate()
 
   return (
     <div className="flex flex-col h-full p-10 space-y-8 overflow-y-auto">
@@ -150,17 +146,42 @@ function DiagnosticsTab() {
         </div>
         <button
           onClick={runCheck}
-          disabled={isRunning}
+          disabled={diagnosticsMutation.isPending}
           className="flex items-center gap-3 px-8 py-4 bg-accent text-white rounded-2xl font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-lg active:scale-95 disabled:opacity-50"
         >
-          {isRunning ? <RefreshCw size={20} className="animate-spin" /> : <Play size={20} fill="currentColor" />}
-          {isRunning ? 'Running Analysis...' : 'Run Health Check'}
+          {diagnosticsMutation.isPending ? <RefreshCw size={20} className="animate-spin" /> : <Play size={20} fill="currentColor" />}
+          {diagnosticsMutation.isPending ? 'Running Analysis...' : 'Run Health Check'}
         </button>
       </div>
 
-      {result ? (
+      {diagnosticsMutation.isPending && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {result.checks.map((check, i) => (
+          {[1,2,3,4,5,6].map((i) => (
+            <div key={i} className="p-6 rounded-2xl border border-border bg-panel-2">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-4 w-24 bg-panel-3 rounded animate-pulse" />
+                <div className="h-5 w-16 bg-panel-3 rounded animate-pulse" />
+              </div>
+              <div className="h-6 w-32 bg-panel-3 rounded animate-pulse mb-2" />
+              <div className="h-3 w-full bg-panel-3 rounded animate-pulse" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {diagnosticsMutation.isError && (
+        <div className="bg-danger/10 border border-danger/30 rounded-[var(--radius-lg)] p-6 flex items-start gap-3">
+          <AlertTriangle size={20} className="text-danger shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-danger">Health check failed</p>
+            <p className="text-sm text-[var(--color-text-dim)] mt-1">{String(diagnosticsMutation.error)}</p>
+          </div>
+        </div>
+      )}
+
+      {diagnosticsMutation.data && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {diagnosticsMutation.data.checks.map((check, i) => (
             <div key={i} className={cn("p-6 rounded-2xl border transition-all hover:scale-[1.02]",
               check.status === 'pass' ? "bg-success/5 border-success/20 hover:border-success/40" :
               check.status === 'warn' ? "bg-warning/5 border-warning/20 hover:border-warning/40" :
@@ -174,7 +195,9 @@ function DiagnosticsTab() {
             </div>
           ))}
         </div>
-      ) : (
+      )}
+
+      {!diagnosticsMutation.data && !diagnosticsMutation.isPending && !diagnosticsMutation.isError && (
         <div className="flex-1 flex flex-col items-center justify-center opacity-30 py-20">
            <Shield size={80} className="text-accent mb-6" />
            <p className="text-xl font-black uppercase tracking-[0.3em]">Ready for Analysis</p>

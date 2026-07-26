@@ -43,7 +43,7 @@ export function HawkSidebar({ isOpen, onClose }: HawkSidebarProps) {
     setLoading(true)
 
     try {
-      const res = await call('AIOps.Chat', input) as { content: string; actions?: any }
+      const res = await call('AIOps.Chat', 'sidebar', input) as { content: string; actions?: any }
       setMessages((prev) => [
         ...prev,
         {

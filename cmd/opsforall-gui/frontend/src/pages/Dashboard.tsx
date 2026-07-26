@@ -100,9 +100,9 @@ function clamp(v: number, min = 0, max = 100) {
   return Math.min(max, Math.max(min, v))
 }
 
-function healthColor(pct: number) {
-  if (pct >= 90) return 'var(--color-danger)'
-  if (pct >= 80) return 'var(--color-warning)'
+function getHealthScoreColor(score: number) {
+  if (score <= 10) return 'var(--color-danger)'
+  if (score <= 20) return 'var(--color-warning)'
   return 'var(--color-success)'
 }
 
@@ -187,10 +187,11 @@ const HeroSection = memo(function HeroSection() {
 
   if (!stats) return null
 
-  const avgHealth = clamp(((stats.cpu?.value ?? 0) + (stats.memory?.value ?? 0) + (stats.disk?.value ?? 0)) / 3)
+  const peakPressure = Math.max(stats.cpu?.value ?? 0, stats.memory?.value ?? 0, stats.disk?.value ?? 0)
+  const systemHealth = clamp(100 - peakPressure)
   const r = 44
   const circumference = 2 * Math.PI * r
-  const dash = (avgHealth / 100) * circumference
+  const dash = (systemHealth / 100) * circumference
   const gap = circumference - dash
 
   const alertBreakdown = {
@@ -212,7 +213,7 @@ const HeroSection = memo(function HeroSection() {
           <circle
             cx="60" cy="60" r={r}
             fill="none"
-            stroke={healthColor(avgHealth)}
+            stroke={getHealthScoreColor(systemHealth)}
             strokeWidth="10"
             strokeLinecap="round"
             strokeDasharray={`${dash} ${gap}`}
@@ -220,7 +221,7 @@ const HeroSection = memo(function HeroSection() {
             style={{ transition: 'stroke-dasharray 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
           />
           <text x="60" y="54" textAnchor="middle" fill="var(--color-text)" fontSize="28" fontWeight="900" dominantBaseline="middle" className="tabular-nums">
-            {Math.round(avgHealth)}%
+            {Math.round(systemHealth)}%
           </text>
           <text x="60" y="78" textAnchor="middle" fill="var(--color-text-faint)" fontSize="12" fontWeight="bold" style={{ textTransform: 'uppercase' }} dominantBaseline="middle">
             HEALTH
@@ -231,7 +232,14 @@ const HeroSection = memo(function HeroSection() {
       <div className="flex-1 min-w-0 w-full">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <span className="px-3 py-1 rounded-full bg-[var(--color-success)]/10 border border-[var(--color-success)]/30 text-xs font-semibold text-[var(--color-success)] uppercase tracking-wider">System Nominal</span>
+            <span className={cn(
+              "px-3 py-1 rounded-full border text-xs font-semibold uppercase tracking-wider transition-colors",
+              systemHealth > 80 ? "bg-success/10 border-success/30 text-success" :
+              systemHealth > 50 ? "bg-warning/10 border-warning/30 text-warning" :
+              "bg-danger/10 border-danger/30 text-danger animate-pulse"
+            )}>
+              {systemHealth > 80 ? "System Nominal" : systemHealth > 50 ? "Performance Degraded" : "Critical State"}
+            </span>
             {alerts.length > 0 && (
               <div className="flex items-center gap-2">
                 {alertBreakdown.critical > 0 && (
@@ -256,7 +264,9 @@ const HeroSection = memo(function HeroSection() {
 
         <p className="text-[var(--color-text-dim)] text-sm leading-relaxed mb-6 max-w-2xl">
           Aggregate performance score derived from core compute, volatile memory, and storage throughput.
-          Current status indicates <span className="text-[var(--color-text)] font-semibold">Stable Operation</span> across all monitored subsystems.
+          Current status indicates <span className={cn("font-semibold", systemHealth > 80 ? "text-success" : systemHealth > 50 ? "text-warning" : "text-danger")}>
+            {systemHealth > 80 ? "Stable Operation" : systemHealth > 50 ? "Pressure Detected" : "High Instability Risks"}
+          </span> across all monitored subsystems.
         </p>
 
         <div className="flex gap-1 items-end h-12 w-full bg-panel-3 p-2 rounded-xl border border-border shadow-inner">
@@ -266,7 +276,7 @@ const HeroSection = memo(function HeroSection() {
               className="flex-1 rounded-[2px] transition-all"
               style={{
                 height: `${Math.max(5, val)}%`,
-                backgroundColor: healthColor(val),
+                backgroundColor: val >= 90 ? 'var(--color-danger)' : val >= 80 ? 'var(--color-warning)' : 'var(--color-success)',
                 opacity: val > 80 ? 0.9 : 0.5,
               }}
             />

@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/aiops"
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/devops"
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/netops"
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/secops"
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/sysops"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/aiops"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/devops"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/netops"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/secops"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/sysops"
 )
 
 // WorkflowAPI exposes reusable operational workflows to the frontend.
@@ -174,7 +174,6 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 		Steps: []common.WorkflowStep{
 			{
 				ID:              "firewall-status",
-				Type:            common.StepTypePowerShell,
 				Label:           "Firewall State",
 				Description:     "Check Domain, Private, and Public profile states.",
 				Command:         "Get-NetFirewallProfile | Select Name, Enabled",
@@ -185,7 +184,6 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 			},
 			{
 				ID:              "check-listeners",
-				Type:            common.StepTypePowerShell,
 				Label:           "External Listeners",
 				Description:     "Identify processes listening on all interfaces (0.0.0.0).",
 				Command:         "Get-NetTCPConnection -State Listen | Where-Object { $_.LocalAddress -eq '0.0.0.0' }",

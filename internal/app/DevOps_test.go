@@ -3,7 +3,7 @@ package app
 import (
 	"testing"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/devops"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/devops"
 )
 
 func TestDevOps_RunCommand_Echo(t *testing.T) {

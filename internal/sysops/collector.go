@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // CollectAllStats gathers all system metrics into a single snapshot.
@@ -55,22 +55,22 @@ func buildSystemStats(cpuStats *CPUStats, memStats *MemoryStats, diskStats *Disk
 	stats := &common.SystemStats{}
 
 	if cpuStats != nil {
-		stats.CPUPercent = cpuStats.Percent
+		stats.SystemCPUUtilization = cpuStats.Percent
 	}
 
 	if memStats != nil {
-		stats.MemoryUsed = memStats.UsedPercent
-		stats.MemoryTotal = memStats.TotalBytes
-		stats.MemoryUsedGB = float64(memStats.UsedBytes) / (1024 * 1024 * 1024)
-		stats.MemoryTotalGB = float64(memStats.TotalBytes) / (1024 * 1024 * 1024)
+		stats.SystemMemoryUsage = memStats.UsedPercent
+		stats.SystemMemoryTotal = memStats.TotalBytes
+		stats.SystemMemoryUsedGB = float64(memStats.UsedBytes) / (1024 * 1024 * 1024)
+		stats.SystemMemoryTotalGB = float64(memStats.TotalBytes) / (1024 * 1024 * 1024)
 	}
 
 	if diskStats != nil {
-		stats.DiskUsed, stats.DiskFree = primaryDiskUsage(diskStats)
+		stats.SystemDiskUsage, stats.SystemDiskFree = primaryDiskUsage(diskStats)
 	}
 
 	if info != nil {
-		stats.Uptime = common.FormatUptime(info.UptimeSeconds)
+		stats.SystemUptime = common.FormatUptime(info.UptimeSeconds)
 		stats.ProcessCount = info.ProcessCount
 	}
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 	"github.com/yusufpapurcu/wmi"
 )
 
@@ -121,7 +121,7 @@ func GetDetailedBatteryHealth() (*BatteryHealth, error) {
 	}
 
 	if b.DesignCapacity > 0 {
-		health.WearLevel = 100.0 - (float64(b.FullChargeCapacity)/float64(b.DesignCapacity)*100.0)
+		health.WearLevel = 100.0 - (float64(b.FullChargeCapacity) / float64(b.DesignCapacity) * 100.0)
 	}
 
 	return health, nil

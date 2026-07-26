@@ -74,8 +74,8 @@ export function LoadModels() {
   return window['go']['app']['AIOps']['LoadModels']();
 }
 
-export function NotifyActionResult(arg1, arg2, arg3, arg4) {
-  return window['go']['app']['AIOps']['NotifyActionResult'](arg1, arg2, arg3, arg4);
+export function NotifyActionResult(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['app']['AIOps']['NotifyActionResult'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function PlanWorkflow(arg1, arg2) {

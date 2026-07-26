@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // TLSCertificate holds TLS certificate info.

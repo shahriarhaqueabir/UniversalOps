@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // ── AppInfo ──────────────────────────────────────────────────────────────────
@@ -321,11 +321,11 @@ type LHMStatusResult struct {
 
 // LHMAuthorization explains what admin elevation is required for.
 type LHMAuthorization struct {
-	Reason     string   `json:"reason"`
-	Capabil    []string `json:"capabilities"`
-	Risks      []string `json:"risks"`
-	BinaryName string   `json:"binaryName"`
-	Publisher  string   `json:"publisher"`
+	Reason       string   `json:"reason"`
+	Capabilities []string `json:"capabilities"`
+	Risks        []string `json:"risks"`
+	BinaryName   string   `json:"binaryName"`
+	Publisher    string   `json:"publisher"`
 }
 
 // ScheduledTaskData holds a scheduled task for frontend (SysOps).
@@ -347,6 +347,7 @@ type DiagnosticCheckData struct {
 
 // ExtendedDiagnosticResult holds the full diagnostic result for frontend.
 type ExtendedDiagnosticResult struct {
+	ID        string                `json:"id"`
 	Checks    []DiagnosticCheckData `json:"checks"`
 	Score     int                   `json:"score"`
 	Timestamp string                `json:"timestamp"`
@@ -680,6 +681,7 @@ type AuditCheckItem struct {
 
 // SecurityAuditResult holds the full audit result.
 type SecurityAuditResult struct {
+	ID        string           `json:"id"`
 	Score     int              `json:"score"`
 	Total     int              `json:"total"`
 	Passed    int              `json:"passed"`
@@ -1048,12 +1050,13 @@ type DevOpsSuggestion struct {
 
 // AIInsight is a synthesized observation from the AIOps engine.
 type AIInsight struct {
-	Category  string `json:"category"` // "performance", "security", "network", "storage"
-	Severity  string `json:"severity"` // "info", "warning", "critical"
-	Title     string `json:"title"`
-	Message   string `json:"message"`
-	Action    string `json:"action"` // suggested action
-	Timestamp string `json:"timestamp"`
+	Category   string `json:"category"` // "performance", "security", "network", "storage"
+	Severity   string `json:"severity"` // "info", "warning", "critical"
+	Title      string `json:"title"`
+	Message    string `json:"message"`
+	Action     string `json:"action"`     // suggested action
+	ActionPage string `json:"actionPage"` // page to navigate to when action is clicked, empty = no navigation
+	Timestamp  string `json:"timestamp"`
 }
 
 // AIConfidence holds the overall confidence score and per-factor breakdown.

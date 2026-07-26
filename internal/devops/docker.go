@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // ContainerInfo holds information about a single container.

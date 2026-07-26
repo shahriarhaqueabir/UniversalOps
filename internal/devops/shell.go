@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // ansiRegexp matches CSI ANSI escape sequences (ESC[...m) used for
@@ -181,8 +181,6 @@ var allowedShellCommands = map[string]bool{
 	"htop":       true,
 	"systemctl":  true,
 	"service":    true,
-	"sc":         true,
-	"net":        true,
 	"ipconfig":   true,
 	"ifconfig":   true,
 	"route":      true,
@@ -219,6 +217,9 @@ func RunCommand(cmd string) (*ShellResult, error) {
 	}
 	if !isAllowedShellCommand(cmd) {
 		return nil, fmt.Errorf("command not in allowlist: %s", cmd)
+	}
+	if IsDangerousCommand(cmd) {
+		return nil, fmt.Errorf("%w: %s", ErrDangerousCommand, cmd)
 	}
 
 	start := time.Now()
@@ -347,7 +348,7 @@ var AllowedPowerShellWorkflows = []string{
 
 // PowerShellProfilePath is the path to the PowerShell profile script.
 // It tries multiple locations in order of preference:
-	// 1. Relative to the executable's directory (production build, e.g. universal-ops.exe)
+// 1. Relative to the executable's directory (production build, e.g. universal-ops.exe)
 //  2. Relative to the current working directory (dev mode via `wails dev`)
 //  3. Two levels above CWD (dev mode when CWD is buried in a temp dir)
 //  4. Plain "profiles/powershell_profile.ps1" relative path

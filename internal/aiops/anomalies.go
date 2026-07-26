@@ -1,7 +1,7 @@
 package aiops
 
 import (
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // AnomalyInfo holds a detected anomaly.

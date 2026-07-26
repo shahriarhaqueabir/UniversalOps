@@ -322,3 +322,116 @@ func TestIsDangerousCommand_EdgeCases(t *testing.T) {
 		}
 	}
 }
+
+func TestIsAllowedShellCommand(t *testing.T) {
+	allowed := []string{
+		"ipconfig",
+		"ipconfig /all",
+		"ping 8.8.8.8",
+		"netstat -an",
+		"tasklist",
+		"dir",
+		"ls -la",
+		"C:\\Windows\\System32\\ping.exe -n 4 google.com",
+		"/usr/bin/df -h",
+	}
+	for _, cmd := range allowed {
+		if !isAllowedShellCommand(cmd) {
+			t.Errorf("isAllowedShellCommand(%q) = false, want true", cmd)
+		}
+	}
+
+	blocked := []string{
+		"",
+		"rm -rf /",
+		"powershell -c \"Get-Process\"",
+		"bash -c 'exploit'",
+		"format C:",
+		"chmod 777 /etc/shadow",
+	}
+	for _, cmd := range blocked {
+		if isAllowedShellCommand(cmd) {
+			t.Errorf("isAllowedShellCommand(%q) = true, want false", cmd)
+		}
+	}
+}
+
+func TestNormalizeWhitespace(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"rm -rf /", "rm -rf /"},
+		{"rm\t-rf\t/", "rm -rf /"},
+		{"kill   -9    1234", "kill -9 1234"},
+		{"ipconfig", "ipconfig"},
+		{"echo  hello    world", "echo hello world"},
+		{"\tls\t-la\t", " ls -la "},
+	}
+	for _, tt := range tests {
+		if got := normalizeWhitespace(tt.input); got != tt.want {
+			t.Errorf("normalizeWhitespace(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestFindGitBash(t *testing.T) {
+	path := findGitBash()
+	if path == "" {
+		t.Log("Git Bash not found (expected on non-Windows or without Git)")
+	} else {
+		t.Logf("Git Bash found at: %s", path)
+	}
+}
+
+func TestStripANSI(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"hello", "hello"},
+		{"\x1b[31mred\x1b[0m", "red"},
+		{"\x1b[1m\x1b[32mbold green\x1b[0m", "bold green"},
+		{"no escapes here", "no escapes here"},
+		{"\x1b[Kclear line", "clear line"},
+	}
+	for _, tt := range tests {
+		if got := stripANSI(tt.input); got != tt.want {
+			t.Errorf("stripANSI(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestRunCommand_WithAllowedCommand(t *testing.T) {
+	res, err := RunCommand("dir")
+	if err != nil {
+		t.Fatalf("RunCommand(dir) failed: %v", err)
+	}
+	if res.ExitCode != 0 {
+		t.Errorf("RunCommand(dir) exit code = %d, want 0", res.ExitCode)
+	}
+	if res.Output == "" {
+		t.Error("RunCommand(dir) output should not be empty")
+	}
+	if res.Command != "dir" {
+		t.Errorf("RunCommand(dir) command = %q, want %q", res.Command, "dir")
+	}
+	if res.Duration <= 0 {
+		t.Error("RunCommand(dir) duration should be positive")
+	}
+}
+
+func TestRunCommand_WithOutput(t *testing.T) {
+	// Use an allowed command
+	res, err := RunCommand("whoami")
+	if err != nil {
+		t.Fatalf("RunCommand(whoami) failed: %v", err)
+	}
+	if res.Command != "whoami" {
+		t.Errorf("RunCommand command = %q, want %q", res.Command, "whoami")
+	}
+	if res.Duration <= 0 {
+		t.Error("RunCommand duration should be positive")
+	}
+	t.Logf("RunCommand output: %q (exit=%d)", res.Output, res.ExitCode)
+}

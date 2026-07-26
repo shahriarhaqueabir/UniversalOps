@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { useEvents } from '@/hooks/useEvents'
@@ -35,6 +36,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { EmptyState } from '@/components/ui/EmptyState'
 import * as Tabs from '@radix-ui/react-tabs'
 import { useOllamaStore } from '@/stores/useOllamaStore'
+import { useNavigationStore, type Page } from '@/stores/useSettingsStore'
 import type { ChatMessage, AnomalyInfo, OllamaStatus, AIInsight, ChatSession, DashboardData, ActionPreview } from '@/types'
 
 type TabId = 'ai-chat' | 'anomalies' | 'insights'
@@ -64,7 +66,7 @@ function ChatBubble({ role, content, actions, sessionID, onAssistantReply }: Cha
       await navigator.clipboard.writeText(content)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    } catch { /* ignore */ }
+    } catch { toast.error('Failed to copy to clipboard') }
   }
 
   const handleAuthorize = async (action: ActionPreview) => {
@@ -82,7 +84,7 @@ function ChatBubble({ role, content, actions, sessionID, onAssistantReply }: Cha
 
       // Notify the AI about the success and GET a summary response
       try {
-        const response = await call('AIOps.NotifyActionResult', sessionID, action.action, status, detail) as ChatResponse
+        const response = await call('AIOps.NotifyActionResult', sessionID, action.action, status, detail, action.handshake_id) as ChatResponse
         if (response.content) {
           onAssistantReply(response.content, response.actions)
         }
@@ -101,7 +103,7 @@ function ChatBubble({ role, content, actions, sessionID, onAssistantReply }: Cha
     setAbortedIds(prev => new Set(prev).add(action.handshake_id))
     // Notify the AI about the abort
     try {
-      const response = await call('AIOps.NotifyActionResult', sessionID, action.action, 'ABORTED', 'User cancelled the action.') as ChatResponse
+      const response = await call('AIOps.NotifyActionResult', sessionID, action.action, 'ABORTED', 'User cancelled the action.', action.handshake_id) as ChatResponse
       if (response.content) {
         onAssistantReply(response.content, response.actions)
       }
@@ -284,12 +286,33 @@ export function AIOps() {
   }, [])
 
   const ollamaStatus: OllamaStatus = ollamaStatusData ?? { available: false, binary_exists: false, model: '', version: '' }
+
+  // Check if the universalops persona model exists in the available models list
+  const universalopsModel = ollamaStatus.available_models?.find(m => m.startsWith('universalops'))
+  const universalopsExistsInOllama = !!universalopsModel
   const isPersonaMissing = ollamaStatus.available && !ollamaStatus.model.startsWith('universalops')
+  const canJustSwitch = isPersonaMissing && universalopsExistsInOllama
 
   const handleInitializePersona = async () => {
     if (initializing) return
     setInitializing(true)
-    const tid = toast.loading('Initializing specialized AI persona...')
+
+    if (universalopsExistsInOllama && universalopsModel) {
+      // Model already exists — just switch to it
+      const tid = toast.loading(`Switching to ${universalopsModel}...`)
+      try {
+        await call('AIOps.SetOllamaModel', universalopsModel)
+        toast.success(`Switched to persona model: ${universalopsModel}`, { id: tid })
+        queryClient.invalidateQueries({ queryKey: ['ollama-status'] })
+      } catch (err: any) {
+        toast.error(`Failed to switch: ${err.message}`, { id: tid })
+      } finally {
+        setInitializing(false)
+      }
+      return
+    }
+
+    const tid = toast.loading('Creating specialized AI persona from modelfile...')
     try {
       await call('AIOps.CreateOpsPersona')
       toast.success('Persona initialized successfully', { id: tid })
@@ -330,10 +353,18 @@ export function AIOps() {
             <button
               onClick={handleInitializePersona}
               disabled={initializing}
-              className="flex items-center gap-2.5 px-6 py-3 bg-warning/10 border border-warning/30 text-warning rounded-xl text-sm font-bold hover:bg-warning/20 transition-all disabled:opacity-50 active:scale-95"
+              className={cn(
+                "flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-50 active:scale-95",
+                canJustSwitch
+                  ? "bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20"
+                  : "bg-warning/10 border border-warning/30 text-warning hover:bg-warning/20"
+              )}
+              title={canJustSwitch
+                ? `Switch to the existing ${universalopsModel} persona model`
+                : 'Create the universalops model from the modelfile in data/ directory'}
             >
               {initializing ? <RefreshCw size={14} className="animate-spin" /> : <Bot size={14} />}
-              Initialize Persona
+              {canJustSwitch ? 'Switch to Persona' : 'Initialize Persona'}
             </button>
           )}
 
@@ -358,22 +389,34 @@ export function AIOps() {
             </button>
 
             {isModelDropdownOpen && (
-              <div className="absolute top-full right-0 mt-2 z-[300] min-w-[220px] bg-panel-2 border border-border rounded-xl p-2 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+              <div className="absolute top-full right-0 mt-2 z-[300] min-w-[260px] bg-panel-2 border border-border rounded-xl p-2 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
                 <p className="px-3 py-2 text-[10px] font-bold text-text-faint uppercase tracking-[0.2em]">Available Models</p>
                 <div className="max-h-64 overflow-y-auto space-y-1">
-                  {ollamaStatus.available_models?.map(m => (
-                    <button
-                      key={m}
-                      onClick={() => handleSetModel(m)}
-                      className={cn(
-                        "w-full px-3 py-2.5 rounded-lg text-sm font-bold flex items-center justify-between transition-all",
-                        m === ollamaStatus.model ? "bg-accent text-white" : "text-text-dim hover:bg-accent-soft hover:text-text"
-                      )}
-                    >
-                      {m}
-                      {m === ollamaStatus.model && <Check size={16} />}
-                    </button>
-                  ))}
+                  {ollamaStatus.available_models?.map(m => {
+                    const isCurrent = m === ollamaStatus.model
+                    const isPersonaModel = m.startsWith('universalops')
+                    return (
+                      <button
+                        key={m}
+                        onClick={() => handleSetModel(m)}
+                        className={cn(
+                          "w-full px-3 py-2.5 rounded-lg text-sm font-bold flex items-center justify-between gap-2 transition-all",
+                          isCurrent ? "bg-accent text-white" : "text-text-dim hover:bg-accent-soft hover:text-text"
+                        )}
+                      >
+                        <span className="truncate flex items-center gap-2">
+                          {m}
+                          {isPersonaModel && <Bot size={12} className="shrink-0" />}
+                        </span>
+                        <span className="flex items-center gap-2 shrink-0">
+                          {isCurrent && <Check size={16} />}
+                          {isPersonaModel && !isCurrent && (
+                            <span className="text-[8px] font-bold text-accent uppercase tracking-wider bg-accent/10 px-1.5 py-0.5 rounded">PERSONA</span>
+                          )}
+                        </span>
+                      </button>
+                    )
+                  })}
                   {!ollamaStatus.available_models?.length && (
                     <div className="px-3 py-4 text-center">
                       <p className="text-xs text-text-faint italic">No models found</p>
@@ -454,6 +497,7 @@ function ChatTab() {
   const [loaded, setLoaded] = useState(false)
   const [activeSession, setActiveSession] = useState<string>(`sess-${Date.now()}`)
   const [streamingContent, setStreamingContent] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const chatRef = useRef<HTMLDivElement>(null)
 
   const { data: sessions = [], refetch: refetchSessions } = useQuery<ChatSession[]>({
@@ -535,7 +579,7 @@ function ChatTab() {
     try {
       await call('AIOps.SaveMessage', activeSession, 'user', userMsg.content)
       refetchSessions()
-    } catch { /* ignore */ }
+    } catch { toast.error('Failed to save message') }
 
     try {
       await call('AIOps.ChatStream', activeSession, input)
@@ -551,15 +595,22 @@ function ChatTab() {
     setStreamingContent(null)
   }
 
-  const handleDeleteSession = async (sid: string, e: React.MouseEvent) => {
+  const handleDeleteSession = (sid: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!window.confirm('Delete this session and all its messages?')) return
-    await call('AIOps.DeleteSession', sid)
+    setDeleteTarget(sid)
+  }
+
+  const confirmDeleteSession = async () => {
+    if (!deleteTarget) return
+    await call('AIOps.DeleteSession', deleteTarget)
     refetchSessions()
-    if (activeSession === sid) {
+    if (activeSession === deleteTarget) {
       handleNewSession()
     }
+    setDeleteTarget(null)
   }
+
+  const cancelDelete = () => setDeleteTarget(null)
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -739,6 +790,16 @@ function ChatTab() {
         </div>
         <ContextSidebar />
       </div>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete Session"
+        description="Delete this session and all its messages? This action cannot be undone."
+        type="danger"
+        confirmText="Delete"
+        onConfirm={confirmDeleteSession}
+        onClose={cancelDelete}
+      />
     </div>
   )
 }
@@ -844,7 +905,7 @@ function AnomaliesTab() {
   const { call } = useBackend()
   const { refreshInterval } = useSettingsStore()
 
-  const { data: anomalies = [], isLoading, refetch } = useQuery<AnomalyInfo[]>({
+  const { data: anomalies = [], isFetching, refetch } = useQuery<AnomalyInfo[]>({
     queryKey: ['anomalies'],
     queryFn: async () => {
       const res = await call('AIOps.DetectAnomalies') as AnomalyInfo[]
@@ -875,7 +936,7 @@ function AnomaliesTab() {
           onClick={() => refetch()}
           className="flex items-center gap-3 px-6 py-3 bg-accent text-white rounded-xl hover:opacity-90 font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95"
         >
-          <RefreshCw size={18} className={cn(isLoading && "animate-spin")} />
+          <RefreshCw size={18} className={cn(isFetching && "animate-spin")} />
           Deep Scan Now
         </button>
       </div>
@@ -931,8 +992,9 @@ function AnomaliesTab() {
 function InsightsTab() {
   const { call } = useBackend()
   const { refreshInterval } = useSettingsStore()
+  const { navigate } = useNavigationStore()
 
-  const { data: insights = [], isLoading, refetch } = useQuery<AIInsight[]>({
+  const { data: insights = [], isFetching, refetch } = useQuery<AIInsight[]>({
     queryKey: ['ai-insights'],
     queryFn: async () => {
       const res = await call('AIOps.GetAIInsights') as AIInsight[]
@@ -977,7 +1039,7 @@ function InsightsTab() {
           onClick={() => refetch()}
           className="flex items-center gap-3 px-6 py-3 bg-[var(--color-panel-3)] border border-[var(--color-border)] rounded-xl hover:bg-panel hover:border-accent/40 text-[var(--color-text)] font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95"
         >
-          <RefreshCw size={18} className={cn(isLoading && "animate-spin")} />
+          <RefreshCw size={18} className={cn(isFetching && "animate-spin")} />
           Refresh Logic
         </button>
       </div>
@@ -1019,10 +1081,14 @@ function InsightsTab() {
                       <StatusBadge status={insight.severity} />
                     </div>
                     <p className="text-sm text-[var(--color-text-dim)] leading-relaxed mb-4 font-medium max-w-3xl">{insight.message}</p>
-                    <div className="flex items-center gap-2 text-xs text-accent font-black uppercase tracking-widest group-hover:translate-x-1 transition-transform cursor-pointer">
+                    <button
+                      onClick={() => insight.actionPage && navigate(insight.actionPage as Page)}
+                      disabled={!insight.actionPage}
+                      className="flex items-center gap-2 text-xs text-accent font-black uppercase tracking-widest group-hover:translate-x-1 transition-transform disabled:opacity-60 disabled:cursor-default enabled:cursor-pointer"
+                    >
                       {insight.action}
                       <ChevronRight size={14} />
-                    </div>
+                    </button>
                   </div>
                 </div>
               </div>

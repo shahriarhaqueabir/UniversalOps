@@ -7,6 +7,12 @@ import { useQuery } from '@tanstack/react-query'
 // Mock useQuery
 vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn(),
+  useMutation: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false,
+    isError: false,
+    error: null,
+  })),
   QueryClient: class { clear() {} },
   QueryClientProvider: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }))

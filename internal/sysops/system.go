@@ -105,8 +105,8 @@ func GetLoggedInUsers() ([]LoggedInUser, error) {
 	return getLoggedInUsersPlatform()
 }
 
-// LoggedInUserFromHost converts a gopsutil host.UserInfo to a LoggedInUser.
-func LoggedInUserFromHost(u host.UserInfo) LoggedInUser {
+// LoggedInUserFromHost converts a gopsutil host.UserStat to a LoggedInUser.
+func LoggedInUserFromHost(u host.UserStat) LoggedInUser {
 	return LoggedInUser{
 		User:     u.User,
 		Terminal: u.Terminal,

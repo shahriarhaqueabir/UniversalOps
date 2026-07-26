@@ -1,11 +1,12 @@
 package aiops
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // AnalystResponse contains the AI message and any proposed actions.
@@ -51,53 +52,77 @@ func SanitizeInput(s string) string {
 
 // BuildAnalystPrompt creates a structured system prompt using physical system reality.
 func BuildAnalystPrompt(k common.SystemKnowledge, history string) string {
-	return fmt.Sprintf(`You are the Universal-Ops System Analyst.
-Current System State:
-- CPU: %.1f%%
-- RAM: %.1f%%
-- Disk: %.1f%%
+	return fmt.Sprintf(`You are the UniversalOps System Analyst.
+Current System State (OTel Mapped):
+- CPU (system.cpu.utilization): %.1f%% (Trend: %s)
+- RAM (system.memory.usage): %.1f%% (Trend: %s)
+- Disk (system.disk.usage): %.1f%% (Trend: %s)
 - Connections: %d
 - Anomalies: %d
 - Security Grade: %s
+- Uptime: %s
 %s
 Instructions:
-1. Analyze the system state provided.
-2. Respond to user queries.
+1. Analyze the system state and trends provided.
+2. Respond to user queries concisely and professionally.
 3. For system actions, use: <action_request name="ACTION" param="VALUE" />.
-4. Follow system security policies.`,
-		k.CPUUsage, k.MemoryUsage, k.DiskUsage,
-		k.ActiveConns, k.Anomalies, k.SecurityGrade, history)
+4. If a metric is rising sharply, provide a technical justification for the trend.`,
+		k.SystemCPUUtilization, k.CPUTrend, k.SystemMemoryUsage, k.MemoryTrend, k.SystemDiskUsage, k.DiskTrend,
+		k.ActiveConns, k.Anomalies, k.SecurityGrade, k.SystemUptime, history)
 }
 
-// ParseActions extracts action_request tags from the AI response.
-func ParseActions(response string) (string, []common.ActionPreview) {
-	re := regexp.MustCompile(`<action_request\s+name="([^"]+)"\s*(.*?)\s*/>`)
-	matches := re.FindAllStringSubmatch(response, -1)
-
+// ParseActions extracts action_request tags or MCP-style function tags from the AI response.
+func ParseActions(sessionID, response string) (string, []common.ActionPreview) {
 	var actions []common.ActionPreview
 	cleanResponse := response
 
-	for _, match := range matches {
+	// 1. Legacy/Custom Action Protocol: <action_request name="..." />
+	reLegacy := regexp.MustCompile(`<action_request\s+name="([^"]+)"\s*(.*?)\s*/>`)
+	matchesLegacy := reLegacy.FindAllStringSubmatch(response, -1)
+
+	for _, match := range matchesLegacy {
 		if len(match) >= 3 {
 			actionName := match[1]
 			paramsRaw := match[2]
+			params := parseParams(paramsRaw)
 
-			// Simple param parser
+			p := common.GetHandshakeRegistry().CreatePreview(sessionID, actionName, params)
+			actions = append(actions, p)
+			cleanResponse = strings.ReplaceAll(cleanResponse, match[0], "")
+		}
+	}
+
+	// 2. MCP/Standard Function Protocol: <function name="...">...</function>
+	reMCP := regexp.MustCompile(`<function\s+name="([^"]+)"\s*>(.*?)</function>`)
+	matchesMCP := reMCP.FindAllStringSubmatch(response, -1)
+
+	for _, match := range matchesMCP {
+		if len(match) >= 3 {
+			toolName := match[1]
+			content := match[2]
 			params := make(map[string]interface{})
-			paramRe := regexp.MustCompile(`([a-zA-Z0-9]+)="([^"]+)"`)
-			paramMatches := paramRe.FindAllStringSubmatch(paramsRaw, -1)
-			for _, pm := range paramMatches {
-				params[pm[1]] = pm[2]
+
+			// Attempt to parse JSON content inside function tag
+			if strings.TrimSpace(content) != "" {
+				_ = json.Unmarshal([]byte(content), &params)
 			}
 
-			// Create Handshake Preview
-			p := common.GetHandshakeRegistry().CreatePreview(actionName, params)
+			// Map MCP tool call to ActionPreview (requiring HITL)
+			p := common.GetHandshakeRegistry().CreatePreview(sessionID, toolName, params)
 			actions = append(actions, p)
-
-			// Strip the tag from the visible content
 			cleanResponse = strings.ReplaceAll(cleanResponse, match[0], "")
 		}
 	}
 
 	return strings.TrimSpace(cleanResponse), actions
+}
+
+func parseParams(paramsRaw string) map[string]interface{} {
+	params := make(map[string]interface{})
+	paramRe := regexp.MustCompile(`([a-zA-Z0-9]+)="([^"]+)"`)
+	paramMatches := paramRe.FindAllStringSubmatch(paramsRaw, -1)
+	for _, pm := range paramMatches {
+		params[pm[1]] = pm[2]
+	}
+	return params
 }

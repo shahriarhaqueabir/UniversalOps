@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // HardeningCheck holds a single hardening check result.
@@ -53,7 +53,7 @@ func getHardeningChecksWindows() ([]HardeningCheck, error) {
 
 	// Defender check
 	defender, _ := GetDefenderStatus()
-	defenderOK := defender != nil && defender.Enabled
+	defenderOK := defender != nil && defender.Enabled && defender.RealTimeProtection
 	checks = append(checks, HardeningCheck{
 		Category: "Antivirus", Check: "Windows Defender enabled", Passed: defenderOK,
 		Severity: "high", Remediation: "Enable Windows Defender in Settings",
@@ -70,10 +70,27 @@ func getHardeningChecksWindows() ([]HardeningCheck, error) {
 
 	// Guest account check
 	guestOut, err := common.HiddenCommand("net", "user", "Guest").Output()
-	guestDisabled := err != nil || strings.Contains(strings.ToLower(string(guestOut)), "account is disabled")
+	guestDisabled := true // default: assume disabled
+	if err == nil {
+		for _, line := range strings.Split(string(guestOut), "\n") {
+			if strings.Contains(strings.ToLower(line), "account active") {
+				guestDisabled = !strings.Contains(strings.ToLower(line), "yes")
+				break
+			}
+		}
+	}
 	checks = append(checks, HardeningCheck{
 		Category: "Account", Check: "Guest account disabled", Passed: guestDisabled,
 		Severity: "medium", Remediation: "Disable guest account: net user Guest /active:no",
+	})
+
+	// BitLocker check
+	bitLockerOut, err := common.HiddenCommand("powershell", "-NoProfile", "-Command",
+		"(Get-BitLockerVolume -MountPoint C:).ProtectionStatus").Output()
+	bitLockerOK := err == nil && strings.TrimSpace(string(bitLockerOut)) == "1"
+	checks = append(checks, HardeningCheck{
+		Category: "Encryption", Check: "BitLocker enabled", Passed: bitLockerOK,
+		Severity: "high", Remediation: "Enable BitLocker: Enable-BitLocker -MountPoint C: -TpmProtector",
 	})
 
 	return checks, nil
@@ -99,9 +116,28 @@ func getHardeningChecksLinux() ([]HardeningCheck, error) {
 	})
 
 	// World-writable files in /etc
+	out, err := common.HiddenCommand("find", "/etc", "-maxdepth", "2", "-perm", "-002", "-type", "f").Output()
+	noWorldWritable := err == nil && strings.TrimSpace(string(out)) == ""
 	checks = append(checks, HardeningCheck{
-		Category: "Files", Check: "No world-writable in /etc", Passed: true,
+		Category: "Files", Check: "No world-writable in /etc", Passed: noWorldWritable,
 		Severity: "medium", Remediation: "Run: sudo find /etc -perm -002 -type f",
+	})
+
+	// SELinux/AppArmor check
+	selinuxOut, selinuxErr := common.HiddenCommand("getenforce").Output()
+	apparmorOut, apparmorErr := common.HiddenCommand("aa-status").Output()
+	macEnabled := (selinuxErr == nil && strings.Contains(strings.ToLower(string(selinuxOut)), "enforcing")) ||
+		(apparmorErr == nil && strings.Contains(strings.ToLower(string(apparmorOut)), "enabled"))
+	checks = append(checks, HardeningCheck{
+		Category: "Access Control", Check: "SELinux/AppArmor enforcing", Passed: macEnabled,
+		Severity: "high", Remediation: "Enable SELinux: setenforce 1; or AppArmor: systemctl enable apparmor",
+	})
+
+	// SSH password auth check
+	passAuthOK := sshConfig.PasswordAuthentication == "no" || sshConfig.PasswordAuthentication == "prohibit-password"
+	checks = append(checks, HardeningCheck{
+		Category: "SSH", Check: "Password auth disabled", Passed: passAuthOK,
+		Severity: "high", Remediation: "Set PasswordAuthentication no in /etc/ssh/sshd_config",
 	})
 
 	return checks, nil

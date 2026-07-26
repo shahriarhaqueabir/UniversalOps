@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/secops"
-	sysopsPkg "github.com/shahriarhaqueabir/AllOpsFull/internal/sysops"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/secops"
+	sysopsPkg "github.com/shahriarhaqueabir/UniversalOps/internal/sysops"
 )
 
 // SecOps exposes security operations bindings to the frontend.
@@ -157,7 +157,7 @@ func (s *SecOps) SetFirewallRuleHandshake(name string, enable bool) common.Actio
 		command = fmt.Sprintf("netsh advfirewall firewall set rule name=\"%s\" new enable=yes", name)
 	}
 
-	id := common.GetHandshakeRegistry().Register("SetFirewallRule", command, map[string]interface{}{
+	id := common.GetHandshakeRegistry().Register("", "SetFirewallRule", command, map[string]interface{}{
 		"name":   name,
 		"enable": enable,
 	})
@@ -621,6 +621,7 @@ func (s *SecOps) RunSecurityAuditChecklist() SecurityAuditResult {
 	}
 
 	out := SecurityAuditResult{
+		ID:        fmt.Sprintf("sec-audit-%d", time.Now().Unix()),
 		Score:     result.Score,
 		Total:     result.Total,
 		Passed:    result.Passed,
@@ -636,9 +637,8 @@ func (s *SecOps) RunSecurityAuditChecklist() SecurityAuditResult {
 		if marshalErr != nil {
 			common.LogError("SecOps: failed to marshal audit report: %v", marshalErr)
 		}
-		id := fmt.Sprintf("sec-audit-%d", time.Now().Unix())
 		if err := storage.InsertReport(common.ReportRecord{
-			ID:        id,
+			ID:        out.ID,
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Type:      "security",
 			Score:     out.Score,
@@ -679,7 +679,7 @@ func (s *SecOps) GetHistoricalSecurityReport(id string) (SecurityAuditResult, er
 // IsolateHost requests a safety handshake for isolating the host.
 func (s *SecOps) IsolateHost(confirm bool, autoExpireSeconds int) common.ActionPreview {
 	command := "netsh advfirewall set allprofiles firewallpolicy blockinbound,blockoutbound"
-	id := common.GetHandshakeRegistry().Register("IsolateHost", command, map[string]interface{}{
+	id := common.GetHandshakeRegistry().Register("", "IsolateHost", command, map[string]interface{}{
 		"confirm":           confirm,
 		"autoExpireSeconds": autoExpireSeconds,
 	})
@@ -707,7 +707,7 @@ func (s *SecOps) executeIsolateHost(confirm bool, autoExpireSeconds int) common.
 // KillProcess requests a safety handshake for terminating a process.
 func (s *SecOps) KillProcess(pid int) common.ActionPreview {
 	command := fmt.Sprintf("taskkill /F /PID %d", pid)
-	id := common.GetHandshakeRegistry().Register("KillProcess", command, map[string]interface{}{"pid": pid})
+	id := common.GetHandshakeRegistry().Register("", "KillProcess", command, map[string]interface{}{"pid": pid})
 
 	return common.ActionPreview{
 		HandshakeID: id,
@@ -732,7 +732,7 @@ func (s *SecOps) executeKillProcess(pid int) common.SecActionResult {
 // KillProcessTree requests a safety handshake for terminating a process and its children.
 func (s *SecOps) KillProcessTree(pid int) common.ActionPreview {
 	command := fmt.Sprintf("Get-Process -Id %d | Stop-Process -Force", pid)
-	id := common.GetHandshakeRegistry().Register("KillProcessTree", command, map[string]interface{}{"pid": pid})
+	id := common.GetHandshakeRegistry().Register("", "KillProcessTree", command, map[string]interface{}{"pid": pid})
 
 	return common.ActionPreview{
 		HandshakeID: id,
@@ -757,7 +757,7 @@ func (s *SecOps) executeKillProcessTree(pid int) common.SecActionResult {
 // BlockIP requests a safety handshake for blocking an IP address.
 func (s *SecOps) BlockIP(ip string) common.ActionPreview {
 	command := fmt.Sprintf("netsh advfirewall firewall add rule name=\"Block %s\" dir=in action=block remoteip=%s", ip, ip)
-	id := common.GetHandshakeRegistry().Register("BlockIP", command, map[string]interface{}{"ip": ip})
+	id := common.GetHandshakeRegistry().Register("", "BlockIP", command, map[string]interface{}{"ip": ip})
 
 	return common.ActionPreview{
 		HandshakeID: id,
@@ -782,7 +782,7 @@ func (s *SecOps) executeBlockIP(ip string) common.SecActionResult {
 // DisableAccount requests a safety handshake for disabling a local user account.
 func (s *SecOps) DisableAccount(username string) common.ActionPreview {
 	command := fmt.Sprintf("net user %s /active:no", username)
-	id := common.GetHandshakeRegistry().Register("DisableAccount", command, map[string]interface{}{"username": username})
+	id := common.GetHandshakeRegistry().Register("", "DisableAccount", command, map[string]interface{}{"username": username})
 
 	return common.ActionPreview{
 		HandshakeID: id,
@@ -834,6 +834,7 @@ func (s *SecOps) GetForensic(id string) common.ForensicRecord {
 type ForensicDiff struct {
 	NewProcesses  []string `json:"new_processes"`
 	GoneProcesses []string `json:"gone_processes"`
+	NewConns      []string `json:"new_connections"`
 	SnapshotA     string   `json:"snapshot_a"`
 	SnapshotB     string   `json:"snapshot_b"`
 }
@@ -851,10 +852,19 @@ func (s *SecOps) DiffForensics(idA, idB string) (ForensicDiff, error) {
 		return ForensicDiff{}, fmt.Errorf("failed to retrieve snapshots")
 	}
 
-	// Simple process diff logic (comparing names for now)
+	// ── Deep Process Diff ──
 	type proc struct {
+		Id          int    `json:"Id"`
 		ProcessName string `json:"ProcessName"`
+		Path        string `json:"Path"`
 	}
+	type conn struct {
+		LocalAddress  string `json:"LocalAddress"`
+		LocalPort     int    `json:"LocalPort"`
+		RemoteAddress string `json:"RemoteAddress"`
+		RemotePort    int    `json:"RemotePort"`
+	}
+
 	var dataA, dataB map[string]interface{}
 	_ = json.Unmarshal([]byte(snapA.DataJSON), &dataA)
 	_ = json.Unmarshal([]byte(snapB.DataJSON), &dataB)
@@ -863,15 +873,35 @@ func (s *SecOps) DiffForensics(idA, idB string) (ForensicDiff, error) {
 	_ = json.Unmarshal([]byte(dataA["processes"].(string)), &listA)
 	_ = json.Unmarshal([]byte(dataB["processes"].(string)), &listB)
 
+	// Build process map for A: key is Name:Path (PID excluded as it changes on restart)
 	mapA := make(map[string]bool)
 	for _, p := range listA {
-		mapA[p.ProcessName] = true
+		key := fmt.Sprintf("%s|%s", p.ProcessName, p.Path)
+		mapA[key] = true
 	}
 
 	diff := ForensicDiff{SnapshotA: idA, SnapshotB: idB}
 	for _, p := range listB {
-		if !mapA[p.ProcessName] {
-			diff.NewProcesses = append(diff.NewProcesses, p.ProcessName)
+		key := fmt.Sprintf("%s|%s", p.ProcessName, p.Path)
+		if !mapA[key] {
+			diff.NewProcesses = append(diff.NewProcesses, fmt.Sprintf("%s (%s)", p.ProcessName, p.Path))
+		}
+	}
+
+	// ── Connection Diff ──
+	var connsA, connsB []conn
+	_ = json.Unmarshal([]byte(dataA["connections"].(string)), &connsA)
+	_ = json.Unmarshal([]byte(dataB["connections"].(string)), &connsB)
+
+	connMapA := make(map[string]bool)
+	for _, c := range connsA {
+		key := fmt.Sprintf("%s:%d->%s:%d", c.LocalAddress, c.LocalPort, c.RemoteAddress, c.RemotePort)
+		connMapA[key] = true
+	}
+	for _, c := range connsB {
+		key := fmt.Sprintf("%s:%d->%s:%d", c.LocalAddress, c.LocalPort, c.RemoteAddress, c.RemotePort)
+		if !connMapA[key] && c.RemoteAddress != "0.0.0.0" && c.RemoteAddress != "::" {
+			diff.NewConns = append(diff.NewConns, key)
 		}
 	}
 
@@ -881,7 +911,7 @@ func (s *SecOps) DiffForensics(idA, idB string) (ForensicDiff, error) {
 // CaptureEvidence requests a safety handshake for collecting forensic evidence.
 func (s *SecOps) CaptureEvidence() common.ActionPreview {
 	command := "Forensic Snapshot (Process List, Connections, Environment)"
-	id := common.GetHandshakeRegistry().Register("CaptureEvidence", command, nil)
+	id := common.GetHandshakeRegistry().Register("", "CaptureEvidence", command, nil)
 
 	return common.ActionPreview{
 		HandshakeID: id,
@@ -906,7 +936,7 @@ func (s *SecOps) executeCaptureEvidence() common.SecActionResult {
 // ExportForensicBundle requests a safety handshake for exporting evidence.
 func (s *SecOps) ExportForensicBundle(snapshotID string) common.ActionPreview {
 	command := fmt.Sprintf("Export snapshot %s to local archive", snapshotID)
-	id := common.GetHandshakeRegistry().Register("ExportForensicBundle", command, map[string]interface{}{"id": snapshotID})
+	id := common.GetHandshakeRegistry().Register("", "ExportForensicBundle", command, map[string]interface{}{"id": snapshotID})
 
 	return common.ActionPreview{
 		HandshakeID: id,

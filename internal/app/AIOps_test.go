@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/aiops"
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/aiops"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // skipIfOllamaUnavailable checks if Ollama is reachable on localhost:11434.

@@ -11,7 +11,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/app"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/app"
 )
 
 //go:embed all:cmd/opsforall-gui/frontend/dist

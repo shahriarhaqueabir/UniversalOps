@@ -74,6 +74,14 @@ jobs:
       - name: Build NSIS installer
         run: wails build -platform windows/amd64 -nsis -o universal-ops-${{ github.ref_name }}-windows-amd64-installer
 
+      - name: Generate individual checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem build/bin -File | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($_.Name)" | Out-File -FilePath "$($_.FullName).sha256" -Encoding ascii
+          }
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -113,6 +121,15 @@ jobs:
       - name: Build
         run: wails build -platform linux/amd64 -o universal-ops-${{ github.ref_name }}-linux-amd64
 
+      - name: Generate individual checksums
+        run: |
+          cd build/bin
+          for f in *; do
+            if [ -f "$f" ]; then
+              sha256sum "$f" > "$f.sha256"
+            fi
+          done
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -145,6 +162,27 @@ jobs:
 
       - name: Build (universal binary)
         run: wails build -platform darwin/universal -o universal-ops-${{ github.ref_name }}-darwin-universal
+
+      - name: Sign and notarize (if credentials configured)
+        run: |
+          chmod +x scripts/notarize-macos.sh
+          ./scripts/notarize-macos.sh "build/bin/universal-ops-${{ github.ref_name }}-darwin-universal.app"
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_NOTARIZATION_PASSWORD: ${{ secrets.APPLE_NOTARIZATION_PASSWORD }}
+
+      - name: Generate individual checksums
+        run: |
+          cd build/bin
+          for f in *; do
+            if [ -f "$f" ]; then
+              sha256sum "$f" > "$f.sha256"
+            fi
+          done
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

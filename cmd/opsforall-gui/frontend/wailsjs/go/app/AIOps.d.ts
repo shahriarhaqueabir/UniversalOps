@@ -40,7 +40,7 @@ export function ListSessions():Promise<Array<Record<string, any>>>;
 
 export function LoadModels():Promise<void>;
 
-export function NotifyActionResult(arg1:string,arg2:string,arg3:string,arg4:string):Promise<app.ChatResponse>;
+export function NotifyActionResult(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<app.ChatResponse>;
 
 export function PlanWorkflow(arg1:string,arg2:string):Promise<app.ChatResponse>;
 

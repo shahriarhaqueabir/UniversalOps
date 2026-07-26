@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // FirewallRule represents a firewall rule.
@@ -209,12 +209,21 @@ func IsolateHost(isolate bool, autoExpireSeconds int) (*common.SecActionResult, 
 	}
 
 	if common.IsLinux() {
-		action := "-D"
 		if isolate {
-			action = "-A"
+			// Only append DROP rule if not already present
+			if common.HiddenCommand("iptables", "-C", "INPUT", "-j", "DROP").Run() != nil {
+				_ = common.HiddenCommand("iptables", "-A", "INPUT", "-j", "DROP").Run()
+			}
+			if common.HiddenCommand("iptables", "-C", "OUTPUT", "-j", "DROP").Run() != nil {
+				_ = common.HiddenCommand("iptables", "-A", "OUTPUT", "-j", "DROP").Run()
+			}
+		} else {
+			// Remove ALL matching DROP rules (loop until none left)
+			for common.HiddenCommand("iptables", "-D", "INPUT", "-j", "DROP").Run() == nil {
+			}
+			for common.HiddenCommand("iptables", "-D", "OUTPUT", "-j", "DROP").Run() == nil {
+			}
 		}
-		_ = common.HiddenCommand("iptables", action, "INPUT", "-j", "DROP").Run()
-		_ = common.HiddenCommand("iptables", action, "OUTPUT", "-j", "DROP").Run()
 
 		return &common.SecActionResult{
 			Success: true,

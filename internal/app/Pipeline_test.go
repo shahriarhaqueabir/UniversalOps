@@ -3,7 +3,7 @@ package app
 import (
 	"testing"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 func TestPipelineAPI_GetMetricHistory_NilTS(t *testing.T) {

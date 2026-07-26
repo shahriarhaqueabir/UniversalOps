@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 // ReportTypeMeta describes a report type available for manual generation.
@@ -23,6 +23,137 @@ type ReportGenerationResult struct {
 	Timestamp string `json:"timestamp"`
 	Score     int    `json:"score"`
 	Summary   string `json:"summary,omitempty"`
+}
+
+// PrebuiltReportTemplate defines a canned auto-report rule template.
+// Name follows the convention: {Topic}-{Condition}{Threshold} — PascalCase,
+// hyphen-separated tokens with a suffixed condition+value indicator.
+type PrebuiltReportTemplate struct {
+	ID          string  `json:"id"`
+	Category    string  `json:"category"` // "health", "security", "performance"
+	PresetName  string  `json:"preset_name"`
+	Description string  `json:"description"`
+	Metric      string  `json:"metric"`
+	Condition   string  `json:"condition"`
+	Threshold   float64 `json:"threshold"`
+	ReportType  string  `json:"report_type"`
+	Schedule    string  `json:"schedule"`
+}
+
+// prebuiltTemplates returns the static catalog of prebuilt report templates.
+func prebuiltTemplates() []PrebuiltReportTemplate {
+	return []PrebuiltReportTemplate{
+		{
+			ID:          "prebuilt-health-high-cpu",
+			Category:    "health",
+			PresetName:  "CPU-Util-GT-90",
+			Description: "Triggers a health report when CPU utilization exceeds 90%.",
+			Metric:      "cpu.percent",
+			Condition:   "GT",
+			Threshold:   90,
+			ReportType:  "health",
+			Schedule:    scheduleOnAlert,
+		},
+		{
+			ID:          "prebuilt-health-mem-pressure",
+			Category:    "health",
+			PresetName:  "Memory-Used-GT-95",
+			Description: "Triggers a health report when memory usage exceeds 95%.",
+			Metric:      "memory.used_percent",
+			Condition:   "GT",
+			Threshold:   95,
+			ReportType:  "health",
+			Schedule:    scheduleOnAlert,
+		},
+		{
+			ID:          "prebuilt-health-disk-space",
+			Category:    "health",
+			PresetName:  "Disk-Used-GT-90",
+			Description: "Generates a daily health report when any disk exceeds 90% usage.",
+			Metric:      "disk.used_percent",
+			Condition:   "GT",
+			Threshold:   90,
+			ReportType:  "health",
+			Schedule:    scheduleDaily,
+		},
+		{
+			ID:          "prebuilt-health-high-process",
+			Category:    "health",
+			PresetName:  "Process-Count-GT-250",
+			Description: "Triggers an hourly health report when total process count exceeds 250.",
+			Metric:      "process.count",
+			Condition:   "GT",
+			Threshold:   250,
+			ReportType:  "health",
+			Schedule:    scheduleHourly,
+		},
+		{
+			ID:          "prebuilt-health-network-surge",
+			Category:    "health",
+			PresetName:  "Network-Rx-GT-1Gbps",
+			Description: "Triggers an hourly health report when network receive rate exceeds 1 Gbps.",
+			Metric:      "network.rx_rate",
+			Condition:   "GT",
+			Threshold:   1_000_000_000,
+			ReportType:  "health",
+			Schedule:    scheduleHourly,
+		},
+		{
+			ID:          "prebuilt-security-port-scan",
+			Category:    "security",
+			PresetName:  "Open-Ports-GT-50",
+			Description: "Triggers a security audit when open port count exceeds 50 (possible scan).",
+			Metric:      "connections.open_ports",
+			Condition:   "GT",
+			Threshold:   50,
+			ReportType:  "security",
+			Schedule:    scheduleOnAlert,
+		},
+		{
+			ID:          "prebuilt-security-suspicious-conns",
+			Category:    "security",
+			PresetName:  "External-Conns-GT-20",
+			Description: "Triggers a security audit when external connections exceed 20.",
+			Metric:      "connections.external",
+			Condition:   "GT",
+			Threshold:   20,
+			ReportType:  "security",
+			Schedule:    scheduleOnAlert,
+		},
+		{
+			ID:          "prebuilt-security-fw-change",
+			Category:    "security",
+			PresetName:  "FW-Rules-Changed",
+			Description: "Triggers a security audit when firewall rule count changes from baseline (threshold > 0).",
+			Metric:      "security.firewall_rules",
+			Condition:   "GT",
+			Threshold:   0,
+			ReportType:  "security",
+			Schedule:    scheduleHourly,
+		},
+		{
+			ID:          "prebuilt-perf-baseline-drift",
+			Category:    "performance",
+			PresetName:  "Baseline-Deviation-GT-2σ",
+			Description: "Generates an AI diagnostic when baseline deviation exceeds 2 sigma.",
+			Metric:      "baseline.deviation",
+			Condition:   "GT",
+			Threshold:   2,
+			ReportType:  "auto_diag",
+			Schedule:    scheduleDaily,
+		},
+		{
+			ID:          "prebuilt-perf-system-health",
+			Category:    "performance",
+			PresetName:  "System-Health-LT-70",
+			Description: "Generates an AI diagnostic when the overall system health score drops below 70.",
+			Metric:      "system.health_score",
+			Condition:   "LT",
+			Threshold:   70,
+			ReportType:  "auto_diag",
+			Schedule:    scheduleDaily,
+		},
+	}
 }
 
 // ReportsAPI exposes consolidated report retrieval and generation to the frontend.
@@ -99,7 +230,7 @@ func (r *ReportsAPI) GenerateReport(reportType string) (*ReportGenerationResult,
 		}
 		result := r.sysOps.RunDiagnostic()
 		return &ReportGenerationResult{
-			ReportID:  fmt.Sprintf("health-%d", time.Now().Unix()),
+			ReportID:  result.ID,
 			Type:      "health",
 			Timestamp: result.Timestamp,
 			Score:     result.Score,
@@ -112,7 +243,7 @@ func (r *ReportsAPI) GenerateReport(reportType string) (*ReportGenerationResult,
 		}
 		result := r.secOps.RunAudit()
 		return &ReportGenerationResult{
-			ReportID:  fmt.Sprintf("sec-audit-%d", time.Now().Unix()),
+			ReportID:  result.ID,
 			Type:      "security",
 			Timestamp: result.Timestamp,
 			Score:     result.Score,
@@ -141,11 +272,12 @@ func (r *ReportsAPI) GenerateReport(reportType string) (*ReportGenerationResult,
 			return nil, fmt.Errorf("storage unavailable")
 		}
 		id := fmt.Sprintf("auto-diag-%d", time.Now().Unix())
+		score := int(r.aiOps.GetConfidenceScore().Overall)
 		err := storage.InsertReport(common.ReportRecord{
 			ID:        id,
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Type:      "auto_diag",
-			Score:     0,
+			Score:     score,
 			DataJSON:  string(data),
 		})
 		if err != nil {
@@ -155,7 +287,7 @@ func (r *ReportsAPI) GenerateReport(reportType string) (*ReportGenerationResult,
 			ReportID:  id,
 			Type:      "auto_diag",
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
-			Score:     0,
+			Score:     score,
 			Summary:   "AI-powered diagnostic generated successfully",
 		}, nil
 
@@ -171,6 +303,25 @@ func (r *ReportsAPI) GetReport(id string) (*common.ReportRecord, error) {
 		return nil, fmt.Errorf("storage unavailable")
 	}
 	return storage.GetReport(id)
+}
+
+// =============================================================================
+// Prebuilt Report Templates
+// =============================================================================
+
+// GetPrebuiltTemplates returns the catalog of prebuilt report templates.
+func (r *ReportsAPI) GetPrebuiltTemplates() []PrebuiltReportTemplate {
+	return prebuiltTemplates()
+}
+
+// AddRuleFromTemplate creates a new auto-report rule from a prebuilt template ID.
+func (r *ReportsAPI) AddRuleFromTemplate(templateID string) (*common.AutoReportRule, error) {
+	for _, t := range prebuiltTemplates() {
+		if t.ID == templateID {
+			return r.AddReportRule(t.PresetName, t.Description, t.Metric, t.Condition, t.Threshold, t.ReportType, t.Schedule)
+		}
+	}
+	return nil, fmt.Errorf("unknown prebuilt template: %q", templateID)
 }
 
 // =============================================================================

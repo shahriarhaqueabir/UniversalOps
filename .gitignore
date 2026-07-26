@@ -26,10 +26,9 @@ opsforall-gui.log
 # Database
 opsforall.db
 opsforall.db-shm
-opsforall.db-wal
 *.db
-allopsfull.db-shm
-allopsfull.db-wal
+universalops.db-wal
+universalops.db-shm
 
 # Dependencies
 node_modules/

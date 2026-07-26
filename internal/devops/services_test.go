@@ -197,3 +197,129 @@ func TestListServices(t *testing.T) {
 		t.Log("Spooler service not found (unusual for Windows)")
 	}
 }
+
+func TestIsValidServiceName(t *testing.T) {
+	tests := []struct {
+		name string
+		want bool
+	}{
+		{"Spooler", true},
+		{"WSearch", true},
+		{"MpsSvc", true},
+		{"wuauserv", true},
+		{"test-service", true},
+		{"test.service", true},
+		{"test_service", true},
+		{"test123", true},
+		{"", false},
+		{"spooler/services", false},
+		{"../etc/passwd", false},
+		{"rm -rf", false},
+		{"$(whoami)", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isValidServiceName(tt.name); got != tt.want {
+				t.Errorf("isValidServiceName(%q) = %v, want %v", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsValidServiceName_LongName(t *testing.T) {
+	// 257 characters should be invalid (max 256)
+	longName := make([]byte, 257)
+	for i := range longName {
+		longName[i] = 'a'
+	}
+	if isValidServiceName(string(longName)) {
+		t.Errorf("isValidServiceName(long 257-char name) = true, want false")
+	}
+
+	// 256 characters of valid chars should be valid
+	shortName := make([]byte, 256)
+	for i := range shortName {
+		shortName[i] = 'a'
+	}
+	if !isValidServiceName(string(shortName)) {
+		t.Errorf("isValidServiceName(256-char name) = false, want true")
+	}
+}
+
+func TestControlService_InvalidName(t *testing.T) {
+	// ControlService rejects invalid names before executing anything
+	err := ControlService("../evil", "start")
+	if err == nil {
+		t.Fatal("ControlService with invalid name should return error")
+	}
+	if !contains(err.Error(), "invalid service name") {
+		t.Errorf("ControlService error = %q, want 'invalid service name'", err.Error())
+	}
+}
+
+func TestControlService_InvalidAction(t *testing.T) {
+	// Test that invalid action is rejected even with valid name
+	err := ControlService("Spooler", "restartNow")
+	if err == nil {
+		t.Fatal("ControlService with invalid action should return error")
+	}
+}
+
+func TestParseSystemctlServices(t *testing.T) {
+	input := `cron.service                         loaded active     running   Cron Job Scheduler
+docker.service                       loaded active     running   Docker Application Container Engine
+sshd.service                         loaded inactive   dead      OpenSSH Daemon
+`
+	services := parseSystemctlServices(input)
+	if len(services) != 3 {
+		t.Fatalf("parseSystemctlServices returned %d services, want 3", len(services))
+	}
+	if services[0].Name != "cron.service" {
+		t.Errorf("services[0].Name = %q, want %q", services[0].Name, "cron.service")
+	}
+	if services[0].Status != "running" {
+		t.Errorf("services[0].Status = %q, want %q", services[0].Status, "running")
+	}
+	if services[0].DisplayName != "Cron Job Scheduler" {
+		t.Errorf("services[0].DisplayName = %q, want %q", services[0].DisplayName, "Cron Job Scheduler")
+	}
+	if services[0].StartType != "active" {
+		t.Errorf("services[0].StartType = %q, want %q", services[0].StartType, "active")
+	}
+
+	if services[2].Name != "sshd.service" {
+		t.Errorf("services[2].Name = %q, want %q", services[2].Name, "sshd.service")
+	}
+	if services[2].Status != "dead" {
+		t.Errorf("services[2].Status = %q, want %q", services[2].Status, "dead")
+	}
+}
+
+func TestParseSystemctlServices_Empty(t *testing.T) {
+	services := parseSystemctlServices("")
+	if len(services) != 0 {
+		t.Errorf("parseSystemctlServices empty returned %d services, want 0", len(services))
+	}
+}
+
+func TestParseSystemctlServices_TruncatedLine(t *testing.T) {
+	// Lines with fewer than 4 fields should be skipped
+	input := `cron.service                         loaded active     running   Cron Daemon
+short line
+`
+	services := parseSystemctlServices(input)
+	if len(services) != 1 {
+		t.Errorf("parseSystemctlServices with truncated line returned %d services, want 1", len(services))
+	}
+}
+
+func TestListLinuxServices_OnWindows(t *testing.T) {
+	// On Windows, systemctl is not available, so this should return an error
+	svcs, err := listLinuxServices()
+	if runtime.GOOS == "windows" {
+		if err == nil {
+			t.Log("listLinuxServices returned unexpected success on Windows")
+			_ = svcs
+		}
+	}
+}

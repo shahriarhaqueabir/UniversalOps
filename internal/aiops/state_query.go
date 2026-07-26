@@ -5,7 +5,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
 const (
@@ -53,13 +53,13 @@ func AnswerSystemStateQuery(query string, stats *common.SystemStats, sections []
 	case containsAny(q, "anomaly", "anomalies", "issue", "problem", "risk", "health", "status"):
 		return formatHealthAnswer(stats, anomalies)
 	case strings.Contains(q, "cpu"):
-		return fmt.Sprintf("CPU usage is %.1f%%. %s", stats.CPUPercent, usageAdvice("CPU", stats.CPUPercent))
+		return fmt.Sprintf("CPU usage is %.1f%%. %s", stats.SystemCPUUtilization, usageAdvice("CPU", stats.SystemCPUUtilization))
 	case strings.Contains(q, "mem") || strings.Contains(q, "ram"):
 		return fmt.Sprintf("Memory usage is %.1f%% (%.1f GB of %.1f GB). %s",
-			stats.MemoryUsed, stats.MemoryUsedGB, stats.MemoryTotalGB, usageAdvice("memory", stats.MemoryUsed))
+			stats.SystemMemoryUsage, stats.SystemMemoryUsedGB, stats.SystemMemoryTotalGB, usageAdvice("memory", stats.SystemMemoryUsage))
 	case strings.Contains(q, "disk") || strings.Contains(q, "storage") || strings.Contains(q, "free"):
 		return fmt.Sprintf("Disk usage is %.1f%% with %s free. %s",
-			stats.DiskUsed, common.FormatBytes(stats.DiskFree), usageAdvice("disk", stats.DiskUsed))
+			stats.SystemDiskUsage, common.FormatBytes(stats.SystemDiskFree), usageAdvice("disk", stats.SystemDiskUsage))
 	case strings.Contains(q, "process"):
 		var topProc string
 		if answer := answerFromReportSections("process", sections); answer != "" {
@@ -72,7 +72,7 @@ func AnswerSystemStateQuery(query string, stats *common.SystemStats, sections []
 		}
 		return "Network stats look normal based on available data. Check NetOps for real-time connection lists."
 	case strings.Contains(q, "uptime") || strings.Contains(q, "up time") || strings.Contains(q, "running"):
-		return fmt.Sprintf("System uptime is %s.", valueOrUnknown(stats.Uptime))
+		return fmt.Sprintf("System uptime is %s.", valueOrUnknown(stats.SystemUptime))
 	default:
 		if answer := answerFromReportSections(q, sections); answer != "" {
 			return answer
@@ -90,22 +90,22 @@ func DetectAnomalies(history []common.SystemStats) []Anomaly {
 	latest := history[len(history)-1]
 	var findings []Anomaly
 
-	findings = append(findings, thresholdAnomaly("CPU", latest.CPUPercent)...)
-	findings = append(findings, thresholdAnomaly("memory", latest.MemoryUsed)...)
-	findings = append(findings, thresholdAnomaly("disk", latest.DiskUsed)...)
+	findings = append(findings, thresholdAnomaly("CPU", latest.SystemCPUUtilization)...)
+	findings = append(findings, thresholdAnomaly("memory", latest.SystemMemoryUsage)...)
+	findings = append(findings, thresholdAnomaly("disk", latest.SystemDiskUsage)...)
 
 	// Uptime anomaly (recent reboot)
-	if strings.Contains(latest.Uptime, "second") || (strings.Contains(latest.Uptime, "minute") && !strings.Contains(latest.Uptime, "minutes")) {
+	if strings.Contains(latest.SystemUptime, "second") || (strings.Contains(latest.SystemUptime, "minute") && !strings.Contains(latest.SystemUptime, "minutes")) {
 		findings = append(findings, Anomaly{
 			Metric:   "uptime",
 			Severity: "info",
-			Message:  "System was recently rebooted (uptime: " + latest.Uptime + ").",
+			Message:  "System was recently rebooted (uptime: " + latest.SystemUptime + ").",
 		})
 	}
 
 	if len(history) >= 6 {
 		recent6 := history[len(history)-6:]
-		if allAtLeast(recent6, func(s common.SystemStats) float64 { return s.CPUPercent }, 95.0) {
+		if allAtLeast(recent6, func(s common.SystemStats) float64 { return s.SystemCPUUtilization }, 95.0) {
 			findings = append(findings, Anomaly{
 				Metric:   "CPU",
 				Severity: "critical",
@@ -116,21 +116,21 @@ func DetectAnomalies(history []common.SystemStats) []Anomaly {
 
 	if len(history) >= 3 {
 		recent := history[len(history)-3:]
-		if allAtLeast(recent, func(s common.SystemStats) float64 { return s.CPUPercent }, sustainedThreshold) {
+		if allAtLeast(recent, func(s common.SystemStats) float64 { return s.SystemCPUUtilization }, sustainedThreshold) {
 			findings = append(findings, Anomaly{
 				Metric:   "CPU",
 				Severity: "warning",
 				Message:  fmt.Sprintf("CPU has stayed at or above %.0f%% for the last 3 samples.", sustainedThreshold),
 			})
 		}
-		if allAtLeast(recent, func(s common.SystemStats) float64 { return s.MemoryUsed }, sustainedThreshold) {
+		if allAtLeast(recent, func(s common.SystemStats) float64 { return s.SystemMemoryUsage }, sustainedThreshold) {
 			findings = append(findings, Anomaly{
 				Metric:   "memory",
 				Severity: "warning",
 				Message:  fmt.Sprintf("Memory has stayed at or above %.0f%% for the last 3 samples.", sustainedThreshold),
 			})
 		}
-		if steadilyIncreasing(recent, func(s common.SystemStats) float64 { return s.MemoryUsed }, 15) && latest.MemoryUsed >= 70 {
+		if steadilyIncreasing(recent, func(s common.SystemStats) float64 { return s.SystemMemoryUsage }, 15) && latest.SystemMemoryUsage >= 70 {
 			findings = append(findings, Anomaly{
 				Metric:   "memory",
 				Severity: "warning",
@@ -141,12 +141,12 @@ func DetectAnomalies(history []common.SystemStats) []Anomaly {
 
 	if len(history) >= 2 {
 		prev := history[:len(history)-1]
-		prevCPUAvg := average(prev, func(s common.SystemStats) float64 { return s.CPUPercent })
-		if latest.CPUPercent >= 70 && latest.CPUPercent-prevCPUAvg >= spikeThreshold {
+		prevCPUAvg := average(prev, func(s common.SystemStats) float64 { return s.SystemCPUUtilization })
+		if latest.SystemCPUUtilization >= 70 && latest.SystemCPUUtilization-prevCPUAvg >= spikeThreshold {
 			findings = append(findings, Anomaly{
 				Metric:   "CPU",
 				Severity: "warning",
-				Message:  fmt.Sprintf("CPU jumped %.1f points above the previous average.", latest.CPUPercent-prevCPUAvg),
+				Message:  fmt.Sprintf("CPU jumped %.1f points above the previous average.", latest.SystemCPUUtilization-prevCPUAvg),
 			})
 		}
 
@@ -160,12 +160,12 @@ func DetectAnomalies(history []common.SystemStats) []Anomaly {
 			})
 		}
 
-		prevDiskAvg := average(prev, func(s common.SystemStats) float64 { return s.DiskUsed })
-		if latest.DiskUsed-prevDiskAvg >= 5.0 {
+		prevDiskAvg := average(prev, func(s common.SystemStats) float64 { return s.SystemDiskUsage })
+		if latest.SystemDiskUsage-prevDiskAvg >= 5.0 {
 			findings = append(findings, Anomaly{
 				Metric:   "disk",
 				Severity: "warning",
-				Message:  fmt.Sprintf("Disk usage jumped %.1f%% across the last few samples.", latest.DiskUsed-prevDiskAvg),
+				Message:  fmt.Sprintf("Disk usage jumped %.1f%% across the last few samples.", latest.SystemDiskUsage-prevDiskAvg),
 			})
 		}
 	}
@@ -187,7 +187,7 @@ func thresholdAnomaly(metric string, value float64) []Anomaly {
 func formatHealthAnswer(stats *common.SystemStats, anomalies []Anomaly) string {
 	if len(anomalies) == 0 {
 		return fmt.Sprintf("No anomalies detected. CPU %.1f%%, memory %.1f%%, disk %.1f%%, processes %d.",
-			stats.CPUPercent, stats.MemoryUsed, stats.DiskUsed, stats.ProcessCount)
+			stats.SystemCPUUtilization, stats.SystemMemoryUsage, stats.SystemDiskUsage, stats.ProcessCount)
 	}
 
 	var b strings.Builder
@@ -200,14 +200,14 @@ func formatHealthAnswer(stats *common.SystemStats, anomalies []Anomaly) string {
 
 func formatSystemSummary(stats *common.SystemStats, anomalies []Anomaly) string {
 	summary := fmt.Sprintf("System state: CPU %.1f%%, memory %.1f%% (%.1f/%.1f GB), disk %.1f%% (%s free), processes %d, uptime %s.",
-		stats.CPUPercent,
-		stats.MemoryUsed,
-		stats.MemoryUsedGB,
-		stats.MemoryTotalGB,
-		stats.DiskUsed,
-		common.FormatBytes(stats.DiskFree),
+		stats.SystemCPUUtilization,
+		stats.SystemMemoryUsage,
+		stats.SystemMemoryUsedGB,
+		stats.SystemMemoryTotalGB,
+		stats.SystemDiskUsage,
+		common.FormatBytes(stats.SystemDiskFree),
 		stats.ProcessCount,
-		valueOrUnknown(stats.Uptime),
+		valueOrUnknown(stats.SystemUptime),
 	)
 	if len(anomalies) == 0 {
 		return summary + " No anomalies detected."

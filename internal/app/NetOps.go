@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/common"
-	"github.com/shahriarhaqueabir/AllOpsFull/internal/netops"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/netops"
 )
 
 // NetOps exposes network operations bindings to the frontend.

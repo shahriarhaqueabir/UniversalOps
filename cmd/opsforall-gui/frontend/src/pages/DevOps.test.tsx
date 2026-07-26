@@ -7,6 +7,13 @@ import { useBackend } from '@/hooks/useBackend'
 
 vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn(),
+  useMutation: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false,
+    isError: false,
+    error: null,
+    data: null,
+  })),
   useQueryClient: vi.fn(() => ({ invalidateQueries: vi.fn() })),
 }))
 

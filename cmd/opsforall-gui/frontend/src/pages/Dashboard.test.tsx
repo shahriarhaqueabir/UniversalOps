@@ -76,8 +76,7 @@ describe('Dashboard Page', () => {
 
   it('displays Memory metric value', async () => {
     render(<Dashboard />)
-    const elements = await screen.findAllByText(/62/)
-    expect(elements.length).toBe(2)
+    expect(await screen.findByText(/62/)).toBeInTheDocument()
   })
 
   it('shows loading state initially', async () => {

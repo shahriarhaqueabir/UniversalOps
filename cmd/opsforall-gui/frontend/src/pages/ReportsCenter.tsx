@@ -9,8 +9,9 @@ import {
 import { motion, AnimatePresence } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
+import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
 import { toast } from 'sonner'
-import type { ReportRecord } from '@/types'
+import type { ReportRecord, PrebuiltTemplate } from '@/types'
 import { app, common } from '../../wailsjs/go/models'
 
 const TYPE_META: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
@@ -77,19 +78,20 @@ export function ReportsCenter() {
   const [showDetail, setShowDetail] = useState(false)
   const [showRules, setShowRules] = useState(false)
   const [showGenerateDropdown, setShowGenerateDropdown] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
 
   // Auto-report rule form state
-  const [ruleForm, setRuleForm] = useState({ name: '', description: '', metric: '', condition: 'GT', threshold: 0, reportType: 'health', schedule: 'on_alert' })
+  const [ruleForm, setRuleForm] = useState({ name: '', description: '', metric: '', condition: 'GT', threshold: 0, reportType: 'health', schedule: 'on_alert', templateId: '' })
 
   const { data: reports = [], isLoading } = useQuery<ReportRecord[]>({
     queryKey: ['reports'],
-    queryFn: async () => (await call('Reports.ListAllReports')) as ReportRecord[] || [],
+    queryFn: async () => (await call('ReportsAPI.ListAllReports')) as ReportRecord[] || [],
     refetchInterval: 15_000,
   })
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const ok = await call('Reports.DeleteReport', id)
+      const ok = await call('ReportsAPI.DeleteReport', id)
       if (!ok) throw new Error('Delete failed')
     },
     onSuccess: (_data, id) => {
@@ -108,7 +110,7 @@ export function ReportsCenter() {
   // Generate report mutation
   const generateMutation = useMutation({
     mutationFn: async (type: string) => {
-      const result = await call('Reports.GenerateReport', type)
+      const result = await call('ReportsAPI.GenerateReport', type)
       return result as app.ReportGenerationResult
     },
     onSuccess: (result) => {
@@ -125,25 +127,58 @@ export function ReportsCenter() {
   // Report types (for the generate dropdown)
   const { data: reportTypes = [] } = useQuery<app.ReportTypeMeta[]>({
     queryKey: ['reportTypes'],
-    queryFn: async () => (await call('Reports.GetReportTypes')) as app.ReportTypeMeta[] || [],
+    queryFn: async () => (await call('ReportsAPI.GetReportTypes')) as app.ReportTypeMeta[] || [],
     staleTime: 60_000,
   })
 
   // Auto-report rules
   const { data: rules = [] } = useQuery<common.AutoReportRule[]>({
     queryKey: ['reportRules'],
-    queryFn: async () => (await call('Reports.GetReportRules')) as common.AutoReportRule[] || [],
+    queryFn: async () => (await call('ReportsAPI.GetReportRules')) as common.AutoReportRule[] || [],
     refetchInterval: 30_000,
   })
+
+  // Prebuilt report templates
+  const { data: templates = [] } = useQuery<PrebuiltTemplate[]>({
+    queryKey: ['prebuiltTemplates'],
+    queryFn: async () => (await call('ReportsAPI.GetPrebuiltTemplates')) as PrebuiltTemplate[] || [],
+    staleTime: 120_000,
+  })
+
+  // Group templates by category for the dropdown
+  const templatesByCategory = templates.reduce<Record<string, PrebuiltTemplate[]>>((acc, t) => {
+    (acc[t.category] ??= []).push(t)
+    return acc
+  }, {})
+
+  // Handle template selection: auto-fill rule form fields
+  const handleTemplateSelect = useCallback((templateId: string) => {
+    if (!templateId) {
+      setRuleForm((f) => ({ ...f, templateId: '', name: '', description: '', metric: '' }))
+      return
+    }
+    const t = templates.find((tmpl) => tmpl.id === templateId)
+    if (!t) return
+    setRuleForm({
+      name: t.preset_name,
+      description: t.description,
+      metric: t.metric,
+      condition: t.condition,
+      threshold: t.threshold,
+      reportType: t.report_type,
+      schedule: t.schedule,
+      templateId: t.id,
+    })
+  }, [templates])
 
   const addRuleMutation = useMutation({
     mutationFn: async () => {
       const r = ruleForm
-      await call('Reports.AddReportRule', r.name, r.description, r.metric, r.condition, r.threshold, r.reportType, r.schedule)
+      await call('ReportsAPI.AddReportRule', r.name, r.description, r.metric, r.condition, r.threshold, r.reportType, r.schedule)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reportRules'] })
-      setRuleForm({ name: '', description: '', metric: '', condition: 'GT', threshold: 0, reportType: 'health', schedule: 'on_alert' })
+      setRuleForm({ name: '', description: '', metric: '', condition: 'GT', threshold: 0, reportType: 'health', schedule: 'on_alert', templateId: '' })
       toast.success('Auto-report rule created')
     },
     onError: (err: any) => toast.error(`Failed to create rule: ${err?.message ?? 'unknown error'}`),
@@ -151,7 +186,7 @@ export function ReportsCenter() {
 
   const toggleRuleMutation = useMutation({
     mutationFn: async (rule: common.AutoReportRule) => {
-      await call('Reports.UpdateReportRule', rule.id, rule.name, rule.description, !rule.enabled)
+      await call('ReportsAPI.UpdateReportRule', rule.id, rule.name, rule.description, !rule.enabled)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reportRules'] })
@@ -162,7 +197,7 @@ export function ReportsCenter() {
 
   const deleteRuleMutation = useMutation({
     mutationFn: async (id: string) => {
-      const ok = await call('Reports.DeleteReportRule', id)
+      const ok = await call('ReportsAPI.DeleteReportRule', id)
       if (!ok) throw new Error('Delete failed')
     },
     onSuccess: () => {
@@ -442,11 +477,34 @@ export function ReportsCenter() {
 
               {/* New rule form */}
               <div className="grid grid-cols-7 gap-3 items-end">
-                <div className="col-span-2">
+                {/* Template selector — replaces manual name/metric entry */}
+                <div className="col-span-4">
+                  <label className="block text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-faint)] mb-1">Prebuilt Template</label>
+                  <select
+                    value={ruleForm.templateId}
+                    onChange={(e) => handleTemplateSelect(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-[var(--color-panel-2)] border border-[var(--color-border)] text-xs text-[var(--color-text)] outline-none focus:border-accent/40 transition-colors"
+                  >
+                    <option value="">Custom Rule (manual)</option>
+                    {(['health', 'security', 'performance'] as const).map((cat) => {
+                      const catLabel = cat.charAt(0).toUpperCase() + cat.slice(1)
+                      const items = templatesByCategory[cat]
+                      if (!items?.length) return null
+                      return (
+                        <optgroup key={cat} label={catLabel}>
+                          {items.map((t) => (
+                            <option key={t.id} value={t.id}>{t.preset_name}</option>
+                          ))}
+                        </optgroup>
+                      )
+                    })}
+                  </select>
+                </div>
+                <div className="col-span-3">
                   <label className="block text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-faint)] mb-1">Name</label>
                   <input
                     value={ruleForm.name}
-                    onChange={(e) => setRuleForm((f) => ({ ...f, name: e.target.value }))}
+                    onChange={(e) => setRuleForm((f) => ({ ...f, name: e.target.value, templateId: '' }))}
                     placeholder="e.g. High CPU alert"
                     className="w-full px-3 py-2 rounded-lg bg-[var(--color-panel-2)] border border-[var(--color-border)] text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] outline-none focus:border-accent/40 transition-colors"
                   />
@@ -455,7 +513,7 @@ export function ReportsCenter() {
                   <label className="block text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-faint)] mb-1">Metric</label>
                   <input
                     value={ruleForm.metric}
-                    onChange={(e) => setRuleForm((f) => ({ ...f, metric: e.target.value }))}
+                    onChange={(e) => setRuleForm((f) => ({ ...f, metric: e.target.value, templateId: '' }))}
                     placeholder="e.g. cpu_usage"
                     className="w-full px-3 py-2 rounded-lg bg-[var(--color-panel-2)] border border-[var(--color-border)] text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] outline-none focus:border-accent/40 transition-colors"
                   />
@@ -622,7 +680,7 @@ export function ReportsCenter() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
-                          if (confirm('Delete this report?')) deleteMutation.mutate(report.id)
+                          setDeleteTarget(report.id)
                         }}
                         className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-[var(--color-text-faint)] hover:text-red-500 hover:bg-red-500/10"
                         title="Delete report"
@@ -726,11 +784,7 @@ export function ReportsCenter() {
                     Export JSON
                   </button>
                   <button
-                    onClick={() => {
-                      if (confirm('Delete this report?')) {
-                        deleteMutation.mutate(selectedReport.id)
-                      }
-                    }}
+                    onClick={() => setDeleteTarget(selectedReport.id)}
                     className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold hover:bg-red-500/20 transition-all"
                   >
                     <Trash2 size={14} />
@@ -742,6 +796,17 @@ export function ReportsCenter() {
           )}
         </AnimatePresence>
       </div>
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete Report"
+        description="Delete this report? This action cannot be undone."
+        type="danger"
+        confirmText="Delete"
+        onConfirm={() => {
+          if (deleteTarget) deleteMutation.mutate(deleteTarget)
+        }}
+        onClose={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

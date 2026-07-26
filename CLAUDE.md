@@ -13,7 +13,7 @@ Universal-Ops is a high-performance native desktop operations platform built wit
 - **Backend**: Go 1.26+
   - **System Metrics**: `github.com/shirou/gopsutil/v4`
   - **Network**: `github.com/miekg/dns`
-  - **Storage**: `modernc.org/sqlite` (Database: `ops_core.db`)
+  - **Storage**: `modernc.org/sqlite` (Database: `universalops.db`)
 - **Frontend**: React 19, TypeScript, Vite, Tailwind v4
   - **State**: Zustand
   - **Data Fetching**: TanStack Query (React Query)
@@ -40,4 +40,4 @@ Universal-Ops is a high-performance native desktop operations platform built wit
 ## Coding Standards
 - **Go**: Idiomatic Go, error wrapping, consistent logging via `common.LogInfo`.
 - **Frontend**: Functional components, memoization for performance, CSS variables for theming.
-- **Database**: All persistence logic must use `ops_core.db`.
+- **Database**: All persistence logic must use `universalops.db`.

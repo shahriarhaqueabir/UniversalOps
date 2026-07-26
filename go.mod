@@ -1,4 +1,4 @@
-module github.com/shahriarhaqueabir/AllOpsFull
+module github.com/shahriarhaqueabir/UniversalOps
 
 go 1.26.0
 

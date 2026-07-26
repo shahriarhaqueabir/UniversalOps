@@ -235,6 +235,11 @@ func (e *EngineLoop) checkScheduledReports() {
 		if rule.Schedule != "hourly" && rule.Schedule != "daily" {
 			continue
 		}
+
+		if !e.canTriggerReport(rule) {
+			continue
+		}
+
 		ruleID := rule.ID
 		go func(rt ReportTrigger, rid, rtype string) {
 			defer RecoverPanic()
@@ -282,7 +287,11 @@ func (e *EngineLoop) checkReportRulesForAlerts(newAlerts []Alert) {
 				continue
 			}
 
-			// Rule matched — trigger report generation in background
+			// Rule matched — check cooldown
+			if !e.canTriggerReport(rule) {
+				continue
+			}
+
 			ruleID := rule.ID
 			go func(rt ReportTrigger, rid, rtype string) {
 				defer RecoverPanic()
@@ -296,6 +305,35 @@ func (e *EngineLoop) checkReportRulesForAlerts(newAlerts []Alert) {
 			}(e.reportTrigger, ruleID, rule.ReportType)
 			break // one report per rule per cycle
 		}
+	}
+}
+
+// canTriggerReport checks if enough time has elapsed since the rule was last triggered.
+func (e *EngineLoop) canTriggerReport(rule AutoReportRule) bool {
+	if rule.LastTriggeredAt == nil || *rule.LastTriggeredAt == "" {
+		return true
+	}
+
+	last, err := time.Parse(time.RFC3339, *rule.LastTriggeredAt)
+	if err != nil {
+		// Fallback for non-RFC formats if any
+		last, err = time.Parse("2006-01-02 15:04:05", *rule.LastTriggeredAt)
+		if err != nil {
+			return true // cannot parse? let it trigger
+		}
+	}
+
+	elapsed := time.Since(last)
+
+	switch rule.Schedule {
+	case "on_alert":
+		return elapsed > 30*time.Minute
+	case "hourly":
+		return elapsed > 55*time.Minute
+	case "daily":
+		return elapsed > 23*time.Hour
+	default:
+		return true
 	}
 }
 

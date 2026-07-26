@@ -15,6 +15,27 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+// storageTimestampFormat is the canonical timestamp format for all SQLite writes.
+const storageTimestampFormat = time.RFC3339
+
+// formatStorageTimestamp formats a time.Time for SQLite storage.
+func formatStorageTimestamp(t time.Time) string {
+	return t.UTC().Format(storageTimestampFormat)
+}
+
+// parseStorageTimestamp parses a timestamp from SQLite storage, with
+// legacy format fallback for data written by DEFAULT CURRENT_TIMESTAMP.
+func parseStorageTimestamp(s string) (time.Time, error) {
+	t, err := time.Parse(storageTimestampFormat, s)
+	if err != nil {
+		t, err = time.Parse("2006-01-02 15:04:05", s)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("parse timestamp %q: %v", s, err)
+		}
+	}
+	return t, nil
+}
+
 // MetricWrite represents a single metric enqueued for asynchronous batch write.
 type MetricWrite struct {
 	Name  string
@@ -168,6 +189,7 @@ func (s *Storage) Close() error {
 	s.closed = true
 	close(s.closeCh)
 	close(s.metricsCh)
+	close(s.logsCh)
 	s.mu.Unlock()
 
 	s.pruneWg.Wait()
@@ -189,130 +211,186 @@ func (s *Storage) Begin() (*sql.Tx, error) {
 	return s.db.Begin()
 }
 
+// getSchemaVersion returns the highest applied schema version from the migration
+// tracking table. Returns 0 if no migrations have been recorded.
+func (s *Storage) getSchemaVersion() (int, error) {
+	var version int
+	err := s.db.QueryRow(`SELECT COALESCE(MAX(version), 0) FROM schema_versions`).Scan(&version)
+	return version, err
+}
+
 func (s *Storage) migrate() error {
-	queries := []string{
-		`CREATE TABLE IF NOT EXISTS schema_versions (
-			version INTEGER PRIMARY KEY,
-			applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		)`,
-		`INSERT OR IGNORE INTO schema_versions (version) VALUES (1)`,
-		`CREATE TABLE IF NOT EXISTS metrics (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-			name TEXT NOT NULL,
-			unit TEXT,
-			value REAL NOT NULL
-		)`,
-		`CREATE TABLE IF NOT EXISTS logs (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-			level TEXT NOT NULL,
-			module TEXT,
-			message TEXT NOT NULL
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_metrics_name_time ON metrics(name, timestamp)`,
-		`CREATE INDEX IF NOT EXISTS idx_logs_time ON logs(timestamp)`,
-		`CREATE TABLE IF NOT EXISTS events (
-			id TEXT PRIMARY KEY,
-			timestamp DATETIME NOT NULL,
-			category TEXT NOT NULL,
-			level TEXT NOT NULL,
-			title TEXT NOT NULL,
-			detail TEXT NOT NULL DEFAULT '',
-			module TEXT NOT NULL DEFAULT '',
-			related TEXT NOT NULL DEFAULT '',
-			metadata TEXT NOT NULL DEFAULT ''
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_events_time ON events(timestamp)`,
-		`CREATE INDEX IF NOT EXISTS idx_events_cat ON events(category, timestamp)`,
-		`CREATE TABLE IF NOT EXISTS alerts (
-			id TEXT PRIMARY KEY,
-			timestamp DATETIME NOT NULL,
-			level TEXT NOT NULL,
-			metric TEXT NOT NULL,
-			message TEXT NOT NULL,
-			value REAL NOT NULL,
-			threshold REAL NOT NULL,
-			resolved INTEGER NOT NULL DEFAULT 0,
-			resolved_at DATETIME
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_alerts_time ON alerts(timestamp)`,
-		`CREATE INDEX IF NOT EXISTS idx_alerts_metric ON alerts(metric)`,
-		`CREATE TABLE IF NOT EXISTS conversations (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			session_id TEXT NOT NULL,
-			role TEXT NOT NULL,
-			content TEXT NOT NULL,
-			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_conv_session ON conversations(session_id, timestamp)`,
-		`CREATE TABLE IF NOT EXISTS settings (
-			key TEXT PRIMARY KEY,
-			value TEXT NOT NULL,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		)`,
-		`CREATE TABLE IF NOT EXISTS forensics (
-			id TEXT PRIMARY KEY,
-			timestamp DATETIME NOT NULL,
-			type TEXT NOT NULL,
-			title TEXT NOT NULL,
-			data_json TEXT NOT NULL,
-			metadata TEXT
-		)`,
-		`CREATE TABLE IF NOT EXISTS reports (
-			id TEXT PRIMARY KEY,
-			timestamp DATETIME NOT NULL,
-			type TEXT NOT NULL,
-			score INTEGER NOT NULL,
-			data_json TEXT NOT NULL
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_reports_type_time ON reports(type, timestamp)`,
-		`CREATE TABLE IF NOT EXISTS baselines (
-			metric TEXT PRIMARY KEY,
-			avg REAL NOT NULL,
-			stddev REAL NOT NULL,
-			last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
-		)`,
-		`CREATE TABLE IF NOT EXISTS health_scores (
-			day DATE PRIMARY KEY,
-			score INTEGER NOT NULL,
-			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-		)`,
-		`CREATE TABLE IF NOT EXISTS custom_workflows (
-			id TEXT PRIMARY KEY,
-			name TEXT NOT NULL,
-			description TEXT NOT NULL,
-			definition_json TEXT NOT NULL,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		)`,
-		`CREATE TABLE IF NOT EXISTS incidents (
-			id TEXT PRIMARY KEY,
-			timestamp DATETIME NOT NULL,
-			title TEXT NOT NULL,
-			details TEXT NOT NULL,
-			report_ids TEXT,
-			severity TEXT NOT NULL
-		)`,
-		`CREATE TABLE IF NOT EXISTS report_rules (
-			id TEXT PRIMARY KEY,
-			name TEXT NOT NULL,
-			description TEXT NOT NULL DEFAULT '',
-			metric TEXT NOT NULL DEFAULT '',
-			condition TEXT NOT NULL DEFAULT 'GT',
-			threshold REAL NOT NULL DEFAULT 0,
-			report_type TEXT NOT NULL DEFAULT 'health',
-			schedule TEXT NOT NULL DEFAULT 'on_alert',
-			enabled INTEGER NOT NULL DEFAULT 1,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			last_triggered_at DATETIME
-		)`,
+	// Phase 1: Ensure the migration tracking table exists (required before version checks).
+	if _, err := s.db.Exec(`CREATE TABLE IF NOT EXISTS schema_versions (
+		version INTEGER PRIMARY KEY,
+		applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`); err != nil {
+		return fmt.Errorf("create schema_versions: %w", err)
 	}
 
-	for _, q := range queries {
-		if _, err := s.db.Exec(q); err != nil {
-			return err
+	currentVersion, err := s.getSchemaVersion()
+	if err != nil {
+		return fmt.Errorf("get schema version: %w", err)
+	}
+
+	// ── NOTE on DEFAULT CURRENT_TIMESTAMP ──────────────────────────────
+	// Several tables below use DEFAULT CURRENT_TIMESTAMP, which produces
+	// SQLite's native format ("2006-01-02 15:04:05").  This differs from
+	// the canonical RFC3339 format used by all explicit application writes
+	// (via formatStorageTimestamp).  The dual-format read path implemented
+	// by parseStorageTimestamp handles both transparently, so mixed-format
+	// columns are safe for reading.
+	//
+	// Future schema changes should NOT add new DEFAULT CURRENT_TIMESTAMP
+	// columns; always write timestamps explicitly with formatStorageTimestamp.
+	// ───────────────────────────────────────────────────────────────────
+
+	// Version 1: Initial schema (all current tables and indexes).
+	if currentVersion < 1 {
+		queries := []string{
+			`INSERT OR IGNORE INTO schema_versions (version) VALUES (1)`,
+			`CREATE TABLE IF NOT EXISTS metrics (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+				name TEXT NOT NULL,
+				unit TEXT,
+				value REAL NOT NULL
+			)`,
+			`CREATE TABLE IF NOT EXISTS logs (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+				level TEXT NOT NULL,
+				module TEXT,
+				message TEXT NOT NULL
+			)`,
+			`CREATE INDEX IF NOT EXISTS idx_metrics_name_time ON metrics(name, timestamp)`,
+			`CREATE INDEX IF NOT EXISTS idx_logs_time ON logs(timestamp)`,
+			`CREATE TABLE IF NOT EXISTS events (
+				id TEXT PRIMARY KEY,
+				timestamp DATETIME NOT NULL,
+				category TEXT NOT NULL,
+				level TEXT NOT NULL,
+				title TEXT NOT NULL,
+				detail TEXT NOT NULL DEFAULT '',
+				module TEXT NOT NULL DEFAULT '',
+				related TEXT NOT NULL DEFAULT '',
+				metadata TEXT NOT NULL DEFAULT ''
+			)`,
+			`CREATE INDEX IF NOT EXISTS idx_events_time ON events(timestamp)`,
+			`CREATE INDEX IF NOT EXISTS idx_events_cat ON events(category, timestamp)`,
+			`CREATE TABLE IF NOT EXISTS alerts (
+				id TEXT PRIMARY KEY,
+				timestamp DATETIME NOT NULL,
+				level TEXT NOT NULL,
+				metric TEXT NOT NULL,
+				message TEXT NOT NULL,
+				value REAL NOT NULL,
+				threshold REAL NOT NULL,
+				resolved INTEGER NOT NULL DEFAULT 0,
+				resolved_at DATETIME
+			)`,
+			`CREATE INDEX IF NOT EXISTS idx_alerts_time ON alerts(timestamp)`,
+			`CREATE INDEX IF NOT EXISTS idx_alerts_metric ON alerts(metric)`,
+			`CREATE TABLE IF NOT EXISTS conversations (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				session_id TEXT NOT NULL,
+				role TEXT NOT NULL,
+				content TEXT NOT NULL,
+				timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+			)`,
+			`CREATE INDEX IF NOT EXISTS idx_conv_session ON conversations(session_id, timestamp)`,
+			`CREATE TABLE IF NOT EXISTS settings (
+				key TEXT PRIMARY KEY,
+				value TEXT NOT NULL,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			)`,
+			`CREATE TABLE IF NOT EXISTS forensics (
+				id TEXT PRIMARY KEY,
+				timestamp DATETIME NOT NULL,
+				type TEXT NOT NULL,
+				title TEXT NOT NULL,
+				data_json TEXT NOT NULL,
+				metadata TEXT
+			)`,
+			`CREATE TABLE IF NOT EXISTS reports (
+				id TEXT PRIMARY KEY,
+				timestamp DATETIME NOT NULL,
+				type TEXT NOT NULL,
+				score INTEGER NOT NULL,
+				data_json TEXT NOT NULL
+			)`,
+			`CREATE INDEX IF NOT EXISTS idx_reports_type_time ON reports(type, timestamp)`,
+			`CREATE TABLE IF NOT EXISTS baselines (
+				metric TEXT PRIMARY KEY,
+				avg REAL NOT NULL,
+				stddev REAL NOT NULL,
+				last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
+			)`,
+			`CREATE TABLE IF NOT EXISTS health_scores (
+				day DATE PRIMARY KEY,
+				score INTEGER NOT NULL,
+				timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+			)`,
+			`CREATE TABLE IF NOT EXISTS custom_workflows (
+				id TEXT PRIMARY KEY,
+				name TEXT NOT NULL,
+				description TEXT NOT NULL,
+				definition_json TEXT NOT NULL,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			)`,
+			`CREATE TABLE IF NOT EXISTS incidents (
+				id TEXT PRIMARY KEY,
+				timestamp DATETIME NOT NULL,
+				title TEXT NOT NULL,
+				details TEXT NOT NULL,
+				report_ids TEXT,
+				severity TEXT NOT NULL
+			)`,
+			`CREATE TABLE IF NOT EXISTS report_rules (
+				id TEXT PRIMARY KEY,
+				name TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				metric TEXT NOT NULL DEFAULT '',
+				condition TEXT NOT NULL DEFAULT 'GT',
+				threshold REAL NOT NULL DEFAULT 0,
+				report_type TEXT NOT NULL DEFAULT 'health',
+				schedule TEXT NOT NULL DEFAULT 'on_alert',
+				enabled INTEGER NOT NULL DEFAULT 1,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				last_triggered_at DATETIME
+			)`,
+			`CREATE TABLE IF NOT EXISTS decisions_audit (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+				session_id TEXT NOT NULL,
+				tool_name TEXT NOT NULL,
+				arguments_json TEXT NOT NULL,
+				context_snapshot TEXT NOT NULL,
+				approved INTEGER NOT NULL DEFAULT 0,
+				execution_result TEXT
+			)`,
+		}
+
+		for _, q := range queries {
+			if _, err := s.db.Exec(q); err != nil {
+				return fmt.Errorf("migration v1: %w", err)
+			}
 		}
 	}
+
+	// Version 2: Add composite index for log level + timestamp queries.
+	if currentVersion < 2 {
+		v2Queries := []string{
+			`INSERT OR IGNORE INTO schema_versions (version) VALUES (2)`,
+			`CREATE INDEX IF NOT EXISTS idx_logs_level_time ON logs(level, timestamp)`,
+		}
+		for _, q := range v2Queries {
+			if _, err := s.db.Exec(q); err != nil {
+				return fmt.Errorf("migration v2: %w", err)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -332,6 +410,18 @@ func (s *Storage) writerLoop() {
 		select {
 		case w, ok := <-s.metricsCh:
 			if !ok {
+				// Drain remaining log items before flushing
+				for i := 0; i < 1000; i++ {
+					select {
+					case l, ok2 := <-s.logsCh:
+						if !ok2 {
+							break
+						}
+						logsBatch = append(logsBatch, l)
+					default:
+						break
+					}
+				}
 				s.insertMetricsBatch(metricsBatch)
 				s.insertLogsBatch(logsBatch)
 				return
@@ -347,7 +437,18 @@ func (s *Storage) writerLoop() {
 
 		case l, ok := <-s.logsCh:
 			if !ok {
-				// Handled by metricsCh close usually, but for safety:
+				// Drain remaining metric items before flushing
+				for i := 0; i < 1000; i++ {
+					select {
+					case w, ok2 := <-s.metricsCh:
+						if !ok2 {
+							break
+						}
+						metricsBatch = append(metricsBatch, w)
+					default:
+						break
+					}
+				}
 				s.insertMetricsBatch(metricsBatch)
 				s.insertLogsBatch(logsBatch)
 				return
@@ -463,7 +564,7 @@ func (s *Storage) insertMetricsBatch(batch []MetricWrite) {
 
 	stmt := tx.Stmt(s.insertStmt)
 	for _, m := range batch {
-		if _, err := stmt.Exec(m.Name, m.Unit, m.Value, m.Time.UTC().Format(time.RFC3339)); err != nil {
+		if _, err := stmt.Exec(m.Name, m.Unit, m.Value, formatStorageTimestamp(m.Time)); err != nil {
 			LogInfo("Batch insert metric: %v", err)
 		}
 	}
@@ -495,7 +596,7 @@ func (s *Storage) insertLogsBatch(batch []LogWrite) {
 
 	query := `INSERT INTO logs (level, module, message, timestamp) VALUES (?, ?, ?, ?)`
 	for _, l := range batch {
-		if _, err := tx.Exec(query, l.Level, l.Module, l.Message, l.Time.UTC().Format(time.RFC3339)); err != nil {
+		if _, err := tx.Exec(query, l.Level, l.Module, l.Message, formatStorageTimestamp(l.Time)); err != nil {
 			LogInfo("Batch insert log: %v", err)
 		}
 	}
@@ -599,10 +700,10 @@ func (s *Storage) InsertMetric(name, unit string, value float64) error {
 
 	w := MetricWrite{Name: name, Unit: unit, Value: value, Time: time.Now()}
 
-	// PERFORMANCE FIX: Reduced timeout from 500ms to 10ms.
-	// A monitoring app should NEVER block the caller (like the UI or high-freq collector)
-	// if the background persistence layer is backed up. Data freshness > History.
-	timer := time.NewTimer(10 * time.Millisecond)
+	// PERFORMANCE FIX: Increased timeout from 10ms to 50ms.
+	// A monitoring app should NEVER block the caller indefinitely, but 10ms
+	// is too aggressive for SQLite WAL writes on standard workstation HDDs/SSDs under load.
+	timer := time.NewTimer(50 * time.Millisecond)
 	defer timer.Stop()
 
 	select {
@@ -668,12 +769,12 @@ func (s *Storage) GetMetricHistoryWithTimestamps(name string, limit int) ([]Metr
 		if err := rows.Scan(&tsRaw, &p.Value); err != nil {
 			return nil, err
 		}
-		// Parse timestamp from SQLite (usually ISO8601 or YYYY-MM-DD HH:MM:SS)
-		if t, err := time.Parse("2006-01-02 15:04:05", tsRaw); err == nil {
-			p.Timestamp = t
-		} else if t, err := time.Parse(time.RFC3339, tsRaw); err == nil {
-			p.Timestamp = t
+		// Parse timestamp from SQLite (canonical RFC3339 or legacy format)
+		t, err := parseStorageTimestamp(tsRaw)
+		if err != nil {
+			return nil, fmt.Errorf("parse metric timestamp %q: %w", tsRaw, err)
 		}
+		p.Timestamp = t
 		points = append(points, p)
 	}
 
@@ -691,6 +792,8 @@ func (s *Storage) GetMetricHistoryWithTimestamps(name string, limit int) ([]Metr
 // ── Logs CRUD ───────────────────────────────────────────────────────────────
 
 // InsertLog enqueues a log entry for asynchronous batch write.
+// Uses a 50ms timeout to avoid blocking the caller under load, matching
+// the InsertMetric pattern.
 func (s *Storage) InsertLog(level, module, message string) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -705,12 +808,21 @@ func (s *Storage) InsertLog(level, module, message string) error {
 		Time:    time.Now(),
 	}
 
+	timer := time.NewTimer(50 * time.Millisecond)
+	defer timer.Stop()
+
 	select {
 	case s.logsCh <- l:
 		return nil
-	default:
-		// Channel full — drop log to avoid blocking
-		return fmt.Errorf("logs queue full")
+	case <-timer.C:
+		// Channel full after timeout — drop log and warn periodically
+		lastDropLogMu.Lock()
+		if time.Since(lastDropLog) > 10*time.Second {
+			lastDropLog = time.Now()
+			LogWarn("InsertLog: logs queue backed up, dropping entry (level=%s). WORKSTATION DISK I/O IS SATURATED.", level)
+		}
+		lastDropLogMu.Unlock()
+		return fmt.Errorf("queue full")
 	}
 }
 
@@ -748,11 +860,9 @@ func (s *Storage) QueryLogs(level, search string, limit int) ([]LogEntryData, er
 		if module.Valid {
 			e.Module = module.String
 		}
-		var t time.Time
-		if parsed, err := time.Parse("2006-01-02 15:04:05", tsRaw); err == nil {
-			t = parsed
-		} else if parsed, err := time.Parse(time.RFC3339, tsRaw); err == nil {
-			t = parsed
+		t, err := parseStorageTimestamp(tsRaw)
+		if err != nil {
+			return nil, fmt.Errorf("parse log timestamp %q: %w", tsRaw, err)
 		}
 		e.Timestamp = t.Format("2006/01/02 15:04:05")
 		entries = append(entries, e)
@@ -784,7 +894,7 @@ type TrendingLogError struct {
 // CountLogsAfter returns the number of log entries after the given time.
 func (s *Storage) CountLogsAfter(t time.Time) int {
 	var count int
-	s.db.QueryRow(`SELECT COUNT(*) FROM logs WHERE timestamp >= ?`, t).Scan(&count)
+	s.db.QueryRow(`SELECT COUNT(*) FROM logs WHERE timestamp >= ?`, formatStorageTimestamp(t)).Scan(&count)
 	return count
 }
 
@@ -827,7 +937,7 @@ func (s *Storage) TopLogSources(limit int) ([]SourceCount, error) {
 // CountLogsByLevelInRange returns the count of logs with the given level within a time range.
 func (s *Storage) CountLogsByLevelInRange(level string, from, to time.Time) int {
 	var count int
-	s.db.QueryRow(`SELECT COUNT(*) FROM logs WHERE level = ? AND timestamp >= ? AND timestamp < ?`, level, from, to).Scan(&count)
+	s.db.QueryRow(`SELECT COUNT(*) FROM logs WHERE level = ? AND timestamp >= ? AND timestamp < ?`, level, formatStorageTimestamp(from), formatStorageTimestamp(to)).Scan(&count)
 	return count
 }
 
@@ -860,7 +970,7 @@ func (s *Storage) QueryLogTimeline(hours int) ([]LogTimelineBucket, error) {
 			SUM(CASE WHEN level = 'WARN' THEN 1 ELSE 0 END) as warnings,
 			SUM(CASE WHEN level = 'INFO' THEN 1 ELSE 0 END) as info
 		FROM logs
-		WHERE timestamp > datetime('now', ?)
+		WHERE datetime(timestamp) > datetime('now', ?)
 		GROUP BY bucket
 		ORDER BY bucket ASC
 	`, bucketExpr)
@@ -913,11 +1023,11 @@ func (s *Storage) TrendingLogErrors(limit int) ([]TrendingLogError, error) {
 		if err := rows.Scan(&te.Message, &te.Count, &tsRaw); err != nil {
 			return nil, err
 		}
-		if t, err := time.Parse("2006-01-02 15:04:05", tsRaw); err == nil {
-			te.LastSeen = t
-		} else if t, err := time.Parse(time.RFC3339, tsRaw); err == nil {
-			te.LastSeen = t
+		t, err := parseStorageTimestamp(tsRaw)
+		if err != nil {
+			return nil, fmt.Errorf("parse trending timestamp %q: %w", tsRaw, err)
 		}
+		te.LastSeen = t
 		results = append(results, te)
 	}
 	if results == nil {
@@ -926,33 +1036,60 @@ func (s *Storage) TrendingLogErrors(limit int) ([]TrendingLogError, error) {
 	return results, nil
 }
 
-// Prune removes data older than the given duration. Covers every
-// timestamped table, including alerts and conversations which were
-// previously left out and grew unbounded (M5).
+// Prune removes data older than the given duration.
+// PERFORMANCE FIX: Uses batched deletes to prevent long-held SQLite locks.
 func (s *Storage) Prune(olderThan time.Duration) {
-	cutoff := time.Now().Add(-olderThan)
-	tx, err := s.db.Begin()
-	if err != nil {
-		LogWarn("Prune tx begin failed: %v", err)
-		return
-	}
-	defer tx.Rollback()
+	cutoff := formatStorageTimestamp(time.Now().Add(-olderThan))
 
-	tx.Exec(`DELETE FROM metrics WHERE timestamp < ?`, cutoff)
-	tx.Exec(`DELETE FROM logs WHERE timestamp < ?`, cutoff)
-	tx.Exec(`DELETE FROM events WHERE timestamp < ?`, cutoff)
-	tx.Exec(`DELETE FROM alerts WHERE timestamp < ? AND resolved = 1`, cutoff)
-	tx.Exec(`DELETE FROM conversations WHERE timestamp < ?`, cutoff)
-	tx.Exec(`DELETE FROM forensics WHERE timestamp < ?`, cutoff)
-	tx.Exec(`DELETE FROM reports WHERE timestamp < ?`, cutoff)
-	tx.Exec(`DELETE FROM incidents WHERE timestamp < ?`, cutoff)
-	tx.Exec(`DELETE FROM health_scores WHERE timestamp < ?`, cutoff)
+	tables := []string{"metrics", "logs", "events", "conversations", "forensics", "reports", "incidents", "health_scores", "alerts"}
 
-	if err := tx.Commit(); err != nil {
-		LogWarn("Prune tx commit failed: %v", err)
-		return
+	for _, table := range tables {
+		// Specific condition for alerts (only prune resolved ones)
+		condition := "timestamp < ?"
+		if table == "alerts" {
+			condition = "timestamp < ? AND resolved = 1"
+		}
+
+		for {
+			// Select 5000 IDs to delete
+			var ids []interface{}
+			query := fmt.Sprintf("SELECT id FROM %s WHERE %s LIMIT 5000", table, condition)
+			rows, err := s.db.Query(query, cutoff)
+			if err != nil {
+				LogWarn("Prune: failed to query %s: %v", table, err)
+				break
+			}
+			for rows.Next() {
+				var id interface{}
+				if err := rows.Scan(&id); err == nil {
+					ids = append(ids, id)
+				}
+			}
+			rows.Close()
+
+			if len(ids) == 0 {
+				break
+			}
+
+			// Delete this batch
+			placeholders := make([]string, len(ids))
+			for i := range ids {
+				placeholders[i] = "?"
+			}
+
+			deleteQuery := fmt.Sprintf("DELETE FROM %s WHERE id IN (%s)", table, strings.Join(placeholders, ","))
+			_, err = s.db.Exec(deleteQuery, ids...)
+			if err != nil {
+				LogWarn("Prune: failed to delete batch from %s: %v", table, err)
+				break
+			}
+
+			// Yield to other writers
+			time.Sleep(100 * time.Millisecond)
+		}
 	}
-	LogInfo("Retention policy applied: Pruned data older than %v", olderThan)
+
+	LogInfo("Retention policy applied: Batch pruned data older than %v", olderThan)
 }
 
 // ── Events CRUD ────────────────────────────────────────────────────────────────
@@ -985,7 +1122,7 @@ func (s *Storage) InsertEvent(evt TimelineEvent, tx *sql.Tx) error {
 
 	_, err := s.getDB(tx).Exec(
 		`INSERT OR IGNORE INTO events (id, timestamp, category, level, title, detail, module, related, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		evt.ID, evt.Timestamp.UTC().Format(time.RFC3339), string(evt.Category), evt.Level.String(), evt.Title, evt.Detail, evt.Module, related, metaJSON,
+		evt.ID, formatStorageTimestamp(evt.Timestamp), string(evt.Category), evt.Level.String(), evt.Title, evt.Detail, evt.Module, related, metaJSON,
 	)
 	if err != nil {
 		LogWarn("InsertEvent failed: %v", err)
@@ -1023,11 +1160,11 @@ func (s *Storage) QueryEvents(category string, level string, limit int, offset i
 		if err := rows.Scan(&e.ID, &tsRaw, &cat, &lvl, &e.Title, &e.Detail, &e.Module, &related, &metaJSON); err != nil {
 			return nil, err
 		}
-		if t, err := time.Parse("2006-01-02 15:04:05", tsRaw); err == nil {
-			e.Timestamp = t
-		} else if t, err := time.Parse(time.RFC3339, tsRaw); err == nil {
-			e.Timestamp = t
+		t, err := parseStorageTimestamp(tsRaw)
+		if err != nil {
+			return nil, fmt.Errorf("parse event timestamp %q: %w", tsRaw, err)
 		}
+		e.Timestamp = t
 		e.Category = EventCategory(cat)
 		switch lvl {
 		case "warning":
@@ -1063,11 +1200,11 @@ func (s *Storage) GetEventByID(id string) (*TimelineEvent, error) {
 		}
 		return nil, err
 	}
-	if t, err := time.Parse("2006-01-02 15:04:05", tsRaw); err == nil {
-		e.Timestamp = t
-	} else if t, err := time.Parse(time.RFC3339, tsRaw); err == nil {
-		e.Timestamp = t
+	t, err := parseStorageTimestamp(tsRaw)
+	if err != nil {
+		return nil, fmt.Errorf("parse event timestamp %q: %w", tsRaw, err)
 	}
+	e.Timestamp = t
 	e.Category = EventCategory(cat)
 	switch lvl {
 	case "warning":
@@ -1153,12 +1290,12 @@ func (s *Storage) InsertAlert(a AlertRecord, tx *sql.Tx) error {
 
 	resolvedAt := interface{}(nil)
 	if a.ResolvedAt != nil {
-		resolvedAt = a.ResolvedAt.UTC().Format(time.RFC3339)
+		resolvedAt = formatStorageTimestamp(*a.ResolvedAt)
 	}
 
 	_, err := s.getDB(tx).Exec(
 		`INSERT OR REPLACE INTO alerts (id, timestamp, level, metric, message, value, threshold, resolved, resolved_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		a.ID, a.Timestamp.UTC().Format(time.RFC3339), a.Level, a.Metric, a.Message, a.Value, a.Threshold, boolToInt(a.Resolved), resolvedAt,
+		a.ID, formatStorageTimestamp(a.Timestamp), a.Level, a.Metric, a.Message, a.Value, a.Threshold, boolToInt(a.Resolved), resolvedAt,
 	)
 	if err != nil {
 		LogWarn("InsertAlert failed: %v", err)
@@ -1177,7 +1314,7 @@ func (s *Storage) UpdateAlertResolved(id string, tx *sql.Tx) error {
 	}
 	_, err := s.getDB(tx).Exec(
 		`UPDATE alerts SET resolved = 1, resolved_at = ? WHERE id = ?`,
-		time.Now(), id,
+		formatStorageTimestamp(time.Now()), id,
 	)
 	return err
 }
@@ -1205,11 +1342,11 @@ func (s *Storage) QueryAlertHistory(limit int) ([]AlertRecord, error) {
 		if err := rows.Scan(&a.ID, &tsRaw, &a.Level, &a.Metric, &a.Message, &a.Value, &a.Threshold, &resolved, &resolvedAt); err != nil {
 			return nil, err
 		}
-		if t, err := time.Parse("2006-01-02 15:04:05", tsRaw); err == nil {
-			a.Timestamp = t
-		} else if t, err := time.Parse(time.RFC3339, tsRaw); err == nil {
-			a.Timestamp = t
+		t, err := parseStorageTimestamp(tsRaw)
+		if err != nil {
+			return nil, fmt.Errorf("parse alert timestamp %q: %w", tsRaw, err)
 		}
+		a.Timestamp = t
 		a.Resolved = resolved != 0
 		if resolvedAt.Valid {
 			a.ResolvedAt = &resolvedAt.Time
@@ -1237,7 +1374,7 @@ type ConversationMessage struct {
 func (s *Storage) InsertMessage(sessionID, role, content string) error {
 	_, err := s.db.Exec(
 		`INSERT INTO conversations (session_id, role, content, timestamp) VALUES (?, ?, ?, ?)`,
-		sessionID, role, content, time.Now().UTC().Format(time.RFC3339),
+		sessionID, role, content, formatStorageTimestamp(time.Now()),
 	)
 	return err
 }
@@ -1260,11 +1397,11 @@ func (s *Storage) GetMessages(sessionID string) ([]ConversationMessage, error) {
 		if err := rows.Scan(&m.ID, &m.SessionID, &m.Role, &m.Content, &tsRaw); err != nil {
 			return nil, err
 		}
-		if t, err := time.Parse("2006-01-02 15:04:05", tsRaw); err == nil {
-			m.Timestamp = t
-		} else if t, err := time.Parse(time.RFC3339, tsRaw); err == nil {
-			m.Timestamp = t
+		t, err := parseStorageTimestamp(tsRaw)
+		if err != nil {
+			return nil, fmt.Errorf("parse message timestamp %q: %w", tsRaw, err)
 		}
+		m.Timestamp = t
 		msgs = append(msgs, m)
 	}
 	if msgs == nil {
@@ -1294,9 +1431,8 @@ func (s *Storage) ListSessions() ([]map[string]interface{}, error) {
 		}
 		var lastActive time.Time
 		if lastActiveStr != nil {
-			if t, err := time.Parse("2006-01-02 15:04:05", *lastActiveStr); err == nil {
-				lastActive = t
-			} else if t, err := time.Parse(time.RFC3339, *lastActiveStr); err == nil {
+			t, err := parseStorageTimestamp(*lastActiveStr)
+			if err == nil {
 				lastActive = t
 			}
 		}
@@ -1631,17 +1767,17 @@ func (s *Storage) ListSettings() (map[string]string, error) {
 
 // AutoReportRule defines a rule that auto-generates a report when triggered.
 type AutoReportRule struct {
-	ID             string     `json:"id"`
-	Name           string     `json:"name"`
-	Description    string     `json:"description"`
-	Metric         string     `json:"metric"`
-	Condition      string     `json:"condition"` // "GT", "LT"
-	Threshold      float64    `json:"threshold"`
-	ReportType     string     `json:"report_type"` // "health", "security", "auto_diag"
-	Schedule       string     `json:"schedule"`    // "on_alert", "hourly", "daily"
-	Enabled        bool       `json:"enabled"`
-	CreatedAt      string     `json:"created_at"`
-	LastTriggeredAt *string   `json:"last_triggered_at,omitempty"`
+	ID              string  `json:"id"`
+	Name            string  `json:"name"`
+	Description     string  `json:"description"`
+	Metric          string  `json:"metric"`
+	Condition       string  `json:"condition"` // "GT", "LT"
+	Threshold       float64 `json:"threshold"`
+	ReportType      string  `json:"report_type"` // "health", "security", "auto_diag"
+	Schedule        string  `json:"schedule"`    // "on_alert", "hourly", "daily"
+	Enabled         bool    `json:"enabled"`
+	CreatedAt       string  `json:"created_at"`
+	LastTriggeredAt *string `json:"last_triggered_at,omitempty"`
 }
 
 // InsertReportRule stores a new auto-report rule.
@@ -1718,6 +1854,16 @@ func (s *Storage) DeleteReportRule(id string) error {
 // TouchReportRule updates the last_triggered_at timestamp for a rule.
 func (s *Storage) TouchReportRule(id string) error {
 	_, err := s.db.Exec(`UPDATE report_rules SET last_triggered_at = CURRENT_TIMESTAMP WHERE id = ?`, id)
+	return err
+}
+
+// LogDecision records an AI-driven decision or tool call for DORA/EU AI Act compliance.
+func (s *Storage) LogDecision(sessionID, toolName, argsJSON, contextSnapshot string, approved bool) error {
+	_, err := s.db.Exec(
+		`INSERT INTO decisions_audit (session_id, tool_name, arguments_json, context_snapshot, approved)
+		 VALUES (?, ?, ?, ?, ?)`,
+		sessionID, toolName, argsJSON, contextSnapshot, boolToInt(approved),
+	)
 	return err
 }
 
