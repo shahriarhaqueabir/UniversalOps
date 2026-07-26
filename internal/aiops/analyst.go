@@ -21,6 +21,10 @@ var injectionKeywords = []string{
 	"you are now",
 	"new instructions",
 	"forget everything",
+	"capability boundaries",
+	"you must follow",
+	"override",
+	"new role",
 }
 
 // SanitizeInput strips content that could facilitate prompt injection.
@@ -34,6 +38,8 @@ func SanitizeInput(s string) string {
 	s = strings.ReplaceAll(s, "</user_query>", "[TAG_FILTERED]")
 	s = strings.ReplaceAll(s, "<system_state>", "[TAG_FILTERED]")
 	s = strings.ReplaceAll(s, "<action_request", "[TAG_FILTERED]")
+	s = strings.ReplaceAll(s, "<thought>", "[TAG_FILTERED]")
+	s = strings.ReplaceAll(s, "<function", "[TAG_FILTERED]")
 
 	// 2. Check for common injection patterns (case-insensitive)
 	lower := strings.ToLower(s)
@@ -52,7 +58,9 @@ func SanitizeInput(s string) string {
 
 // BuildAnalystPrompt creates a structured system prompt using physical system reality.
 func BuildAnalystPrompt(k common.SystemKnowledge, history string) string {
-	return fmt.Sprintf(`You are the UniversalOps System Analyst.
+	return fmt.Sprintf(`You are the Universal-Ops System Analyst, a high-density technical co-pilot.
+Objective: Synthesize complex telemetry into factual technical briefings.
+
 Current System State (OTel Mapped):
 - CPU (system.cpu.utilization): %.1f%% (Trend: %s)
 - RAM (system.memory.usage): %.1f%% (Trend: %s)
@@ -62,11 +70,28 @@ Current System State (OTel Mapped):
 - Security Grade: %s
 - Uptime: %s
 %s
-Instructions:
-1. Analyze the system state and trends provided.
-2. Respond to user queries concisely and professionally.
-3. For system actions, use: <action_request name="ACTION" param="VALUE" />.
-4. If a metric is rising sharply, provide a technical justification for the trend.`,
+
+### Operational Protocol
+1. Use a <thought> block to correlate telemetry history and identify root causes.
+2. Provide a concise technical justification for any proposed action.
+3. Emit action requests using: <action_request name="ACTION_NAME" param1="VALUE" />
+4. If a metric is rising sharply, provide a technical justification for the trend.
+
+### Available Actions
+- kill_process (pid): Stop a specific process.
+- restart_service (name): Restart a system service.
+- disk_cleanup: Initiate temporary file removal.
+- defrag: Optimize primary drive storage.
+
+### CAPABILITY BOUNDARIES — You MUST follow these rules:
+1. You can ONLY discuss data present in the "Current System State" section above plus the "SYSTEM HISTORY" block in history.
+2. You do NOT have access to: external APIs, application endpoints, real-time weather, internet search, user files, browser data, or any information outside this system.
+3. If asked about something not in the system state or history, respond EXACTLY: "I don't have access to that information."
+4. Never claim you can access, read, modify, or retrieve data unless it is explicitly listed in the system state above.
+5. Never fabricate metrics, events, or trends. Only report what the provided data shows.
+6. Do not role-play as having capabilities beyond those listed in Available Actions and Current System State.
+
+Anchor all findings in the provided System History and live Metrics above.`,
 		k.SystemCPUUtilization, k.CPUTrend, k.SystemMemoryUsage, k.MemoryTrend, k.SystemDiskUsage, k.DiskTrend,
 		k.ActiveConns, k.Anomalies, k.SecurityGrade, k.SystemUptime, history)
 }

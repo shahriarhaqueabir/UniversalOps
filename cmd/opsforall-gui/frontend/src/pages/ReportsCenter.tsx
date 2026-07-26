@@ -89,6 +89,16 @@ export function ReportsCenter() {
     refetchInterval: 15_000,
   })
 
+  // Fetch the full report (with data_json) when a report is selected for detail view
+  const { data: fullReport } = useQuery<ReportRecord | null>({
+    queryKey: ['report', selectedReport?.id],
+    queryFn: async () => {
+      if (!selectedReport?.id) return null
+      return (await call('ReportsAPI.GetReport', selectedReport.id)) as ReportRecord | null
+    },
+    enabled: !!selectedReport?.id && showDetail,
+  })
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const ok = await call('ReportsAPI.DeleteReport', id)
@@ -764,10 +774,12 @@ export function ReportsCenter() {
                   <div className="p-4 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)] overflow-x-auto">
                     <pre className="text-[10px] leading-relaxed text-[var(--color-text-dim)] font-mono whitespace-pre-wrap max-h-[400px] overflow-y-auto">
                       {(() => {
+                        const raw = fullReport?.data_json ?? selectedReport?.data_json ?? ''
+                        if (!raw) return 'No data available'
                         try {
-                          return JSON.stringify(JSON.parse(selectedReport.data_json || '{}'), null, 2)
+                          return JSON.stringify(JSON.parse(raw), null, 2)
                         } catch {
-                          return selectedReport.data_json || 'No data available'
+                          return raw
                         }
                       })()}
                     </pre>

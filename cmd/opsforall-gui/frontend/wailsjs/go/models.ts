@@ -927,6 +927,145 @@ export namespace app {
 		}
 	}
 	
+	export class DoHResultData {
+	    server: string;
+	    latency_ms: number;
+	    success: boolean;
+	    resolved_ip: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DoHResultData(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.server = source["server"];
+	        this.latency_ms = source["latency_ms"];
+	        this.success = source["success"];
+	        this.resolved_ip = source["resolved_ip"];
+	    }
+	}
+	export class DockerActionResult {
+	    action: string;
+	    message: string;
+	    success: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new DockerActionResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.action = source["action"];
+	        this.message = source["message"];
+	        this.success = source["success"];
+	    }
+	}
+	export class DockerComposeService {
+	    name: string;
+	    state: string;
+	    ports: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DockerComposeService(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.state = source["state"];
+	        this.ports = source["ports"];
+	    }
+	}
+	export class DockerComposeProject {
+	    project: string;
+	    status: string;
+	    work_dir: string;
+	    services: DockerComposeService[];
+	
+	    static createFrom(source: any = {}) {
+	        return new DockerComposeProject(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.project = source["project"];
+	        this.status = source["status"];
+	        this.work_dir = source["work_dir"];
+	        this.services = this.convertValues(source["services"], DockerComposeService);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	export class DockerNetworkInfo {
+	    id: string;
+	    name: string;
+	    driver: string;
+	    scope: string;
+	    subnet: string;
+	    gateway: string;
+	    containers: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DockerNetworkInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.driver = source["driver"];
+	        this.scope = source["scope"];
+	        this.subnet = source["subnet"];
+	        this.gateway = source["gateway"];
+	        this.containers = source["containers"];
+	    }
+	}
+	export class DockerStatsEntry {
+	    container_id: string;
+	    name: string;
+	    cpu_percent: string;
+	    memory_usage: string;
+	    memory_limit: string;
+	    memory_percent: string;
+	    net_io: string;
+	    block_io: string;
+	    pid_count: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DockerStatsEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.container_id = source["container_id"];
+	        this.name = source["name"];
+	        this.cpu_percent = source["cpu_percent"];
+	        this.memory_usage = source["memory_usage"];
+	        this.memory_limit = source["memory_limit"];
+	        this.memory_percent = source["memory_percent"];
+	        this.net_io = source["net_io"];
+	        this.block_io = source["block_io"];
+	        this.pid_count = source["pid_count"];
+	    }
+	}
 	export class DockerStatus {
 	    installed: boolean;
 	    running: boolean;
@@ -962,6 +1101,24 @@ export namespace app {
 		    }
 		    return a;
 		}
+	}
+	export class DockerVolumeInfo {
+	    driver: string;
+	    name: string;
+	    mountpoint: string;
+	    size: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DockerVolumeInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.driver = source["driver"];
+	        this.name = source["name"];
+	        this.mountpoint = source["mountpoint"];
+	        this.size = source["size"];
+	    }
 	}
 	export class EnvReport {
 	    hostname: string;
@@ -1206,6 +1363,22 @@ export namespace app {
 	    }
 	}
 	
+	export class GatewayInfo {
+	    ip: string;
+	    interface: string;
+	    reachable: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new GatewayInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ip = source["ip"];
+	        this.interface = source["interface"];
+	        this.reachable = source["reachable"];
+	    }
+	}
 	
 	export class HardeningCheck {
 	    category: string;
@@ -1319,6 +1492,100 @@ export namespace app {
 	        this.tx_rate_bps = source["tx_rate_bps"];
 	        this.rx_history = source["rx_history"];
 	        this.tx_history = source["tx_history"];
+	    }
+	}
+	export class K8sActionResult {
+	    action: string;
+	    message: string;
+	    success: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new K8sActionResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.action = source["action"];
+	        this.message = source["message"];
+	        this.success = source["success"];
+	    }
+	}
+	export class K8sEvent {
+	    last_seen: string;
+	    type: string;
+	    reason: string;
+	    object: string;
+	    message: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new K8sEvent(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.last_seen = source["last_seen"];
+	        this.type = source["type"];
+	        this.reason = source["reason"];
+	        this.object = source["object"];
+	        this.message = source["message"];
+	    }
+	}
+	export class K8sNamespaceInfo {
+	    name: string;
+	    status: string;
+	    age: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new K8sNamespaceInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.status = source["status"];
+	        this.age = source["age"];
+	    }
+	}
+	export class K8sResourceItem {
+	    name: string;
+	    namespace: string;
+	    status: string;
+	    age: string;
+	    details: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new K8sResourceItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.namespace = source["namespace"];
+	        this.status = source["status"];
+	        this.age = source["age"];
+	        this.details = source["details"];
+	    }
+	}
+	export class K8sRolloutStatus {
+	    name: string;
+	    kind: string;
+	    ready: boolean;
+	    replicas: string;
+	    updated: string;
+	    available: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new K8sRolloutStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.kind = source["kind"];
+	        this.ready = source["ready"];
+	        this.replicas = source["replicas"];
+	        this.updated = source["updated"];
+	        this.available = source["available"];
 	    }
 	}
 	export class KubernetesStatus {
@@ -1765,6 +2032,66 @@ export namespace app {
 		    return a;
 		}
 	}
+	export class NetOpsFirewallRuleData {
+	    name: string;
+	    direction: string;
+	    action: string;
+	    protocol: string;
+	    ports: string;
+	    enabled: boolean;
+	    source: string;
+	    destination: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new NetOpsFirewallRuleData(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.direction = source["direction"];
+	        this.action = source["action"];
+	        this.protocol = source["protocol"];
+	        this.ports = source["ports"];
+	        this.enabled = source["enabled"];
+	        this.source = source["source"];
+	        this.destination = source["destination"];
+	    }
+	}
+	export class NetworkActionResult {
+	    action: string;
+	    message: string;
+	    success: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new NetworkActionResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.action = source["action"];
+	        this.message = source["message"];
+	        this.success = source["success"];
+	    }
+	}
+	export class NetworkChange {
+	    type: string;
+	    interface: string;
+	    detail: string;
+	    timestamp: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new NetworkChange(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.type = source["type"];
+	        this.interface = source["interface"];
+	        this.detail = source["detail"];
+	        this.timestamp = source["timestamp"];
+	    }
+	}
 	export class NetworkHealthCheck {
 	    name: string;
 	    status: string;
@@ -1820,6 +2147,22 @@ export namespace app {
 		}
 	}
 	
+	export class NetworkSummary {
+	    summaryText: string;
+	    topInterface: string;
+	    issues: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new NetworkSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.summaryText = source["summaryText"];
+	        this.topInterface = source["topInterface"];
+	        this.issues = source["issues"];
+	    }
+	}
 	export class OllamaStatus {
 	    available: boolean;
 	    binary_exists: boolean;
@@ -2852,6 +3195,28 @@ export namespace app {
 	        this.last_logon = source["last_logon"];
 	    }
 	}
+	export class VPNStatusData {
+	    active: boolean;
+	    type: string;
+	    interface: string;
+	    remote_ip: string;
+	    local_ip: string;
+	    protocol: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new VPNStatusData(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.active = source["active"];
+	        this.type = source["type"];
+	        this.interface = source["interface"];
+	        this.remote_ip = source["remote_ip"];
+	        this.local_ip = source["local_ip"];
+	        this.protocol = source["protocol"];
+	    }
+	}
 
 }
 
@@ -3067,6 +3432,36 @@ export namespace common {
 	        this.error = source["error"];
 	    }
 	}
+	export class SystemKnowledge {
+	    "system.cpu.utilization": number;
+	    cpu_trend: string;
+	    "system.memory.usage": number;
+	    memory_trend: string;
+	    "system.disk.usage": number;
+	    disk_trend: string;
+	    active_conns: number;
+	    anomalies: number;
+	    "system.uptime": string;
+	    security_grade: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SystemKnowledge(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this["system.cpu.utilization"] = source["system.cpu.utilization"];
+	        this.cpu_trend = source["cpu_trend"];
+	        this["system.memory.usage"] = source["system.memory.usage"];
+	        this.memory_trend = source["memory_trend"];
+	        this["system.disk.usage"] = source["system.disk.usage"];
+	        this.disk_trend = source["disk_trend"];
+	        this.active_conns = source["active_conns"];
+	        this.anomalies = source["anomalies"];
+	        this["system.uptime"] = source["system.uptime"];
+	        this.security_grade = source["security_grade"];
+	    }
+	}
 	export class WorkflowDefinition {
 	    id: string;
 	    name: string;
@@ -3110,6 +3505,149 @@ export namespace common {
 		    }
 		    return a;
 		}
+	}
+
+}
+
+export namespace netops {
+	
+	export class ARPEntry {
+	    ip: string;
+	    mac: string;
+	    vendor: string;
+	    interface: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ARPEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ip = source["ip"];
+	        this.mac = source["mac"];
+	        this.vendor = source["vendor"];
+	        this.interface = source["interface"];
+	    }
+	}
+	export class DiscoveredDevice {
+	    ip: string;
+	    mac: string;
+	    vendor: string;
+	    hostname: string;
+	    response_time_ms: number;
+	    is_gateway: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new DiscoveredDevice(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ip = source["ip"];
+	        this.mac = source["mac"];
+	        this.vendor = source["vendor"];
+	        this.hostname = source["hostname"];
+	        this.response_time_ms = source["response_time_ms"];
+	        this.is_gateway = source["is_gateway"];
+	    }
+	}
+	export class DiscoveryResult {
+	    devices: DiscoveredDevice[];
+	    subnet: string;
+	    scan_time_ms: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DiscoveryResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.devices = this.convertValues(source["devices"], DiscoveredDevice);
+	        this.subnet = source["subnet"];
+	        this.scan_time_ms = source["scan_time_ms"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class RouteEntry {
+	    destination: string;
+	    mask: string;
+	    gateway: string;
+	    interface: string;
+	    metric: number;
+	    is_default: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new RouteEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.destination = source["destination"];
+	        this.mask = source["mask"];
+	        this.gateway = source["gateway"];
+	        this.interface = source["interface"];
+	        this.metric = source["metric"];
+	        this.is_default = source["is_default"];
+	    }
+	}
+	export class WiFiInfo {
+	    interface: string;
+	    ssid: string;
+	    signal: number;
+	    speed: string;
+	    channel: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new WiFiInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.interface = source["interface"];
+	        this.ssid = source["ssid"];
+	        this.signal = source["signal"];
+	        this.speed = source["speed"];
+	        this.channel = source["channel"];
+	    }
+	}
+	export class WiFiNetwork {
+	    ssid: string;
+	    signal: number;
+	    channel: number;
+	    security: string;
+	    bssid: string;
+	    frequency: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new WiFiNetwork(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ssid = source["ssid"];
+	        this.signal = source["signal"];
+	        this.channel = source["channel"];
+	        this.security = source["security"];
+	        this.bssid = source["bssid"];
+	        this.frequency = source["frequency"];
+	    }
 	}
 
 }
