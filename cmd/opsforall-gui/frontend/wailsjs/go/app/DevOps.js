@@ -6,6 +6,30 @@ export function ControlService(arg1, arg2) {
   return window['go']['app']['DevOps']['ControlService'](arg1, arg2);
 }
 
+export function DockerComposeList() {
+  return window['go']['app']['DevOps']['DockerComposeList']();
+}
+
+export function DockerKill(arg1) {
+  return window['go']['app']['DevOps']['DockerKill'](arg1);
+}
+
+export function DockerPause(arg1) {
+  return window['go']['app']['DevOps']['DockerPause'](arg1);
+}
+
+export function DockerPrune() {
+  return window['go']['app']['DevOps']['DockerPrune']();
+}
+
+export function DockerRename(arg1, arg2) {
+  return window['go']['app']['DevOps']['DockerRename'](arg1, arg2);
+}
+
+export function DockerUnpause(arg1) {
+  return window['go']['app']['DevOps']['DockerUnpause'](arg1);
+}
+
 export function GetAISuggestions() {
   return window['go']['app']['DevOps']['GetAISuggestions']();
 }
@@ -22,8 +46,20 @@ export function GetDevProcesses() {
   return window['go']['app']['DevOps']['GetDevProcesses']();
 }
 
+export function GetDockerNetworks() {
+  return window['go']['app']['DevOps']['GetDockerNetworks']();
+}
+
+export function GetDockerStats() {
+  return window['go']['app']['DevOps']['GetDockerStats']();
+}
+
 export function GetDockerStatus() {
   return window['go']['app']['DevOps']['GetDockerStatus']();
+}
+
+export function GetDockerVolumes() {
+  return window['go']['app']['DevOps']['GetDockerVolumes']();
 }
 
 export function GetEnvironment() {
@@ -32,6 +68,30 @@ export function GetEnvironment() {
 
 export function GetInstalledTools() {
   return window['go']['app']['DevOps']['GetInstalledTools']();
+}
+
+export function GetK8sDeployments(arg1) {
+  return window['go']['app']['DevOps']['GetK8sDeployments'](arg1);
+}
+
+export function GetK8sEvents(arg1, arg2) {
+  return window['go']['app']['DevOps']['GetK8sEvents'](arg1, arg2);
+}
+
+export function GetK8sNamespaces() {
+  return window['go']['app']['DevOps']['GetK8sNamespaces']();
+}
+
+export function GetK8sPods(arg1) {
+  return window['go']['app']['DevOps']['GetK8sPods'](arg1);
+}
+
+export function GetK8sRollouts(arg1) {
+  return window['go']['app']['DevOps']['GetK8sRollouts'](arg1);
+}
+
+export function GetK8sServices(arg1) {
+  return window['go']['app']['DevOps']['GetK8sServices'](arg1);
 }
 
 export function GetKubernetesStatus() {
@@ -52,6 +112,14 @@ export function GetServiceGroupSummary() {
 
 export function GetServices() {
   return window['go']['app']['DevOps']['GetServices']();
+}
+
+export function K8sRestartDeployment(arg1, arg2) {
+  return window['go']['app']['DevOps']['K8sRestartDeployment'](arg1, arg2);
+}
+
+export function K8sRollbackDeployment(arg1, arg2, arg3) {
+  return window['go']['app']['DevOps']['K8sRollbackDeployment'](arg1, arg2, arg3);
 }
 
 export function KillProcess(arg1) {

@@ -466,6 +466,7 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 				ID:              "collect-data",
 				Label:           "Collect Audit Data",
 				Description:     "Gather system health, security posture, and network diagnostics.",
+				Command:         "sysops.RunHealthCheck(); secops.RunSecurityAudit(); netops.RunNetworkDiagnostics()",
 				ExpectedOutcome: "Aggregated raw data for AI analysis.",
 				Action: func(ctx context.Context) (any, error) {
 					var errs []string
@@ -481,6 +482,7 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 					if err != nil {
 						errs = append(errs, fmt.Sprintf("Network: %v", err))
 					}
+					// Populate auditCollectedData as a map for step 2 (ai-analyze)
 					result := map[string]any{}
 					if h != nil {
 						result["health"] = h.String()
@@ -501,13 +503,46 @@ func (api *WorkflowAPI) RegisterDefaultWorkflows() {
 						result["warnings"] = strings.Join(errs, "; ")
 					}
 					auditCollectedData = result
-					return result, nil
+
+					// Return a single formatted text block for human-readable display
+					var display strings.Builder
+					display.WriteString("╔══════════════════════════════════════╗\n")
+					display.WriteString("║        SYSTEM HEALTH REPORT         ║\n")
+					display.WriteString("╚══════════════════════════════════════╝\n\n")
+					if h != nil {
+						display.WriteString(h.String())
+					} else {
+						display.WriteString("Health check unavailable\n")
+					}
+					display.WriteString("\n\n")
+					display.WriteString("╔══════════════════════════════════════╗\n")
+					display.WriteString("║       SECURITY AUDIT REPORT         ║\n")
+					display.WriteString("╚══════════════════════════════════════╝\n\n")
+					if s != nil {
+						display.WriteString(s.String())
+					} else {
+						display.WriteString("Security audit unavailable\n")
+					}
+					display.WriteString("\n\n")
+					display.WriteString("╔══════════════════════════════════════╗\n")
+					display.WriteString("║    NETWORK DIAGNOSTIC REPORT        ║\n")
+					display.WriteString("╚══════════════════════════════════════╝\n\n")
+					if n != nil {
+						display.WriteString(n.String())
+					} else {
+						display.WriteString("Network diagnostics unavailable\n")
+					}
+					if len(errs) > 0 {
+						display.WriteString(fmt.Sprintf("\n⚠ Warnings:\n  %s\n", strings.Join(errs, "\n  ")))
+					}
+					return display.String(), nil
 				},
 			},
 			{
 				ID:              "ai-analyze",
 				Label:           "AI Vulnerability Analysis",
 				Description:     "Send aggregated data to Hawk for cross-layer risk correlation.",
+				Command:         "aiops.GenerateEnhancedReport(\"Full System Audit\", data).OllamaReport()",
 				ExpectedOutcome: "Hawk identification of security risks or performance bottlenecks.",
 				Action: func(ctx context.Context) (any, error) {
 					data := map[string]string{}

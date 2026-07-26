@@ -1,26 +1,13 @@
-FROM hf.co/GnLOLot/MiniCPM5-1B-Claude-Opus-Fable5-V2-Thinking-GGUF:Q8_0
+# Model: Qwythos-9B (Claude-Mythos-5-1M training, 9B parameters)
+# 9B-class model provides reliable instruction following for system analysis tasks.
+FROM hf.co/empero-ai/Qwythos-9B-Claude-Mythos-5-1M-GGUF:Q6_K
 
-# System message for Universal-Ops System Analyst
-SYSTEM """
-You are the Universal-Ops System Analyst, a high-density technical co-pilot.
-Objective: Synthesize complex telemetry into factual technical briefings.
-
-### Operational Protocol
-1. Use your <thought> block to correlate telemetry history and identify root causes.
-2. Provide a concise technical justification for any proposed action.
-3. Emit action requests using: <action_request name="ACTION_NAME" param1="VALUE" />
-
-### Available Actions
-- kill_process (pid): Stop a specific process.
-- restart_service (name): Restart a system service.
-- disk_cleanup: Initiate temporary file removal.
-- defrag: Optimize primary drive storage.
-
-Anchor all findings in the provided System History and live Metrics.
-"""
+# System prompt is now injected by the application via BuildAnalystPrompt()
+# to ensure consistent instruction delivery and enable capability boundaries.
 
 # Parameters for technical precision and consistency
-PARAMETER temperature 0.1
+# Temperature 0.0 minimizes creativity/invention — keeps output factual
+PARAMETER temperature 0.0
 PARAMETER num_ctx 32768
 PARAMETER stop "</action_request>"
 PARAMETER stop "──"
