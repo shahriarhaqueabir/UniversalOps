@@ -8,7 +8,9 @@ on:
 
 jobs:
   test:
+    timeout-minutes: 30
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
@@ -34,6 +36,12 @@ jobs:
 
       - name: Install frontend dependencies
         run: cd cmd/opsforall-gui/frontend && npm ci
+        shell: bash
+
+      - name: Generate Wails TypeScript bindings
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@latest
+          wails generate module
         shell: bash
 
       - name: Build frontend (needed for go vet //go:embed)
