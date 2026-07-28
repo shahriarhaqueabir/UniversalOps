@@ -32,7 +32,7 @@ That's it. Everything else works automatically.
 ## 🛠️ Advanced Setup (From Source)
 
 ### Prerequisites
-- **Go 1.22+**: [Download](https://go.dev/dl/)
+- **Go 1.26+**: [Download](https://go.dev/dl/)
 - **Node.js 22+**: [Download](https://nodejs.org/)
 - **Wails v2**: Install via `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
 - **GCC (Windows)**: [MinGW](https://www.mingw-w64.org/) or TDM-GCC

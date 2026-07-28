@@ -38,7 +38,7 @@ function ProcessTreeItem({ node, level, requestKill }: { node: ProcessNode, leve
             <span className="text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-tighter">PID {node.pid}</span>
           </div>
         </div>
-        <div className="flex-1 text-right text-xs font-bold text-[var(--color-accent)] tabular-nums">{node.cpu.toFixed(1)}%</div>
+        <div className="flex-1 text-right text-xs font-bold text-[var(--color-accent)] tabular-nums">{Math.round(node.cpu)}%</div>
         <div className="flex-1 text-right text-xs font-bold text-[var(--color-text-dim)] tabular-nums">{node.memory.toFixed(0)}</div>
         <div className="w-12 text-right">
           <button onClick={() => requestKill(node.pid)} className="opacity-0 group-hover:opacity-100 p-1 text-[var(--color-text-faint)] hover:text-[var(--color-danger)] transition-all">
@@ -179,7 +179,7 @@ export function ProcessesTab() {
                         <span className="text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-tighter">PID {p.pid}</span>
                       </div>
                     </div>
-                    <div className="flex-1 text-right text-sm font-black text-[var(--color-accent)] tabular-nums">{p.cpu.toFixed(1)}%</div>
+                    <div className="flex-1 text-right text-sm font-black text-[var(--color-accent)] tabular-nums">{Math.round(p.cpu)}%</div>
                     <div className="flex-1 text-right text-sm font-bold text-[var(--color-text-dim)] tabular-nums">{p.memory.toFixed(0)}</div>
                     <div className="flex-1 text-right hidden sm:block">
                       <span className={cn(

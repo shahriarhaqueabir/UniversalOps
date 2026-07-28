@@ -31,6 +31,8 @@ export default tseslint.config(
       'react-hooks/purity': 'off',
       // Wails bridge (window.go) requires dynamic types
       '@typescript-eslint/no-explicit-any': 'off',
+      // Allow underscore-prefixed unused vars (destructuring omit pattern)
+      '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^_' }],
     },
   },
 )

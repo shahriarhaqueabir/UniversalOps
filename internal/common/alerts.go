@@ -429,3 +429,65 @@ func (ae *AlertEngine) AlertCount() int {
 	}
 	return count
 }
+
+// ── DB Restore ──────────────────────────────────────────────────────────────
+
+// parseAlertLevel converts a level string back to AlertLevel.
+func parseAlertLevel(s string) AlertLevel {
+	switch s {
+	case "CRITICAL":
+		return AlertCritical
+	case "WARNING":
+		return AlertWarning
+	default:
+		return AlertInfo
+	}
+}
+
+// RestoreFromDB loads persisted alerts from storage into the engine's in-memory
+// state. This is called once at startup so that alert history survives restarts.
+// Active (unresolved) alerts are re-indexed in alertKeys so the engine can
+// update or resolve them on subsequent Evaluate() cycles.
+func (ae *AlertEngine) RestoreFromDB(records []AlertRecord) {
+	ae.mu.Lock()
+	defer ae.mu.Unlock()
+
+	if len(records) == 0 {
+		return
+	}
+
+	// Pre-allocate the alerts slice
+	ae.alerts = make([]Alert, 0, len(records))
+	ae.alertKeys = make(map[string]int)
+
+	for _, r := range records {
+		a := Alert{
+			ID:        r.ID,
+			Level:     parseAlertLevel(r.Level),
+			Metric:    r.Metric,
+			Condition: AlertGT, // condition not persisted; default is fine for display
+			Message:   r.Message,
+			Value:     r.Value,
+			Threshold: r.Threshold,
+			Timestamp: r.Timestamp,
+			Resolved:  r.Resolved,
+		}
+		ae.alerts = append(ae.alerts, a)
+
+		// Index active alerts so Evaluate() can update/resolve them
+		if !a.Resolved {
+			alertKey := fmt.Sprintf("%s:%s:%.4f:%d", a.Metric, a.Condition, a.Threshold, a.Level)
+			ae.alertKeys[alertKey] = len(ae.alerts) - 1
+		}
+	}
+
+	// Advance nextID past any restored IDs
+	for _, r := range records {
+		var idNum int
+		if _, err := fmt.Sscanf(r.ID, "alert-%d", &idNum); err == nil && idNum >= ae.nextID {
+			ae.nextID = idNum + 1
+		}
+	}
+
+	LogInfo("AlertEngine: restored %d alerts from DB (%d active)", len(ae.alerts), len(ae.alertKeys))
+}

@@ -64,7 +64,7 @@ export function DiskTab({ diskInfo }: { diskInfo: DiskInfo }) {
             <div key={i}>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-bold text-[var(--color-text)]">{p.mountpoint}</span>
-                <span className="text-sm font-bold text-[var(--color-text)] tabular-nums">{p.used_percent.toFixed(1)}%</span>
+                <span className="text-sm font-bold text-[var(--color-text)] tabular-nums">{Math.round(p.used_percent)}%</span>
               </div>
               <div className="h-4 bg-[var(--color-panel-3)] rounded-full overflow-hidden border border-[var(--color-border)]">
                 <div className="h-full rounded-full bg-gradient-to-r from-[var(--color-accent)]/60 to-[var(--color-accent)] transition-all duration-700" style={{ width: `${p.used_percent}%` }} />

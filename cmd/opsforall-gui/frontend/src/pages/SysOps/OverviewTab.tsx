@@ -53,7 +53,7 @@ function HealthRing({ value, label, subtitle }: { value: number; label: string; 
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-lg font-black tabular-nums" style={{ color }}>{value}%</span>
+          <span className="text-lg font-black tabular-nums" style={{ color }}>{Math.round(value)}%</span>
         </div>
       </div>
       <span className="text-[10px] font-black text-text-dim uppercase tracking-[0.15em]">{label}</span>
@@ -235,8 +235,8 @@ export function OverviewTab() {
                     <p className="text-[9px] text-text-faint font-mono">PID {proc.pid}</p>
                   </div>
                   <div className="flex items-center gap-4 text-[10px] font-bold tabular-nums">
-                    <span className="text-danger">{proc.cpu?.toFixed(1) ?? '—'}% CPU</span>
-                    <span className="text-accent">{proc.mem_pct?.toFixed(1) ?? '—'}% RAM</span>
+                    <span className="text-danger">{Math.round(proc.cpu ?? 0)}% CPU</span>
+                    <span className="text-accent">{Math.round(proc.mem_pct ?? 0)}% RAM</span>
                   </div>
                 </div>
               ))}
@@ -325,12 +325,15 @@ export function OverviewTab() {
                     { label: 'User', value: perfData.cpu_times.user, color: 'var(--color-accent)' },
                     { label: 'System', value: perfData.cpu_times.system, color: 'var(--color-warning)' },
                     { label: 'Idle', value: perfData.cpu_times.idle, color: 'var(--color-success)' },
-                  ].map(item => (
-                    <div key={item.label} className="bg-panel-2 rounded-xl p-3 text-center">
-                      <span className="text-lg font-black tabular-nums" style={{ color: item.color }}>{(item.value * 100).toFixed(1)}%</span>
-                      <p className="text-[9px] font-black text-text-faint uppercase tracking-wider mt-1">{item.label}</p>
-                    </div>
-                  ))}
+                  ].map(item => {
+                    const pct = perfData.cpu_times.total > 0 ? (item.value / perfData.cpu_times.total) * 100 : 0
+                    return (
+                      <div key={item.label} className="bg-panel-2 rounded-xl p-3 text-center">
+                        <span className="text-lg font-black tabular-nums" style={{ color: item.color }}>{Math.round(pct)}%</span>
+                        <p className="text-[9px] font-black text-text-faint uppercase tracking-wider mt-1">{item.label}</p>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
               <div className="flex items-center justify-between py-2 border-t border-border/30">
@@ -342,7 +345,7 @@ export function OverviewTab() {
               <div className="flex items-center justify-between py-2 border-t border-border/30">
                 <span className="text-[10px] font-black text-text-dim uppercase tracking-[0.15em]">I/O Wait</span>
                 <span className={cn('text-xs font-bold font-mono tabular-nums', perfData.io_wait > 10 ? 'text-danger' : perfData.io_wait > 5 ? 'text-warning' : 'text-success')}>
-                  {perfData.io_wait.toFixed(1)}%
+                  {Math.round(perfData.io_wait)}%
                 </span>
               </div>
             </div>

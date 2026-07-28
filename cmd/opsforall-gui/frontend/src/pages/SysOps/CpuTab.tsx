@@ -38,7 +38,7 @@ export function CpuTab({ cpuInfo }: CpuTabProps) {
             <h3 className="text-lg font-bold text-[var(--color-text)] uppercase tracking-widest">Processor Health</h3>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-3xl font-bold text-[var(--color-text)] tabular-nums">{cpuInfo.percent.toFixed(1)}%</span>
+            <span className="text-3xl font-bold text-[var(--color-text)] tabular-nums">{Math.round(cpuInfo.percent)}%</span>
             <span className={`text-xs font-bold px-2 py-0.5 rounded border ${saturation > 80 ? 'bg-[var(--color-danger)]/20 text-[var(--color-danger)] border-[var(--color-danger)]/30' : 'bg-[var(--color-success)]/20 text-[var(--color-success)] border-[var(--color-success)]/30'}`}>
               {saturation.toFixed(0)}% Saturation
             </span>
