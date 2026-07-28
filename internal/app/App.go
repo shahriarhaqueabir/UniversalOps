@@ -18,7 +18,6 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
-	"github.com/shahriarhaqueabir/UniversalOps/internal/secops"
 	sysopsPkg "github.com/shahriarhaqueabir/UniversalOps/internal/sysops"
 )
 

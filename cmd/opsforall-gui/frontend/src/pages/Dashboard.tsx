@@ -41,6 +41,8 @@ import { useSettingsStore, useMetricsStore, useNavigationStore } from '@/stores'
 import { cn, formatSafeDate } from '@/lib/utils'
 import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 import { Panel } from '@/components/ui/Panel'
+import { HealthBadge } from '@/components/ui/HealthBadge'
+import type { HealthStatus } from '@/components/ui/HealthBadge'
 import type { DashboardData, SLOSummary } from '@/types'
 
 /* ── Dashboard Backend Types ── */
@@ -373,7 +375,7 @@ const variantStyles = {
       ? (data?.detected ? (metricKey === 'gpu' ? data.vendor : val) : 'N/A')
       : val
 
-  const status = (data?.value != null && data.value > 80) ? 'warning' : 'healthy'
+  const status: HealthStatus = (data?.value != null && data.value > 80) ? 'degraded' : 'healthy'
 
   return (
     <div
@@ -394,7 +396,7 @@ const variantStyles = {
           </div>
           <span className="text-xs font-semibold text-[var(--color-text-dim)] uppercase tracking-wider">{label}</span>
         </div>
-        <div className={cn("w-2.5 h-2.5 rounded-full transition-all duration-500", status === 'healthy' ? "bg-[var(--color-success)] shadow-[0_0_8px_var(--color-success)]" : "bg-[var(--color-warning)] shadow-[0_0_8px_var(--color-warning)]")} />
+        <HealthBadge status={status} shapeMode="circle" size="sm" showLabel={false} />
       </div>
       <div className="flex items-baseline gap-1.5 mb-3">
         <span className="text-3xl font-bold text-[var(--color-text)] tabular-nums">{displayVal}</span>
@@ -595,21 +597,21 @@ const DevOpsPanel = memo(function DevOpsPanel() {
       <div className="grid grid-cols-2 gap-3 flex-1">
         <div className="bg-panel-2 rounded-xl p-3 border border-border/50">
           <div className="flex items-center gap-2 mb-2">
-            <div className={cn("w-2 h-2 rounded-full", svcRunning === svcTotal && svcTotal > 0 ? "bg-success shadow-[0_0_6px_var(--color-success)]" : "bg-warning shadow-[0_0_6px_var(--color-warning)]")} />
+            <HealthBadge status={svcRunning === svcTotal && svcTotal > 0 ? 'healthy' : 'degraded'} shapeMode="circle" size="sm" showLabel={false} />
             <span className="text-[10px] font-bold text-text-faint uppercase tracking-wider">Services</span>
           </div>
           <span className="text-xl font-black text-text tabular-nums">{svcRunning}<span className="text-sm font-semibold text-text-faint">/{svcTotal}</span></span>
         </div>
         <div className="bg-panel-2 rounded-xl p-3 border border-border/50">
           <div className="flex items-center gap-2 mb-2">
-            <div className={cn("w-2 h-2 rounded-full", dockerOk ? "bg-success shadow-[0_0_6px_var(--color-success)]" : "bg-danger shadow-[0_0_6px_var(--color-danger)]")} />
+            <HealthBadge status={dockerOk ? 'healthy' : 'critical'} shapeMode="circle" size="sm" showLabel={false} />
             <span className="text-[10px] font-bold text-text-faint uppercase tracking-wider">Docker</span>
           </div>
           <span className="text-xl font-black text-text tabular-nums">{containerCount}<span className="text-sm font-semibold text-text-faint"> containers</span></span>
         </div>
         <div className="bg-panel-2 rounded-xl p-3 border border-border/50">
           <div className="flex items-center gap-2 mb-2">
-            <div className={cn("w-2 h-2 rounded-full", k8sOk ? "bg-success shadow-[0_0_6px_var(--color-success)]" : "bg-text-faint/30")} />
+            <HealthBadge status={k8sOk ? 'healthy' : 'unknown'} shapeMode="circle" size="sm" showLabel={false} />
             <span className="text-[10px] font-bold text-text-faint uppercase tracking-wider">Kubernetes</span>
           </div>
           <span className="text-xl font-black text-text tabular-nums">{k8sPods}<span className="text-sm font-semibold text-text-faint"> pods</span></span>
@@ -666,7 +668,7 @@ const AIOpsPanel = memo(function AIOpsPanel() {
       <div className="grid grid-cols-2 gap-3 mb-3">
         <div className="bg-panel-2 rounded-xl p-3 border border-border/50">
           <div className="flex items-center gap-2 mb-2">
-            <div className={cn("w-2 h-2 rounded-full", ollamaOk ? "bg-success shadow-[0_0_6px_var(--color-success)]" : "bg-danger shadow-[0_0_6px_var(--color-danger)]")} />
+            <HealthBadge status={ollamaOk ? 'healthy' : 'critical'} shapeMode="circle" size="sm" showLabel={false} />
             <span className="text-[10px] font-bold text-text-faint uppercase tracking-wider">Ollama</span>
           </div>
           <span className="text-sm font-black text-text tabular-nums truncate block">{ollamaModel}</span>
@@ -779,10 +781,7 @@ const SLOPanel = memo(function SLOPanel() {
           <div className="space-y-2">
             {results.map((r) => (
               <div key={r.sloId} className="flex items-center gap-3 bg-panel-2 rounded-lg p-2.5 border border-border/50">
-                <div className={cn(
-                  "w-2 h-2 rounded-full shrink-0",
-                  r.met ? "bg-success shadow-[0_0_6px_var(--color-success)]" : "bg-danger shadow-[0_0_6px_var(--color-danger)]"
-                )} />
+                <HealthBadge status={r.met ? 'healthy' : 'critical'} shapeMode="circle" size="sm" showLabel={false} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[11px] font-bold text-text truncate">{r.sloName}</span>
