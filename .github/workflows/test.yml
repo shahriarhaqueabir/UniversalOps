@@ -53,7 +53,6 @@ jobs:
         with:
           version: v2.1
           args: --timeout=5m ./...
-        shell: bash
 
       - name: Go test
         run: go test -race ./internal/... -coverprofile=coverage.out -covermode=atomic -count=1
