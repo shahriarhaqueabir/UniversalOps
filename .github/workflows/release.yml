@@ -27,13 +27,13 @@ jobs:
       - name: Install frontend dependencies
         run: cd cmd/opsforall-gui/frontend && npm ci
 
+      - name: Build frontend
+        run: cd cmd/opsforall-gui/frontend && npm run build
+
       - name: Generate Wails TypeScript bindings
         run: |
           go install github.com/wailsapp/wails/v2/cmd/wails@latest
           wails generate module
-
-      - name: Build frontend
-        run: cd cmd/opsforall-gui/frontend && npm run build
 
       - name: Go vet
         run: go vet ./...
@@ -95,113 +95,9 @@ jobs:
           name: windows-release
           path: build/bin/*
 
-  build-linux:
-    timeout-minutes: 30
-    needs: [test]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.26.x"
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
-          cache-dependency-path: cmd/opsforall-gui/frontend/package-lock.json
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc libgtk-3-dev
-          sudo apt-get install -y libwebkit2gtk-4.1-dev || sudo apt-get install -y libwebkit2gtk-4.0-dev
-
-      - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-
-      - name: Install frontend dependencies
-        run: cd cmd/opsforall-gui/frontend && npm ci
-
-      - name: Build
-        run: wails build -platform linux/amd64 -o universal-ops-${{ github.ref_name }}-linux-amd64
-
-      - name: Generate individual checksums
-        run: |
-          cd build/bin
-          for f in *; do
-            if [ -f "$f" ]; then
-              sha256sum "$f" > "$f.sha256"
-            fi
-          done
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-release
-          path: build/bin/*
-
-  build-macos:
-    timeout-minutes: 30
-    needs: [test]
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.26.x"
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
-          cache-dependency-path: cmd/opsforall-gui/frontend/package-lock.json
-
-      - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-
-      - name: Install frontend dependencies
-        run: cd cmd/opsforall-gui/frontend && npm ci
-
-      - name: Build (universal binary)
-        run: wails build -platform darwin/universal -o universal-ops-${{ github.ref_name }}-darwin-universal
-
-      - name: Sign and notarize (if credentials configured)
-        run: |
-          chmod +x scripts/notarize-macos.sh
-          ./scripts/notarize-macos.sh "build/bin/universal-ops-${{ github.ref_name }}-darwin-universal.app"
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_NOTARIZATION_PASSWORD: ${{ secrets.APPLE_NOTARIZATION_PASSWORD }}
-
-      - name: Generate individual checksums
-        run: |
-          cd build/bin
-          for f in *; do
-            if [ -f "$f" ]; then
-              sha256sum "$f" > "$f.sha256"
-            fi
-          done
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-release
-          path: build/bin/*
-
   publish:
     timeout-minutes: 10
-    needs: [build-windows, build-linux, build-macos]
+    needs: [build-windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -212,18 +108,14 @@ jobs:
       - name: Generate checksums
         run: |
           echo "## Checksums" > checksums.txt
-          sha256sum windows-release/* linux-release/* macos-release/* >> checksums.txt
+          sha256sum windows-release/* >> checksums.txt
           cat checksums.txt
 
       - name: Prepare package manifests
         run: |
           WINDOWS_HASH=$(sha256sum windows-release/*.exe | cut -d' ' -f1)
-          LINUX_HASH=$(sha256sum linux-release/* | cut -d' ' -f1)
-          MACOS_HASH=$(sha256sum macos-release/* | cut -d' ' -f1)
           echo "Windows SHA256: $WINDOWS_HASH"
-          echo "Linux SHA256: $LINUX_HASH"
-          echo "macOS SHA256: $MACOS_HASH"
-          echo "Use these hashes to update scripts/package-homebrew.ps1 and scripts/package-scoop.ps1"
+          echo "Use these hashes to update scripts/package-scoop.ps1"
 
       - name: Create release
         uses: softprops/action-gh-release@v2
@@ -231,8 +123,6 @@ jobs:
           files: |
             checksums.txt
             windows-release/*
-            linux-release/*
-            macos-release/*
           generate_release_notes: true
         env:
           # Note: on private repos, the built-in GITHUB_TOKEN cannot create releases.
