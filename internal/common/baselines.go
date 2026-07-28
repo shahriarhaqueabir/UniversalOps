@@ -2,7 +2,6 @@ package common
 
 import (
 	"math"
-	"sync"
 )
 
 // DriftInfo describes a detected deviation from the learned baseline.
