@@ -7,6 +7,11 @@ updates:
     labels:
       - "dependencies"
       - "go"
+    groups:
+      go-dependencies:
+        patterns:
+          - "*"
+
   - package-ecosystem: "npm"
     directory: "/cmd/opsforall-gui/frontend"
     schedule:
@@ -14,6 +19,11 @@ updates:
     labels:
       - "dependencies"
       - "npm"
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -21,3 +31,7 @@ updates:
     labels:
       - "dependencies"
       - "ci"
+    groups:
+      actions-dependencies:
+        patterns:
+          - "*"
