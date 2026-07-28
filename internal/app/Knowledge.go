@@ -16,6 +16,7 @@ func NewKnowledgeAPI() *KnowledgeAPI {
 // Returns a zero-value SystemKnowledge if the KnowledgeManager has not been
 // initialized yet (e.g. in tests that call NewApp without Startup).
 func (k *KnowledgeAPI) GetSnapshot() common.SystemKnowledge {
+	defer common.RecoverPanic()
 	km := common.GetKnowledge()
 	if km == nil {
 		return common.SystemKnowledge{}

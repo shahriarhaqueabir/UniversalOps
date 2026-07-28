@@ -28,6 +28,7 @@ func NewTimeline(eventBus *common.EventBus, aiOps *AIOps) *Timeline {
 // GetTimelineEvents returns timeline events with optional filters.
 // category and level can be empty to include all.
 func (t *Timeline) GetTimelineEvents(category, level string, limit, offset int) []TimelineEvent {
+	defer common.RecoverPanic()
 	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
@@ -76,11 +77,13 @@ func (t *Timeline) GetTimelineEvents(category, level string, limit, offset int) 
 
 // GetRecentEvents is a Batch IPC helper that avoids Wails event overhead for polls.
 func (t *Timeline) GetRecentEvents(limit int) []TimelineEvent {
+	defer common.RecoverPanic()
 	return t.GetTimelineEvents("", "", limit, 0)
 }
 
 // GetTimelineEventByID returns a single event by ID.
 func (t *Timeline) GetTimelineEventByID(id string) *TimelineEvent {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage != nil {
 		evt, err := storage.GetEventByID(id)
@@ -94,6 +97,7 @@ func (t *Timeline) GetTimelineEventByID(id string) *TimelineEvent {
 
 // GetRelatedEvents returns events related to a given event.
 func (t *Timeline) GetRelatedEvents(eventID string) []TimelineEvent {
+	defer common.RecoverPanic()
 	evt := t.GetTimelineEventByID(eventID)
 	if evt == nil || len(evt.Related) == 0 {
 		return []TimelineEvent{}
@@ -116,11 +120,13 @@ func (t *Timeline) GetRelatedEvents(eventID string) []TimelineEvent {
 
 // GetTimelineCategories returns all distinct event categories.
 func (t *Timeline) GetTimelineCategories() []string {
+	defer common.RecoverPanic()
 	return []string{"system", "network", "security", "devops", "ai", "alert", "pipeline"}
 }
 
 // GetTimelineSummary returns a summary of events grouped by category.
 func (t *Timeline) GetTimelineSummary(sinceMinutes int) map[string]int {
+	defer common.RecoverPanic()
 	if sinceMinutes <= 0 {
 		sinceMinutes = 60
 	}
@@ -154,6 +160,7 @@ func (t *Timeline) GetTimelineSummary(sinceMinutes int) map[string]int {
 
 // ExplainEvents asks the AI to analyse a set of timeline events.
 func (t *Timeline) ExplainEvents(eventIDs []string) string {
+	defer common.RecoverPanic()
 	if len(eventIDs) == 0 {
 		return "No events to analyse."
 	}

@@ -35,6 +35,7 @@ func NewDevOps(ctx context.Context, eventBus *common.EventBus) *DevOps {
 
 // RunCommand executes a shell command and returns the result.
 func (d *DevOps) RunCommand(cmd string) CommandResult {
+	defer common.RecoverPanic()
 	start := time.Now()
 	result, err := devops.RunCommand(cmd)
 	dur := time.Since(start).Milliseconds()
@@ -106,6 +107,7 @@ func (d *DevOps) RunCommandLive(cmd string, id string) CommandResult {
 
 // GetDevProcesses returns all processes by CPU usage (from system ops).
 func (d *DevOps) GetDevProcesses() []ProcessInfo {
+	defer common.RecoverPanic()
 	procs, err := sysopsPkg.GetTopProcesses(100)
 	if err != nil {
 		return []ProcessInfo{}
@@ -129,6 +131,7 @@ func (d *DevOps) GetDevProcesses() []ProcessInfo {
 
 // KillProcess terminates a process by PID.
 func (d *DevOps) KillProcess(pid int) CommandResult {
+	defer common.RecoverPanic()
 	err := devops.KillProcess(int32(pid))
 	if err != nil {
 		return CommandResult{Error: err.Error()}
@@ -138,6 +141,7 @@ func (d *DevOps) KillProcess(pid int) CommandResult {
 
 // GetServices returns a list of system services.
 func (d *DevOps) GetServices() []ServiceEntry {
+	defer common.RecoverPanic()
 	services, err := devops.ListServices(0)
 	if err != nil {
 		return []ServiceEntry{}
@@ -156,6 +160,7 @@ func (d *DevOps) GetServices() []ServiceEntry {
 
 // ControlService manages a service state.
 func (d *DevOps) ControlService(name, action string) bool {
+	defer common.RecoverPanic()
 	common.LogInfo("Service control: %s %s", action, name)
 	err := devops.ControlService(name, action)
 	if err != nil {
@@ -281,6 +286,7 @@ func (d *DevOps) RunGitBashLive(cmd string, id string) CommandResult {
 
 // GetDefaultPath returns the application root directory for file browsing.
 func (d *DevOps) GetDefaultPath() string {
+	defer common.RecoverPanic()
 	root, err := os.Getwd()
 	if err != nil {
 		return "."
@@ -313,6 +319,7 @@ type toolSpec struct {
 
 // GetInstalledTools detects installed development tools and their versions.
 func (d *DevOps) GetInstalledTools() []ToolInfo {
+	defer common.RecoverPanic()
 	tools := []toolSpec{
 		{
 			Name:    "Git",
@@ -468,6 +475,7 @@ func firstLine(text string) string {
 
 // GetContainers returns Docker container status and summary.
 func (d *DevOps) GetContainers() ContainerSummary {
+	defer common.RecoverPanic()
 	if _, err := exec.LookPath("docker"); err != nil {
 		return ContainerSummary{Containers: []ContainerInfo{}}
 	}
@@ -541,6 +549,7 @@ func parseIntOr(s string, fallback int) int {
 
 // RunDevOpsDiagnostics runs a health check on all dev tools.
 func (d *DevOps) RunDevOpsDiagnostics() DevOpsDiagResult {
+	defer common.RecoverPanic()
 	result := devops.RunDevOpsDiagnostics()
 	checks := make([]DevOpsDiagCheck, 0, len(result.Checks))
 	for _, c := range result.Checks {
@@ -605,6 +614,7 @@ func healthCheckProbe(port int) string {
 
 // GetLocalServers returns locally listening servers with framework detection and health checks.
 func (d *DevOps) GetLocalServers() []LocalServer {
+	defer common.RecoverPanic()
 	if runtime.GOOS == "windows" {
 		return d.getLocalServersWindows()
 	}
@@ -822,6 +832,7 @@ func lookupProcessName(pid string) string {
 
 // GetEnvironment returns environment variables, SDKs, and package managers.
 func (d *DevOps) GetEnvironment() EnvironmentInfo {
+	defer common.RecoverPanic()
 	// PATH directories (first 20)
 	pathRaw := os.Getenv("PATH")
 	pathDirs := strings.Split(pathRaw, string(os.PathListSeparator))
@@ -937,6 +948,7 @@ func severityRank(s string) int {
 
 // GetAISuggestions synthesizes Docker, Git, and tool data into actionable suggestions.
 func (d *DevOps) GetAISuggestions() []DevOpsSuggestion {
+	defer common.RecoverPanic()
 	var suggestions []DevOpsSuggestion
 
 	// ── Docker checks ──
@@ -1043,6 +1055,7 @@ func (d *DevOps) GetAISuggestions() []DevOpsSuggestion {
 
 // GetDockerStatus checks Docker installation, daemon status, and container counts.
 func (d *DevOps) GetDockerStatus() DockerStatus {
+	defer common.RecoverPanic()
 	var status DockerStatus
 
 	// 1. Check if docker CLI exists
@@ -1119,6 +1132,7 @@ func (d *DevOps) GetDockerStatus() DockerStatus {
 
 // GetKubernetesStatus checks kubectl availability and cluster connectivity.
 func (d *DevOps) GetKubernetesStatus() KubernetesStatus {
+	defer common.RecoverPanic()
 	var status KubernetesStatus
 
 	// 1. Check if kubectl exists
@@ -1252,6 +1266,7 @@ func normalizeServiceStatus(status string) string {
 
 // GetServiceCategories returns services grouped by function type.
 func (d *DevOps) GetServiceCategories() []ServiceCategory {
+	defer common.RecoverPanic()
 	services := d.GetServices()
 	if len(services) == 0 {
 		return []ServiceCategory{}
@@ -1287,6 +1302,7 @@ func (d *DevOps) GetServiceCategories() []ServiceCategory {
 
 // GetServiceGroupSummary returns aggregated service counts by category.
 func (d *DevOps) GetServiceGroupSummary() ServiceGroupSummary {
+	defer common.RecoverPanic()
 	cats := d.GetServiceCategories()
 	var summary ServiceGroupSummary
 
@@ -1320,6 +1336,7 @@ func (d *DevOps) GetServiceGroupSummary() ServiceGroupSummary {
 
 // GetDockerStats returns real-time stats for all running containers.
 func (d *DevOps) GetDockerStats() []DockerStatsEntry {
+	defer common.RecoverPanic()
 	entries, err := devops.GetDockerStats()
 	if err != nil {
 		return []DockerStatsEntry{}
@@ -1343,6 +1360,7 @@ func (d *DevOps) GetDockerStats() []DockerStatsEntry {
 
 // DockerComposeList returns all Docker Compose projects with their services.
 func (d *DevOps) DockerComposeList() []DockerComposeProject {
+	defer common.RecoverPanic()
 	projects, err := devops.DockerComposeList()
 	if err != nil {
 		return []DockerComposeProject{}
@@ -1374,6 +1392,7 @@ func (d *DevOps) DockerComposeList() []DockerComposeProject {
 
 // GetDockerNetworks returns all Docker networks.
 func (d *DevOps) GetDockerNetworks() []DockerNetworkInfo {
+	defer common.RecoverPanic()
 	networks, err := devops.GetDockerNetworks()
 	if err != nil {
 		return []DockerNetworkInfo{}
@@ -1395,6 +1414,7 @@ func (d *DevOps) GetDockerNetworks() []DockerNetworkInfo {
 
 // GetDockerVolumes returns all Docker volumes.
 func (d *DevOps) GetDockerVolumes() []DockerVolumeInfo {
+	defer common.RecoverPanic()
 	volumes, err := devops.GetDockerVolumes()
 	if err != nil {
 		return []DockerVolumeInfo{}
@@ -1413,6 +1433,7 @@ func (d *DevOps) GetDockerVolumes() []DockerVolumeInfo {
 
 // DockerPrune prunes unused Docker resources.
 func (d *DevOps) DockerPrune() DockerActionResult {
+	defer common.RecoverPanic()
 	msg, err := devops.DockerPrune()
 	if err != nil {
 		return DockerActionResult{
@@ -1430,6 +1451,7 @@ func (d *DevOps) DockerPrune() DockerActionResult {
 
 // DockerKill forcefully stops a container.
 func (d *DevOps) DockerKill(id string) DockerActionResult {
+	defer common.RecoverPanic()
 	msg, err := devops.DockerKill(id)
 	if err != nil {
 		return DockerActionResult{
@@ -1445,8 +1467,27 @@ func (d *DevOps) DockerKill(id string) DockerActionResult {
 	}
 }
 
+// DockerStart starts a stopped container.
+func (d *DevOps) DockerStart(id string) DockerActionResult {
+	defer common.RecoverPanic()
+	err := devops.ControlContainer(id, "start")
+	if err != nil {
+		return DockerActionResult{
+			Action:  "start",
+			Message: err.Error(),
+			Success: false,
+		}
+	}
+	return DockerActionResult{
+		Action:  "start",
+		Message: "Container started successfully",
+		Success: true,
+	}
+}
+
 // DockerPause pauses a container.
 func (d *DevOps) DockerPause(id string) DockerActionResult {
+	defer common.RecoverPanic()
 	msg, err := devops.DockerPause(id)
 	if err != nil {
 		return DockerActionResult{
@@ -1464,6 +1505,7 @@ func (d *DevOps) DockerPause(id string) DockerActionResult {
 
 // DockerUnpause unpauses a paused container.
 func (d *DevOps) DockerUnpause(id string) DockerActionResult {
+	defer common.RecoverPanic()
 	msg, err := devops.DockerUnpause(id)
 	if err != nil {
 		return DockerActionResult{
@@ -1481,6 +1523,7 @@ func (d *DevOps) DockerUnpause(id string) DockerActionResult {
 
 // DockerRename renames a container.
 func (d *DevOps) DockerRename(id string, newName string) DockerActionResult {
+	defer common.RecoverPanic()
 	msg, err := devops.DockerRename(id, newName)
 	if err != nil {
 		return DockerActionResult{
@@ -1500,6 +1543,7 @@ func (d *DevOps) DockerRename(id string, newName string) DockerActionResult {
 
 // GetK8sNamespaces returns all Kubernetes namespaces.
 func (d *DevOps) GetK8sNamespaces() []K8sNamespaceInfo {
+	defer common.RecoverPanic()
 	items, err := devops.GetK8sNamespaces()
 	if err != nil {
 		return []K8sNamespaceInfo{}
@@ -1517,6 +1561,7 @@ func (d *DevOps) GetK8sNamespaces() []K8sNamespaceInfo {
 
 // GetK8sDeployments returns Kubernetes deployments in the given namespace.
 func (d *DevOps) GetK8sDeployments(namespace string) []K8sResourceItem {
+	defer common.RecoverPanic()
 	items, err := devops.GetK8sDeployments(namespace)
 	if err != nil {
 		return []K8sResourceItem{}
@@ -1536,6 +1581,7 @@ func (d *DevOps) GetK8sDeployments(namespace string) []K8sResourceItem {
 
 // GetK8sServices returns Kubernetes services in the given namespace.
 func (d *DevOps) GetK8sServices(namespace string) []K8sResourceItem {
+	defer common.RecoverPanic()
 	items, err := devops.GetK8sServices(namespace)
 	if err != nil {
 		return []K8sResourceItem{}
@@ -1555,6 +1601,7 @@ func (d *DevOps) GetK8sServices(namespace string) []K8sResourceItem {
 
 // GetK8sPods returns Kubernetes pods in the given namespace.
 func (d *DevOps) GetK8sPods(namespace string) []K8sResourceItem {
+	defer common.RecoverPanic()
 	items, err := devops.GetK8sPods(namespace)
 	if err != nil {
 		return []K8sResourceItem{}
@@ -1574,6 +1621,7 @@ func (d *DevOps) GetK8sPods(namespace string) []K8sResourceItem {
 
 // GetK8sEvents returns Kubernetes events in the given namespace with a limit.
 func (d *DevOps) GetK8sEvents(namespace string, limit int) []K8sEvent {
+	defer common.RecoverPanic()
 	items, err := devops.GetK8sEvents(namespace, limit)
 	if err != nil {
 		return []K8sEvent{}
@@ -1593,6 +1641,7 @@ func (d *DevOps) GetK8sEvents(namespace string, limit int) []K8sEvent {
 
 // GetK8sRollouts returns Kubernetes rollout status in the given namespace.
 func (d *DevOps) GetK8sRollouts(namespace string) []K8sRolloutStatus {
+	defer common.RecoverPanic()
 	items, err := devops.GetK8sRollouts(namespace)
 	if err != nil {
 		return []K8sRolloutStatus{}
@@ -1613,6 +1662,7 @@ func (d *DevOps) GetK8sRollouts(namespace string) []K8sRolloutStatus {
 
 // K8sRestartDeployment restarts a Kubernetes deployment.
 func (d *DevOps) K8sRestartDeployment(name, namespace string) K8sActionResult {
+	defer common.RecoverPanic()
 	msg, err := devops.K8sRestartDeployment(name, namespace)
 	if err != nil {
 		return K8sActionResult{
@@ -1630,6 +1680,7 @@ func (d *DevOps) K8sRestartDeployment(name, namespace string) K8sActionResult {
 
 // K8sRollbackDeployment rolls back a Kubernetes deployment to a previous revision.
 func (d *DevOps) K8sRollbackDeployment(name, namespace string, revision int) K8sActionResult {
+	defer common.RecoverPanic()
 	msg, err := devops.K8sRollbackDeployment(name, namespace, revision)
 	if err != nil {
 		return K8sActionResult{

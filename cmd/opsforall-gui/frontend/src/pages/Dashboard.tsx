@@ -23,6 +23,8 @@ import {
   Loader2,
   ScrollText,
   Clock,
+  Shield,
+  Terminal,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import {
@@ -36,10 +38,10 @@ import {
 } from 'recharts'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore, useMetricsStore, useNavigationStore } from '@/stores'
-import { cn } from '@/lib/utils'
+import { cn, formatSafeDate } from '@/lib/utils'
 import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 import { Panel } from '@/components/ui/Panel'
-import type { DashboardData } from '@/types'
+import type { DashboardData, SLOSummary } from '@/types'
 
 /* ── Dashboard Backend Types ── */
 
@@ -72,6 +74,53 @@ interface SystemSnapshot {
   alerts: any[]
   timeline: TimelineEvent[]
   timestamp: string
+}
+
+/* ── Cross-Pillar Summary Types ── */
+
+interface SecurityScore {
+  score: number
+  grade: string
+  breakdown: Record<string, number>
+  recommendations: string[]
+}
+
+interface SecuritySummary {
+  score: number
+  summary: string
+  risks: string[]
+  recommendations: string[]
+  analyzedAt: string
+}
+
+interface DevOpsSummary {
+  serviceCount: number
+  runningCount: number
+  dockerInstalled: boolean
+  dockerRunning: boolean
+  containerCount: number
+  k8sInstalled: boolean
+  k8sConnected: boolean
+  k8sPods: number
+  summary: string
+}
+
+interface AIInsight {
+  category: string
+  severity: string
+  title: string
+  message: string
+  action: string
+  actionPage: string
+  timestamp: string
+}
+
+interface AIOpsSummary {
+  ollamaAvailable: boolean
+  ollamaModel: string
+  anomalyCount: number
+  criticalAnomalies: number
+  recentInsights: AIInsight[]
 }
 
 function diagColor(status: string): string {
@@ -187,8 +236,9 @@ const HeroSection = memo(function HeroSection() {
 
   if (!stats) return null
 
-  const peakPressure = Math.max(stats.cpu?.value ?? 0, stats.memory?.value ?? 0, stats.disk?.value ?? 0)
-  const systemHealth = clamp(100 - peakPressure)
+  // Use the backend drift-weighted health score, fall back to naive computation
+  const systemHealth = stats.health_score != null ? stats.health_score : clamp(100 - Math.max(stats.cpu?.value ?? 0, stats.memory?.value ?? 0, stats.disk?.value ?? 0))
+  const healthTrend = stats.health_trend ?? []
   const r = 44
   const circumference = 2 * Math.PI * r
   const dash = (systemHealth / 100) * circumference
@@ -263,14 +313,25 @@ const HeroSection = memo(function HeroSection() {
         </div>
 
         <p className="text-[var(--color-text-dim)] text-sm leading-relaxed mb-6 max-w-2xl">
-          Aggregate performance score derived from core compute, volatile memory, and storage throughput.
+          Drift-weighted health score computed by the backend engine from CPU, memory, and disk deviation analysis.
           Current status indicates <span className={cn("font-semibold", systemHealth > 80 ? "text-success" : systemHealth > 50 ? "text-warning" : "text-danger")}>
             {systemHealth > 80 ? "Stable Operation" : systemHealth > 50 ? "Pressure Detected" : "High Instability Risks"}
           </span> across all monitored subsystems.
         </p>
 
         <div className="flex gap-1 items-end h-12 w-full bg-panel-3 p-2 rounded-xl border border-border shadow-inner">
-          {cpuHistoryBars.length > 0 ? cpuHistoryBars.map((val, i) => (
+          {healthTrend.length > 0 ? healthTrend.map((point, i) => (
+            <div
+              key={i}
+              className="flex-1 rounded-[2px] transition-all relative group/tooltip"
+              style={{
+                height: `${Math.max(5, point.score)}%`,
+                backgroundColor: point.score >= 80 ? 'var(--color-success)' : point.score >= 50 ? 'var(--color-warning)' : 'var(--color-danger)',
+                opacity: 0.7,
+              }}
+              title={`${point.day}: ${point.score}%`}
+            />
+          )) : cpuHistoryBars.length > 0 ? cpuHistoryBars.map((val, i) => (
             <div
               key={i}
               className="flex-1 rounded-[2px] transition-all"
@@ -374,7 +435,7 @@ const RecentEventsPanel = memo(function RecentEventsPanel({ onExplain, explainin
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[var(--color-panel-3)] text-[var(--color-text-faint)] border border-[var(--color-border)]/50">{evt.category}</span>
-                <span className="text-[10px] text-[var(--color-text-faint)] tabular-nums ml-auto">{evt.timestamp ? format(new Date(evt.timestamp), 'HH:mm:ss') : ''}</span>
+                <span className="text-[10px] text-[var(--color-text-faint)] tabular-nums ml-auto">{formatSafeDate(evt.timestamp, (d) => format(d, 'HH:mm:ss'))}</span>
               </div>
               <p className="text-xs font-semibold text-[var(--color-text)] leading-snug">{evt.title}</p>
               <div className="flex items-center justify-between gap-4 mt-1">
@@ -396,6 +457,359 @@ const RecentEventsPanel = memo(function RecentEventsPanel({ onExplain, explainin
           </div>
         )}
       </div>
+    </Panel>
+  )
+})
+
+/* ── Cross-Pillar Dashboard Panels ── */
+
+const SecOpsPanel = memo(function SecOpsPanel() {
+  const { call } = useBackend()
+  const { navigate } = useNavigationStore()
+
+  const { data: secScore } = useQuery<SecurityScore>({
+    queryKey: ['dashboard-sec-score'],
+    queryFn: () => call('Dashboard.GetSecurityScore') as Promise<SecurityScore>,
+    staleTime: 30000,
+    refetchInterval: 60000,
+    refetchOnWindowFocus: false,
+  })
+
+  const { data: secSummary } = useQuery<SecuritySummary>({
+    queryKey: ['dashboard-sec-summary'],
+    queryFn: () => call('Dashboard.GetSecuritySummary') as Promise<SecuritySummary>,
+    staleTime: 30000,
+    refetchInterval: 60000,
+    refetchOnWindowFocus: false,
+  })
+
+  const score = secScore?.score ?? 0
+  const grade = secScore?.grade ?? 'N/A'
+  const riskCount = secSummary?.risks?.length ?? 0
+  const recCount = secSummary?.recommendations?.length ?? 0
+
+  const scoreColor = score >= 80 ? 'var(--color-success)' : score >= 50 ? 'var(--color-warning)' : 'var(--color-danger)'
+  const r = 32
+  const circumference = 2 * Math.PI * r
+  const dash = (score / 100) * circumference
+  const gap = circumference - dash
+
+  return (
+    <Panel padding="md" className="group hover:border-[var(--color-accent)]/30 flex flex-col rounded-[2rem]">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-2xl bg-danger/10 border border-danger/20 flex items-center justify-center text-danger shadow-sm group-hover:scale-110 transition-transform">
+          <Shield size={20} />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-xs font-black text-danger uppercase tracking-[0.2em]">Security Posture</h3>
+          <p className="text-[10px] text-text-faint font-bold uppercase tracking-wider">Threat & Compliance</p>
+        </div>
+        <button
+          onClick={() => navigate('secops')}
+          className="text-[10px] font-black uppercase tracking-tighter text-accent hover:text-accent/80 bg-accent/5 px-3 py-1.5 rounded-lg border border-accent/10 transition-all hover:bg-accent/10"
+        >
+          Open SecOps
+        </button>
+      </div>
+
+      <div className="flex items-center gap-6 flex-1">
+        <div className="shrink-0">
+          <svg width={100} height={100} viewBox="0 0 80 80" className="tabular-nums drop-shadow-[0_0_6px_rgba(var(--color-danger-rgb),0.15)]">
+            <circle cx="40" cy="40" r={r} fill="none" stroke="var(--color-border)" strokeWidth="8" />
+            <circle
+              cx="40" cy="40" r={r}
+              fill="none"
+              stroke={scoreColor}
+              strokeWidth="8"
+              strokeLinecap="round"
+              strokeDasharray={`${dash} ${gap}`}
+              transform="rotate(-90 40 40)"
+              style={{ transition: 'stroke-dasharray 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+            />
+            <text x="40" y="36" textAnchor="middle" fill="var(--color-text)" fontSize="18" fontWeight="900" dominantBaseline="middle" className="tabular-nums">
+              {score}
+            </text>
+            <text x="40" y="54" textAnchor="middle" fill="var(--color-text-faint)" fontSize="9" fontWeight="bold" dominantBaseline="middle">
+              {grade}
+            </text>
+          </svg>
+        </div>
+
+        <div className="flex-1 space-y-2 min-w-0">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-text-faint uppercase tracking-wider">Risks</span>
+            <span className={cn("text-xs font-black tabular-nums", riskCount > 0 ? "text-danger" : "text-success")}>{riskCount}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-text-faint uppercase tracking-wider">Recommendations</span>
+            <span className={cn("text-xs font-black tabular-nums", recCount > 0 ? "text-warning" : "text-success")}>{recCount}</span>
+          </div>
+          {secSummary?.summary && (
+            <p className="text-[11px] text-text-dim leading-relaxed mt-2 line-clamp-2 border-t border-border/50 pt-2">
+              {secSummary.summary}
+            </p>
+          )}
+        </div>
+      </div>
+    </Panel>
+  )
+})
+
+const DevOpsPanel = memo(function DevOpsPanel() {
+  const { call } = useBackend()
+  const { navigate } = useNavigationStore()
+
+  const { data: devOpsSummary } = useQuery<DevOpsSummary>({
+    queryKey: ['dashboard-devops-summary'],
+    queryFn: () => call('Dashboard.GetDevOpsSummary') as Promise<DevOpsSummary>,
+    staleTime: 30000,
+    refetchInterval: 60000,
+    refetchOnWindowFocus: false,
+  })
+
+  const svcRunning = devOpsSummary?.runningCount ?? 0
+  const svcTotal = devOpsSummary?.serviceCount ?? 0
+  const dockerOk = devOpsSummary?.dockerRunning ?? false
+  const k8sOk = devOpsSummary?.k8sConnected ?? false
+  const containerCount = devOpsSummary?.containerCount ?? 0
+  const k8sPods = devOpsSummary?.k8sPods ?? 0
+
+  return (
+    <Panel padding="md" className="group hover:border-[var(--color-accent)]/30 flex flex-col rounded-[2rem]">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent shadow-sm group-hover:scale-110 transition-transform">
+          <Terminal size={20} />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-xs font-black text-accent uppercase tracking-[0.2em]">DevOps Health</h3>
+          <p className="text-[10px] text-text-faint font-bold uppercase tracking-wider">Services & Containers</p>
+        </div>
+        <button
+          onClick={() => navigate('devops')}
+          className="text-[10px] font-black uppercase tracking-tighter text-accent hover:text-accent/80 bg-accent/5 px-3 py-1.5 rounded-lg border border-accent/10 transition-all hover:bg-accent/10"
+        >
+          Open DevOps
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 flex-1">
+        <div className="bg-panel-2 rounded-xl p-3 border border-border/50">
+          <div className="flex items-center gap-2 mb-2">
+            <div className={cn("w-2 h-2 rounded-full", svcRunning === svcTotal && svcTotal > 0 ? "bg-success shadow-[0_0_6px_var(--color-success)]" : "bg-warning shadow-[0_0_6px_var(--color-warning)]")} />
+            <span className="text-[10px] font-bold text-text-faint uppercase tracking-wider">Services</span>
+          </div>
+          <span className="text-xl font-black text-text tabular-nums">{svcRunning}<span className="text-sm font-semibold text-text-faint">/{svcTotal}</span></span>
+        </div>
+        <div className="bg-panel-2 rounded-xl p-3 border border-border/50">
+          <div className="flex items-center gap-2 mb-2">
+            <div className={cn("w-2 h-2 rounded-full", dockerOk ? "bg-success shadow-[0_0_6px_var(--color-success)]" : "bg-danger shadow-[0_0_6px_var(--color-danger)]")} />
+            <span className="text-[10px] font-bold text-text-faint uppercase tracking-wider">Docker</span>
+          </div>
+          <span className="text-xl font-black text-text tabular-nums">{containerCount}<span className="text-sm font-semibold text-text-faint"> containers</span></span>
+        </div>
+        <div className="bg-panel-2 rounded-xl p-3 border border-border/50">
+          <div className="flex items-center gap-2 mb-2">
+            <div className={cn("w-2 h-2 rounded-full", k8sOk ? "bg-success shadow-[0_0_6px_var(--color-success)]" : "bg-text-faint/30")} />
+            <span className="text-[10px] font-bold text-text-faint uppercase tracking-wider">Kubernetes</span>
+          </div>
+          <span className="text-xl font-black text-text tabular-nums">{k8sPods}<span className="text-sm font-semibold text-text-faint"> pods</span></span>
+        </div>
+        <div className="bg-panel-2 rounded-xl p-3 border border-border/50">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] font-bold text-text-faint uppercase tracking-wider">Status</span>
+          </div>
+          <span className={cn("text-sm font-black", devOpsSummary?.summary?.includes('stopped') || devOpsSummary?.summary?.includes('not running') ? "text-warning" : "text-success")}>
+            {devOpsSummary?.summary ?? 'Unknown'}
+          </span>
+        </div>
+      </div>
+    </Panel>
+  )
+})
+
+const AIOpsPanel = memo(function AIOpsPanel() {
+  const { call } = useBackend()
+  const { navigate } = useNavigationStore()
+
+  const { data: aiOpsSummary } = useQuery<AIOpsSummary>({
+    queryKey: ['dashboard-aiops-summary'],
+    queryFn: () => call('Dashboard.GetAIOpsSummary') as Promise<AIOpsSummary>,
+    staleTime: 30000,
+    refetchInterval: 60000,
+    refetchOnWindowFocus: false,
+  })
+
+  const ollamaOk = aiOpsSummary?.ollamaAvailable ?? false
+  const ollamaModel = aiOpsSummary?.ollamaModel ?? 'N/A'
+  const anomalyCount = aiOpsSummary?.anomalyCount ?? 0
+  const criticalAnomalies = aiOpsSummary?.criticalAnomalies ?? 0
+  const insights = aiOpsSummary?.recentInsights ?? []
+
+  return (
+    <Panel padding="md" className="group hover:border-[var(--color-accent)]/30 flex flex-col rounded-[2rem]">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent shadow-sm group-hover:scale-110 transition-transform">
+          <Brain size={20} />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-xs font-black text-accent uppercase tracking-[0.2em]">AI Operations</h3>
+          <p className="text-[10px] text-text-faint font-bold uppercase tracking-wider">Anomalies & Insights</p>
+        </div>
+        <button
+          onClick={() => navigate('aiops')}
+          className="text-[10px] font-black uppercase tracking-tighter text-accent hover:text-accent/80 bg-accent/5 px-3 py-1.5 rounded-lg border border-accent/10 transition-all hover:bg-accent/10"
+        >
+          Open AIOps
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <div className="bg-panel-2 rounded-xl p-3 border border-border/50">
+          <div className="flex items-center gap-2 mb-2">
+            <div className={cn("w-2 h-2 rounded-full", ollamaOk ? "bg-success shadow-[0_0_6px_var(--color-success)]" : "bg-danger shadow-[0_0_6px_var(--color-danger)]")} />
+            <span className="text-[10px] font-bold text-text-faint uppercase tracking-wider">Ollama</span>
+          </div>
+          <span className="text-sm font-black text-text tabular-nums truncate block">{ollamaModel}</span>
+        </div>
+        <div className="bg-panel-2 rounded-xl p-3 border border-border/50">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] font-bold text-text-faint uppercase tracking-wider">Anomalies</span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className={cn("text-xl font-black tabular-nums", criticalAnomalies > 0 ? "text-danger" : anomalyCount > 0 ? "text-warning" : "text-success")}>
+              {anomalyCount}
+            </span>
+            {criticalAnomalies > 0 && (
+              <span className="text-[10px] font-bold text-danger uppercase tracking-wider">{criticalAnomalies} critical</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {insights.length > 0 && (
+        <div className="space-y-1.5 border-t border-border/50 pt-3">
+          <p className="text-[10px] font-bold text-text-faint uppercase tracking-wider mb-1.5">Recent Insights</p>
+          {insights.slice(0, 2).map((insight, i) => (
+            <div key={i} className="flex items-start gap-2 bg-panel-2 rounded-lg p-2 border border-border/50">
+              <div className={cn(
+                "w-1.5 h-1.5 rounded-full mt-1 shrink-0",
+                insight.severity === 'critical' ? 'bg-danger' : insight.severity === 'warning' ? 'bg-warning' : 'bg-accent'
+              )} />
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold text-text leading-tight truncate">{insight.title}</p>
+                <p className="text-[10px] text-text-dim leading-relaxed line-clamp-1">{insight.message}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Panel>
+  )
+})
+
+/* ── SLO/SLI Panel ── */
+
+const SLOPanel = memo(function SLOPanel() {
+  const { call } = useBackend()
+
+  const { data: sloSummary, isLoading } = useQuery<SLOSummary>({
+    queryKey: ['dashboard-slo-summary'],
+    queryFn: () => call('Dashboard.GetSLOSummary') as Promise<SLOSummary>,
+    staleTime: 30000,
+    refetchInterval: 60000,
+    refetchOnWindowFocus: false,
+  })
+
+  const total = sloSummary?.totalSLOs ?? 0
+  const met = sloSummary?.metCount ?? 0
+  const miss = sloSummary?.missCount ?? 0
+  const overall = sloSummary?.overallPct ?? 100
+  const results = sloSummary?.results ?? []
+
+  return (
+    <Panel padding="md" className="group hover:border-[var(--color-accent)]/30 flex flex-col rounded-[2rem]">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent shadow-sm group-hover:scale-110 transition-transform">
+          <Target size={20} />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-xs font-black text-accent uppercase tracking-[0.2em]">SLO / SLI</h3>
+          <p className="text-[10px] text-text-faint font-bold uppercase tracking-wider">Service Level Objectives</p>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-6">
+          <Loader2 size={18} className="animate-spin text-text-faint" />
+        </div>
+      ) : total === 0 ? (
+        <div className="flex flex-col items-center justify-center py-6 text-text-faint">
+          <Target size={24} className="mb-2 opacity-40" />
+          <p className="text-[11px] font-bold uppercase tracking-wider">No SLOs configured</p>
+          <p className="text-[10px] text-text-dim mt-1">Metrics will populate as data is collected.</p>
+        </div>
+      ) : (
+        <>
+          {/* Overall compliance ring */}
+          <div className="flex items-center gap-4 mb-4 bg-panel-2 rounded-xl p-3 border border-border/50">
+            <div className={cn(
+              "w-14 h-14 rounded-full flex items-center justify-center text-sm font-black tabular-nums border-2 shrink-0",
+              overall >= 95 ? "border-success text-success" :
+              overall >= 80 ? "border-warning text-warning" :
+              "border-danger text-danger"
+            )}>
+              {overall.toFixed(0)}%
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 text-[11px] font-bold">
+                <span className="flex items-center gap-1 text-success"><CheckCircle2 size={12} /> {met} met</span>
+                {miss > 0 && <span className="flex items-center gap-1 text-danger"><XCircle size={12} /> {miss} miss</span>}
+                <span className="text-text-faint">{total} total</span>
+              </div>
+              <div className="mt-1.5 h-1.5 bg-panel-3 rounded-full overflow-hidden">
+                <div
+                  className={cn("h-full rounded-full transition-all duration-500", overall >= 95 ? "bg-success" : overall >= 80 ? "bg-warning" : "bg-danger")}
+                  style={{ width: `${Math.min(overall, 100)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Individual SLO results */}
+          <div className="space-y-2">
+            {results.map((r) => (
+              <div key={r.sloId} className="flex items-center gap-3 bg-panel-2 rounded-lg p-2.5 border border-border/50">
+                <div className={cn(
+                  "w-2 h-2 rounded-full shrink-0",
+                  r.met ? "bg-success shadow-[0_0_6px_var(--color-success)]" : "bg-danger shadow-[0_0_6px_var(--color-danger)]"
+                )} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-bold text-text truncate">{r.sloName}</span>
+                    <span className={cn(
+                      "text-[11px] font-black tabular-nums shrink-0",
+                      r.met ? "text-success" : "text-danger"
+                    )}>
+                      {r.compliantPct.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[9px] text-text-faint font-bold uppercase tracking-wider">
+                      target {r.targetPct}% · {r.samples} samples
+                    </span>
+                  </div>
+                  <div className="mt-1 h-1 bg-panel-3 rounded-full overflow-hidden">
+                    <div
+                      className={cn("h-full rounded-full", r.met ? "bg-success" : "bg-danger")}
+                      style={{ width: `${Math.min(r.compliantPct, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </Panel>
   )
 })
@@ -528,6 +942,128 @@ export function Dashboard() {
            <KpiCard icon={<Battery size={24} />} label="Battery" metricKey="battery" unit="%" onClick={() => navigate('sysops', 'hardware')} variant="default" description={latest.battery?.detected ? `${latest.battery.status}` : 'AC-powered.'} />
            <KpiCard icon={<Network size={24} />} label="Network" metricKey="network" unit="/s" onClick={() => navigate('netops', 'overview')} variant="accent" description="Real-time throughput." />
          </div>
+      </motion.div>
+
+      {/* ── Top Issues ── */}
+      <motion.div variants={itemVariants} className="space-y-5">
+        <div className="flex items-center gap-4"><div className="h-px flex-1 bg-[var(--color-border)]" /><h2 className="text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-widest">Top Issues</h2><div className="h-px flex-1 bg-[var(--color-border)]" /></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 hover:border-warning/30 transition-all group">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-warning/10 border border-warning/20 flex items-center justify-center text-warning">
+                <Cpu size={20} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-text">High CPU Usage</h3>
+                <p className="text-[10px] text-text-faint font-bold uppercase tracking-wider">Sustained Load</p>
+              </div>
+              <span className="ml-auto px-2.5 py-1 rounded-full bg-warning/10 border border-warning/20 text-[10px] font-black text-warning uppercase tracking-wider">Warning</span>
+            </div>
+            <p className="text-xs text-text-dim leading-relaxed mb-4">
+              CPU sustained at {latest.cpu?.value != null ? Math.round(latest.cpu.value) : 'N/A'}% — above the 70% threshold. Consider terminating high-consumption processes or scaling compute resources.
+            </p>
+            <div className="flex items-center justify-between border-t border-border/50 pt-3">
+              <span className="text-[10px] text-text-faint font-bold uppercase tracking-wider">Processes: {latest.processes ?? 'N/A'}</span>
+              <button
+                onClick={() => navigate('sysops', 'processes')}
+                className="text-[10px] font-black uppercase tracking-tighter text-accent hover:text-accent/80 bg-accent/5 px-3 py-1.5 rounded-lg border border-accent/10 transition-all hover:bg-accent/10 flex items-center gap-1.5"
+              >
+                <FileSearch size={12} /> Investigate
+              </button>
+            </div>
+          </div>
+          <div className="bg-panel border border-border rounded-[var(--radius-lg)] p-6 hover:border-warning/30 transition-all group">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center text-accent">
+                <Terminal size={20} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-text">Browser Memory Pressure</h3>
+                <p className="text-[10px] text-text-faint font-bold uppercase tracking-wider">Chrome / Edge</p>
+              </div>
+              <span className="ml-auto px-2.5 py-1 rounded-full bg-warning/10 border border-warning/20 text-[10px] font-black text-warning uppercase tracking-wider">Elevated</span>
+            </div>
+            <p className="text-xs text-text-dim leading-relaxed mb-4">
+              Memory at {latest.memory?.value != null ? Math.round(latest.memory.value) : 'N/A'}% — browser processes consuming significant RAM. Close unused tabs or consider a memory management extension.
+            </p>
+            <div className="flex items-center justify-between border-t border-border/50 pt-3">
+              <span className="text-[10px] text-text-faint font-bold uppercase tracking-wider">Memory: {latest.memory?.value != null ? Math.round(latest.memory.value) : 'N/A'}%</span>
+              <button
+                onClick={() => navigate('sysops', 'memory')}
+                className="text-[10px] font-black uppercase tracking-tighter text-accent hover:text-accent/80 bg-accent/5 px-3 py-1.5 rounded-lg border border-accent/10 transition-all hover:bg-accent/10 flex items-center gap-1.5"
+              >
+                <FileSearch size={12} /> Investigate
+              </button>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ── Quick Actions ── */}
+      <motion.div variants={itemVariants} className="space-y-5">
+        <div className="flex items-center gap-4"><div className="h-px flex-1 bg-[var(--color-border)]" /><h2 className="text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-widest">Quick Actions</h2><div className="h-px flex-1 bg-[var(--color-border)]" /></div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <button
+            onClick={runQuickDiag}
+            className="flex flex-col items-center gap-3 p-5 rounded-[var(--radius-lg)] bg-panel border border-border hover:border-accent/30 hover:bg-panel-2 transition-all group active:scale-[0.97]"
+          >
+            <div className="w-12 h-12 rounded-xl bg-warning/10 border border-warning/20 flex items-center justify-center text-warning group-hover:scale-110 transition-transform">
+              <Zap size={22} />
+            </div>
+            <span className="text-xs font-bold text-text-dim group-hover:text-text transition-colors">Scan System</span>
+            <span className="text-[9px] text-text-faint font-semibold uppercase tracking-wider text-center">Quick diagnostic scan</span>
+          </button>
+          <button
+            onClick={() => navigate('netops', 'overview')}
+            className="flex flex-col items-center gap-3 p-5 rounded-[var(--radius-lg)] bg-panel border border-border hover:border-accent/30 hover:bg-panel-2 transition-all group active:scale-[0.97]"
+          >
+            <div className="w-12 h-12 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+              <Network size={22} />
+            </div>
+            <span className="text-xs font-bold text-text-dim group-hover:text-text transition-colors">Network Diagnostics</span>
+            <span className="text-[9px] text-text-faint font-semibold uppercase tracking-wider text-center">Test connectivity & latency</span>
+          </button>
+          <button
+            onClick={generateBriefing}
+            className="flex flex-col items-center gap-3 p-5 rounded-[var(--radius-lg)] bg-panel border border-border hover:border-accent/30 hover:bg-panel-2 transition-all group active:scale-[0.97]"
+          >
+            <div className="w-12 h-12 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+              <FileSearch size={22} />
+            </div>
+            <span className="text-xs font-bold text-text-dim group-hover:text-text transition-colors">Generate Report</span>
+            <span className="text-[9px] text-text-faint font-semibold uppercase tracking-wider text-center">Full operations briefing</span>
+          </button>
+          <button
+            onClick={() => navigate('aiops')}
+            className="flex flex-col items-center gap-3 p-5 rounded-[var(--radius-lg)] bg-panel border border-border hover:border-accent/30 hover:bg-panel-2 transition-all group active:scale-[0.97]"
+          >
+            <div className="w-12 h-12 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+              <Brain size={22} />
+            </div>
+            <span className="text-xs font-bold text-text-dim group-hover:text-text transition-colors">AI Analysis</span>
+            <span className="text-[9px] text-text-faint font-semibold uppercase tracking-wider text-center">Heuristic insights & anomalies</span>
+          </button>
+          <button
+            onClick={() => navigate('sysops', 'overview')}
+            className="flex flex-col items-center gap-3 p-5 rounded-[var(--radius-lg)] bg-panel border border-border hover:border-accent/30 hover:bg-panel-2 transition-all group active:scale-[0.97]"
+          >
+            <div className="w-12 h-12 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+              <Activity size={22} />
+            </div>
+            <span className="text-xs font-bold text-text-dim group-hover:text-text transition-colors">Take Snapshot</span>
+            <span className="text-[9px] text-text-faint font-semibold uppercase tracking-wider text-center">System state capture</span>
+          </button>
+        </div>
+      </motion.div>
+
+      <motion.div variants={itemVariants} className="space-y-5">
+        <div className="flex items-center gap-4"><div className="h-px flex-1 bg-[var(--color-border)]" /><h2 className="text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-widest">Cross-Pillar Operations</h2><div className="h-px flex-1 bg-[var(--color-border)]" /></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-5">
+          <SecOpsPanel />
+          <DevOpsPanel />
+          <AIOpsPanel />
+          <SLOPanel />
+        </div>
       </motion.div>
 
       <div className="grid grid-cols-12 gap-5">

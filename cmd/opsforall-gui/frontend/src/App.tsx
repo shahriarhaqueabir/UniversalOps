@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
+import { formatSafeDate } from '@/lib/utils'
 import { Sidebar } from './components/layout/Sidebar'
 import { TopBar } from './components/layout/TopBar'
 import { MainContent } from './components/layout/MainContent'
@@ -108,16 +109,17 @@ function App() {
     const level = alert.level?.toLowerCase() || 'info'
     const msg = `${alert.metric}: ${alert.message} (${Math.round(alert.value * 10) / 10})`
 
+    const ts = formatSafeDate(alert.timestamp)
     switch (level) {
       case 'critical':
       case 'error':
-        toast.error(msg, { description: new Date(alert.timestamp).toLocaleString() })
+        toast.error(msg, { description: ts })
         break
       case 'warning':
-        toast.warning(msg, { description: new Date(alert.timestamp).toLocaleString() })
+        toast.warning(msg, { description: ts })
         break
       default:
-        toast.info(msg, { description: new Date(alert.timestamp).toLocaleString() })
+        toast.info(msg, { description: ts })
     }
   }, [addAlert])
 

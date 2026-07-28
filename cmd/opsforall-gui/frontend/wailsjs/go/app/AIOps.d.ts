@@ -28,6 +28,8 @@ export function GetCompanionName():Promise<string>;
 
 export function GetConfidenceScore():Promise<app.AIConfidence>;
 
+export function GetDataStreamSnapshot():Promise<Array<app.DataStreamMetric>>;
+
 export function GetLearnedBaselines():Promise<Array<app.LearnedBaseline>>;
 
 export function GetMessages(arg1:string):Promise<Array<app.ConversationMessage>>;

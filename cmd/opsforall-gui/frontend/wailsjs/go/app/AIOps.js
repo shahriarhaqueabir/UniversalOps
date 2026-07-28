@@ -50,6 +50,10 @@ export function GetConfidenceScore() {
   return window['go']['app']['AIOps']['GetConfidenceScore']();
 }
 
+export function GetDataStreamSnapshot() {
+  return window['go']['app']['AIOps']['GetDataStreamSnapshot']();
+}
+
 export function GetLearnedBaselines() {
   return window['go']['app']['AIOps']['GetLearnedBaselines']();
 }

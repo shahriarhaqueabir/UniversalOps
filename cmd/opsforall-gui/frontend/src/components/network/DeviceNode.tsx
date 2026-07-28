@@ -6,6 +6,7 @@ import {
   Shield,
   Cloud,
   GitMerge,
+  Network,
 } from 'lucide-react'
 import type { TopologyDevice, DeviceType } from '@/types'
 
@@ -26,6 +27,10 @@ const deviceIcons: Record<DeviceType, React.ReactNode> = {
   workstation: <Monitor size={24} />,
   firewall: <Shield size={24} />,
   cloud: <Cloud size={24} />,
+  gateway: <Network size={24} />,
+  printer: <Monitor size={24} />,
+  iot: <Monitor size={24} />,
+  unknown: <Monitor size={24} />,
 }
 
 const deviceColors: Record<DeviceType, string> = {
@@ -35,6 +40,10 @@ const deviceColors: Record<DeviceType, string> = {
   workstation: 'var(--color-accent-2)',
   firewall: 'var(--color-danger)',
   cloud: 'var(--color-text-dim)',
+  gateway: 'var(--color-accent)',
+  printer: 'var(--color-text-dim)',
+  iot: 'var(--color-text-dim)',
+  unknown: 'var(--color-text-dim)',
 }
 
 const statusDotColors: Record<string, string> = {

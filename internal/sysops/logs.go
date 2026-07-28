@@ -41,6 +41,19 @@ type SystemLogsResult struct {
 	Total   int        `json:"total"`
 }
 
+// validWindowsLogSources is the set of allowed Windows event log names.
+// Prevents PowerShell injection via user-supplied source parameter.
+var validWindowsLogSources = map[string]bool{
+	"application":        true,
+	"app":                true,
+	"security":           true,
+	"sec":                true,
+	"system":             true,
+	"":                   true,
+	"setup":              true,
+	"windows powershell": true,
+}
+
 // GetSystemLogs retrieves OS system logs.
 // source can be "system", "application", "security", or empty (defaults to "system").
 func GetSystemLogs(n int, source string) (*SystemLogsResult, error) {
@@ -63,7 +76,11 @@ func GetSystemLogs(n int, source string) (*SystemLogsResult, error) {
 		case "system", "":
 			logName = "System"
 		default:
-			logName = source // Allow raw log names like "Setup", "Windows PowerShell"
+			// Validate against allowlist to prevent PowerShell injection
+			if !validWindowsLogSources[strings.ToLower(source)] {
+				return nil, fmt.Errorf("invalid log source %q: not in allowed list", source)
+			}
+			logName = source
 		}
 		logSource = logName
 

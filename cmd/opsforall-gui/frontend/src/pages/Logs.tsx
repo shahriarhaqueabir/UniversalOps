@@ -6,6 +6,8 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { format } from 'date-fns'
 import {
   ArrowDownToDot,
+  ArrowUp,
+  ArrowDown,
   RefreshCw,
   Info,
   AlertTriangle,
@@ -34,7 +36,7 @@ import {
   Legend,
 } from 'recharts'
 
-import { cn } from '@/lib/utils'
+import { cn, formatSafeDate } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import type { LogEntry, LogStats, LogTimelinePoint, LogSummary } from '@/types'
@@ -202,6 +204,52 @@ function OverviewTab() {
         ))}
       </div>
 
+      {/* ── Recent Changes Strip ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {(() => {
+          const err = stats?.errorCount ?? 0
+          const warn = stats?.warningCount ?? 0
+          const info = stats?.infoCount ?? 0
+          const total = err + warn + info + (stats?.debugCount ?? 0)
+          const errPct = total > 0 ? (err / total * 100) : 0
+          const warnPct = total > 0 ? (warn / total * 100) : 0
+
+          // Compute direction from timeline (last 2 points)
+          let errDir: 'up' | 'down' | 'stable' = 'stable'
+          let warnDir: 'up' | 'down' | 'stable' = 'stable'
+          if (timeline.length >= 2) {
+            const last = timeline[timeline.length - 1]
+            const prev = timeline[timeline.length - 2]
+            errDir = last.errors > prev.errors ? 'up' : last.errors < prev.errors ? 'down' : 'stable'
+            warnDir = last.warnings > prev.warnings ? 'up' : last.warnings < prev.warnings ? 'down' : 'stable'
+          }
+
+          return [
+            { label: 'Error Rate', value: `${errPct.toFixed(1)}%`, count: err, dir: errDir, color: 'var(--color-danger)' },
+            { label: 'Warning Rate', value: `${warnPct.toFixed(1)}%`, count: warn, dir: warnDir, color: 'var(--color-warning)' },
+            { label: 'Total Volume', value: total.toLocaleString(), count: total, dir: 'stable', color: 'var(--color-accent)' },
+          ].map((item) => (
+            <div key={item.label} className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-xl p-4 flex items-center gap-4 hover:border-[var(--color-accent)]/30 transition-all">
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-black text-[var(--color-text-dim)] uppercase tracking-[0.15em] mb-1">{item.label}</p>
+                <p className="text-xl font-black text-[var(--color-text)] tabular-nums" style={{ color: item.color }}>{item.value}</p>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                {item.dir !== 'stable' && (
+                  <span className={cn(
+                    "flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider",
+                    item.dir === 'up' ? 'text-danger' : 'text-success'
+                  )}>
+                    {item.dir === 'up' ? <><ArrowUp size={12} /> Rising</> : <><ArrowDown size={12} /> Falling</>}
+                  </span>
+                )}
+                <span className="text-[10px] text-text-faint font-mono">{item.count} events</span>
+              </div>
+            </div>
+          ))
+        })()}
+      </div>
+
       {/* ── Timeline Chart ── */}
       <Panel padding="md">
         <h3 className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider mb-4">Log Volume Timeline (24h)</h3>
@@ -228,7 +276,7 @@ function OverviewTab() {
                 <CartesianGrid strokeDasharray="4 4" stroke="var(--color-border)" vertical={false} strokeOpacity={0.5} />
                 <XAxis
                   dataKey="timestamp"
-                  tickFormatter={(v: string) => format(new Date(v), 'HH:mm')}
+                  tickFormatter={(v: string) => formatSafeDate(v, (d) => format(d, 'HH:mm'))}
                   stroke="var(--color-text-faint)"
                   tick={{ fontSize: 11 }}
                 />
@@ -240,7 +288,7 @@ function OverviewTab() {
                     borderRadius: '12px',
                     color: 'var(--color-text)',
                   }}
-                  labelFormatter={(v: any) => format(new Date(v), 'MMM d, HH:mm')}
+                  labelFormatter={(v: any) => formatSafeDate(v, (d) => format(d, 'MMM d, HH:mm'))}
                 />
                 <Legend
                   wrapperStyle={{ fontSize: 12, color: 'var(--color-text-dim)' }}
@@ -286,6 +334,99 @@ function OverviewTab() {
             </div>
           </div>
         )}
+      </Panel>
+
+      {/* ── Attention Items ── */}
+      <Panel padding="md">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'color-mix(in srgb, var(--color-danger) 15%, transparent)', color: 'var(--color-danger)' }}>
+            <AlertTriangle size={20} />
+          </div>
+          <h3 className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider">Needs Attention</h3>
+        </div>
+        {(() => {
+          const items: { level: 'critical' | 'warning' | 'info'; message: string; detail: string }[] = []
+
+          const err = stats?.errorCount ?? 0
+          const warn = stats?.warningCount ?? 0
+          const total = err + warn + (stats?.infoCount ?? 0) + (stats?.debugCount ?? 0)
+
+          if (err > 0) {
+            const errPct = total > 0 ? (err / total * 100) : 0
+            items.push({
+              level: errPct > 20 ? 'critical' : 'warning',
+              message: `${err} error${err > 1 ? 's' : ''} recorded today`,
+              detail: `Errors account for ${errPct.toFixed(1)}% of all log volume. ${(stats?.trendingErrors ?? []).length > 0 ? 'Check trending errors below.' : ''}`,
+            })
+          }
+
+          if (warn > 50) {
+            items.push({
+              level: 'warning',
+              message: `High warning count: ${warn}`,
+              detail: `Warnings are ${total > 0 ? (warn / total * 100).toFixed(1) : 0}% of total volume. May indicate systemic issues.`,
+            })
+          }
+
+          if ((stats?.trendingErrors ?? []).length > 0) {
+            const topErr = stats!.trendingErrors[0]
+            items.push({
+              level: 'warning',
+              message: `Repeating error: "${topErr.message}"`,
+              detail: `Occurred ${topErr.count} times. Last seen ${topErr.lastSeen}.`,
+            })
+          }
+
+          if (total === 0) {
+            items.push({
+              level: 'info',
+              message: 'No log activity detected',
+              detail: 'The system has not recorded any log events. This may be normal if the system recently started.',
+            })
+          }
+
+          if (items.length === 0) {
+            items.push({
+              level: 'info',
+              message: 'All clear — no anomalies detected',
+              detail: 'Log volume and error rates are within normal parameters.',
+            })
+          }
+
+          return (
+            <div className="space-y-2">
+              {items.map((item, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "flex items-start gap-3 rounded-xl p-3.5 border",
+                    item.level === 'critical' ? 'bg-danger/10 border-danger/20' :
+                    item.level === 'warning' ? 'bg-warning/10 border-warning/20' :
+                    'bg-accent/5 border-border/50'
+                  )}
+                >
+                  <div className={cn(
+                    "w-2 h-2 rounded-full mt-1 shrink-0",
+                    item.level === 'critical' ? 'bg-danger shadow-[0_0_6px_var(--color-danger)]' :
+                    item.level === 'warning' ? 'bg-warning shadow-[0_0_6px_var(--color-warning)]' :
+                    'bg-accent'
+                  )} />
+                  <div className="min-w-0">
+                    <p className={cn(
+                      "text-[13px] font-bold leading-snug",
+                      item.level === 'critical' ? 'text-danger' :
+                      item.level === 'warning' ? 'text-warning' :
+                      'text-text'
+                    )}>
+                      {item.message}
+                    </p>
+                    <p className="text-[11px] text-text-dim mt-0.5 leading-relaxed">{item.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        })()}
       </Panel>
 
       {/* ── Error Breakdown ── */}

@@ -33,14 +33,19 @@ func SanitizeInput(s string) string {
 		s = s[:500]
 	}
 
-	// 1. Block XML tag escaping (critical for our action protocol)
+	// 1. Normalize whitespace FIRST — prevents "ignore\nprevious" from bypassing keyword check
+	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.ReplaceAll(s, "\r", " ")
+	s = strings.ReplaceAll(s, "\t", " ")
+
+	// 2. Block XML tag escaping (critical for our action protocol)
 	s = strings.ReplaceAll(s, "</user_query>", "[TAG_FILTERED]")
 	s = strings.ReplaceAll(s, "<system_state>", "[TAG_FILTERED]")
 	s = strings.ReplaceAll(s, "<action_request", "[TAG_FILTERED]")
 	s = strings.ReplaceAll(s, "<thought>", "[TAG_FILTERED]")
 	s = strings.ReplaceAll(s, "<function", "[TAG_FILTERED]")
 
-	// 2. Check for common injection patterns (case-insensitive)
+	// 3. Check for common injection patterns (case-insensitive)
 	lower := strings.ToLower(s)
 	for _, kw := range injectionKeywords {
 		if strings.Contains(lower, kw) {
@@ -49,9 +54,6 @@ func SanitizeInput(s string) string {
 		}
 	}
 
-	// 3. Normalize whitespace to prevent multi-line bypasses
-	s = strings.ReplaceAll(s, "\n", " ")
-	s = strings.ReplaceAll(s, "\r", " ")
 	return s
 }
 

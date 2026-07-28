@@ -16,6 +16,7 @@ const pageLabels: Record<Page, string> = {
   dashboard: 'Dashboard',
   sysops: 'System Operations',
   workflows: 'Operational Workflows',
+  'network-designer': 'Network Designer',
   netops: 'Network Operations',
   secops: 'Security Operations',
   devops: 'Development Operations',

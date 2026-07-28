@@ -13,6 +13,8 @@ const connectionColors: Record<ConnectionType, string> = {
   ethernet: 'var(--color-accent)',
   fiber: 'var(--color-warning)',
   wireless: 'var(--color-success)',
+  vpn: 'var(--color-danger)',
+  direct: 'var(--color-text-dim)',
 }
 
 const DEVICE_WIDTH = 120

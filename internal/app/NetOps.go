@@ -55,6 +55,7 @@ func NewNetOps(eventBus *common.EventBus) *NetOps {
 
 // Ping sends ICMP echo requests to a target host.
 func (n *NetOps) Ping(host string, count int) PingResult {
+	defer common.RecoverPanic()
 	if count <= 0 {
 		count = 4
 	}
@@ -108,6 +109,7 @@ func (n *NetOps) Ping(host string, count int) PingResult {
 
 // DNSLookup performs DNS lookups for a given hostname with the specified timeout (ms).
 func (n *NetOps) DNSLookup(hostname string, server string, timeoutMs int) DNSResult {
+	defer common.RecoverPanic()
 	if timeoutMs <= 0 {
 		timeoutMs = 2000
 	}
@@ -147,6 +149,7 @@ func (n *NetOps) DNSLookup(hostname string, server string, timeoutMs int) DNSRes
 
 // PortScan scans specific ports on a host.
 func (n *NetOps) PortScan(host string, ports []int) []PortResult {
+	defer common.RecoverPanic()
 	if len(ports) == 0 {
 		ports = netops.DefaultScanPorts()
 	}
@@ -168,6 +171,7 @@ func (n *NetOps) PortScan(host string, ports []int) []PortResult {
 
 // Traceroute runs traceroute to a target host with a 30-second timeout.
 func (n *NetOps) Traceroute(host string) TraceResult {
+	defer common.RecoverPanic()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -198,6 +202,7 @@ func (n *NetOps) Traceroute(host string) TraceResult {
 
 // GetConnections returns current network connections.
 func (n *NetOps) GetConnections() []ConnectionInfo {
+	defer common.RecoverPanic()
 	conns, err := netops.GetConnections()
 	if err != nil {
 		common.LogDebug("NetOps: GetConnections failed: %v", err)
@@ -223,6 +228,7 @@ func (n *NetOps) GetConnections() []ConnectionInfo {
 // Maintains an internal speed cache (refreshed every 5 min) to avoid
 // spawning PowerShell for link speeds on every frontend poll.
 func (n *NetOps) GetInterfaces() []InterfaceInfo {
+	defer common.RecoverPanic()
 	n.model.mu.Lock()
 	defer n.model.mu.Unlock()
 
@@ -282,6 +288,7 @@ func (n *NetOps) collectInterfaces(cachedSpeeds map[string]int64) ([]InterfaceIn
 // RunNetworkHealthCheck runs a comprehensive network health check and returns the report.
 // This exposes the domain-level netops.RunNetworkHealthCheck via Wails IPC.
 func (n *NetOps) RunNetworkHealthCheck() NetworkHealthReport {
+	defer common.RecoverPanic()
 	report := netops.RunNetworkHealthCheck()
 
 	checks := make([]NetworkHealthCheck, 0, len(report.Checks))
@@ -304,6 +311,7 @@ func (n *NetOps) RunNetworkHealthCheck() NetworkHealthReport {
 
 // PingMultiTarget pings multiple targets concurrently and returns results.
 func (n *NetOps) PingMultiTarget(targets []string, count int) []PingResultMultiData {
+	defer common.RecoverPanic()
 	if len(targets) == 0 {
 		return []PingResultMultiData{}
 	}
@@ -331,6 +339,7 @@ func (n *NetOps) PingMultiTarget(targets []string, count int) []PingResultMultiD
 
 // GetPingStats computes aggregate stats across multiple ping results.
 func (n *NetOps) GetPingStats(results []PingResultMultiData) PingStatsData {
+	defer common.RecoverPanic()
 	if len(results) == 0 {
 		return PingStatsData{}
 	}
@@ -363,6 +372,7 @@ func (n *NetOps) GetPingStats(results []PingResultMultiData) PingStatsData {
 
 // GetARPTable returns the system ARP table.
 func (n *NetOps) GetARPTable() []netops.ARPEntry {
+	defer common.RecoverPanic()
 	entries, err := netops.GetARPTable()
 	if err != nil {
 		return []netops.ARPEntry{}
@@ -375,6 +385,7 @@ func (n *NetOps) GetARPTable() []netops.ARPEntry {
 
 // GetRoutingTable returns the system routing table.
 func (n *NetOps) GetRoutingTable() []netops.RouteEntry {
+	defer common.RecoverPanic()
 	entries, err := netops.GetRoutingTable()
 	if err != nil {
 		return []netops.RouteEntry{}
@@ -388,6 +399,7 @@ func (n *NetOps) GetRoutingTable() []netops.RouteEntry {
 // GetFirewallRules returns firewall rules for the NetOps frontend.
 // Converts from secops.FirewallRule to NetOpsFirewallRuleData.
 func (n *NetOps) GetFirewallRules() []NetOpsFirewallRuleData {
+	defer common.RecoverPanic()
 	rules, err := secops.GetFirewallRules()
 	if err != nil {
 		return []NetOpsFirewallRuleData{}
@@ -414,6 +426,7 @@ func (n *NetOps) GetFirewallRules() []NetOpsFirewallRuleData {
 
 // GetVPNStatus returns the current VPN connection status.
 func (n *NetOps) GetVPNStatus() VPNStatusData {
+	defer common.RecoverPanic()
 	active := netops.IsVPNActive()
 	return VPNStatusData{
 		Active:    active,
@@ -427,6 +440,7 @@ func (n *NetOps) GetVPNStatus() VPNStatusData {
 
 // FlushDNSCache flushes the system DNS resolver cache.
 func (n *NetOps) FlushDNSCache() map[string]any {
+	defer common.RecoverPanic()
 	err := netops.FlushDNSCache()
 	if err != nil {
 		return map[string]any{"success": false, "message": "", "error": err.Error()}
@@ -436,6 +450,7 @@ func (n *NetOps) FlushDNSCache() map[string]any {
 
 // ReverseLookup performs a reverse DNS PTR lookup for the given IP address.
 func (n *NetOps) ReverseLookup(ip string) map[string]any {
+	defer common.RecoverPanic()
 	hostname, err := netops.ReverseLookup(ip)
 	if err != nil {
 		return map[string]any{"hostname": "", "error": err.Error()}
@@ -445,6 +460,7 @@ func (n *NetOps) ReverseLookup(ip string) map[string]any {
 
 // TestDoH tests DNS-over-HTTPS connectivity to the specified server.
 func (n *NetOps) TestDoH(server string) DoHResultData {
+	defer common.RecoverPanic()
 	result := netops.TestDoH(server)
 	return DoHResultData{
 		Server:     result.Server,
@@ -456,6 +472,7 @@ func (n *NetOps) TestDoH(server string) DoHResultData {
 
 // GetRecentChanges returns recent network interface state changes.
 func (n *NetOps) GetRecentChanges() []NetworkChange {
+	defer common.RecoverPanic()
 	n.model.mu.RLock()
 	defer n.model.mu.RUnlock()
 	if len(n.model.recentChanges) == 0 {
@@ -468,6 +485,7 @@ func (n *NetOps) GetRecentChanges() []NetworkChange {
 
 // ScanWiFiNetworks scans for visible WiFi access points.
 func (n *NetOps) ScanWiFiNetworks() []netops.WiFiNetwork {
+	defer common.RecoverPanic()
 	networks, err := netops.ScanWiFiNetworks()
 	if err != nil {
 		return []netops.WiFiNetwork{}
@@ -480,6 +498,7 @@ func (n *NetOps) ScanWiFiNetworks() []netops.WiFiNetwork {
 
 // GetWiFiInfo returns the current WiFi adapter connection state.
 func (n *NetOps) GetWiFiInfo() netops.WiFiInfo {
+	defer common.RecoverPanic()
 	info, err := netops.GetWiFiInfo()
 	if err != nil {
 		return netops.WiFiInfo{}
@@ -489,11 +508,13 @@ func (n *NetOps) GetWiFiInfo() netops.WiFiInfo {
 
 // RunNetworkDiscovery performs a network discovery scan on the given subnet.
 func (n *NetOps) RunNetworkDiscovery(subnet string) netops.DiscoveryResult {
+	defer common.RecoverPanic()
 	return netops.RunNetworkDiscovery(subnet)
 }
 
 // RunNetworkAction executes a named network action with the given parameters.
 func (n *NetOps) RunNetworkAction(action string, params map[string]string) NetworkActionResult {
+	defer common.RecoverPanic()
 	err := netops.RunNetworkAction(action, params)
 	if err != nil {
 		return NetworkActionResult{
@@ -511,6 +532,7 @@ func (n *NetOps) RunNetworkAction(action string, params map[string]string) Netwo
 
 // GetDefaultGateway returns the system default gateway information.
 func (n *NetOps) GetDefaultGateway() GatewayInfo {
+	defer common.RecoverPanic()
 	gw := netops.GetDefaultGateway()
 	return GatewayInfo{
 		IP:        gw.IP,
@@ -521,6 +543,7 @@ func (n *NetOps) GetDefaultGateway() GatewayInfo {
 
 // GetNetworkSummary returns an aggregated summary of the current network state.
 func (n *NetOps) GetNetworkSummary() NetworkSummary {
+	defer common.RecoverPanic()
 	ifaces := n.GetInterfaces()
 	changes := n.GetRecentChanges()
 	summary := NetworkSummary{
@@ -542,4 +565,148 @@ func (n *NetOps) GetNetworkSummary() NetworkSummary {
 		summary.SummaryText = "Network has active issues"
 	}
 	return summary
+}
+
+// ── Topology Methods ─────────────────────────────────────────────────────────
+
+// topologyEngine is a package-level singleton for the NetOps facade.
+var topologyEngine = netops.NewTopologyEngine()
+
+// GetTopology returns the current network topology graph.
+func (n *NetOps) GetTopology() NetworkTopologyData {
+	defer common.RecoverPanic()
+	topo := topologyEngine.GetTopology()
+	return convertTopologyToData(topo)
+}
+
+// GetDiscoveryTemplates returns the available discovery templates.
+func (n *NetOps) GetDiscoveryTemplates() []DiscoveryTemplateData {
+	defer common.RecoverPanic()
+	templates := topologyEngine.GetDiscoveryTemplates()
+	out := make([]DiscoveryTemplateData, 0, len(templates))
+	for _, t := range templates {
+		out = append(out, DiscoveryTemplateData{
+			ID:          t.ID,
+			Name:        t.Name,
+			Description: t.Description,
+			RunPing:     t.RunPing,
+			RunDNS:      t.RunDNS,
+			RunTrace:    t.RunTrace,
+			RunARP:      t.RunARP,
+			RunRouting:  t.RunRouting,
+			RunPortScan: t.RunPortScan,
+			PingCount:   t.PingCount,
+		})
+	}
+	return out
+}
+
+// RunAutoDiscovery runs the specified discovery template and returns the topology.
+func (n *NetOps) RunAutoDiscovery(templateID string) NetworkTopologyData {
+	defer common.RecoverPanic()
+	templates := topologyEngine.GetDiscoveryTemplates()
+	var selected *netops.DiscoveryTemplate
+	for _, t := range templates {
+		if t.ID == templateID {
+			selected = &t
+			break
+		}
+	}
+	if selected == nil {
+		// Default to ping-sweep
+		for _, t := range templates {
+			if t.ID == "ping-sweep" {
+				selected = &t
+				break
+			}
+		}
+	}
+	if selected == nil {
+		return NetworkTopologyData{}
+	}
+
+	topo, err := topologyEngine.AutoDiscover(*selected)
+	if err != nil {
+		common.LogWarn("NetOps: RunAutoDiscovery failed: %v", err)
+		return NetworkTopologyData{}
+	}
+	return convertTopologyToData(*topo)
+}
+
+// SaveTopology persists a manually-edited topology from the frontend.
+func (n *NetOps) SaveTopology(data NetworkTopologyData) bool {
+	defer common.RecoverPanic()
+	topo := netops.GraphTopology{
+		Devices:     make([]netops.TopologyDevice, 0, len(data.Devices)),
+		Connections: make([]netops.TopologyConnection, 0, len(data.Connections)),
+		GeneratedAt: data.GeneratedAt,
+		Subnet:      data.Subnet,
+	}
+	for _, d := range data.Devices {
+		topo.Devices = append(topo.Devices, netops.TopologyDevice{
+			ID:       d.ID,
+			Type:     netops.DeviceType(d.Type),
+			Label:    d.Label,
+			IP:       d.IP,
+			MAC:      d.MAC,
+			Subnet:   d.Subnet,
+			Vendor:   d.Vendor,
+			Hostname: d.Hostname,
+			Status:   netops.TopologyStatus(d.Status),
+			X:        d.X,
+			Y:        d.Y,
+			Online:   d.Online,
+			Notes:    d.Notes,
+		})
+	}
+	for _, c := range data.Connections {
+		topo.Connections = append(topo.Connections, netops.TopologyConnection{
+			ID:       c.ID,
+			SourceID: c.SourceID,
+			TargetID: c.TargetID,
+			Type:     netops.ConnectionType(c.Type),
+			Label:    c.Label,
+			Metric:   c.Metric,
+		})
+	}
+	topologyEngine.SetTopology(topo)
+	return true
+}
+
+// convertTopologyToData converts domain topology to facade types.
+func convertTopologyToData(topo netops.GraphTopology) NetworkTopologyData {
+	data := NetworkTopologyData{
+		Devices:     make([]TopologyDeviceData, 0, len(topo.Devices)),
+		Connections: make([]TopologyConnectionData, 0, len(topo.Connections)),
+		GeneratedAt: topo.GeneratedAt,
+		Subnet:      topo.Subnet,
+	}
+	for _, d := range topo.Devices {
+		data.Devices = append(data.Devices, TopologyDeviceData{
+			ID:       d.ID,
+			Type:     string(d.Type),
+			Label:    d.Label,
+			IP:       d.IP,
+			MAC:      d.MAC,
+			Subnet:   d.Subnet,
+			Vendor:   d.Vendor,
+			Hostname: d.Hostname,
+			Status:   string(d.Status),
+			X:        d.X,
+			Y:        d.Y,
+			Online:   d.Online,
+			Notes:    d.Notes,
+		})
+	}
+	for _, c := range topo.Connections {
+		data.Connections = append(data.Connections, TopologyConnectionData{
+			ID:       c.ID,
+			SourceID: c.SourceID,
+			TargetID: c.TargetID,
+			Type:     string(c.Type),
+			Label:    c.Label,
+			Metric:   c.Metric,
+		})
+	}
+	return data
 }

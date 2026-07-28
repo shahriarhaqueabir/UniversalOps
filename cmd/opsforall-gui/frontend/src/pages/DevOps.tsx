@@ -24,7 +24,7 @@ import { nanoid } from 'nanoid'
 import type {
   CommandResult, ServiceEntry, ContainerSummary,
   LocalServer, EnvironmentInfo, DockerStatus, KubernetesStatus,
-  ServiceGroupSummary,
+  ServiceGroupSummary, ToolInfo, DevOpsSuggestion,
   DockerStatsEntry, DockerComposeProject, DockerNetworkInfo, DockerVolumeInfo,
   K8sResourceItem, K8sRolloutStatus, K8sEvent, K8sNamespaceInfo,
 } from '@/types'
@@ -252,6 +252,30 @@ function OverviewTab() {
     refetchInterval: refreshInterval,
   })
 
+  const { data: tools = [] } = useQuery<ToolInfo[]>({
+    queryKey: ['devops-tools'],
+    queryFn: async () => (await call('DevOps.GetInstalledTools') as ToolInfo[]) || [],
+    refetchInterval: refreshInterval,
+  })
+
+  const { data: localServers = [] } = useQuery<LocalServer[]>({
+    queryKey: ['devops-servers'],
+    queryFn: async () => (await call('DevOps.GetLocalServers') as LocalServer[]) || [],
+    refetchInterval: refreshInterval,
+  })
+
+  const { data: envInfo } = useQuery<EnvironmentInfo>({
+    queryKey: ['devops-env'],
+    queryFn: async () => await call('DevOps.GetEnvironment') as EnvironmentInfo,
+    refetchInterval: refreshInterval,
+  })
+
+  const { data: suggestions = [] } = useQuery<DevOpsSuggestion[]>({
+    queryKey: ['devops-suggestions'],
+    queryFn: async () => (await call('DevOps.GetAISuggestions') as DevOpsSuggestion[]) || [],
+    refetchInterval: refreshInterval,
+  })
+
   return (
     <div className="flex flex-col h-full space-y-6 overflow-y-auto p-10">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -333,6 +357,185 @@ function OverviewTab() {
           ))}
         </div>
       </div>
+
+      {/* ── Installed Tools ── */}
+      {tools.length > 0 && (
+        <Panel variant="elevated" padding="lg" category="devops">
+          <h3 className="text-xs font-black text-text uppercase tracking-[0.2em] mb-6 flex items-center gap-4">
+            <TerminalSquare size={18} className="text-accent" />
+            Installed Tools
+            <span className="ml-auto text-[10px] font-bold text-text-faint tabular-nums">{tools.filter(t => t.status === 'installed').length} / {tools.length} installed</span>
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3">
+            {tools.map((t, i) => (
+              <div key={i} className={cn(
+                "flex flex-col items-center gap-2 p-4 rounded-xl border transition-all",
+                t.status === 'installed'
+                  ? "bg-success/5 border-success/20 hover:border-success/40"
+                  : "bg-panel-2 border-border/50 hover:border-border text-text-faint"
+              )}>
+                <span className={cn(
+                  "text-xs font-black uppercase tracking-wider",
+                  t.status === 'installed' ? "text-success" : "text-text-faint"
+                )}>{t.name}</span>
+                {t.status === 'installed' ? (
+                  <span className="text-[9px] font-bold text-text-dim text-center leading-tight">{t.version}</span>
+                ) : (
+                  <span className="text-[9px] font-bold text-text-faint uppercase tracking-wider">Not Found</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </Panel>
+      )}
+
+      {/* ── Local Servers ── */}
+      {localServers.length > 0 && (
+        <Panel variant="elevated" padding="lg" category="devops">
+          <h3 className="text-xs font-black text-text uppercase tracking-[0.2em] mb-6 flex items-center gap-4">
+            <Server size={18} className="text-accent" />
+            Local Servers
+            <span className="ml-auto text-[10px] font-bold text-text-faint tabular-nums">{localServers.length} services</span>
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-border/50 text-[10px] font-black text-text-faint uppercase tracking-wider">
+                  <th className="pb-3 pr-4">Port</th>
+                  <th className="pb-3 pr-4">Protocol</th>
+                  <th className="pb-3 pr-4">Process</th>
+                  <th className="pb-3 pr-4">PID</th>
+                  <th className="pb-3 pr-4">Framework</th>
+                  <th className="pb-3 text-right">Health</th>
+                </tr>
+              </thead>
+              <tbody>
+                {localServers.map((s, i) => (
+                  <tr key={i} className="border-b border-border/30 hover:bg-panel-2 transition-colors">
+                    <td className="py-3 pr-4 text-sm font-bold text-text tabular-nums">{s.port}</td>
+                    <td className="py-3 pr-4 text-xs font-semibold text-text-dim">{s.protocol}</td>
+                    <td className="py-3 pr-4 text-xs font-semibold text-text-dim">{s.process}</td>
+                    <td className="py-3 pr-4 text-xs font-semibold text-text-dim tabular-nums">{s.pid}</td>
+                    <td className="py-3 pr-4 text-xs font-semibold text-text-dim">{s.framework || '—'}</td>
+                    <td className="py-3 text-right">
+                      <span className={cn(
+                        "text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded",
+                        s.health === 'healthy' ? "bg-success/10 text-success border border-success/20" :
+                        s.health === 'error' ? "bg-danger/10 text-danger border border-danger/20" :
+                        "bg-warning/10 text-warning border border-warning/20"
+                      )}>
+                        {s.health}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+      )}
+
+      {/* ── Environment ── */}
+      {envInfo && (
+        <Panel variant="elevated" padding="lg" category="devops">
+          <h3 className="text-xs font-black text-text uppercase tracking-[0.2em] mb-6 flex items-center gap-4">
+            <Variable size={18} className="text-accent" />
+            Environment
+          </h3>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {envInfo.sdks && envInfo.sdks.length > 0 && (
+              <div>
+                <p className="text-[10px] font-black text-text-faint uppercase tracking-wider mb-3">SDKs</p>
+                <div className="space-y-2">
+                  {envInfo.sdks.map((sdk, i) => (
+                    <div key={i} className="flex items-center justify-between bg-panel-2 border border-border/50 rounded-lg px-4 py-2.5">
+                      <span className="text-xs font-bold text-text">{sdk.name}</span>
+                      <span className="text-[10px] font-semibold text-text-dim tabular-nums">{sdk.version}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {envInfo.package_managers && envInfo.package_managers.length > 0 && (
+              <div>
+                <p className="text-[10px] font-black text-text-faint uppercase tracking-wider mb-3">Package Managers</p>
+                <div className="space-y-2">
+                  {envInfo.package_managers.map((pm, i) => (
+                    <div key={i} className="flex items-center justify-between bg-panel-2 border border-border/50 rounded-lg px-4 py-2.5">
+                      <span className="text-xs font-bold text-text">{pm.name}</span>
+                      <span className="text-[10px] font-semibold text-text-dim tabular-nums">{pm.version}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {envInfo.key_vars && envInfo.key_vars.length > 0 && (
+              <div>
+                <p className="text-[10px] font-black text-text-faint uppercase tracking-wider mb-3">Key Variables</p>
+                <div className="space-y-2">
+                  {envInfo.key_vars.slice(0, 8).map((v, i) => (
+                    <div key={i} className="flex items-center justify-between bg-panel-2 border border-border/50 rounded-lg px-4 py-2.5">
+                      <span className="text-xs font-bold text-text">{v.name}</span>
+                      <span className="text-[9px] font-semibold text-text-dim max-w-[120px] truncate" title={v.value}>{v.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </Panel>
+      )}
+
+      {/* ── AI Suggestions ── */}
+      {suggestions.length > 0 && (
+        <Panel variant="elevated" padding="lg" category="devops">
+          <h3 className="text-xs font-black text-text uppercase tracking-[0.2em] mb-6 flex items-center gap-4">
+            <AlertTriangle size={18} className="text-accent" />
+            AI Suggestions
+          </h3>
+          <div className="space-y-3">
+            {suggestions.map((s, i) => (
+              <div key={i} className={cn(
+                "flex items-start gap-4 p-4 rounded-xl border transition-all",
+                s.severity === 'critical' ? "bg-danger/5 border-danger/20" :
+                s.severity === 'warning' ? "bg-warning/5 border-warning/20" :
+                "bg-panel-2 border-border/50"
+              )}>
+                <div className={cn(
+                  "mt-0.5 w-2 h-2 rounded-full shrink-0",
+                  s.severity === 'critical' ? "bg-danger shadow-[0_0_6px_var(--color-danger)]" :
+                  s.severity === 'warning' ? "bg-warning shadow-[0_0_6px_var(--color-warning)]" :
+                  "bg-accent"
+                )} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-1">
+                    <span className={cn(
+                      "text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded",
+                      s.severity === 'critical' ? "bg-danger/10 text-danger" :
+                      s.severity === 'warning' ? "bg-warning/10 text-warning" :
+                      "bg-accent/10 text-accent"
+                    )}>
+                      {s.category}
+                    </span>
+                    <span className={cn(
+                      "text-[10px] font-black uppercase tracking-wider",
+                      s.severity === 'critical' ? "text-danger" :
+                      s.severity === 'warning' ? "text-warning" :
+                      "text-accent"
+                    )}>
+                      {s.severity}
+                    </span>
+                  </div>
+                  <p className="text-xs font-semibold text-text-dim leading-relaxed">{s.message}</p>
+                  {s.action && (
+                    <p className="text-[10px] font-bold text-accent mt-1">→ {s.action}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      )}
     </div>
   )
 }
@@ -540,8 +743,7 @@ function DockerTabExpanded() {
                 {c.ports && <span className="text-xs font-mono text-text-faint">{c.ports}</span>}
                 <StatusBadge status={c.state} />
                 <div className="flex gap-1">
-                  {c.state !== 'running' && <ActionButton icon={<Play size={12} />} label="" onClick={() => dockerAction('Kill', c.id)} />}
-                  {/* Using Kill as workaround - the actual start/stop is via ControlContainer but that's different */}
+                  {c.state !== 'running' && <ActionButton icon={<Play size={12} />} label="" onClick={() => dockerAction('Start', c.id)} />}
                 </div>
               </div>
             </div>

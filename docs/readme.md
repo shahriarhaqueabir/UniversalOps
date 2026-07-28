@@ -83,6 +83,7 @@ docs/
 ├── TROUBLESHOOTING.md     — Common issues & solutions
 ├── USER_GUIDE.md          — Full user guide
 ├── developing.md          — Deep development guide
+├── reviewprompt.md        — Internal AI review prompt (not user-facing)
 ├── screenshots/           — Application screenshots
 │   ├── final_execution_1_dashboard.png
 │   ├── final_execution_2_reports.png

@@ -19,6 +19,7 @@ func NewPipelineAPI(pipeline *common.DataPipeline) *PipelineAPI {
 
 // GetMetricHistory returns the last n values for a named metric.
 func (p *PipelineAPI) GetMetricHistory(name string, n int) []float64 {
+	defer common.RecoverPanic()
 	ts := p.pipeline.GetTimeSeries(name)
 	if ts == nil {
 		return []float64{}
@@ -32,6 +33,7 @@ func (p *PipelineAPI) GetMetricHistory(name string, n int) []float64 {
 
 // GetMetricHistoryWithTimestamps returns the last n values with timestamps for a named metric.
 func (p *PipelineAPI) GetMetricHistoryWithTimestamps(name string, n int) []DataPoint {
+	defer common.RecoverPanic()
 	ts := p.pipeline.GetTimeSeries(name)
 	if ts == nil {
 		return []DataPoint{}
@@ -52,11 +54,13 @@ func (p *PipelineAPI) GetMetricHistoryWithTimestamps(name string, n int) []DataP
 
 // GetForecast returns predicted values for a named metric.
 func (p *PipelineAPI) GetForecast(name string, steps int) []float64 {
+	defer common.RecoverPanic()
 	return p.pipeline.GetForecast(name, steps)
 }
 
 // GetTrend returns the current trend for a named metric.
 func (p *PipelineAPI) GetTrend(name string) TrendInfo {
+	defer common.RecoverPanic()
 	trend := p.pipeline.GetTrend(name)
 	return TrendInfo{
 		Direction:   trendDirectionString(trend.Direction),
@@ -68,6 +72,7 @@ func (p *PipelineAPI) GetTrend(name string) TrendInfo {
 
 // GetWindowStats returns rolling statistics for a named metric.
 func (p *PipelineAPI) GetWindowStats(name string) StatsInfo {
+	defer common.RecoverPanic()
 	stats := p.pipeline.GetWindowStats(name)
 	return StatsInfo{
 		Min:   stats.Min,
@@ -83,6 +88,7 @@ func (p *PipelineAPI) GetWindowStats(name string) StatsInfo {
 
 // GetMetricWithForecast returns a complete metric snapshot with forecast.
 func (p *PipelineAPI) GetMetricWithForecast(name string) MetricHistory {
+	defer common.RecoverPanic()
 	mf := p.pipeline.GetMetricWithForecast(name)
 	return MetricHistory{
 		Name:      mf.Name,
@@ -97,6 +103,7 @@ func (p *PipelineAPI) GetMetricWithForecast(name string) MetricHistory {
 
 // AllMetricNames returns all tracked metric names and units.
 func (p *PipelineAPI) AllMetricNames() []MetricDef {
+	defer common.RecoverPanic()
 	metrics := common.DefaultMetrics
 	out := make([]MetricDef, 0, len(metrics))
 	for _, m := range metrics {
@@ -107,11 +114,13 @@ func (p *PipelineAPI) AllMetricNames() []MetricDef {
 
 // ClearPipeline resets all stored data and forecasts.
 func (p *PipelineAPI) ClearPipeline() {
+	defer common.RecoverPanic()
 	p.pipeline.Clear()
 }
 
 // UpdateSettings updates the pipeline configuration and network defaults.
 func (p *PipelineAPI) UpdateSettings(intervalMs int, capacity int, pingCount int, dnsTimeout int) {
+	defer common.RecoverPanic()
 	cfg := p.pipeline.Config()
 
 	if intervalMs > 0 {
@@ -138,6 +147,7 @@ func (p *PipelineAPI) UpdateSettings(intervalMs int, capacity int, pingCount int
 
 // PersistSettings saves current pipeline configuration to the database.
 func (p *PipelineAPI) PersistSettings() {
+	defer common.RecoverPanic()
 	s := common.GetStorage()
 	if s == nil {
 		return
@@ -151,6 +161,7 @@ func (p *PipelineAPI) PersistSettings() {
 
 // LoadSettings retrieves and applies persisted settings from the database.
 func (p *PipelineAPI) LoadSettings() {
+	defer common.RecoverPanic()
 	s := common.GetStorage()
 	if s == nil {
 		return
@@ -179,6 +190,7 @@ func (p *PipelineAPI) LoadSettings() {
 
 // GetCurrentSettings returns the current operational settings of the data pipeline.
 func (p *PipelineAPI) GetCurrentSettings() map[string]interface{} {
+	defer common.RecoverPanic()
 	cfg := p.pipeline.Config()
 	return map[string]interface{}{
 		"refreshInterval": int(cfg.TickInterval.Milliseconds()),

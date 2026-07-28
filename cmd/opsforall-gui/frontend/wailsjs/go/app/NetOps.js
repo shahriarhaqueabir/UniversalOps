@@ -22,6 +22,10 @@ export function GetDefaultGateway() {
   return window['go']['app']['NetOps']['GetDefaultGateway']();
 }
 
+export function GetDiscoveryTemplates() {
+  return window['go']['app']['NetOps']['GetDiscoveryTemplates']();
+}
+
 export function GetFirewallRules() {
   return window['go']['app']['NetOps']['GetFirewallRules']();
 }
@@ -44,6 +48,10 @@ export function GetRecentChanges() {
 
 export function GetRoutingTable() {
   return window['go']['app']['NetOps']['GetRoutingTable']();
+}
+
+export function GetTopology() {
+  return window['go']['app']['NetOps']['GetTopology']();
 }
 
 export function GetVPNStatus() {
@@ -70,6 +78,10 @@ export function ReverseLookup(arg1) {
   return window['go']['app']['NetOps']['ReverseLookup'](arg1);
 }
 
+export function RunAutoDiscovery(arg1) {
+  return window['go']['app']['NetOps']['RunAutoDiscovery'](arg1);
+}
+
 export function RunNetworkAction(arg1, arg2) {
   return window['go']['app']['NetOps']['RunNetworkAction'](arg1, arg2);
 }
@@ -80,6 +92,10 @@ export function RunNetworkDiscovery(arg1) {
 
 export function RunNetworkHealthCheck() {
   return window['go']['app']['NetOps']['RunNetworkHealthCheck']();
+}
+
+export function SaveTopology(arg1) {
+  return window['go']['app']['NetOps']['SaveTopology'](arg1);
 }
 
 export function ScanWiFiNetworks() {

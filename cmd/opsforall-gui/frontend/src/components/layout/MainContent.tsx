@@ -8,6 +8,7 @@ const Dashboard = lazy(() => import('../../pages/Dashboard').then(m => ({ defaul
 const SysOps = lazy(() => import('../../pages/SysOps').then(m => ({ default: m.SysOps })))
 const WorkflowCenter = lazy(() => import('../../pages/WorkflowCenter').then(m => ({ default: m.WorkflowCenter })))
 const NetOps = lazy(() => import('../../pages/NetOps').then(m => ({ default: m.NetOps })))
+const NetworkDesigner = lazy(() => import('../../pages/NetworkDesigner').then(m => ({ default: m.NetworkDesigner })))
 const SecOps = lazy(() => import('../../pages/SecOps').then(m => ({ default: m.SecOps })))
 const DevOps = lazy(() => import('../../pages/DevOps').then(m => ({ default: m.DevOps })))
 const AIOps = lazy(() => import('../../pages/AIOps').then(m => ({ default: m.AIOps })))
@@ -61,6 +62,7 @@ export function MainContent({ currentPage }: { currentPage: Page }) {
       case 'sysops': return <SysOps />
       case 'workflows': return <WorkflowCenter />
       case 'netops': return <NetOps />
+      case 'network-designer': return <NetworkDesigner />
       case 'secops': return <SecOps />
       case 'devops': return <DevOps />
       case 'aiops': return <AIOps />

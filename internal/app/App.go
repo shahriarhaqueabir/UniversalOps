@@ -47,6 +47,12 @@ type App struct {
 	Workflows   *WorkflowAPI
 	Reports     *ReportsAPI
 
+	// System health facade
+	Health *Health
+
+	// SLO/SLI evaluation engine
+	sloEngine *common.SLOEngine
+
 	// Workflow engine
 	workflowEngine *common.WorkflowEngine
 
@@ -116,7 +122,7 @@ func NewApp() *App {
 	a.DevOps = NewDevOps(nil, a.eventBus)
 	a.Timeline = NewTimeline(a.eventBus, a.AIOps)
 	a.Reports = NewReportsAPI(a.SysOps, a.SecOps, a.AIOps)
-	a.Dash = NewDashboard(a.pipeline, a.alerts, a.SysOps, a.NetOps, a.Timeline, func() string {
+	a.Dash = NewDashboard(a.pipeline, a.alerts, a.SysOps, a.NetOps, a.SecOps, a.DevOps, a.AIOps, a.Timeline, nil, func() string {
 		return a.GetAppInfo().Uptime
 	})
 
@@ -233,6 +239,13 @@ func (a *App) Startup(ctx context.Context) {
 		common.LogWarn("Failed to init local storage: %v", err)
 	}
 
+	// Initialize SLO engine and seed defaults
+	if s := common.GetStorage(); s != nil {
+		a.sloEngine = common.NewSLOEngine(s)
+		a.sloEngine.SeedDefaultSLOs()
+		a.Dash.SetSLOEngine(a.sloEngine)
+	}
+
 	// Initialize the session logger locally
 	logPath := filepath.Join(logsDir, "universalops.log")
 	if err := common.InitLogger(logPath); err != nil {
@@ -260,6 +273,9 @@ func (a *App) Startup(ctx context.Context) {
 	RegisterCollectors(a.collectorRegistry, a)
 	a.scheduler = common.NewCollectorScheduler(a.collectorRegistry, a.pipeline)
 	a.scheduler.Start()
+
+	// Initialize Health facade now that the registry exists
+	a.Health = NewHealth(a.pipeline, a.alerts, a.collectorRegistry)
 
 	// Start the modular engine evaluation loop
 	a.engineLoop.Start(2 * time.Second)

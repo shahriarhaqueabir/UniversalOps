@@ -6,8 +6,40 @@ export function GenerateDashboardBriefing() {
   return window['go']['app']['Dashboard']['GenerateDashboardBriefing']();
 }
 
+export function GetAIOpsSummary() {
+  return window['go']['app']['Dashboard']['GetAIOpsSummary']();
+}
+
 export function GetDashboardData() {
   return window['go']['app']['Dashboard']['GetDashboardData']();
+}
+
+export function GetDevOpsSummary() {
+  return window['go']['app']['Dashboard']['GetDevOpsSummary']();
+}
+
+export function GetDockerStatus() {
+  return window['go']['app']['Dashboard']['GetDockerStatus']();
+}
+
+export function GetKubernetesStatus() {
+  return window['go']['app']['Dashboard']['GetKubernetesStatus']();
+}
+
+export function GetSLODefinitions() {
+  return window['go']['app']['Dashboard']['GetSLODefinitions']();
+}
+
+export function GetSLOSummary() {
+  return window['go']['app']['Dashboard']['GetSLOSummary']();
+}
+
+export function GetSecurityScore() {
+  return window['go']['app']['Dashboard']['GetSecurityScore']();
+}
+
+export function GetSecuritySummary() {
+  return window['go']['app']['Dashboard']['GetSecuritySummary']();
 }
 
 export function GetSystemSnapshot() {
@@ -16,4 +48,8 @@ export function GetSystemSnapshot() {
 
 export function RunQuickDiag() {
   return window['go']['app']['Dashboard']['RunQuickDiag']();
+}
+
+export function SetSLOEngine(arg1) {
+  return window['go']['app']['Dashboard']['SetSLOEngine'](arg1);
 }

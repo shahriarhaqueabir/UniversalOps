@@ -172,6 +172,183 @@ export function OverviewTab() {
           </div>
         </Panel>
       )}
+
+      {/* ── Exposed Services ── */}
+      {ports.length > 0 && (
+        <Panel padding="lg" category="security">
+          <h3 className="text-lg font-black text-text uppercase tracking-[0.2em] mb-8 flex items-center gap-4">
+            <div className="p-2 rounded-xl bg-accent/10 border border-accent/20">
+              <Radio size={24} className="text-accent" />
+            </div>
+            Exposed Services
+            <span className="ml-auto text-xs font-bold text-text-faint tabular-nums">{ports.length} ports</span>
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-border/50 text-[10px] font-black text-text-faint uppercase tracking-wider">
+                  <th className="pb-3 pr-4">Port</th>
+                  <th className="pb-3 pr-4">Protocol</th>
+                  <th className="pb-3 pr-4">Process</th>
+                  <th className="pb-3 pr-4">PID</th>
+                  <th className="pb-3 pr-4">Service</th>
+                  <th className="pb-3 pr-4">External</th>
+                  <th className="pb-3 text-right">Risk</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ports.slice(0, 12).map((p, i) => (
+                  <tr key={i} className="border-b border-border/30 hover:bg-panel-2 transition-colors">
+                    <td className="py-3 pr-4 text-sm font-bold text-text tabular-nums">{p.port}</td>
+                    <td className="py-3 pr-4 text-xs font-semibold text-text-dim">{p.protocol}</td>
+                    <td className="py-3 pr-4 text-xs font-semibold text-text-dim max-w-[160px] truncate">{p.process_name}</td>
+                    <td className="py-3 pr-4 text-xs font-semibold text-text-dim tabular-nums">{p.pid}</td>
+                    <td className="py-3 pr-4 text-xs font-semibold text-text-dim">{p.service_name || '—'}</td>
+                    <td className="py-3 pr-4">
+                      <span className={cn(
+                        "text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded",
+                        p.is_external ? "bg-danger/10 text-danger border border-danger/20" : "bg-success/10 text-success border border-success/20"
+                      )}>
+                        {p.is_external ? 'Yes' : 'No'}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right">
+                      <span className={cn(
+                        "text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded",
+                        p.risk_level === 'high' ? "bg-danger/10 text-danger border border-danger/20" :
+                        p.risk_level === 'medium' ? "bg-warning/10 text-warning border border-warning/20" :
+                        "bg-success/10 text-success border border-success/20"
+                      )}>
+                        {p.risk_level}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {ports.length > 12 && (
+              <p className="text-[10px] text-text-faint font-bold uppercase tracking-wider text-center mt-4">
+                +{ports.length - 12} more ports
+              </p>
+            )}
+          </div>
+        </Panel>
+      )}
+
+      {/* ── User Accounts Breakdown ── */}
+      {users.length > 0 && (
+        <Panel padding="lg" category="security">
+          <h3 className="text-lg font-black text-text uppercase tracking-[0.2em] mb-8 flex items-center gap-4">
+            <div className="p-2 rounded-xl bg-accent/10 border border-accent/20">
+              <Users size={24} className="text-accent" />
+            </div>
+            User Accounts
+            <span className="ml-auto text-xs font-bold text-text-faint tabular-nums">{users.length} total</span>
+          </h3>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-panel-2 border border-border rounded-2xl p-5 text-center hover:border-accent/30 transition-all">
+              <p className="text-3xl font-black text-text tabular-nums">{users.filter(u => u.is_admin && u.is_enabled).length}</p>
+              <p className="text-[10px] font-black text-text-faint uppercase tracking-wider mt-1">Active Admins</p>
+            </div>
+            <div className="bg-panel-2 border border-border rounded-2xl p-5 text-center hover:border-accent/30 transition-all">
+              <p className="text-3xl font-black text-text tabular-nums">{users.filter(u => !u.is_enabled).length}</p>
+              <p className="text-[10px] font-black text-text-faint uppercase tracking-wider mt-1">Disabled</p>
+            </div>
+            <div className="bg-panel-2 border border-border rounded-2xl p-5 text-center hover:border-accent/30 transition-all">
+              <p className="text-3xl font-black text-text tabular-nums">{users.filter(u => u.password_never_expires).length}</p>
+              <p className="text-[10px] font-black text-text-faint uppercase tracking-wider mt-1">Password Never Expires</p>
+            </div>
+            <div className="bg-panel-2 border border-border rounded-2xl p-5 text-center hover:border-accent/30 transition-all">
+              <p className="text-3xl font-black text-text tabular-nums">{users.filter(u => !u.is_enabled || !u.last_logon).length}</p>
+              <p className="text-[10px] font-black text-text-faint uppercase tracking-wider mt-1">Inactive</p>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-border/50 text-[10px] font-black text-text-faint uppercase tracking-wider">
+                  <th className="pb-3 pr-4">Username</th>
+                  <th className="pb-3 pr-4">Full Name</th>
+                  <th className="pb-3 pr-4">Group</th>
+                  <th className="pb-3 pr-4">Admin</th>
+                  <th className="pb-3 pr-4">Enabled</th>
+                  <th className="pb-3 pr-4">Pwd Expires</th>
+                  <th className="pb-3 text-right">Last Logon</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.slice(0, 10).map((u, i) => (
+                  <tr key={i} className="border-b border-border/30 hover:bg-panel-2 transition-colors">
+                    <td className="py-3 pr-4 text-sm font-bold text-text">{u.username}</td>
+                    <td className="py-3 pr-4 text-xs font-semibold text-text-dim">{u.full_name || '—'}</td>
+                    <td className="py-3 pr-4 text-xs font-semibold text-text-dim">{u.group || '—'}</td>
+                    <td className="py-3 pr-4">
+                      <StatusBadge status={u.is_admin ? 'enabled' : 'disabled'} />
+                    </td>
+                    <td className="py-3 pr-4">
+                      <StatusBadge status={u.is_enabled ? 'enabled' : 'disabled'} />
+                    </td>
+                    <td className="py-3 pr-4">
+                      <StatusBadge status={u.password_never_expires ? 'disabled' : 'enabled'} />
+                    </td>
+                    <td className="py-3 text-right text-xs font-semibold text-text-dim tabular-nums">{u.last_logon || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {users.length > 10 && (
+              <p className="text-[10px] text-text-faint font-bold uppercase tracking-wider text-center mt-4">
+                +{users.length - 10} more users
+              </p>
+            )}
+          </div>
+        </Panel>
+      )}
+
+      {/* ── Recent Security Events ── */}
+      {events.length > 0 && (
+        <Panel padding="lg" category="security">
+          <h3 className="text-lg font-black text-text uppercase tracking-[0.2em] mb-8 flex items-center gap-4">
+            <div className="p-2 rounded-xl bg-danger/10 border border-danger/20">
+              <AlertTriangle size={24} className="text-danger" />
+            </div>
+            Recent Security Events
+            <span className="ml-auto text-xs font-bold text-text-faint tabular-nums">{events.length} events</span>
+          </h3>
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+            {events.slice(0, 20).map((e, i) => (
+              <div key={i} className="flex items-start gap-4 p-4 rounded-xl bg-panel-2 border border-border/50 hover:border-border transition-all">
+                <div className={cn(
+                  "mt-0.5 w-2 h-2 rounded-full shrink-0",
+                  e.level === 'Error' ? 'bg-danger shadow-[0_0_6px_var(--color-danger)]' :
+                  e.level === 'Warning' ? 'bg-warning shadow-[0_0_6px_var(--color-warning)]' :
+                  'bg-accent'
+                )} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-1">
+                    <span className={cn(
+                      "text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded",
+                      e.level === 'Error' ? 'bg-danger/10 text-danger' :
+                      e.level === 'Warning' ? 'bg-warning/10 text-warning' :
+                      'bg-accent/10 text-accent'
+                    )}>
+                      {e.level}
+                    </span>
+                    <span className="text-[10px] font-bold text-text-faint tabular-nums">{e.time}</span>
+                    <span className="text-[10px] font-bold text-text-faint">{e.provider}</span>
+                  </div>
+                  <p className="text-xs font-semibold text-text-dim leading-relaxed">{e.message}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          {events.length > 20 && (
+            <p className="text-[10px] text-text-faint font-bold uppercase tracking-wider text-center mt-4">
+              +{events.length - 20} more events
+            </p>
+          )}
+        </Panel>
+      )}
     </div>
   )
 }

@@ -13,6 +13,8 @@ export function GetConnections():Promise<Array<app.ConnectionInfo>>;
 
 export function GetDefaultGateway():Promise<app.GatewayInfo>;
 
+export function GetDiscoveryTemplates():Promise<Array<app.DiscoveryTemplateData>>;
+
 export function GetFirewallRules():Promise<Array<app.NetOpsFirewallRuleData>>;
 
 export function GetInterfaces():Promise<Array<app.InterfaceInfo>>;
@@ -24,6 +26,8 @@ export function GetPingStats(arg1:Array<app.PingResultMultiData>):Promise<app.Pi
 export function GetRecentChanges():Promise<Array<app.NetworkChange>>;
 
 export function GetRoutingTable():Promise<Array<netops.RouteEntry>>;
+
+export function GetTopology():Promise<app.NetworkTopologyData>;
 
 export function GetVPNStatus():Promise<app.VPNStatusData>;
 
@@ -37,11 +41,15 @@ export function PortScan(arg1:string,arg2:Array<number>):Promise<Array<app.PortR
 
 export function ReverseLookup(arg1:string):Promise<Record<string, any>>;
 
+export function RunAutoDiscovery(arg1:string):Promise<app.NetworkTopologyData>;
+
 export function RunNetworkAction(arg1:string,arg2:Record<string, string>):Promise<app.NetworkActionResult>;
 
 export function RunNetworkDiscovery(arg1:string):Promise<netops.DiscoveryResult>;
 
 export function RunNetworkHealthCheck():Promise<app.NetworkHealthReport>;
+
+export function SaveTopology(arg1:app.NetworkTopologyData):Promise<boolean>;
 
 export function ScanWiFiNetworks():Promise<Array<netops.WiFiNetwork>>;
 

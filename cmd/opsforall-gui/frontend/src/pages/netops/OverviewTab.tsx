@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { cn } from '@/lib/utils'
+import { cn, formatSafeDate } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import {
@@ -350,6 +350,59 @@ export function OverviewTab() {
         )}
       </Panel>
 
+      {/* ── Section 3b: Top Talkers ── */}
+      {connInterfaces.length > 0 && (
+        <Panel padding="md" category="network">
+          <PanelHeader icon={<Activity size={20} />} title="Top Talkers" category="network" action={<span className="text-xs font-black px-4 py-1.5 rounded-full bg-panel-3 text-accent border border-border tabular-nums shadow-inner">RX/TX per interface</span>} />
+          <div className="space-y-4">
+            {(() => {
+              const maxRx = Math.max(...connInterfaces.map(i => i.rx_bytes), 1)
+              const maxTx = Math.max(...connInterfaces.map(i => i.tx_bytes), 1)
+              const sorted = [...connInterfaces].sort((a, b) => (b.rx_bytes + b.tx_bytes) - (a.rx_bytes + a.tx_bytes))
+              return sorted.map((iface) => {
+                const rxPct = (iface.rx_bytes / maxRx) * 100
+                const txPct = (iface.tx_bytes / maxTx) * 100
+                const total = iface.rx_bytes + iface.tx_bytes
+                return (
+                  <div key={iface.name} className="bg-panel-2 border border-border/50 rounded-xl p-4 hover:border-accent/20 transition-all">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-[10px] font-black text-text uppercase tracking-wider truncate">{iface.name}</span>
+                        <span className={cn(
+                          "text-[9px] font-bold px-1.5 py-0.5 rounded-full border uppercase tracking-widest",
+                          iface.is_up ? "bg-success/15 text-success border-success/30" : "bg-danger/15 text-danger border-danger/30"
+                        )}>{iface.is_up ? 'UP' : 'DOWN'}</span>
+                      </div>
+                      <span className="text-xs font-black text-text tabular-nums">{formatBytes(total)}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div>
+                        <div className="flex items-center justify-between text-[10px] mb-1">
+                          <span className="font-bold text-success flex items-center gap-1"><ArrowDownRight size={12} /> RX</span>
+                          <span className="font-bold text-text-dim tabular-nums">{formatBytes(iface.rx_bytes)}</span>
+                        </div>
+                        <div className="h-2 bg-panel-3 rounded-full overflow-hidden">
+                          <div className="h-full bg-success/70 rounded-full transition-all duration-700" style={{ width: `${rxPct}%` }} />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between text-[10px] mb-1">
+                          <span className="font-bold text-accent flex items-center gap-1"><ArrowUpRight size={12} /> TX</span>
+                          <span className="font-bold text-text-dim tabular-nums">{formatBytes(iface.tx_bytes)}</span>
+                        </div>
+                        <div className="h-2 bg-panel-3 rounded-full overflow-hidden">
+                          <div className="h-full bg-accent/70 rounded-full transition-all duration-700" style={{ width: `${txPct}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            })()}
+          </div>
+        </Panel>
+      )}
+
       {/* ── Section 4: Network Quality ── */}
       <Panel padding="lg" category="network">
         <PanelHeader icon={<Zap size={20} />} title="Network Quality" category="network" />
@@ -462,7 +515,7 @@ export function OverviewTab() {
                   <span className="text-xs font-bold text-text uppercase tracking-tight">{change.interface}</span>
                   <span className="text-xs font-medium text-text-dim flex-1 truncate">{change.detail}</span>
                   <span className="text-[10px] font-medium text-text-faint tabular-nums whitespace-nowrap">
-                    {new Date(change.timestamp).toLocaleTimeString()}
+                    {formatSafeDate(change.timestamp, (d) => d.toLocaleTimeString())}
                   </span>
                 </div>
               )

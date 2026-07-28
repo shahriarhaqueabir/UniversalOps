@@ -124,6 +124,13 @@ export function NetOps() {
           <p className="text-[var(--color-text-dim)] text-xs font-semibold uppercase tracking-widest mt-2">Inspection, diagnosis, and action for network engineering workflows.</p>
           <DataFreshnessIndicator lastUpdated={ifacesUpdatedAt ? new Date(ifacesUpdatedAt) : null} className="mt-4" />
         </div>
+        <button
+          onClick={() => useNavigationStore.getState().navigate('network-designer')}
+          className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold rounded-xl bg-accent text-white hover:bg-accent/90 shadow-lg transition-all mr-10"
+        >
+          <Map size={16} />
+          Network Designer
+        </button>
       </div>
 
       {/* Content: Sidebar + Main */}

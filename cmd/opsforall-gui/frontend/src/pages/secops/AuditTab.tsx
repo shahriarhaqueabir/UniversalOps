@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { ClipboardCheck, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react'
 import { useBackend } from '@/hooks/useBackend'
+import { formatSafeDate } from '@/lib/utils'
 import { SectionBriefing } from '@/components/ui/SectionBriefing'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Panel } from '@/components/ui/Panel'
@@ -84,7 +85,7 @@ export function AuditTab() {
                   }}
                 />
               </div>
-              <p className="text-xs text-text-faint mt-2">Last run: {new Date(auditMutation.data.timestamp).toLocaleString()}</p>
+              <p className="text-xs text-text-faint mt-2">Last run: {formatSafeDate(auditMutation.data.timestamp)}</p>
             </div>
           </Panel>
 

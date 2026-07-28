@@ -21,7 +21,7 @@ import {
   Database,
   HardDrive,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, safeDate } from '@/lib/utils'
 import * as Slider from '@radix-ui/react-slider'
 import * as Dialog from '@radix-ui/react-dialog'
 import { useBackend } from '@/hooks/useBackend'
@@ -110,11 +110,14 @@ function CollectorList({ call }: { call: ReturnType<typeof useBackend>['call'] }
               />
             </div>
             <p className="text-xs text-[var(--color-text-faint)] truncate">{c.description}</p>
-            {c.last_run && (
-              <p className="text-[10px] text-[var(--color-text-faint)] mt-0.5 font-mono">
-                Last: {new Date(c.last_run).toLocaleTimeString()}
-              </p>
-            )}
+            {(() => {
+              const lastRun = c.last_run ? safeDate(c.last_run) : null
+              return lastRun ? (
+                <p className="text-[10px] text-[var(--color-text-faint)] mt-0.5 font-mono">
+                  Last: {lastRun.toLocaleTimeString()}
+                </p>
+              ) : null
+            })()}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">

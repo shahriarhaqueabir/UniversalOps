@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "universalops-config-schema",
+  "title": "Universal-Ops Configuration Schema",
+  "description": "Validates staged config changes in useConfigStore before deployment.",
+  "type": "object",
+  "properties": {
+    "refreshInterval": {
+      "type": "number",
+      "description": "Dashboard auto-refresh interval in milliseconds",
+      "minimum": 500,
+      "maximum": 60000,
+      "default": 5000
+    },
+    "pingCount": {
+      "type": "number",
+      "description": "Number of ICMP echo requests per ping operation",
+      "minimum": 1,
+      "maximum": 50,
+      "default": 4
+    },
+    "dnsTimeout": {
+      "type": "number",
+      "description": "DNS lookup timeout in milliseconds",
+      "minimum": 100,
+      "maximum": 30000,
+      "default": 2000
+    },
+    "companionName": {
+      "type": "string",
+      "description": "Name of the AI companion (Hawk)",
+      "minLength": 1,
+      "maxLength": 50,
+      "default": "Hawk"
+    }
+  },
+  "additionalProperties": {
+    "description": "Keys not in the schema are allowed but should be validated dynamically"
+  }
+}

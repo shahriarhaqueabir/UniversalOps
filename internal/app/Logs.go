@@ -17,6 +17,7 @@ func NewLogs() *Logs {
 
 // GetLogs returns filtered log entries from the Universal-Ops database.
 func (l *Logs) GetLogs(level string, since string, n int) []LogEntry {
+	defer common.RecoverPanic()
 	if n <= 0 {
 		n = 200
 	}
@@ -47,6 +48,7 @@ func (l *Logs) GetLogs(level string, since string, n int) []LogEntry {
 
 // GetLogStats returns aggregated log statistics for the Overview tab.
 func (l *Logs) GetLogStats() LogStats {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return LogStats{TopSources: []LogSourceCount{}, TrendingErrors: []TrendingError{}}
@@ -101,6 +103,7 @@ func (l *Logs) GetLogStats() LogStats {
 // GetLogTimeline returns time-bucketed log counts for charting.
 // hours >= 24 buckets by hour; hours < 24 buckets by 5 minutes.
 func (l *Logs) GetLogTimeline(hours int) []LogTimelinePoint {
+	defer common.RecoverPanic()
 	if hours <= 0 {
 		hours = 24
 	}
@@ -131,6 +134,7 @@ func (l *Logs) GetLogTimeline(hours int) []LogTimelinePoint {
 
 // GenerateLogSummary returns a deterministic summary of recent log activity.
 func (l *Logs) GenerateLogSummary() LogSummary {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return LogSummary{}

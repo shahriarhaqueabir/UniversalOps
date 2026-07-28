@@ -58,7 +58,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
 
 // ── Navigation Store ──
 
-export type Page = 'dashboard' | 'sysops' | 'workflows' | 'netops' | 'secops' | 'devops' | 'aiops' | 'reports' | 'alerts' | 'logs' | 'settings'
+export type Page = 'dashboard' | 'sysops' | 'workflows' | 'netops' | 'network-designer' | 'secops' | 'devops' | 'aiops' | 'reports' | 'alerts' | 'logs' | 'settings'
 
 interface NavigationState {
   currentPage: Page
