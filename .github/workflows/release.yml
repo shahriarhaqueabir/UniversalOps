@@ -7,6 +7,7 @@ on:
 
 jobs:
   test:
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +26,11 @@ jobs:
 
       - name: Install frontend dependencies
         run: cd cmd/opsforall-gui/frontend && npm ci
+
+      - name: Generate Wails TypeScript bindings
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@latest
+          wails generate module
 
       - name: Build frontend
         run: cd cmd/opsforall-gui/frontend && npm run build
@@ -45,6 +51,7 @@ jobs:
         run: cd cmd/opsforall-gui/frontend && npm run lint
 
   build-windows:
+    timeout-minutes: 30
     needs: [test]
     runs-on: windows-latest
     steps:
@@ -89,6 +96,7 @@ jobs:
           path: build/bin/*
 
   build-linux:
+    timeout-minutes: 30
     needs: [test]
     runs-on: ubuntu-latest
     steps:
@@ -137,6 +145,7 @@ jobs:
           path: build/bin/*
 
   build-macos:
+    timeout-minutes: 30
     needs: [test]
     runs-on: macos-latest
     steps:
@@ -191,6 +200,7 @@ jobs:
           path: build/bin/*
 
   publish:
+    timeout-minutes: 10
     needs: [build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
     steps:
