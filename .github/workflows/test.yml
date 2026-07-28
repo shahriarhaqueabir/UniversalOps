@@ -33,14 +33,6 @@ jobs:
           cache: "npm"
           cache-dependency-path: cmd/opsforall-gui/frontend/package-lock.json
 
-      - name: Install frontend dependencies
-        run: cd cmd/opsforall-gui/frontend && npm ci
-        shell: bash
-
-      - name: Build frontend (needed for go vet //go:embed)
-        run: cd cmd/opsforall-gui/frontend && npm run build
-        shell: bash
-
       - name: Install Wails CLI
         run: |
           go install github.com/wailsapp/wails/v2/cmd/wails@latest
@@ -49,6 +41,14 @@ jobs:
 
       - name: Generate Wails TypeScript bindings
         run: wails generate module
+        shell: bash
+
+      - name: Install frontend dependencies
+        run: cd cmd/opsforall-gui/frontend && npm ci
+        shell: bash
+
+      - name: Build frontend
+        run: cd cmd/opsforall-gui/frontend && npm run build
         shell: bash
 
       - name: Vet
