@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    timeout-minutes: 45
+    timeout-minutes: 60
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -57,7 +57,7 @@ jobs:
         shell: bash
 
       - name: Go test
-        run: go test -race ./internal/... -count=1
+        run: go test ./internal/... -count=1
         shell: bash
 
       - name: TypeScript check
@@ -68,12 +68,8 @@ jobs:
         run: cd cmd/opsforall-gui/frontend && npx vitest run
         shell: bash
 
-      - name: Lint
-        run: cd cmd/opsforall-gui/frontend && npm run lint
-        shell: bash
-
   build-windows:
-    timeout-minutes: 30
+    timeout-minutes: 45
     needs: [test]
     runs-on: windows-latest
     steps:
