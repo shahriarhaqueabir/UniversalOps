@@ -1,9 +1,0 @@
-step 0 action: starting screenshot capture
-step 1 action: visiting dashboard
-step 2 action: navigating to reports
-step 3 action: navigating to sysops
-step 4 action: navigating to netops
-step 5 action: navigating to secops
-step 6 action: navigating to devops
-step 7 action: navigating to aiops
-step 8 action: finished all screenshots

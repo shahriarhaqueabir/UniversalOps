@@ -12,6 +12,10 @@ dist/
 dist-test/
 build/bin/
 
+# Wails auto-generated bindings (regenerated on wails dev/build)
+wailsjs/
+cmd/opsforall-gui/frontend/wailsjs/
+
 # IDE
 .idea/
 .vscode/
@@ -27,6 +31,8 @@ opsforall-gui.log
 opsforall.db
 opsforall.db-shm
 *.db
+*.db-shm
+*.db-wal
 universalops.db-wal
 universalops.db-shm
 
@@ -48,6 +54,10 @@ vendor/
 coverage
 coverage.out
 coverage.txt
+coverage_devops
+coverage_secops
+coverage_sysops
+test_cov
 cmd/opsforall-gui/nul
 nul
 test.err
@@ -78,6 +88,11 @@ data/lhm/
 data/.onboarded
 data/baseline.json
 logs/
+outputs/
+profiles/
+
+# Python virtual environment
+.venv/
 
 # Python cache
 __pycache__/
@@ -91,6 +106,7 @@ scripts/release-gh.sh
 scripts/package-homebrew.ps1
 scripts/package-scoop.ps1
 install.sh
+run_e2e_tests.py
 
 # Internal / research docs (not user-facing)
 docs/MustHaves.md
