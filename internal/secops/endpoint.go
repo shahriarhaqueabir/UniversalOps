@@ -40,10 +40,11 @@ func GetDiskEncryptionStatus() ([]DiskEncryption, error) {
 }
 
 func getDiskEncryptionWindows() ([]DiskEncryption, error) {
+	// Removed -As Array for PS 5.1 compatibility.
 	out, err := common.HiddenCommand("powershell", "-NoProfile", "-Command",
-		"Get-BitLockerVolume | Select-Object MountPoint,ProtectionStatus,EncryptionMethod | ConvertTo-Json -As Array -Depth 2").Output()
+		"Get-BitLockerVolume -ErrorAction SilentlyContinue | Select-Object MountPoint,ProtectionStatus,EncryptionMethod | ConvertTo-Json -Depth 2").Output()
 	if err != nil {
-		return []DiskEncryption{{Volume: "C:", Encrypted: false, Method: "Unknown", Status: "Unavailable"}}, nil
+		return []DiskEncryption{{Volume: "C:", Encrypted: false, Method: "Unknown", Status: "Unavailable (Admin required?)"}}, nil
 	}
 	return parseBitLockerJSON(string(out)), nil
 }

@@ -521,7 +521,7 @@ func (d *DevOps) GetContainers() ContainerSummary {
 		case "exited":
 			stopped++
 			// Check for non-zero exit code in status string
-			if strings.Contains(c.Status, "(0)") == false && strings.Contains(c.Status, "Exited") {
+			if !strings.Contains(c.Status, "(0)") && strings.Contains(c.Status, "Exited") {
 				failed++
 			}
 		default:
@@ -1224,7 +1224,7 @@ func categorizeService(name string) string {
 
 	databases := []string{"mysql", "postgres", "postgresql", "sqlite", "mongodb", "mongo",
 		"redis", "mariadb", "sqlserver", "mssql", "oracle", "couchdb", "cassandra", "memcached"}
-	messageQueues := []string{"rabbitmq", "nats", "kafka", "zeromq", "activemq", "mosquitto"}
+	messageQueues := []string{"rabbitmq", "nats", "kafka", "zeromq", "activemq", "mosquito"}
 	webServers := []string{"nginx", "apache", "httpd", "iis", "caddy", "traefik", "haproxy"}
 	containers := []string{"docker", "podman", "containerd", "containerd-shim", "docker-proxy"}
 

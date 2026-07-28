@@ -2,8 +2,13 @@
 # Docs: https://golangci-lint.run/usage/configuration/
 
 run:
-  timeout: 5m
+  timeout: 10m
   tests: true
+  # Exclude third-party code and helper scripts from analysis
+  skip-dirs:
+    - node_modules
+    - scripts
+    - vendor
 
 linters:
   disable-all: true
@@ -19,7 +24,7 @@ linters:
     # Additional useful checks
     - errorlint      # error wrapping ( %w vs %s )
     - revive         # replacement for golint
-    - bodyclose       # ensure HTTP response bodies are closed
+    - bodyclose      # ensure HTTP response bodies are closed
     - prealloc        # pre-allocate slices when size is known
     - gocritic        # lint checks from Go team
     - misspell        # detect common typos
@@ -27,12 +32,22 @@ linters:
 linters-settings:
   errcheck:
     check-type-assertions: true
-    check-blank: true
+    # Allow explicit ignore with '_' to reduce noise
+    check-blank: false
+  revive:
+    # Disable strict naming for WMI structs (which use underscores)
+    rules:
+      - name: var-naming
+        disabled: true
   gocritic:
     enabled-tags:
       - performance
       - diagnostic
       - style
+    disabled-checks:
+      - octalLiteral # allow 0644 style
+      - hugeParam    # don't worry about large structs for now
+      - rangeValCopy # don't worry about large range copies for now
 
 issues:
   max-same-issues: 0

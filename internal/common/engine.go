@@ -129,6 +129,7 @@ func (e *EngineLoop) DailyAnalysis() {
 	score := 100
 	metrics := []string{MetricCPU, MetricMem, MetricDisk}
 
+	// 1. Check for statistical baseline drift
 	for _, m := range metrics {
 		if drift, ok := e.baselines.DetectDrift(m); ok {
 			if drift.Severity == "high" {
@@ -137,6 +138,34 @@ func (e *EngineLoop) DailyAnalysis() {
 				score -= 5
 			}
 		}
+	}
+
+	// 2. Penalize for active alerts
+	alertCount := 0
+	if e.alerts != nil {
+		alertCount = e.alerts.AlertCount()
+		// Reduce score by 2 points per active alert, up to a max penalty of 40
+		penalty := alertCount * 2
+		if penalty > 40 {
+			penalty = 40
+		}
+		score -= penalty
+	}
+
+	// 3. Check current utilization thresholds (instantaneous safety)
+	p := e.pipeline
+	cpuMF := p.GetMetricWithForecast(MetricCPU)
+	if cpuMF.LastValue > 90 {
+		score -= 20
+	} else if cpuMF.LastValue > 80 {
+		score -= 10
+	}
+
+	memMF := p.GetMetricWithForecast(MetricMem)
+	if memMF.LastValue > 95 {
+		score -= 25
+	} else if memMF.LastValue > 85 {
+		score -= 10
 	}
 
 	if score < 0 {

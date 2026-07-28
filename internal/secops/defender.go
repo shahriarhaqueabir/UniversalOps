@@ -301,11 +301,20 @@ func getJSONString(data map[string]interface{}, key string) (string, bool) {
 		case string:
 			return val, true
 		case bool:
-			// PowerShell ConvertTo-Json serialises booleans as JSON true/false
+			// PowerShell ConvertTo-Json serialises booleans as JSON true/false.
+			// Return as "True" or "False" strings for consistent processing in Go.
 			if val {
 				return "True", true
 			}
 			return "False", true
+		case float64:
+			// Handle numeric values (e.g. 1/0 for bools in some contexts)
+			if val == 1 {
+				return "True", true
+			} else if val == 0 {
+				return "False", true
+			}
+			return fmt.Sprintf("%.0f", val), true
 		case map[string]interface{}:
 			// Handle {"Value": "something"} objects from PowerShell
 			if inner, ok := val["Value"]; ok {
