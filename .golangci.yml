@@ -1,8 +1,6 @@
 # golangci-lint configuration for Universal-Ops
 # Docs: https://golangci-lint.run/usage/configuration/
 
-version: "1"
-
 run:
   timeout: 5m
   tests: true
@@ -21,10 +19,10 @@ linters:
     # Additional useful checks
     - errorlint      # error wrapping ( %w vs %s )
     - revive         # replacement for golint
-    - bodyclose      # ensure HTTP response bodies are closed
-    - prealloc       # pre-allocate slices when size is known
+    - bodyclose       # ensure HTTP response bodies are closed
+    - prealloc        # pre-allocate slices when size is known
     - gocritic        # lint checks from Go team
-    - misspell       # detect common typos
+    - misspell        # detect common typos
 
 linters-settings:
   errcheck:
