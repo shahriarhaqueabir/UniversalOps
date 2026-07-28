@@ -7,8 +7,8 @@ on:
 
 jobs:
   test:
-    timeout-minutes: 30
-    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -16,6 +16,10 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.26.x"
+          cache: true
+
+      - name: Set up MSVC for Windows
+        uses: ilammy/msvc-dev-cmd@v1
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -26,29 +30,41 @@ jobs:
 
       - name: Install frontend dependencies
         run: cd cmd/opsforall-gui/frontend && npm ci
+        shell: bash
 
       - name: Build frontend (needed for go vet //go:embed)
         run: cd cmd/opsforall-gui/frontend && npm run build
+        shell: bash
 
-      - name: Generate Wails TypeScript bindings
+      - name: Install Wails CLI
         run: |
           go install github.com/wailsapp/wails/v2/cmd/wails@latest
-          wails generate module
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+        shell: bash
+
+      - name: Generate Wails TypeScript bindings
+        run: wails generate module
+        shell: bash
 
       - name: Go vet
         run: go vet ./...
+        shell: bash
 
       - name: Go test
         run: go test -race ./internal/... -count=1
+        shell: bash
 
       - name: TypeScript check
         run: cd cmd/opsforall-gui/frontend && npx tsc --noEmit
+        shell: bash
 
       - name: Frontend test
         run: cd cmd/opsforall-gui/frontend && npx vitest run
+        shell: bash
 
       - name: Lint
         run: cd cmd/opsforall-gui/frontend && npm run lint
+        shell: bash
 
   build-windows:
     timeout-minutes: 30
@@ -61,6 +77,10 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.26.x"
+          cache: true
+
+      - name: Set up MSVC for Windows
+        uses: ilammy/msvc-dev-cmd@v1
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -70,16 +90,22 @@ jobs:
           cache-dependency-path: cmd/opsforall-gui/frontend/package-lock.json
 
       - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+        shell: bash
 
       - name: Install frontend dependencies
         run: cd cmd/opsforall-gui/frontend && npm ci
+        shell: bash
 
       - name: Build standalone executable
         run: wails build -platform windows/amd64 -o universal-ops-${{ github.ref_name }}-windows-amd64.exe
+        shell: bash
 
       - name: Build NSIS installer
         run: wails build -platform windows/amd64 -nsis -o universal-ops-${{ github.ref_name }}-windows-amd64-installer
+        shell: bash
 
       - name: Generate individual checksums
         shell: pwsh
@@ -96,7 +122,7 @@ jobs:
           path: build/bin/*
 
   publish:
-    timeout-minutes: 10
+    timeout-minutes: 15
     needs: [build-windows]
     runs-on: ubuntu-latest
     steps:
@@ -104,18 +130,15 @@ jobs:
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+          path: windows-release
 
       - name: Generate checksums
         run: |
           echo "## Checksums" > checksums.txt
           sha256sum windows-release/* >> checksums.txt
           cat checksums.txt
-
-      - name: Prepare package manifests
-        run: |
-          WINDOWS_HASH=$(sha256sum windows-release/*.exe | cut -d' ' -f1)
-          echo "Windows SHA256: $WINDOWS_HASH"
-          echo "Use these hashes to update scripts/package-scoop.ps1"
 
       - name: Create release
         uses: softprops/action-gh-release@v2
@@ -125,6 +148,4 @@ jobs:
             windows-release/*
           generate_release_notes: true
         env:
-          # Note: on private repos, the built-in GITHUB_TOKEN cannot create releases.
-          # Create a classic PAT with `repo` scope and save it as GH_TOKEN in repo secrets.
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
