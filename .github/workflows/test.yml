@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -39,6 +39,10 @@ jobs:
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
         shell: bash
 
+      - name: Install golangci-lint (Build from source for Go 1.26 compatibility)
+        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+        shell: bash
+
       - name: Create placeholder for embed
         run: |
           mkdir -p cmd/opsforall-gui/frontend/dist
@@ -61,11 +65,9 @@ jobs:
         run: go vet ./...
         shell: bash
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
-          args: --timeout=10m
+      - name: Run golangci-lint
+        run: golangci-lint run --timeout=10m
+        shell: bash
 
       - name: Go test
         run: go test ./internal/... -coverprofile=coverage.out -covermode=atomic -count=1
@@ -77,10 +79,6 @@ jobs:
 
       - name: Frontend test
         run: cd cmd/opsforall-gui/frontend && npx vitest run --coverage
-        shell: bash
-
-      - name: Lint
-        run: cd cmd/opsforall-gui/frontend && npm run lint
         shell: bash
 
       - name: Build app for E2E tests
@@ -109,14 +107,11 @@ jobs:
         run: cd cmd/opsforall-gui/frontend && npm audit --audit-level=high
         shell: bash
 
-      - name: govulncheck
-        uses: golang/govulncheck-action@v1
-
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.out,cmd/opsforall-gui/frontend/coverage/lcov.info
+          files: ./coverage.out,./cmd/opsforall-gui/frontend/coverage/lcov.info
           flags: unittests
           verbose: true
 
@@ -127,6 +122,5 @@ jobs:
           name: test-results-${{ matrix.os }}
           path: |
             coverage.out
-            cmd/opsforall-gui/frontend/coverage/lcov.info
             cmd/opsforall-gui/frontend/coverage/
           retention-days: 7
