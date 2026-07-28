@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -38,19 +38,15 @@ jobs:
         run: cd cmd/opsforall-gui/frontend && npm ci
         shell: bash
 
+      - name: Build frontend (needed for go vet //go:embed)
+        run: cd cmd/opsforall-gui/frontend && npm run build
+        shell: bash
+
       - name: Generate Wails TypeScript bindings
         run: |
           go install github.com/wailsapp/wails/v2/cmd/wails@latest
           wails generate module
         shell: bash
-
-      - name: Build frontend (needed for go vet //go:embed)
-        run: cd cmd/opsforall-gui/frontend && npm run build
-        shell: bash
-
-      - name: Allow ping (setcap CAP_NET_RAW)
-        if: runner.os == 'Linux'
-        run: sudo setcap cap_net_raw+ep /bin/ping || true
 
       - name: Vet
         run: go vet ./...
