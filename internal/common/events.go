@@ -203,7 +203,7 @@ func (eb *EventBus) FilterByCategory(cat EventCategory, n int) []TimelineEvent {
 // NewUUID returns a random 16-byte UUID v4 hex string.
 func NewUUID() string {
 	b := make([]byte, 16)
-	_ = rand.Read(b)
+	_, _ = rand.Read(b)
 	// Set version 4 and variant bits
 	b[6] = (b[6] & 0x0f) | 0x40
 	b[8] = (b[8] & 0x3f) | 0x80
