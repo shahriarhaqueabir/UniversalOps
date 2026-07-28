@@ -490,7 +490,7 @@ func (d *DevOps) GetContainers() ContainerSummary {
 		return ContainerSummary{Containers: []ContainerInfo{}}
 	}
 
-	var containers []ContainerInfo
+	var containers = make([]ContainerInfo, 0)
 	running, stopped, failed := 0, 0, 0
 
 	for _, line := range strings.Split(stdout.String(), "\n") {
