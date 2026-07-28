@@ -118,8 +118,9 @@ func NewApp() *App {
 	a.Workflows = NewWorkflowAPI(a.workflowEngine, a.SysOps, a.SecOps, a.DevOps, a.AlertAPI)
 
 	// Initialize subsystems that might need context later
-	a.AIOps = NewAIOps(nil, a.pipeline, a.Knowledge, a.capabilities, a.PipelineAPI, a.SysOps, a.currentDataDir)
-	a.DevOps = NewDevOps(nil, a.eventBus)
+	ctx := context.Background()
+	a.AIOps = NewAIOps(ctx, a.pipeline, a.Knowledge, a.capabilities, a.PipelineAPI, a.SysOps, a.currentDataDir)
+	a.DevOps = NewDevOps(ctx, a.eventBus)
 	a.Timeline = NewTimeline(a.eventBus, a.AIOps)
 	a.Reports = NewReportsAPI(a.SysOps, a.SecOps, a.AIOps)
 	a.Dash = NewDashboard(a.pipeline, a.alerts, a.SysOps, a.NetOps, a.SecOps, a.DevOps, a.AIOps, a.Timeline, nil, func() string {

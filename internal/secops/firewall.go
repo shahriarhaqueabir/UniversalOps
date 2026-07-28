@@ -35,8 +35,9 @@ func GetFirewallProfiles() ([]FirewallProfile, error) {
 	if common.IsWindows() {
 		// Use HiddenCommand because Get-NetFirewallProfile needs registry access
 		// often restricted by sandboxing.
+		// Removed -As Array for PS 5.1 compatibility.
 		cmd := common.HiddenCommand("powershell", "-NoProfile", "-Command",
-			"Get-NetFirewallProfile -ErrorAction SilentlyContinue | Select-Object Name,Enabled | ConvertTo-Json -As Array -Depth 1")
+			"Get-NetFirewallProfile -ErrorAction SilentlyContinue | Select-Object Name,Enabled | ConvertTo-Json -Depth 1")
 		output, err := cmd.Output()
 		if err != nil {
 			// Fallback: use netsh to check firewall state
@@ -48,9 +49,18 @@ func GetFirewallProfiles() ([]FirewallProfile, error) {
 			return nil, fmt.Errorf("empty firewall profile output")
 		}
 
+		// Handle both single object and array
 		var raw []map[string]interface{}
-		if err := json.Unmarshal([]byte(cleaned), &raw); err != nil {
-			return nil, fmt.Errorf("parse firewall profile json: %w", err)
+		if strings.HasPrefix(cleaned, "{") {
+			var single map[string]interface{}
+			if err := json.Unmarshal([]byte(cleaned), &single); err != nil {
+				return nil, fmt.Errorf("parse single firewall profile json: %w", err)
+			}
+			raw = []map[string]interface{}{single}
+		} else {
+			if err := json.Unmarshal([]byte(cleaned), &raw); err != nil {
+				return nil, fmt.Errorf("parse firewall profile array json: %w", err)
+			}
 		}
 
 		profiles := make([]FirewallProfile, 0, len(raw))
@@ -62,6 +72,7 @@ func GetFirewallProfiles() ([]FirewallProfile, error) {
 				continue
 			}
 			if enabled, ok := getJSONString(item, "Enabled"); ok {
+				// Handle both boolean and string "True"/"False"
 				p.Enabled = strings.EqualFold(enabled, "True")
 			}
 			profiles = append(profiles, p)
@@ -264,8 +275,9 @@ func IsolateHost(isolate bool, autoExpireSeconds int) (*common.SecActionResult, 
 // getFirewallRulesPowerShell retrieves firewall rules via PowerShell Get-NetFirewallRule.
 // This is locale-independent and serves as a fallback when netsh verbose parsing fails.
 func getFirewallRulesPowerShell() ([]FirewallRule, error) {
+	// Removed -As Array for PS 5.1 compatibility.
 	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-NoProfile", "-Command",
-		"Get-NetFirewallRule -All | Select-Object Name,Direction,Action,Enabled,Profile | ConvertTo-Json -As Array -Depth 1")
+		"Get-NetFirewallRule -All | Select-Object Name,Direction,Action,Enabled,Profile | ConvertTo-Json -Depth 1")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("Get-NetFirewallRule failed: %w", err)
@@ -276,9 +288,18 @@ func getFirewallRulesPowerShell() ([]FirewallRule, error) {
 		return nil, fmt.Errorf("empty firewall rule output from PowerShell")
 	}
 
+	// Handle both single object and array
 	var raw []map[string]interface{}
-	if err := json.Unmarshal([]byte(cleaned), &raw); err != nil {
-		return nil, fmt.Errorf("parse firewall rules json: %w", err)
+	if strings.HasPrefix(cleaned, "{") {
+		var single map[string]interface{}
+		if err := json.Unmarshal([]byte(cleaned), &single); err != nil {
+			return nil, fmt.Errorf("parse single firewall rule json: %w", err)
+		}
+		raw = []map[string]interface{}{single}
+	} else {
+		if err := json.Unmarshal([]byte(cleaned), &raw); err != nil {
+			return nil, fmt.Errorf("parse firewall rules array json: %w", err)
+		}
 	}
 
 	rules := make([]FirewallRule, 0, len(raw))

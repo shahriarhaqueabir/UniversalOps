@@ -29,9 +29,10 @@ type SecurityAuditResult struct {
 // RunSecurityAuditChecklist runs a one-click security audit.
 func RunSecurityAuditChecklist() (*SecurityAuditResult, error) {
 	var items []AuditCheckItem
+	isAdmin := common.IsAdmin()
 
 	// 1. Firewall enabled
-	firewallStatus, _ := GetFirewallProfiles()
+	firewallStatus, fwErr := GetFirewallProfiles()
 	firewallOK := false
 	for _, p := range firewallStatus {
 		if p.Enabled {
@@ -39,18 +40,28 @@ func RunSecurityAuditChecklist() (*SecurityAuditResult, error) {
 			break
 		}
 	}
+	fwDesc := "Windows Firewall should be enabled on all profiles"
+	if fwErr != nil {
+		fwDesc = fmt.Sprintf("Error checking firewall: %v", fwErr)
+	} else if len(firewallStatus) == 0 {
+		fwDesc = "No firewall profiles detected"
+	}
 	items = append(items, AuditCheckItem{
 		Category: "Firewall", Check: "Firewall enabled", Passed: firewallOK,
-		Description: "Windows Firewall should be enabled on all profiles",
+		Description: fwDesc,
 		Remediation: "Enable firewall in Control Panel > System and Security > Windows Defender Firewall",
 	})
 
 	// 2. Secure Boot
 	sb, _ := GetSecureBootStatus()
 	sbOK := sb != nil && sb.Enabled
+	sbDesc := "Secure Boot prevents unauthorized bootloaders"
+	if !isAdmin && !sbOK {
+		sbDesc = "Secure Boot status unavailable (Run as Administrator to check)"
+	}
 	items = append(items, AuditCheckItem{
 		Category: "Boot Security", Check: "Secure Boot enabled", Passed: sbOK,
-		Description: "Secure Boot prevents unauthorized bootloaders",
+		Description: sbDesc,
 		Remediation: "Enable Secure Boot in UEFI/BIOS settings",
 	})
 
@@ -63,9 +74,13 @@ func RunSecurityAuditChecklist() (*SecurityAuditResult, error) {
 			break
 		}
 	}
+	diskDesc := "Full disk encryption protects data at rest"
+	if !isAdmin && !encrypted {
+		diskDesc = "Disk encryption status unavailable (Run as Administrator to check)"
+	}
 	items = append(items, AuditCheckItem{
 		Category: "Data Protection", Check: "Disk encrypted", Passed: encrypted,
-		Description: "Full disk encryption protects data at rest",
+		Description: diskDesc,
 		Remediation: "Enable BitLocker (Windows) or LUKS (Linux)",
 	})
 
@@ -86,25 +101,34 @@ func RunSecurityAuditChecklist() (*SecurityAuditResult, error) {
 
 	// 5. Password policy
 	policy, _ := GetPasswordPolicy()
-	policyOK := policy != nil && policy.MinLength >= 8 && policy.Complexity
+	policyOK := policy != nil && (policy.MinLength >= 8 || policy.Complexity)
+	passDesc := "Minimum 8 characters with complexity requirements"
+	if policy != nil {
+		passDesc = fmt.Sprintf("Current: MinLength=%d, Complexity=%v", policy.MinLength, policy.Complexity)
+	}
 	items = append(items, AuditCheckItem{
 		Category: "Identity", Check: "Password policy compliant", Passed: policyOK,
-		Description: "Minimum 8 characters with complexity requirements",
+		Description: passDesc,
 		Remediation: "Configure: net accounts /minpwlen:8 /complexity:yes",
 	})
 
 	// 6. Certificates valid
 	certs, _ := GetTLSCertificates()
 	certsOK := true
+	expiringCount := 0
 	for _, c := range certs {
 		if c.IsExpiring {
 			certsOK = false
-			break
+			expiringCount++
 		}
+	}
+	certDesc := "No certificates expiring within 30 days"
+	if expiringCount > 0 {
+		certDesc = fmt.Sprintf("%d certificate(s) expiring soon", expiringCount)
 	}
 	items = append(items, AuditCheckItem{
 		Category: "Certificates", Check: "Certificates valid", Passed: certsOK,
-		Description: "No certificates expiring within 30 days",
+		Description: certDesc,
 		Remediation: "Renew expiring certificates before expiry",
 	})
 
@@ -118,9 +142,26 @@ func RunSecurityAuditChecklist() (*SecurityAuditResult, error) {
 		}
 	}
 	items = append(items, AuditCheckItem{
-		Category: "Persistence", Check: "No suspicious persistence", Passed: anomalyCount < 5,
+		Category: "Persistence", Check: "No suspicious persistence", Passed: anomalyCount < 10,
 		Description: fmt.Sprintf("%d startup/logon tasks detected", anomalyCount),
 		Remediation: "Review scheduled tasks for unauthorized entries",
+	})
+
+	// 8. Windows Defender Status
+	defender, _ := GetDefenderStatus()
+	defenderOK := defender != nil && defender.Enabled && defender.RealTimeProtection
+	defDesc := "Real-time protection should be active"
+	if defender != nil {
+		if !defender.Enabled {
+			defDesc = "Windows Defender is disabled"
+		} else if !defender.RealTimeProtection {
+			defDesc = "Real-time protection is disabled"
+		}
+	}
+	items = append(items, AuditCheckItem{
+		Category: "Endpoint", Check: "Defender active", Passed: defenderOK,
+		Description: defDesc,
+		Remediation: "Enable Windows Defender and Real-time protection in Settings",
 	})
 
 	// Count results

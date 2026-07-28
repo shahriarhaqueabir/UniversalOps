@@ -37,8 +37,9 @@ func GetTLSCertificates() ([]TLSCertificate, error) {
 }
 
 func getTLSCertificatesWindows() ([]TLSCertificate, error) {
+	// Removed -As Array for PS 5.1 compatibility.
 	out, err := common.HiddenCommand("powershell", "-NoProfile", "-Command",
-		`Get-ChildItem Cert:\LocalMachine\My | Select-Object Subject,Issuer,NotAfter,KeySize | ConvertTo-Json -As Array -Depth 2`).Output()
+		`Get-ChildItem Cert:\LocalMachine\My -ErrorAction SilentlyContinue | Select-Object Subject,Issuer,NotAfter,KeySize | ConvertTo-Json -Depth 2`).Output()
 	if err != nil {
 		return []TLSCertificate{}, nil
 	}

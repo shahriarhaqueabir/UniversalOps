@@ -9,7 +9,7 @@
   "frontend:dev:serverUrl": "http://localhost:5173",
   "info": {
     "productName": "UniversalOps Operations Platform",
-    "productVersion": "1.4.0",
+    "productVersion": "1.4.1",
     "copyright": "Copyright 2026 UniversalOps",
     "comments": "High-Performance Technical Operations Intelligence"
   },

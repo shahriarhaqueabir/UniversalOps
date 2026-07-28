@@ -130,9 +130,10 @@ func GetFailedLogins() ([]FailedLogin, error) {
 
 func getFailedLoginsWindows() ([]FailedLogin, error) {
 	// Use HiddenCommand for event log access.
+	// Removed -As Array for PS 5.1 compatibility.
 	cmd := common.HiddenCommand("powershell", "-NoProfile", "-Command",
 		`Get-WinEvent -FilterHashtable @{Id=4625} -MaxEvents 50 -ErrorAction SilentlyContinue |
-		Select-Object TimeCreated,Message | ConvertTo-Json -As Array -Depth 2`)
+		Select-Object TimeCreated,Message | ConvertTo-Json -Depth 2`)
 	out, err := cmd.Output()
 	if err != nil {
 		return []FailedLogin{}, nil

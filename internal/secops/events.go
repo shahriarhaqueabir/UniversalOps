@@ -32,8 +32,9 @@ func GetSecurityEvents() ([]SecurityEvent, error) {
 		defer cancel()
 
 		// Try Security log first (requires Admin).
+		// Removed -As Array for PS 5.1 compatibility.
 		cmd := common.HiddenCommandContext(ctx, "powershell", "-NoProfile", "-Command",
-			"Get-WinEvent -LogName Security -MaxEvents 25 -ErrorAction Stop | Select-Object Id,LevelDisplayName,ProviderName,TimeCreated,Message | ConvertTo-Json -As Array -Depth 2")
+			"Get-WinEvent -LogName Security -MaxEvents 25 -ErrorAction Stop | Select-Object Id,LevelDisplayName,ProviderName,TimeCreated,Message | ConvertTo-Json -Depth 2")
 		output, err := cmd.Output()
 		if err != nil {
 			// Fallback: Try System log
@@ -44,7 +45,7 @@ func GetSecurityEvents() ([]SecurityEvent, error) {
 			ctx2, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel2()
 			cmd = common.HiddenCommandContext(ctx2, "powershell", "-NoProfile", "-Command",
-				"Get-WinEvent -LogName System -MaxEvents 25 -ErrorAction SilentlyContinue | Select-Object Id,LevelDisplayName,ProviderName,TimeCreated,Message | ConvertTo-Json -As Array -Depth 2")
+				"Get-WinEvent -LogName System -MaxEvents 25 -ErrorAction SilentlyContinue | Select-Object Id,LevelDisplayName,ProviderName,TimeCreated,Message | ConvertTo-Json -Depth 2")
 			output, err = cmd.Output()
 			if err != nil {
 				return nil, fmt.Errorf("failed to query Windows security/system event logs: %w", err)
@@ -149,9 +150,10 @@ func GetPrivilegeEvents() ([]PrivilegeEvent, error) {
 }
 
 func getPrivilegeEventsWindows() ([]PrivilegeEvent, error) {
+	// Removed -As Array for PS 5.1 compatibility.
 	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-Command",
 		`Get-WinEvent -FilterHashtable @{Id=4672,4673,4674} -MaxEvents 50 -ErrorAction SilentlyContinue | 
-		Select-Object TimeCreated,Message | ConvertTo-Json -As Array -Depth 2`)
+		Select-Object TimeCreated,Message | ConvertTo-Json -Depth 2`)
 	out, err := cmd.Output()
 	if err != nil {
 		return []PrivilegeEvent{}, nil

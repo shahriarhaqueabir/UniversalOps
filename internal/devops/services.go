@@ -88,8 +88,9 @@ func ControlService(name, action string) error {
 
 func listWindowsServices() ([]ServiceEntry, error) {
 	// Try PowerShell first (best detail)
+	// Removed -As Array for PS 5.1 compatibility.
 	cmd := common.SandboxedCommandWithConfig(common.SystemQuerySandbox(), "powershell", "-NoProfile", "-Command",
-		"Get-Service -ErrorAction SilentlyContinue | Sort-Object Status,Name | Select-Object Name,DisplayName,Status,StartType | ConvertTo-Json -As Array -Depth 2")
+		"Get-Service -ErrorAction SilentlyContinue | Sort-Object Status,Name | Select-Object Name,DisplayName,Status,StartType | ConvertTo-Json -Depth 2")
 	output, err := cmd.Output()
 	if err == nil {
 		services, parseErr := parseWindowsServicesJSON(string(output))

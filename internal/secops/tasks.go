@@ -323,7 +323,7 @@ func parseSystemdTimers(output string) []ScheduledTask {
 			continue
 		}
 
-		// NEXT is fields[0..2], LEFT is fields[3..4], LAST is fields[5..7], PASED is fields[8..9], UNIT is fields[10], ACTIVATES is fields[11]
+		// NEXT is fields[0..2], LEFT is fields[3..4], LAST is fields[5..7], PASSED is fields[8..9], UNIT is fields[10], ACTIVATES is fields[11]
 		nextRun := ""
 		lastRun := ""
 		unitName := ""
