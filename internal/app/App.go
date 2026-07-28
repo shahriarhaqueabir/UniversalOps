@@ -67,15 +67,13 @@ type App struct {
 	engineLoop *common.EngineLoop
 
 	// Previous metric values for significant-change detection.
-	lastMu                     sync.Mutex
-	lastCPU, lastMem, lastDisk float64
+	lastMu sync.Mutex
 
 	// storageLock protects storage relocation and prevents races with evaluation
 	storageLock sync.RWMutex
 
 	// lastSecurityScore is the cached security score to prevent ticker bloat
-	lastSecurityScore   string
-	lastSecurityScoreAt time.Time
+	lastSecurityScore string
 
 	currentDataDir string
 	currentLogsDir string
@@ -709,34 +707,6 @@ func (a *App) startProcessWorker() {
 
 // refreshSecurityScore executes heavy OS scans for security posture.
 // Decoupled into its own worker to prevent ticker-blocking.
-func (a *App) refreshSecurityScore() {
-	score := a.SecOps.GetSecurityScore()
-	a.lastMu.Lock()
-	a.lastSecurityScore = score.Grade
-	a.lastMu.Unlock()
-
-	// INTEGRATION: Emit recent security events to the global event bus
-	events, err := secops.GetSecurityEvents()
-	if err == nil {
-		importantCount := 0
-		for _, e := range events {
-			if e.Important {
-				importantCount++
-				a.eventBus.Emit(common.NewEventWithMeta(
-					common.CatSecurity, common.EventWarning, "secops",
-					fmt.Sprintf("Security Event %d", e.ID),
-					e.Message,
-					map[string]string{"provider": e.Provider, "id": fmt.Sprintf("%d", e.ID)},
-				))
-			}
-		}
-		if importantCount > 0 {
-			common.LogWarn("Security Audit: Detected %d important system security events", importantCount)
-		} else {
-			common.LogInfo("Security Audit: System posture %s (No critical events)", score.Grade)
-		}
-	}
-}
 
 // persistAlertsAsync handles DB writes without blocking the metrics stream.
 // Runs as a goroutine — MUST have its own RecoverPanic guard.

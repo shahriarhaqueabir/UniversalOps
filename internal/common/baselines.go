@@ -18,7 +18,6 @@ type DriftInfo struct {
 // statistical norms for system metrics.
 type BaselinesEngine struct {
 	pipeline *DataPipeline
-	mu       sync.RWMutex
 	cache    map[string]BaselineEntry
 }
 
