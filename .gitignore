@@ -106,7 +106,6 @@ scripts/release-gh.sh
 scripts/package-homebrew.ps1
 scripts/package-scoop.ps1
 install.sh
-run_e2e_tests.py
 
 # Internal / research docs (not user-facing)
 docs/MustHaves.md

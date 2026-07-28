@@ -39,6 +39,12 @@ jobs:
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
         shell: bash
 
+      - name: Create placeholder for embed
+        run: |
+          mkdir -p cmd/opsforall-gui/frontend/dist
+          touch cmd/opsforall-gui/frontend/dist/index.html
+        shell: bash
+
       - name: Generate Wails TypeScript bindings
         run: wails generate module
         shell: bash
