@@ -134,7 +134,7 @@ func (dp *DataPipeline) PushMetric(name, unit string, value float64) {
 
 	// Persist to database
 	if s := GetStorage(); s != nil {
-		s.InsertMetric(name, unit, value)
+		_ = s.InsertMetric(name, unit, value)
 	}
 }
 
