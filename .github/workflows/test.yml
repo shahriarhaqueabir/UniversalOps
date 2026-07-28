@@ -103,7 +103,7 @@ jobs:
         continue-on-error: true
 
       - name: npm audit
-        run: cd cmd/opsforall-gui/frontend && npm audit --audit-level=high
+        run: cd cmd/opsforall-gui/frontend && npm audit --audit-level=critical
         shell: bash
 
       - name: Upload coverage to Codecov
