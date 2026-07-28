@@ -27,7 +27,7 @@ jobs:
       - name: Install frontend dependencies
         run: cd cmd/opsforall-gui/frontend && npm ci
 
-      - name: Build frontend
+      - name: Build frontend (needed for go vet //go:embed)
         run: cd cmd/opsforall-gui/frontend && npm run build
 
       - name: Generate Wails TypeScript bindings
