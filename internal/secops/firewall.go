@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
@@ -210,6 +211,13 @@ func IsolateHost(isolate bool, autoExpireSeconds int) (*common.SecActionResult, 
 
 	if common.IsLinux() {
 		if isolate {
+			// Self-exclusion: ensure the app's own connections survive isolation.
+			// Allow loopback and established connections so the GUI remains responsive.
+			common.HiddenCommand("iptables", "-I", "INPUT", "1", "-i", "lo", "-j", "ACCEPT").Run()
+			common.HiddenCommand("iptables", "-I", "OUTPUT", "1", "-o", "lo", "-j", "ACCEPT").Run()
+			common.HiddenCommand("iptables", "-I", "INPUT", "1", "-m", "state", "--state", "ESTABLISHED,RELATED", "-j", "ACCEPT").Run()
+			common.HiddenCommand("iptables", "-I", "OUTPUT", "1", "-m", "state", "--state", "ESTABLISHED,RELATED", "-j", "ACCEPT").Run()
+
 			// Only append DROP rule if not already present
 			if common.HiddenCommand("iptables", "-C", "INPUT", "-j", "DROP").Run() != nil {
 				_ = common.HiddenCommand("iptables", "-A", "INPUT", "-j", "DROP").Run()
@@ -217,11 +225,30 @@ func IsolateHost(isolate bool, autoExpireSeconds int) (*common.SecActionResult, 
 			if common.HiddenCommand("iptables", "-C", "OUTPUT", "-j", "DROP").Run() != nil {
 				_ = common.HiddenCommand("iptables", "-A", "OUTPUT", "-j", "DROP").Run()
 			}
+
+			// Auto-expire: schedule removal of isolation rules after the specified duration.
+			// This prevents permanent lockout if the user forgets to disable isolation.
+			if autoExpireSeconds > 0 {
+				go func() {
+					time.Sleep(time.Duration(autoExpireSeconds) * time.Second)
+					// Remove all DROP rules (reverse order)
+					for common.HiddenCommand("iptables", "-D", "INPUT", "-j", "DROP").Run() == nil {
+					}
+					for common.HiddenCommand("iptables", "-D", "OUTPUT", "-j", "DROP").Run() == nil {
+					}
+					common.LogInfo("Host isolation auto-expired after %d seconds", autoExpireSeconds)
+				}()
+			}
 		} else {
 			// Remove ALL matching DROP rules (loop until none left)
 			for common.HiddenCommand("iptables", "-D", "INPUT", "-j", "DROP").Run() == nil {
 			}
 			for common.HiddenCommand("iptables", "-D", "OUTPUT", "-j", "DROP").Run() == nil {
+			}
+			// Clean up self-exclusion rules added during isolation
+			for common.HiddenCommand("iptables", "-D", "INPUT", "-i", "lo", "-j", "ACCEPT").Run() == nil {
+			}
+			for common.HiddenCommand("iptables", "-D", "OUTPUT", "-o", "lo", "-j", "ACCEPT").Run() == nil {
 			}
 		}
 

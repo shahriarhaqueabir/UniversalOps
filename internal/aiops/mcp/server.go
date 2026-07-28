@@ -4,12 +4,64 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 
 	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 	"github.com/shahriarhaqueabir/UniversalOps/internal/netops"
 	"github.com/shahriarhaqueabir/UniversalOps/internal/secops"
 	"github.com/shahriarhaqueabir/UniversalOps/internal/sysops"
 )
+
+// Validation constants for MCP tool arguments.
+const (
+	maxTargetLength  = 253 // max DNS hostname length
+	maxCountValue    = 20  // max ping/traceroute count
+	maxTTLValue      = 64  // max TTL
+	maxPortsPerScan  = 100 // max ports per scan request
+	maxProcessListN  = 500 // max processes to list
+	maxLogEntries    = 500 // max log entries to retrieve
+	maxQueryLimit    = 500 // max query result limit
+	maxSearchLength  = 200 // max search string length
+	maxMetricNameLen = 100 // max metric name length
+)
+
+// hostnameRe matches valid hostnames or IP addresses (no shell metacharacters).
+var hostnameRe = regexp.MustCompile(`^[a-zA-Z0-9._:/\-\[\]]+$`)
+
+// validateTarget checks that a network target (hostname/IP) is safe and within limits.
+func validateTarget(target string) error {
+	if target == "" {
+		return fmt.Errorf("target is required")
+	}
+	if len(target) > maxTargetLength {
+		return fmt.Errorf("target too long (max %d chars)", maxTargetLength)
+	}
+	if !hostnameRe.MatchString(target) {
+		return fmt.Errorf("target contains invalid characters")
+	}
+	return nil
+}
+
+// validatePorts checks that a port list is within safe bounds.
+func validatePorts(ports []int) error {
+	if len(ports) == 0 {
+		return nil
+	}
+	if len(ports) > maxPortsPerScan {
+		return fmt.Errorf("too many ports (max %d)", maxPortsPerScan)
+	}
+	for _, p := range ports {
+		if p < 1 || p > 65535 {
+			return fmt.Errorf("invalid port: %d", p)
+		}
+	}
+	return nil
+}
+
+// CountMaxMCPToolCalls is the maximum number of MCP tool calls allowed per
+// AI interaction. This prevents runaway LLM tool-calling loops from exhausting
+// system resources (e.g., continuous port scans).
+const CountMaxMCPToolCalls = 10
 
 // Tool represents an MCP Tool definition.
 type Tool struct {
@@ -177,6 +229,9 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 		if args.N <= 0 {
 			args.N = 20
 		}
+		if args.N > maxProcessListN {
+			args.N = maxProcessListN
+		}
 		return handleGetProcessList(args.N)
 	case "get_system_logs":
 		var args struct {
@@ -188,6 +243,9 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 		}
 		if args.N <= 0 {
 			args.N = 50
+		}
+		if args.N > maxLogEntries {
+			args.N = maxLogEntries
 		}
 		if args.Source == "" {
 			args.Source = "Application"
@@ -211,8 +269,14 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 		if err := json.Unmarshal(arguments, &args); err != nil {
 			return nil, err
 		}
+		if err := validateTarget(args.Target); err != nil {
+			return nil, fmt.Errorf("invalid target: %w", err)
+		}
 		if args.Count <= 0 {
 			args.Count = 4
+		}
+		if args.Count > maxCountValue {
+			args.Count = maxCountValue
 		}
 		return handlePing(args.Target, args.Count)
 	case "dns_lookup":
@@ -223,6 +287,14 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 		if err := json.Unmarshal(arguments, &args); err != nil {
 			return nil, err
 		}
+		if err := validateTarget(args.Hostname); err != nil {
+			return nil, fmt.Errorf("invalid hostname: %w", err)
+		}
+		if args.Server != "" {
+			if err := validateTarget(args.Server); err != nil {
+				return nil, fmt.Errorf("invalid server: %w", err)
+			}
+		}
 		return handleDNSSLookup(args.Hostname, args.Server)
 	case "port_scan":
 		var args struct {
@@ -232,6 +304,13 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 		if err := json.Unmarshal(arguments, &args); err != nil {
 			return nil, err
 		}
+		if err := validateTarget(args.Host); err != nil {
+			return nil, fmt.Errorf("invalid host: %w", err)
+		}
+		if err := validatePorts(args.Ports); err != nil {
+			return nil, err
+		}
+		common.LogInfo("MCP port_scan: host=%s ports=%v", args.Host, args.Ports)
 		return handlePortScan(args.Host, args.Ports)
 	case "traceroute":
 		var args struct {
@@ -241,8 +320,14 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 		if err := json.Unmarshal(arguments, &args); err != nil {
 			return nil, err
 		}
+		if err := validateTarget(args.Target); err != nil {
+			return nil, fmt.Errorf("invalid target: %w", err)
+		}
 		if args.MaxTTL <= 0 {
 			args.MaxTTL = 30
+		}
+		if args.MaxTTL > maxTTLValue {
+			args.MaxTTL = maxTTLValue
 		}
 		return handleTraceRoute(args.Target, args.MaxTTL)
 	case "get_network_connections":
@@ -276,6 +361,12 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 		if args.Limit <= 0 {
 			args.Limit = 50
 		}
+		if args.Limit > maxQueryLimit {
+			args.Limit = maxQueryLimit
+		}
+		if len(args.Metric) > maxMetricNameLen {
+			return nil, fmt.Errorf("metric name too long (max %d chars)", maxMetricNameLen)
+		}
 		return handleQueryMetricHistory(args.Metric, args.Limit)
 	case "query_events":
 		var args struct {
@@ -288,6 +379,9 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 		}
 		if args.Limit <= 0 {
 			args.Limit = 50
+		}
+		if args.Limit > maxQueryLimit {
+			args.Limit = maxQueryLimit
 		}
 		return handleQueryEvents(args.Category, args.Level, args.Limit)
 	case "query_logs":
@@ -302,6 +396,12 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 		if args.Limit <= 0 {
 			args.Limit = 50
 		}
+		if args.Limit > maxQueryLimit {
+			args.Limit = maxQueryLimit
+		}
+		if len(args.Search) > maxSearchLength {
+			return nil, fmt.Errorf("search string too long (max %d chars)", maxSearchLength)
+		}
 		return handleQueryLogs(args.Level, args.Search, args.Limit)
 	case "query_alerts":
 		var args struct {
@@ -312,6 +412,9 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 		}
 		if args.Limit <= 0 {
 			args.Limit = 50
+		}
+		if args.Limit > maxQueryLimit {
+			args.Limit = maxQueryLimit
 		}
 		return handleQueryAlerts(args.Limit)
 

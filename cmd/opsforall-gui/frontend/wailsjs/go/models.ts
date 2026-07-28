@@ -40,6 +40,44 @@ export namespace app {
 	        this.timestamp = source["timestamp"];
 	    }
 	}
+	export class AIOpsSummary {
+	    ollamaAvailable: boolean;
+	    ollamaModel: string;
+	    anomalyCount: number;
+	    criticalAnomalies: number;
+	    recentInsights: AIInsight[];
+	
+	    static createFrom(source: any = {}) {
+	        return new AIOpsSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ollamaAvailable = source["ollamaAvailable"];
+	        this.ollamaModel = source["ollamaModel"];
+	        this.anomalyCount = source["anomalyCount"];
+	        this.criticalAnomalies = source["criticalAnomalies"];
+	        this.recentInsights = this.convertValues(source["recentInsights"], AIInsight);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class AlertInfo {
 	    id: string;
 	    level: string;
@@ -533,6 +571,20 @@ export namespace app {
 	        this.error = source["error"];
 	    }
 	}
+	export class HealthScorePoint {
+	    day: string;
+	    score: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new HealthScorePoint(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.day = source["day"];
+	        this.score = source["score"];
+	    }
+	}
 	export class NetworkMetric {
 	    rx_rate: number;
 	    tx_rate: number;
@@ -606,6 +658,8 @@ export namespace app {
 	    connections: number;
 	    alerts: number;
 	    uptime: string;
+	    health_score: number;
+	    health_trend: HealthScorePoint[];
 	
 	    static createFrom(source: any = {}) {
 	        return new DashboardData(source);
@@ -623,6 +677,8 @@ export namespace app {
 	        this.connections = source["connections"];
 	        this.alerts = source["alerts"];
 	        this.uptime = source["uptime"];
+	        this.health_score = source["health_score"];
+	        this.health_trend = this.convertValues(source["health_trend"], HealthScorePoint);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -655,6 +711,28 @@ export namespace app {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.time = source["time"];
 	        this.value = source["value"];
+	    }
+	}
+	export class DataStreamMetric {
+	    name: string;
+	    unit: string;
+	    lastValue: number;
+	    samples: number;
+	    trend: string;
+	    updatedAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DataStreamMetric(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.unit = source["unit"];
+	        this.lastValue = source["lastValue"];
+	        this.samples = source["samples"];
+	        this.trend = source["trend"];
+	        this.updatedAt = source["updatedAt"];
 	    }
 	}
 	export class DefenderStatus {
@@ -761,6 +839,34 @@ export namespace app {
 	        this.action = source["action"];
 	    }
 	}
+	export class DevOpsSummary {
+	    serviceCount: number;
+	    runningCount: number;
+	    dockerInstalled: boolean;
+	    dockerRunning: boolean;
+	    containerCount: number;
+	    k8sInstalled: boolean;
+	    k8sConnected: boolean;
+	    k8sPods: number;
+	    summary: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DevOpsSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.serviceCount = source["serviceCount"];
+	        this.runningCount = source["runningCount"];
+	        this.dockerInstalled = source["dockerInstalled"];
+	        this.dockerRunning = source["dockerRunning"];
+	        this.containerCount = source["containerCount"];
+	        this.k8sInstalled = source["k8sInstalled"];
+	        this.k8sConnected = source["k8sConnected"];
+	        this.k8sPods = source["k8sPods"];
+	        this.summary = source["summary"];
+	    }
+	}
 	export class DiagnosticCheckData {
 	    name: string;
 	    status: string;
@@ -797,6 +903,36 @@ export namespace app {
 	        this.message = source["message"];
 	        this.value = source["value"];
 	        this.unit = source["unit"];
+	    }
+	}
+	export class DiscoveryTemplateData {
+	    id: string;
+	    name: string;
+	    description: string;
+	    run_ping: boolean;
+	    run_dns: boolean;
+	    run_trace: boolean;
+	    run_arp: boolean;
+	    run_routing: boolean;
+	    run_port_scan: boolean;
+	    ping_count: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DiscoveryTemplateData(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.description = source["description"];
+	        this.run_ping = source["run_ping"];
+	        this.run_dns = source["run_dns"];
+	        this.run_trace = source["run_trace"];
+	        this.run_arp = source["run_arp"];
+	        this.run_routing = source["run_routing"];
+	        this.run_port_scan = source["run_port_scan"];
+	        this.ping_count = source["ping_count"];
 	    }
 	}
 	export class DiskEncryption {
@@ -1458,6 +1594,7 @@ export namespace app {
 		    return a;
 		}
 	}
+	
 	export class InterfaceInfo {
 	    name: string;
 	    mac: string;
@@ -2162,6 +2299,100 @@ export namespace app {
 	        this.topInterface = source["topInterface"];
 	        this.issues = source["issues"];
 	    }
+	}
+	export class TopologyConnectionData {
+	    id: string;
+	    source_id: string;
+	    target_id: string;
+	    type: string;
+	    label?: string;
+	    metric?: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new TopologyConnectionData(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.source_id = source["source_id"];
+	        this.target_id = source["target_id"];
+	        this.type = source["type"];
+	        this.label = source["label"];
+	        this.metric = source["metric"];
+	    }
+	}
+	export class TopologyDeviceData {
+	    id: string;
+	    type: string;
+	    label: string;
+	    ip?: string;
+	    mac?: string;
+	    subnet?: string;
+	    vendor?: string;
+	    hostname?: string;
+	    status: string;
+	    x: number;
+	    y: number;
+	    online: boolean;
+	    notes?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TopologyDeviceData(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.type = source["type"];
+	        this.label = source["label"];
+	        this.ip = source["ip"];
+	        this.mac = source["mac"];
+	        this.subnet = source["subnet"];
+	        this.vendor = source["vendor"];
+	        this.hostname = source["hostname"];
+	        this.status = source["status"];
+	        this.x = source["x"];
+	        this.y = source["y"];
+	        this.online = source["online"];
+	        this.notes = source["notes"];
+	    }
+	}
+	export class NetworkTopologyData {
+	    devices: TopologyDeviceData[];
+	    connections: TopologyConnectionData[];
+	    generated_at: string;
+	    subnet: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new NetworkTopologyData(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.devices = this.convertValues(source["devices"], TopologyDeviceData);
+	        this.connections = this.convertValues(source["connections"], TopologyConnectionData);
+	        this.generated_at = source["generated_at"];
+	        this.subnet = source["subnet"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class OllamaStatus {
 	    available: boolean;
@@ -3113,6 +3344,8 @@ export namespace app {
 	    }
 	}
 	
+	
+	
 	export class TraceHop {
 	    number: number;
 	    host: string;
@@ -3413,6 +3646,108 @@ export namespace common {
 	        this.score = source["score"];
 	        this.data_json = source["data_json"];
 	    }
+	}
+	export class SLIResult {
+	    sloId: string;
+	    sloName: string;
+	    compliantPct: number;
+	    targetPct: number;
+	    met: boolean;
+	    samples: number;
+	    evaluatedAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SLIResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sloId = source["sloId"];
+	        this.sloName = source["sloName"];
+	        this.compliantPct = source["compliantPct"];
+	        this.targetPct = source["targetPct"];
+	        this.met = source["met"];
+	        this.samples = source["samples"];
+	        this.evaluatedAt = source["evaluatedAt"];
+	    }
+	}
+	export class SLODefinition {
+	    id: string;
+	    name: string;
+	    metric: string;
+	    comparison: string;
+	    threshold: number;
+	    targetPct: number;
+	    windowDays: number;
+	    enabled: boolean;
+	    description: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SLODefinition(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.metric = source["metric"];
+	        this.comparison = source["comparison"];
+	        this.threshold = source["threshold"];
+	        this.targetPct = source["targetPct"];
+	        this.windowDays = source["windowDays"];
+	        this.enabled = source["enabled"];
+	        this.description = source["description"];
+	    }
+	}
+	export class SLOEngine {
+	
+	
+	    static createFrom(source: any = {}) {
+	        return new SLOEngine(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	
+	    }
+	}
+	export class SLOSummary {
+	    totalSLOs: number;
+	    metCount: number;
+	    missCount: number;
+	    overallPct: number;
+	    results: SLIResult[];
+	
+	    static createFrom(source: any = {}) {
+	        return new SLOSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.totalSLOs = source["totalSLOs"];
+	        this.metCount = source["metCount"];
+	        this.missCount = source["missCount"];
+	        this.overallPct = source["overallPct"];
+	        this.results = this.convertValues(source["results"], SLIResult);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class SecActionResult {
 	    success: boolean;

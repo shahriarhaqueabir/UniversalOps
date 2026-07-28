@@ -37,6 +37,13 @@ export interface DashboardData {
   connections: number
   alerts: number
   uptime: string
+  health_score: number
+  health_trend: HealthScorePoint[]
+}
+
+export interface HealthScorePoint {
+  day: string
+  score: number
 }
 
 export interface GPUData {
@@ -924,9 +931,9 @@ export interface AnomalyInfo {
 
 // ── Topology Types ──
 
-export type DeviceType = 'router' | 'switch' | 'server' | 'workstation' | 'firewall' | 'cloud'
+export type DeviceType = 'router' | 'switch' | 'server' | 'workstation' | 'firewall' | 'cloud' | 'gateway' | 'printer' | 'iot' | 'unknown'
 export type TopologyStatus = 'healthy' | 'warning' | 'critical'
-export type ConnectionType = 'ethernet' | 'fiber' | 'wireless'
+export type ConnectionType = 'ethernet' | 'fiber' | 'wireless' | 'vpn' | 'direct'
 
 export interface TopologyDevice {
   id: string
@@ -937,7 +944,10 @@ export interface TopologyDevice {
   ip?: string
   subnet?: string
   mac?: string
+  vendor?: string
+  hostname?: string
   status: TopologyStatus
+  online?: boolean
   notes?: string
 }
 
@@ -947,6 +957,54 @@ export interface TopologyConnection {
   targetId: string
   label?: string
   type: ConnectionType
+  metric?: number
+}
+
+// ── Backend Mirror Types (from internal/app/Types.go) ──
+
+export interface TopologyDeviceData {
+  id: string
+  type: string
+  label: string
+  ip?: string
+  mac?: string
+  subnet?: string
+  vendor?: string
+  hostname?: string
+  status: string
+  x: number
+  y: number
+  online: boolean
+  notes?: string
+}
+
+export interface TopologyConnectionData {
+  id: string
+  source_id: string
+  target_id: string
+  type: string
+  label?: string
+  metric?: number
+}
+
+export interface NetworkTopologyData {
+  devices: TopologyDeviceData[]
+  connections: TopologyConnectionData[]
+  generated_at: string
+  subnet: string
+}
+
+export interface DiscoveryTemplateData {
+  id: string
+  name: string
+  description: string
+  run_ping: boolean
+  run_dns: boolean
+  run_trace: boolean
+  run_arp: boolean
+  run_routing: boolean
+  run_port_scan: boolean
+  ping_count: number
 }
 
 export interface AIInsight {
@@ -1116,6 +1174,12 @@ export interface PerformanceData {
   cpu_times: CPUTimesData
   load_average: LoadAverageData
   io_wait: number
+}
+
+export interface SystemRecommendation {
+  category: string
+  severity: string
+  message: string
 }
 
 export interface ActionResult {
@@ -1352,4 +1416,55 @@ export interface LHMAuthorization {
   risks: string[]
   binaryName: string
   publisher: string
+}
+
+// ── AIOps Live Context Types ──
+
+export interface AIWorkflowEvent {
+  sessionId: string
+  stage: string
+  status: 'running' | 'completed' | 'error'
+  detail: string
+  timestamp: string
+}
+
+export interface DataStreamMetric {
+  name: string
+  unit: string
+  lastValue: number
+  samples: number
+  trend: 'rising' | 'falling' | 'stable'
+  updatedAt: string
+}
+
+/* ── SLO/SLI Types ── */
+
+export interface SLODefinition {
+  id: string
+  name: string
+  metric: string
+  comparison: string
+  threshold: number
+  targetPct: number
+  windowDays: number
+  enabled: boolean
+  description: string
+}
+
+export interface SLIResult {
+  sloId: string
+  sloName: string
+  compliantPct: number
+  targetPct: number
+  met: boolean
+  samples: number
+  evaluatedAt: string
+}
+
+export interface SLOSummary {
+  totalSLOs: number
+  metCount: number
+  missCount: number
+  overallPct: number
+  results: SLIResult[]
 }

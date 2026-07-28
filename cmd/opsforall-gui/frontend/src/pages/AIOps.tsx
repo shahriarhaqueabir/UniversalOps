@@ -12,6 +12,7 @@ import {
   Sparkles,
   ChevronRight,
   ChevronDown,
+  ChevronUp,
   BrainCircuit,
   MessageSquare,
   ShieldCheck,
@@ -25,11 +26,18 @@ import {
   Cpu,
   MemoryStick,
   HardDrive,
+  ArrowUp,
+  ArrowDown,
+  Minus,
+  Loader2,
+  Workflow,
+  BarChart3,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
-import { cn } from '@/lib/utils'
+import { Panel } from '@/components/ui/Panel'
+import { cn, formatSafeDate } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { useEvents } from '@/hooks/useEvents'
 import { useSettingsStore } from '@/stores/useSettingsStore'
@@ -37,9 +45,9 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import * as Tabs from '@radix-ui/react-tabs'
 import { useOllamaStore } from '@/stores/useOllamaStore'
 import { useNavigationStore, type Page } from '@/stores/useSettingsStore'
-import type { ChatMessage, AnomalyInfo, OllamaStatus, AIInsight, ChatSession, DashboardData, ActionPreview } from '@/types'
+import type { ChatMessage, AnomalyInfo, OllamaStatus, AIInsight, AIConfidence, ConversationMessage, ChatSession, DashboardData, ActionPreview, AIWorkflowEvent, DataStreamMetric } from '@/types'
 
-type TabId = 'ai-chat' | 'anomalies' | 'insights'
+type TabId = 'overview' | 'ai-chat' | 'anomalies' | 'insights'
 
 interface ChatResponse {
   content: string
@@ -443,6 +451,7 @@ export function AIOps() {
       <Tabs.Root defaultValue="ai-chat" onValueChange={(v) => setActiveTab(v as TabId)} className="flex-1 flex flex-col min-w-0">
         <Tabs.List className="flex border-b border-[var(--color-border)] bg-[var(--color-panel)] px-6">
           {[
+            { id: 'overview', label: 'Overview', icon: <BrainCircuit size={18} /> },
             { id: 'ai-chat', label: 'Analyst Chat', icon: <MessageSquare size={18} /> },
             { id: 'anomalies', label: 'Anomaly Detection', icon: <Activity size={18} /> },
             { id: 'insights', label: 'AI Insights', icon: <Lightbulb size={18} /> },
@@ -470,6 +479,9 @@ export function AIOps() {
         </Tabs.List>
 
         <div className="flex-1 overflow-hidden">
+          <Tabs.Content value="overview" className="h-full">
+            <OverviewTab />
+          </Tabs.Content>
           <Tabs.Content value="ai-chat" className="h-full">
             <ChatTab />
           </Tabs.Content>
@@ -481,6 +493,219 @@ export function AIOps() {
           </Tabs.Content>
         </div>
       </Tabs.Root>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════
+//  Overview Tab
+// ══════════════════════════════════════════════
+
+function OverviewTab() {
+  const { call } = useBackend()
+  const { refreshInterval } = useSettingsStore()
+  const { navigate } = useNavigationStore()
+
+  const { data: ollamaStatus } = useQuery<OllamaStatus>({
+    queryKey: ['ollama-status'],
+    queryFn: async () => await call('AIOps.GetOllamaStatus') as OllamaStatus,
+    refetchInterval: refreshInterval,
+  })
+
+  const { data: insights = [] } = useQuery<AIInsight[]>({
+    queryKey: ['ai-insights'],
+    queryFn: async () => {
+      const res = await call('AIOps.GetAIInsights') as AIInsight[]
+      return res || []
+    },
+    refetchInterval: refreshInterval,
+  })
+
+  const { data: confidence } = useQuery<AIConfidence>({
+    queryKey: ['ai-confidence'],
+    queryFn: async () => await call('AIOps.GetConfidenceScore') as AIConfidence,
+    refetchInterval: refreshInterval,
+  })
+
+  const { data: recentMessages = [] } = useQuery<ConversationMessage[]>({
+    queryKey: ['recent-conversations'],
+    queryFn: async () => {
+      const sessions = await call('AIOps.ListSessions') as { session_id: string; msg_count: number; last_active: string }[]
+      if (!sessions || sessions.length === 0) return []
+      const recent = sessions.sort((a, b) => new Date(b.last_active).getTime() - new Date(a.last_active).getTime()).slice(0, 3)
+      const all: ConversationMessage[] = []
+      for (const s of recent) {
+        const msgs = await call('AIOps.GetMessages', s.session_id) as ConversationMessage[]
+        if (msgs && msgs.length > 0) {
+          all.push(...msgs.slice(-3))
+        }
+      }
+      return all.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 10)
+    },
+    refetchInterval: refreshInterval,
+  })
+
+  const isAvailable = ollamaStatus?.available ?? false
+  const modelName = ollamaStatus?.model ?? 'N/A'
+  const modelVersion = ollamaStatus?.version ?? ''
+  const availableModels = ollamaStatus?.available_models ?? []
+
+  return (
+    <div className="h-full overflow-y-auto p-8 space-y-8">
+      {/* ── AI Status ── */}
+      <Panel variant="elevated" padding="lg" category="ai">
+        <h3 className="text-xs font-black text-text uppercase tracking-[0.2em] mb-6 flex items-center gap-4">
+          <BrainCircuit size={18} className="text-accent" />
+          AI Engine Status
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-panel-2 border border-border/50 rounded-xl p-5 flex flex-col gap-2">
+            <span className="text-[9px] font-black text-text-faint uppercase tracking-widest">Model</span>
+            <span className="text-sm font-black text-text truncate">{modelName}</span>
+            {modelVersion && <span className="text-[10px] font-semibold text-text-dim">{modelVersion}</span>}
+          </div>
+          <div className="bg-panel-2 border border-border/50 rounded-xl p-5 flex flex-col gap-2">
+            <span className="text-[9px] font-black text-text-faint uppercase tracking-widest">Status</span>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={cn("w-2.5 h-2.5 rounded-full", isAvailable ? "bg-success shadow-[0_0_8px_var(--color-success)]" : "bg-danger shadow-[0_0_8px_var(--color-danger)]")} />
+              <span className={cn("text-sm font-black", isAvailable ? "text-success" : "text-danger")}>
+                {isAvailable ? 'Online' : 'Offline'}
+              </span>
+            </div>
+          </div>
+          <div className="bg-panel-2 border border-border/50 rounded-xl p-5 flex flex-col gap-2">
+            <span className="text-[9px] font-black text-text-faint uppercase tracking-widest">Available Models</span>
+            <span className="text-2xl font-black text-text tabular-nums">{availableModels.length}</span>
+          </div>
+          <div className="bg-panel-2 border border-border/50 rounded-xl p-5 flex flex-col gap-2">
+            <span className="text-[9px] font-black text-text-faint uppercase tracking-widest">Confidence</span>
+            <span className={cn(
+              "text-2xl font-black tabular-nums",
+              (confidence?.overall ?? 0) >= 80 ? "text-success" :
+              (confidence?.overall ?? 0) >= 50 ? "text-warning" : "text-danger"
+            )}>
+              {confidence ? `${Math.round(confidence.overall)}%` : '—'}
+            </span>
+          </div>
+        </div>
+        {confidence && confidence.factors && Object.keys(confidence.factors).length > 0 && (
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Object.entries(confidence.factors).map(([key, val]) => (
+              <div key={key} className="flex items-center justify-between bg-panel-2/50 border border-border/30 rounded-lg px-4 py-2.5">
+                <span className="text-[10px] font-bold text-text-faint uppercase tracking-wider">{key}</span>
+                <span className={cn(
+                  "text-[11px] font-black tabular-nums",
+                  val >= 80 ? "text-success" : val >= 50 ? "text-warning" : "text-danger"
+                )}>{Math.round(val)}%</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
+
+      {/* ── Recent Conversations ── */}
+      <Panel variant="elevated" padding="lg" category="ai">
+        <h3 className="text-xs font-black text-text uppercase tracking-[0.2em] mb-6 flex items-center gap-4">
+          <MessageSquare size={18} className="text-accent" />
+          Recent Conversations
+          <button
+            onClick={() => navigate('aiops')}
+            className="ml-auto text-[10px] font-black text-accent uppercase tracking-wider hover:underline"
+          >
+            Open Chat →
+          </button>
+        </h3>
+        {recentMessages.length === 0 ? (
+          <div className="bg-panel-2 border border-border/50 rounded-xl p-8 text-center">
+            <MessageSquare size={24} className="text-text-faint mx-auto mb-3 opacity-50" />
+            <p className="text-xs font-bold text-text-faint">No conversations yet</p>
+            <p className="text-[10px] text-text-dim mt-1">Start a chat with the AI Analyst to see history here.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {recentMessages.map((msg, i) => (
+              <div key={msg.id ?? i} className="flex items-start gap-3 bg-panel-2 border border-border/50 rounded-xl p-4 hover:border-accent/20 transition-all">
+                <div className={cn(
+                  "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border",
+                  msg.role === 'assistant' ? "bg-accent/10 border-accent/20 text-accent" :
+                  msg.role === 'system' ? "bg-warning/10 border-warning/20 text-warning" :
+                  "bg-panel-3 border-border text-text-dim"
+                )}>
+                  {msg.role === 'assistant' ? <Bot size={14} /> : msg.role === 'system' ? <Activity size={14} /> : <User size={14} />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-text-dim">{msg.role}</span>
+                    <span className="text-[9px] text-text-faint tabular-nums">
+                      {formatSafeDate(msg.timestamp, (d) => format(d, 'MMM d, HH:mm'))}
+                    </span>
+                  </div>
+                  <p className="text-xs font-medium text-text-dim leading-relaxed line-clamp-2">{msg.content}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
+
+      {/* ── Generated Reports / Insights Summary ── */}
+      <Panel variant="elevated" padding="lg" category="ai">
+        <h3 className="text-xs font-black text-text uppercase tracking-[0.2em] mb-6 flex items-center gap-4">
+          <Lightbulb size={18} className="text-accent" />
+          Active Insights
+          <button
+            onClick={() => navigate('aiops')}
+            className="ml-auto text-[10px] font-black text-accent uppercase tracking-wider hover:underline"
+          >
+            View All →
+          </button>
+        </h3>
+        {insights.length === 0 ? (
+          <div className="bg-panel-2 border border-border/50 rounded-xl p-8 text-center">
+            <Lightbulb size={24} className="text-text-faint mx-auto mb-3 opacity-50" />
+            <p className="text-xs font-bold text-text-faint">No active insights</p>
+            <p className="text-[10px] text-text-dim mt-1">System is operating within normal parameters.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {insights.slice(0, 5).map((insight, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "flex items-start gap-4 p-4 rounded-xl border transition-all cursor-pointer hover:border-accent/30",
+                  insight.severity === 'critical' ? "bg-danger/5 border-danger/20" :
+                  insight.severity === 'warning' ? "bg-warning/5 border-warning/20" :
+                  "bg-panel-2 border-border/50"
+                )}
+                onClick={() => insight.actionPage && navigate(insight.actionPage as Page)}
+              >
+                <div className={cn(
+                  "mt-0.5 w-2 h-2 rounded-full shrink-0",
+                  insight.severity === 'critical' ? "bg-danger shadow-[0_0_6px_var(--color-danger)]" :
+                  insight.severity === 'warning' ? "bg-warning shadow-[0_0_6px_var(--color-warning)]" :
+                  "bg-accent"
+                )} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-1">
+                    <span className="text-xs font-bold text-text">{insight.title}</span>
+                    <span className={cn(
+                      "text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded",
+                      insight.severity === 'critical' ? "bg-danger/10 text-danger" :
+                      insight.severity === 'warning' ? "bg-warning/10 text-warning" :
+                      "bg-accent/10 text-accent"
+                    )}>{insight.severity}</span>
+                    <span className="text-[9px] font-semibold text-text-faint uppercase tracking-wider">{insight.category}</span>
+                  </div>
+                  <p className="text-xs font-medium text-text-dim leading-relaxed">{insight.message}</p>
+                  {insight.action && (
+                    <p className="text-[10px] font-bold text-accent mt-1.5">→ {insight.action}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
     </div>
   )
 }
@@ -667,7 +892,7 @@ function ChatTab() {
                     <div className="flex items-center gap-3 mt-2 text-[10px] font-black text-text-faint uppercase tracking-tighter">
                       <span className="flex items-center gap-1.5"><MessageSquare size={10} className="text-accent/60" /> {s.msg_count}</span>
                       <span className="opacity-30">|</span>
-                      <span>{format(new Date(s.last_active), 'MMM d, HH:mm')}</span>
+                      <span>{formatSafeDate(s.last_active, (d) => format(d, 'MMM d, HH:mm'))}</span>
                     </div>
                   </div>
                   <button
@@ -814,17 +1039,48 @@ function ContextSidebar() {
     refetchInterval: refreshInterval,
   })
 
+  // ── AI Workflow Activity Feed ──
+  const [workflowEvents, setWorkflowEvents] = useState<AIWorkflowEvent[]>([])
+  const [wfExpanded, setWfExpanded] = useState(true)
+  useEvents('ai:workflow', (data) => {
+    setWorkflowEvents(prev => {
+      const evt = data as AIWorkflowEvent
+      // Update existing event if same stage+session is still running (status change)
+      const idx = prev.findIndex(e => e.sessionId === evt.sessionId && e.stage === evt.stage && e.status === 'running')
+      if (idx >= 0 && evt.status !== 'running') {
+        const updated = [...prev]
+        updated[idx] = evt
+        return updated.slice(0, 100)
+      }
+      return [evt, ...prev].slice(0, 100)
+    })
+  })
+
+  // ── Data Stream Metrics ──
+  const [dsExpanded, setDsExpanded] = useState(true)
+  const { data: streamMetricsRaw } = useQuery<DataStreamMetric[]>({
+    queryKey: ['data-stream'],
+    queryFn: async () => await call('AIOps.GetDataStreamSnapshot') as DataStreamMetric[],
+    refetchInterval: refreshInterval,
+  })
+  const streamMetrics: DataStreamMetric[] = Array.isArray(streamMetricsRaw) ? streamMetricsRaw : []
+
   if (!dashboard) return null
 
   return (
-    <div className="w-72 border-l border-border bg-panel flex flex-col shrink-0 animate-in slide-in-from-right-4 duration-500">
+    <div className="w-80 border-l border-border bg-panel flex flex-col shrink-0 animate-in slide-in-from-right-4 duration-500">
+      {/* Header */}
       <div className="p-6 border-b border-border bg-panel-2/50">
         <h3 className="text-xs font-black text-text-faint uppercase tracking-[0.2em] flex items-center gap-2">
           <Activity size={14} className="text-accent" />
           Live Context
         </h3>
       </div>
+
+      {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+        {/* ── System Gauges ── */}
         <div className="space-y-4">
           <ContextItem
             icon={<Cpu size={18} />}
@@ -849,6 +1105,7 @@ function ContextSidebar() {
           />
         </div>
 
+        {/* ── Neural Awareness ── */}
         <div className="pt-6 border-t border-border">
           <h4 className="text-[10px] font-bold text-text-faint uppercase tracking-widest mb-4">Neural Awareness</h4>
           <div className="p-4 rounded-xl bg-accent-soft border border-accent/20 space-y-3">
@@ -863,6 +1120,129 @@ function ContextSidebar() {
           </div>
         </div>
 
+        {/* ── AI Workflow Activity Feed ── */}
+        <div className="pt-6 border-t border-border">
+          <button
+            onClick={() => setWfExpanded(!wfExpanded)}
+            className="w-full flex items-center justify-between text-[10px] font-bold text-text-faint uppercase tracking-widest mb-4 hover:text-accent transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <Workflow size={12} />
+              Workflow Activity
+              {workflowEvents.filter(e => e.status === 'running').length > 0 && (
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+              )}
+            </span>
+            {wfExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          </button>
+
+          {wfExpanded && (
+            <div className="space-y-1 max-h-[240px] overflow-y-auto">
+              {workflowEvents.length === 0 ? (
+                <p className="text-[10px] text-text-faint italic">No recent AI operations — send a message to begin.</p>
+              ) : (
+                workflowEvents.map((evt, i) => (
+                  <div
+                    key={`${evt.sessionId}-${evt.stage}-${evt.timestamp}-${i}`}
+                    className="flex items-start gap-2 py-1.5 px-2 rounded-lg hover:bg-panel-2 transition-colors"
+                  >
+                    {/* Status icon */}
+                    <div className="mt-0.5 shrink-0">
+                      {evt.status === 'running' ? (
+                        <Loader2 size={12} className="text-accent animate-spin" />
+                      ) : evt.status === 'completed' ? (
+                        <div className="w-3 h-3 rounded-full bg-success/20 flex items-center justify-center">
+                          <div className="w-1.5 h-1.5 rounded-full bg-success" />
+                        </div>
+                      ) : (
+                        <div className="w-3 h-3 rounded-full bg-danger/20 flex items-center justify-center">
+                          <div className="w-1.5 h-1.5 rounded-full bg-danger" />
+                        </div>
+                      )}
+                    </div>
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold text-text uppercase">{evt.stage}</span>
+                        <span className={cn(
+                          'text-[9px] font-semibold uppercase tracking-wider',
+                          evt.status === 'running' ? 'text-accent' :
+                          evt.status === 'completed' ? 'text-success' : 'text-danger'
+                        )}>
+                          {evt.status}
+                        </span>
+                      </div>
+                      <p className="text-[9px] text-text-faint truncate">{evt.detail}</p>
+                    </div>
+                    {/* Timestamp */}
+                    <span className="text-[8px] text-text-faint/60 tabular-nums shrink-0">
+                      {formatSafeDate(evt.timestamp, (d) => format(d, 'HH:mm:ss'))}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Data Stream Metrics ── */}
+        <div className="pt-6 border-t border-border">
+          <button
+            onClick={() => setDsExpanded(!dsExpanded)}
+            className="w-full flex items-center justify-between text-[10px] font-bold text-text-faint uppercase tracking-widest mb-4 hover:text-accent transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <BarChart3 size={12} />
+              Data Stream
+              {streamMetrics && <span className="text-[9px] font-normal text-text-faint">({streamMetrics.length})</span>}
+            </span>
+            {dsExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          </button>
+
+          {dsExpanded && (
+            <div className="space-y-1 max-h-[240px] overflow-y-auto">
+              {!streamMetrics || streamMetrics.length === 0 ? (
+                <p className="text-[10px] text-text-faint italic">No data stream metrics available yet.</p>
+              ) : (
+                streamMetrics.map((m) => (
+                  <div
+                    key={m.name}
+                    className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-panel-2 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold text-text truncate">{m.name}</span>
+                        <span className="text-[8px] text-text-faint/60 tabular-nums">{m.samples} pts</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[11px] font-black text-text tabular-nums">
+                          {m.lastValue.toFixed(1)}
+                        </span>
+                        <span className="text-[9px] text-text-faint">{m.unit}</span>
+                      </div>
+                    </div>
+                    {/* Trend indicator */}
+                    <div className={cn(
+                      'shrink-0',
+                      m.trend === 'rising' ? 'text-success' :
+                      m.trend === 'falling' ? 'text-danger' : 'text-text-faint'
+                    )}>
+                      {m.trend === 'rising' ? (
+                        <ArrowUp size={14} />
+                      ) : m.trend === 'falling' ? (
+                        <ArrowDown size={14} />
+                      ) : (
+                        <Minus size={14} />
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Footer Quote ── */}
         <div className="pt-4">
           <p className="text-[10px] text-text-faint leading-relaxed italic">
             "Analyst is continuously monitoring these heuristics to ground its responses in physical reality."

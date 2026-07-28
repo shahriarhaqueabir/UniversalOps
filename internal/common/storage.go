@@ -64,8 +64,9 @@ type Storage struct {
 	flushCh    chan chan struct{}
 
 	// mu protects metricsCh and closed flag
-	mu     sync.RWMutex
-	closed bool
+	mu        sync.RWMutex
+	closed    bool
+	closeOnce sync.Once
 
 	// Instrumentation metrics
 	writeCount        uint64
@@ -180,28 +181,28 @@ func GetStorage() *Storage {
 }
 
 // Close closes the database connection after flushing pending writes.
+// Safe to call multiple times — only the first call performs the close.
 func (s *Storage) Close() error {
-	s.mu.Lock()
-	if s.closed {
+	var closeErr error
+	s.closeOnce.Do(func() {
+		s.mu.Lock()
+		s.closed = true
+		close(s.closeCh)
+		close(s.metricsCh)
+		close(s.logsCh)
 		s.mu.Unlock()
-		return nil
-	}
-	s.closed = true
-	close(s.closeCh)
-	close(s.metricsCh)
-	close(s.logsCh)
-	s.mu.Unlock()
 
-	s.pruneWg.Wait()
-	s.writerWg.Wait()
+		s.pruneWg.Wait()
+		s.writerWg.Wait()
 
-	if s.insertStmt != nil {
-		s.insertStmt.Close()
-	}
-	if s.db != nil {
-		return s.db.Close()
-	}
-	return nil
+		if s.insertStmt != nil {
+			s.insertStmt.Close()
+		}
+		if s.db != nil {
+			closeErr = s.db.Close()
+		}
+	})
+	return closeErr
 }
 
 // ── Migrations ──────────────────────────────────────────────────────────────
@@ -403,6 +404,30 @@ func (s *Storage) migrate() error {
 		for _, q := range v3Queries {
 			if _, err := s.db.Exec(q); err != nil {
 				return fmt.Errorf("migration v3: %w", err)
+			}
+		}
+	}
+
+	// Version 4: Add SLO definitions table.
+	if currentVersion < 4 {
+		v4Queries := []string{
+			`INSERT OR IGNORE INTO schema_versions (version) VALUES (4)`,
+			`CREATE TABLE IF NOT EXISTS slo_definitions (
+				id TEXT PRIMARY KEY,
+				name TEXT NOT NULL,
+				metric TEXT NOT NULL,
+				comparison TEXT NOT NULL DEFAULT 'lt',
+				threshold REAL NOT NULL DEFAULT 80,
+				target_pct REAL NOT NULL DEFAULT 95,
+				window_days INTEGER NOT NULL DEFAULT 7,
+				enabled INTEGER NOT NULL DEFAULT 1,
+				description TEXT NOT NULL DEFAULT '',
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			)`,
+		}
+		for _, q := range v4Queries {
+			if _, err := s.db.Exec(q); err != nil {
+				return fmt.Errorf("migration v4: %w", err)
 			}
 		}
 	}
@@ -1707,6 +1732,75 @@ func (s *Storage) ListCustomWorkflows() ([]map[string]string, error) {
 func (s *Storage) DeleteCustomWorkflow(id string) error {
 	_, err := s.db.Exec(`DELETE FROM custom_workflows WHERE id = ?`, id)
 	return err
+}
+
+// ── SLO/SLI Persistence ──────────────────────────────────────────────────
+
+// UpsertSLODefinition saves or updates an SLO definition.
+func (s *Storage) UpsertSLODefinition(slo SLODefinition) error {
+	_, err := s.db.Exec(
+		`INSERT INTO slo_definitions (id, name, metric, comparison, threshold, target_pct, window_days, enabled, description)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(id) DO UPDATE SET
+		   name=excluded.name, metric=excluded.metric, comparison=excluded.comparison,
+		   threshold=excluded.threshold, target_pct=excluded.target_pct,
+		   window_days=excluded.window_days, enabled=excluded.enabled,
+		   description=excluded.description`,
+		slo.ID, slo.Name, slo.Metric, slo.Comparison, slo.Threshold,
+		slo.TargetPct, slo.WindowDays, boolToInt(slo.Enabled), slo.Description,
+	)
+	return err
+}
+
+// ListSLODefinitions returns all SLO definitions.
+func (s *Storage) ListSLODefinitions() ([]SLODefinition, error) {
+	rows, err := s.db.Query(`SELECT id, name, metric, comparison, threshold, target_pct, window_days, enabled, description FROM slo_definitions ORDER BY name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var res []SLODefinition
+	for rows.Next() {
+		var slo SLODefinition
+		var enabled int
+		if err := rows.Scan(&slo.ID, &slo.Name, &slo.Metric, &slo.Comparison,
+			&slo.Threshold, &slo.TargetPct, &slo.WindowDays, &enabled, &slo.Description); err != nil {
+			return nil, err
+		}
+		slo.Enabled = enabled != 0
+		res = append(res, slo)
+	}
+	return res, nil
+}
+
+// DeleteSLODefinition removes an SLO definition.
+func (s *Storage) DeleteSLODefinition(id string) error {
+	_, err := s.db.Exec(`DELETE FROM slo_definitions WHERE id = ?`, id)
+	return err
+}
+
+// GetMetricValuesInWindow returns metric values within the last N days.
+func (s *Storage) GetMetricValuesInWindow(name string, days int) ([]float64, error) {
+	since := time.Now().AddDate(0, 0, -days)
+	rows, err := s.db.Query(
+		`SELECT value FROM metrics WHERE name = ? AND timestamp >= ? ORDER BY timestamp`,
+		name, formatStorageTimestamp(since),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var values []float64
+	for rows.Next() {
+		var v float64
+		if err := rows.Scan(&v); err != nil {
+			return nil, err
+		}
+		values = append(values, v)
+	}
+	return values, nil
 }
 
 // ── Incidents Persistence ──────────────────────────────────────────────────

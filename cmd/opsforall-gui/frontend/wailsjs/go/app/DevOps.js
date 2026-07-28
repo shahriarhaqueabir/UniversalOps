@@ -26,6 +26,10 @@ export function DockerRename(arg1, arg2) {
   return window['go']['app']['DevOps']['DockerRename'](arg1, arg2);
 }
 
+export function DockerStart(arg1) {
+  return window['go']['app']['DevOps']['DockerStart'](arg1);
+}
+
 export function DockerUnpause(arg1) {
   return window['go']['app']['DevOps']['DockerUnpause'](arg1);
 }

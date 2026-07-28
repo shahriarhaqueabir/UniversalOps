@@ -14,6 +14,8 @@ export function DockerPrune():Promise<app.DockerActionResult>;
 
 export function DockerRename(arg1:string,arg2:string):Promise<app.DockerActionResult>;
 
+export function DockerStart(arg1:string):Promise<app.DockerActionResult>;
+
 export function DockerUnpause(arg1:string):Promise<app.DockerActionResult>;
 
 export function GetAISuggestions():Promise<Array<app.DevOpsSuggestion>>;

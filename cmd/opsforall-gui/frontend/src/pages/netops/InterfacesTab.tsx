@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { cn } from '@/lib/utils'
+import { cn, formatSafeDate } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import {
@@ -135,7 +135,7 @@ export function InterfacesTab() {
                   <span className="text-sm font-bold text-text uppercase tracking-tight">{change.interface}</span>
                   <span className="text-sm font-medium text-text-dim flex-1">{change.detail}</span>
                   <span className="text-[11px] font-medium text-text-faint tabular-nums whitespace-nowrap">
-                    {new Date(change.timestamp).toLocaleTimeString()}
+                    {formatSafeDate(change.timestamp, (d) => d.toLocaleTimeString())}
                   </span>
                 </div>
               )

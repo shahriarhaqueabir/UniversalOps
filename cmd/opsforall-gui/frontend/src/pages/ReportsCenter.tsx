@@ -85,9 +85,9 @@ function HealthReportView({ data }: { data: HealthReportData }) {
     <div className="space-y-3">
       <div className="flex items-center gap-3 mb-4">
         <span className="text-lg font-black">{data.score}</span>
-        <span className="text-[10px] text-text-dim font-medium">/ 100 — {data.checks.length} checks</span>
+        <span className="text-[10px] text-text-dim font-medium">/ 100 — {data.checks?.length ?? 0} checks</span>
       </div>
-      {data.checks.map((c, i) => (
+      {(data.checks ?? []).map((c, i) => (
         <div key={i} className="flex items-start gap-3 px-3 py-2.5 rounded-lg bg-black/20 border border-white/5">
           {statusIcon(c.status)}
           <div className="flex-1 min-w-0">
@@ -105,7 +105,7 @@ function HealthReportView({ data }: { data: HealthReportData }) {
 
 /** Render a security audit report in human-readable format. */
 function SecurityReportView({ data }: { data: SecurityReportData }) {
-  const byCategory = data.items.reduce<Record<string, SecAuditItem[]>>((acc, item) => {
+  const byCategory = (data.items ?? []).reduce<Record<string, SecAuditItem[]>>((acc, item) => {
     (acc[item.category] ??= []).push(item)
     return acc
   }, {})
@@ -150,7 +150,7 @@ function SecurityReportView({ data }: { data: SecurityReportData }) {
 /** Render an auto-diagnostic report in human-readable format. */
 function AutoDiagReportView({ data }: { data: AutoDiagReportData }) {
   // Split content on section headers (## ...)
-  const parts = data.content.split(/(?=## )/).filter(Boolean)
+  const parts = (data.content ?? '').split(/(?=## )/).filter(Boolean)
   // If content has markdown sections, render them; otherwise show sections list
   return (
     <div className="space-y-4">
@@ -172,7 +172,7 @@ function AutoDiagReportView({ data }: { data: AutoDiagReportData }) {
       ) : (
         <>
           <p className="text-[9px] font-black uppercase tracking-widest text-text-faint mb-2">Sections</p>
-          {data.sections.map((s, i) => (
+          {(data.sections ?? []).map((s, i) => (
             <div key={i} className="px-3 py-2 rounded-lg bg-black/20 border border-white/5">
               <p className="text-[10px] font-bold text-white">{s}</p>
             </div>

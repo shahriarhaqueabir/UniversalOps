@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Library,
+  Map,
 } from 'lucide-react'
 import { type Page } from '../../stores'
 import { cn } from '../../lib/utils'
@@ -36,10 +37,11 @@ const opsItems: NavItem[] = [
 ]
 
 const toolsItems: NavItem[] = [
-  { id: 'reports', label: 'Reports', icon: <FileText size={20} />, shortcut: 8 },
-  { id: 'alerts', label: 'Alerts', icon: <Bell size={20} />, shortcut: 9 },
-  { id: 'logs', label: 'Logs', icon: <ScrollText size={20} />, shortcut: 10 },
-  { id: 'settings', label: 'Settings', icon: <Settings size={20} />, shortcut: 11 },
+  { id: 'network-designer', label: 'Network Designer', icon: <Map size={20} />, shortcut: 8 },
+  { id: 'reports', label: 'Reports', icon: <FileText size={20} />, shortcut: 9 },
+  { id: 'alerts', label: 'Alerts', icon: <Bell size={20} />, shortcut: 10 },
+  { id: 'logs', label: 'Logs', icon: <ScrollText size={20} />, shortcut: 11 },
+  { id: 'settings', label: 'Settings', icon: <Settings size={20} />, shortcut: 12 },
 ]
 
 interface SidebarProps {

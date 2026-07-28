@@ -174,6 +174,7 @@ func NewReportsAPI(sysOps *SysOps, secOps *SecOps, aiOps *AIOps) *ReportsAPI {
 
 // ListAllReports returns all persisted reports (health, security, auto_diag) aggregated by recency.
 func (r *ReportsAPI) ListAllReports() []common.ReportRecord {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return []common.ReportRecord{}
@@ -184,6 +185,7 @@ func (r *ReportsAPI) ListAllReports() []common.ReportRecord {
 
 // DeleteReport removes a single report by ID.
 func (r *ReportsAPI) DeleteReport(id string) bool {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return false
@@ -194,6 +196,7 @@ func (r *ReportsAPI) DeleteReport(id string) bool {
 
 // GetReportTypes returns available report types with metadata.
 func (r *ReportsAPI) GetReportTypes() []ReportTypeMeta {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	_ = storage // used for future availability checks
 	return []ReportTypeMeta{
@@ -223,6 +226,7 @@ func (r *ReportsAPI) GetReportTypes() []ReportTypeMeta {
 // Auto-diagnostic reports are persisted here.
 // Supported types: "health", "security", "auto_diag".
 func (r *ReportsAPI) GenerateReport(reportType string) (*ReportGenerationResult, error) {
+	defer common.RecoverPanic()
 	switch reportType {
 	case "health":
 		if r.sysOps == nil {
@@ -298,6 +302,7 @@ func (r *ReportsAPI) GenerateReport(reportType string) (*ReportGenerationResult,
 
 // GetReport retrieves a single full report with data_json by ID.
 func (r *ReportsAPI) GetReport(id string) (*common.ReportRecord, error) {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return nil, fmt.Errorf("storage unavailable")
@@ -311,11 +316,13 @@ func (r *ReportsAPI) GetReport(id string) (*common.ReportRecord, error) {
 
 // GetPrebuiltTemplates returns the catalog of prebuilt report templates.
 func (r *ReportsAPI) GetPrebuiltTemplates() []PrebuiltReportTemplate {
+	defer common.RecoverPanic()
 	return prebuiltTemplates()
 }
 
 // AddRuleFromTemplate creates a new auto-report rule from a prebuilt template ID.
 func (r *ReportsAPI) AddRuleFromTemplate(templateID string) (*common.AutoReportRule, error) {
+	defer common.RecoverPanic()
 	for _, t := range prebuiltTemplates() {
 		if t.ID == templateID {
 			return r.AddReportRule(t.PresetName, t.Description, t.Metric, t.Condition, t.Threshold, t.ReportType, t.Schedule)
@@ -330,6 +337,7 @@ func (r *ReportsAPI) AddRuleFromTemplate(templateID string) (*common.AutoReportR
 
 // GetReportRules returns all configured auto-report rules.
 func (r *ReportsAPI) GetReportRules() []common.AutoReportRule {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return []common.AutoReportRule{}
@@ -346,6 +354,7 @@ const (
 
 // AddReportRule creates a new auto-report rule.
 func (r *ReportsAPI) AddReportRule(name, description, metric, condition string, threshold float64, reportType, schedule string) (*common.AutoReportRule, error) {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return nil, fmt.Errorf("storage unavailable")
@@ -394,6 +403,7 @@ func (r *ReportsAPI) AddReportRule(name, description, metric, condition string, 
 
 // UpdateReportRule modifies an existing auto-report rule.
 func (r *ReportsAPI) UpdateReportRule(ruleID, name, description string, enabled bool) error {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return fmt.Errorf("storage unavailable")
@@ -415,6 +425,7 @@ func (r *ReportsAPI) UpdateReportRule(ruleID, name, description string, enabled 
 
 // DeleteReportRule removes a report rule by ID.
 func (r *ReportsAPI) DeleteReportRule(ruleID string) bool {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return false
@@ -429,6 +440,7 @@ func (r *ReportsAPI) DeleteReportRule(ruleID string) bool {
 // TriggerReport implements common.ReportTrigger.
 // It generates a report of the given type and returns the report ID.
 func (r *ReportsAPI) TriggerReport(reportType string) (string, error) {
+	defer common.RecoverPanic()
 	result, err := r.GenerateReport(reportType)
 	if err != nil {
 		return "", err
@@ -438,6 +450,7 @@ func (r *ReportsAPI) TriggerReport(reportType string) (string, error) {
 
 // GetEnabledReportRules implements common.ReportTrigger.
 func (r *ReportsAPI) GetEnabledReportRules() ([]common.AutoReportRule, error) {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return nil, nil
@@ -457,6 +470,7 @@ func (r *ReportsAPI) GetEnabledReportRules() ([]common.AutoReportRule, error) {
 
 // TouchRule implements common.ReportTrigger.
 func (r *ReportsAPI) TouchRule(ruleID string) error {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return fmt.Errorf("storage unavailable")

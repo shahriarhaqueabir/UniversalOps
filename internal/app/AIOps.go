@@ -72,11 +72,13 @@ func NewAIOps(ctx context.Context, pipeline *common.DataPipeline, knowledge *Kno
 }
 
 func (a *AIOps) SetDataDir(dir string) {
+	defer common.RecoverPanic()
 	a.dataDir = dir
 }
 
 // SetCompanionName persists the AI assistant name.
 func (a *AIOps) SetCompanionName(name string) {
+	defer common.RecoverPanic()
 	s := common.GetStorage()
 	if s != nil {
 		s.UpsertSetting("companionName", name)
@@ -85,6 +87,7 @@ func (a *AIOps) SetCompanionName(name string) {
 
 // LoadModels retrieves persisted model overrides.
 func (a *AIOps) LoadModels() {
+	defer common.RecoverPanic()
 	s := common.GetStorage()
 	if s == nil {
 		return
@@ -95,6 +98,7 @@ func (a *AIOps) LoadModels() {
 
 // SetModelForCapability updates and persists a model override for a specific capability.
 func (a *AIOps) SetModelForCapability(capability, model string) {
+	defer common.RecoverPanic()
 	s := common.GetStorage()
 	if s == nil {
 		return
@@ -111,6 +115,7 @@ func (a *AIOps) SetModelForCapability(capability, model string) {
 
 // GetCompanionName retrieves the persisted AI assistant name.
 func (a *AIOps) GetCompanionName() string {
+	defer common.RecoverPanic()
 	s := common.GetStorage()
 	if s == nil {
 		return "Hawk"
@@ -131,6 +136,7 @@ type ChatResponse struct {
 
 // Chat sends a message to the Ollama chat API and returns the response.
 func (a *AIOps) Chat(sessionID, message string) ChatResponse {
+	defer common.RecoverPanic()
 	// 1. Prepare Context
 	knowledge := a.knowledge.GetSnapshot()
 
@@ -458,6 +464,7 @@ func (a *AIOps) buildSystemContextSnapshot(forceRefresh bool) string {
 // response token as a Wails "chat:token" event. Emits "chat:done" when
 // complete, or "chat:error" on failure. Returns the parsed ChatResponse.
 func (a *AIOps) ChatStream(sessionID, message string) ChatResponse {
+	defer common.RecoverPanic()
 	if sessionID == "" || message == "" {
 		return ChatResponse{Content: "Error: sessionID and message are required"}
 	}
@@ -473,12 +480,17 @@ func (a *AIOps) ChatStream(sessionID, message string) ChatResponse {
 		}
 	}
 
+	// ── Workflow: Loading system context ──
+	a.emitWorkflowEvent(sessionID, "context", "running", "Loading system metrics, events, and anomaly history...")
+
 	// Decide whether to load heavy context
 	// NOTE: isTrivialMessage returns true for short/greeting messages.
 	// When trivial, we want to use the cached context (forceRefresh=false)
 	// to reduce first-token latency. When non-trivial, force a fresh snapshot.
 	trivial := isTrivialMessage(message)
 	historyContext := a.buildSystemContextSnapshot(!trivial)
+
+	a.emitWorkflowEvent(sessionID, "context", "completed", "System context loaded — CPU, RAM, Disk history + events + anomalies")
 
 	// Load chat history (must happen on this goroutine; storage is not
 	// guaranteed goroutine-safe for sequential access patterns).
@@ -521,6 +533,13 @@ func (a *AIOps) ChatStream(sessionID, message string) ChatResponse {
 
 	chatStart := time.Now()
 
+	// ── Workflow: Querying AI model ──
+	modelLabel := activeModel
+	if modelLabel == "" {
+		modelLabel = "default"
+	}
+	a.emitWorkflowEvent(sessionID, "inference", "running", "Querying Ollama model: "+modelLabel)
+
 	// Execute streaming chat — the onToken callback emits events inline
 	// while the Ollama API delivers chunks. Events reach the frontend
 	// immediately because Wails processes them asynchronously.
@@ -535,6 +554,7 @@ func (a *AIOps) ChatStream(sessionID, message string) ChatResponse {
 
 	if err != nil {
 		common.LogWarn("AI ChatStream failed after %v: %v", chatElapsed, err)
+		a.emitWorkflowEvent(sessionID, "inference", "error", "Ollama error: "+err.Error())
 		wailsruntime.EventsEmit(a.ctx, "chat:error", map[string]string{
 			"sessionId": sessionID,
 			"error":     err.Error(),
@@ -542,6 +562,8 @@ func (a *AIOps) ChatStream(sessionID, message string) ChatResponse {
 		return ChatResponse{Content: "Error: " + err.Error()}
 	}
 
+	a.emitWorkflowEvent(sessionID, "inference", "completed",
+		fmt.Sprintf("Model responded in %.1fs (~%d tokens)", chatElapsed.Seconds(), len(strings.Fields(rawResponse))))
 	common.LogInfo("AI ChatStream completed in %v (session=%s, tokens=%d)", chatElapsed, sessionID, len(strings.Fields(rawResponse)))
 
 	// ── MCP Tool Resolution (Auto-Execute & Re-Synthesize) ──────────
@@ -558,17 +580,25 @@ func (a *AIOps) ChatStream(sessionID, message string) ChatResponse {
 		resultsBuilder.WriteString("SYSTEM: Function call results:\n\n")
 
 		for _, call := range mcpCalls {
+			a.emitWorkflowEvent(sessionID, "mcp", "running", "Executing MCP tool: "+call.Name)
+
 			var argsJSON json.RawMessage
 			if call.Arguments != "" {
 				argsJSON = json.RawMessage(call.Arguments)
 			}
 
+			toolStart := time.Now()
 			result, err := a.mcpServer.CallTool(chatCtx, call.Name, argsJSON)
+			toolElapsed := time.Since(toolStart)
+
 			if err != nil {
 				fmt.Fprintf(&resultsBuilder, "[%s] Error: %v\n\n", call.Name, err)
+				a.emitWorkflowEvent(sessionID, "mcp", "error", "MCP tool "+call.Name+" failed: "+err.Error())
 				common.LogWarn("MCP: tool %q failed: %v", call.Name, err)
 				continue
 			}
+			a.emitWorkflowEvent(sessionID, "mcp", "completed",
+				fmt.Sprintf("MCP tool %s completed in %.1fs", call.Name, toolElapsed.Seconds()))
 			resultBytes, err := json.MarshalIndent(result, "", "  ")
 			if err != nil {
 				fmt.Fprintf(&resultsBuilder, "[%s] Result (marshal error: %v)\n\n", call.Name, err)
@@ -598,6 +628,9 @@ func (a *AIOps) ChatStream(sessionID, message string) ChatResponse {
 			"token":     "\n\n*Analyzing tool results...*\n\n",
 		})
 
+		// ── Workflow: Synthesizing results ──
+		a.emitWorkflowEvent(sessionID, "synthesis", "running", "Synthesizing MCP tool results into final response...")
+
 		// Stream the synthesis (short, typically <200 tokens)
 		synthesis, err := aiops.ChatStreamWithModelAndContext(chatCtx, contMessages, activeModel, func(token string) {
 			wailsruntime.EventsEmit(a.ctx, "chat:token", map[string]string{
@@ -607,8 +640,10 @@ func (a *AIOps) ChatStream(sessionID, message string) ChatResponse {
 		})
 		if err != nil {
 			common.LogWarn("MCP: streaming synthesis failed: %v — falling back to clean response", err)
+			a.emitWorkflowEvent(sessionID, "synthesis", "error", "Synthesis failed, using clean response")
 			finalContent, actions = aiops.ParseActions(sessionID, cleanResponse)
 		} else {
+			a.emitWorkflowEvent(sessionID, "synthesis", "completed", "Tool results synthesized into natural language response")
 			finalContent, actions = aiops.ParseActions(sessionID, synthesis)
 		}
 	} else {
@@ -632,6 +667,9 @@ func (a *AIOps) ChatStream(sessionID, message string) ChatResponse {
 		"latency_ms": fmt.Sprintf("%.0f", chatElapsed.Seconds()*1000),
 	})
 
+	a.emitWorkflowEvent(sessionID, "complete", "completed",
+		fmt.Sprintf("Analysis complete — total latency %.1fs", chatElapsed.Seconds()))
+
 	// Also save actions as JSON payload
 	if len(actions) > 0 {
 		actionJSON, _ := json.Marshal(actions)
@@ -646,6 +684,7 @@ func (a *AIOps) ChatStream(sessionID, message string) ChatResponse {
 
 // GenerateReport creates a formatted text report from the given sections.
 func (a *AIOps) GenerateReport(sections []string) string {
+	defer common.RecoverPanic()
 	var reportSections []aiops.ReportSection
 	for _, title := range sections {
 		title = aiops.SanitizeInput(title)
@@ -685,6 +724,7 @@ func (a *AIOps) GenerateReport(sections []string) string {
 // ListMCPTools returns the full list of available MCP tool definitions for
 // the frontend to display or introspect.
 func (a *AIOps) ListMCPTools() []mcp.Tool {
+	defer common.RecoverPanic()
 	if a.mcpServer == nil {
 		return nil
 	}
@@ -696,8 +736,72 @@ func (a *AIOps) ListMCPTools() []mcp.Tool {
 	return tools
 }
 
+// ── Live Context: Workflow & Data Stream Events ──────────────────────────
+
+// emitWorkflowEvent pushes a real-time AI workflow event to the frontend
+// Live Context view via the "ai:workflow" Wails event channel.
+func (a *AIOps) emitWorkflowEvent(sessionID, stage, status, detail string) {
+	if a.ctx == nil {
+		return
+	}
+	wailsruntime.EventsEmit(a.ctx, "ai:workflow", AIWorkflowEvent{
+		SessionID: sessionID,
+		Stage:     stage,
+		Status:    status,
+		Detail:    detail,
+		Timestamp: time.Now().Format("15:04:05.000"),
+	})
+}
+
+// GetDataStreamSnapshot returns a snapshot of every tracked metric in the
+// pipeline ring buffer for the frontend Live Context data stream view.
+func (a *AIOps) GetDataStreamSnapshot() []DataStreamMetric {
+	defer common.RecoverPanic()
+	if a.pipeline == nil {
+		return nil
+	}
+	series := a.pipeline.AllSeries()
+	if len(series) == 0 {
+		return nil
+	}
+
+	result := make([]DataStreamMetric, 0, len(series))
+	now := time.Now().Format("15:04:05.000")
+
+	for name, ts := range series {
+		if ts.Count() == 0 {
+			continue
+		}
+		trend := "stable"
+		trendInfo := a.pipeline.GetTrend(name)
+		// Use correlation as a confidence proxy (|R| > 0.5 = moderate+ trend)
+		strong := trendInfo.Correlation > 0.5 || trendInfo.Correlation < -0.5
+		if trendInfo.Direction == common.TrendRising && strong {
+			trend = "rising"
+		} else if trendInfo.Direction == common.TrendFalling && strong {
+			trend = "falling"
+		}
+		result = append(result, DataStreamMetric{
+			Name:      name,
+			Unit:      ts.Unit,
+			LastValue: ts.Last(),
+			Samples:   ts.Count(),
+			Trend:     trend,
+			UpdatedAt: now,
+		})
+	}
+
+	// Sort alphabetically for deterministic display
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
+	})
+
+	return result
+}
+
 // GetOllamaStatus returns the current Ollama service status.
 func (a *AIOps) GetOllamaStatus() OllamaStatus {
+	defer common.RecoverPanic()
 	status, err := aiops.CheckOllamaWithContext(a.ctx)
 
 	// Use the centralized CapabilityRegistry for binary detection
@@ -724,6 +828,7 @@ func (a *AIOps) GetOllamaStatus() OllamaStatus {
 
 // GetModelfile reads the local universalops.modelfile and returns its content.
 func (a *AIOps) GetModelfile() (string, error) {
+	defer common.RecoverPanic()
 	path := filepath.Join(a.dataDir, "universalops.modelfile")
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -734,6 +839,7 @@ func (a *AIOps) GetModelfile() (string, error) {
 
 // SaveModelfile writes the given content to the local universalops.modelfile.
 func (a *AIOps) SaveModelfile(content string) error {
+	defer common.RecoverPanic()
 	common.LogInfo("AIOps: Saving updated universalops.modelfile")
 	path := filepath.Join(a.dataDir, "universalops.modelfile")
 	err := os.WriteFile(path, []byte(content), 0644)
@@ -745,12 +851,14 @@ func (a *AIOps) SaveModelfile(content string) error {
 
 // SetOllamaModel updates the active Ollama model.
 func (a *AIOps) SetOllamaModel(modelName string) {
+	defer common.RecoverPanic()
 	common.LogInfo("AIOps: Switching active model to %q", modelName)
 	aiops.SetModel(modelName)
 }
 
 // PullModel initiates a model pull and emits progress events to the frontend.
 func (a *AIOps) PullModel(modelName string) error {
+	defer common.RecoverPanic()
 	common.LogInfo("AIOps: Pulling model %q", modelName)
 	err := aiops.PullModelWithContext(a.ctx, modelName, func(resp api.ProgressResponse) error {
 		if a.ctx != nil {
@@ -777,6 +885,7 @@ func (a *AIOps) PullModel(modelName string) error {
 
 // DeleteModel removes a local model from Ollama.
 func (a *AIOps) DeleteModel(modelName string) error {
+	defer common.RecoverPanic()
 	common.LogInfo("AIOps: Deleting model %q", modelName)
 	return aiops.DeleteModelWithContext(a.ctx, modelName)
 }
@@ -784,6 +893,7 @@ func (a *AIOps) DeleteModel(modelName string) error {
 // CreateOpsPersona creates or activates the specialized 'universalops' model from the local modelfile.
 // If the model already exists in Ollama, it simply activates it without re-creating.
 func (a *AIOps) CreateOpsPersona() error {
+	defer common.RecoverPanic()
 	common.LogInfo("AIOps: Creating/activating universalops persona")
 
 	// 0. Check if the model already exists in Ollama — just activate it
@@ -892,6 +1002,7 @@ PARAMETER stop "──"
 
 // DetectAnomalies performs anomaly detection on pipeline metrics.
 func (a *AIOps) DetectAnomalies() []AnomalyInfo {
+	defer common.RecoverPanic()
 	anoms := aiops.DetectPipelineAnomalies(a.pipeline)
 	var out []AnomalyInfo
 	for _, anom := range anoms {
@@ -911,6 +1022,7 @@ func (a *AIOps) DetectAnomalies() []AnomalyInfo {
 
 // AskAI sends a prompt to the AI with the given context and returns the response.
 func (a *AIOps) AskAI(ctx context.Context, prompt string) (string, error) {
+	defer common.RecoverPanic()
 	messages := []aiops.ChatMessage{
 		{Role: "system", Content: "You are the Universal-Ops AI assistant, an expert operations analyst. Be concise and specific."},
 		{Role: "user", Content: prompt},
@@ -920,6 +1032,7 @@ func (a *AIOps) AskAI(ctx context.Context, prompt string) (string, error) {
 
 // QuerySystemState answers a natural-language system-state question using live metrics.
 func (a *AIOps) QuerySystemState(query string) string {
+	defer common.RecoverPanic()
 	stats, _ := a.sysOps.collector.CollectAllStats()
 
 	return aiops.AnswerSystemStateQuery(query, stats, nil, nil)
@@ -927,6 +1040,7 @@ func (a *AIOps) QuerySystemState(query string) string {
 
 // GetAIInsights synthesizes anomaly, trend, and alert data into actionable insights.
 func (a *AIOps) GetAIInsights() []AIInsight {
+	defer common.RecoverPanic()
 	var insights []AIInsight
 	now := time.Now().Format("2006-01-02T15:04:05Z07:00")
 
@@ -1033,6 +1147,7 @@ func (a *AIOps) GetAIInsights() []AIInsight {
 
 // GetConfidenceScore computes an overall system confidence score (0-100).
 func (a *AIOps) GetConfidenceScore() AIConfidence {
+	defer common.RecoverPanic()
 	now := time.Now().Format("2006-01-02T15:04:05Z07:00")
 	factors := make(map[string]float64)
 
@@ -1131,6 +1246,7 @@ type LearnedBaseline struct {
 
 // GetLearnedBaselines returns the statistical baseline for each core metric.
 func (a *AIOps) GetLearnedBaselines() []LearnedBaseline {
+	defer common.RecoverPanic()
 	metricNames := []string{common.MetricCPU, common.MetricMem, common.MetricDisk, common.MetricNetRX, common.MetricNetTX}
 	var baselines []LearnedBaseline
 
@@ -1158,6 +1274,7 @@ func (a *AIOps) GetLearnedBaselines() []LearnedBaseline {
 
 // SaveMessage persists a chat message. If sessionID is empty, generates a new one.
 func (a *AIOps) SaveMessage(sessionID, role, content string) string {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return sessionID
@@ -1173,6 +1290,7 @@ func (a *AIOps) SaveMessage(sessionID, role, content string) string {
 
 // GetMessages returns all messages for a given session.
 func (a *AIOps) GetMessages(sessionID string) []ConversationMessage {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return []ConversationMessage{}
@@ -1196,6 +1314,7 @@ func (a *AIOps) GetMessages(sessionID string) []ConversationMessage {
 
 // ListSessions returns all chat sessions with metadata.
 func (a *AIOps) ListSessions() []map[string]interface{} {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return []map[string]interface{}{}
@@ -1209,6 +1328,7 @@ func (a *AIOps) ListSessions() []map[string]interface{} {
 
 // DeleteSession removes a chat session and all its messages.
 func (a *AIOps) DeleteSession(sessionID string) {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return
@@ -1220,6 +1340,7 @@ func (a *AIOps) DeleteSession(sessionID string) {
 
 // RequestOptimization asks Hawk to analyze system load and settings to propose improvements.
 func (a *AIOps) RequestOptimization() ChatResponse {
+	defer common.RecoverPanic()
 	// 1. Gather Context
 	knowledge := a.knowledge.GetSnapshot()
 	settings := a.pipelineAPI.GetCurrentSettings()
@@ -1289,6 +1410,7 @@ If no changes are needed, return the current settings in the payload.`,
 // NotifyActionResult informs the AI of an action outcome and returns its response.
 // handshakeID is used for DORA compliance logging on rejected actions.
 func (a *AIOps) NotifyActionResult(sessionID, actionName, status, details, handshakeID string) ChatResponse {
+	defer common.RecoverPanic()
 	// DORA compliance: Log rejected (aborted) actions to decisions_audit
 	if status == "ABORTED" && handshakeID != "" {
 		if reg := common.GetHandshakeRegistry(); reg != nil {
@@ -1317,6 +1439,7 @@ func (a *AIOps) NotifyActionResult(sessionID, actionName, status, details, hands
 
 // VerifyRemediation asks Hawk to verify if a workflow improved system metrics.
 func (a *AIOps) VerifyRemediation(sessionID, workflowID string, beforeMetrics map[string]float64) ChatResponse {
+	defer common.RecoverPanic()
 	knowledge := a.knowledge.GetSnapshot()
 
 	prompt := fmt.Sprintf(`Verify the outcome of workflow '%s'.
@@ -1336,6 +1459,7 @@ Determine if the remediation was successful and provide a brief technical assess
 
 // PlanWorkflow asks Hawk to design a custom operational workflow.
 func (a *AIOps) PlanWorkflow(sessionID, objective string) ChatResponse {
+	defer common.RecoverPanic()
 	prompt := fmt.Sprintf(`Plan a multi-step operational workflow to achieve this objective: "%s".
 Your response MUST be a valid JSON object matching this structure:
 {
@@ -1387,6 +1511,7 @@ Keep it technical and focused on system/network/security ops.`, objective)
 
 // ExportReportAsPDF converts a markdown report to a formatted file.
 func (a *AIOps) ExportReportAsPDF(title, markdown string) (string, error) {
+	defer common.RecoverPanic()
 	// For portability without heavy dependencies (like wkhtmltopdf/gotenberg),
 	// we will generate a nicely formatted .txt/md "Professional Report"
 	// until a light PDF lib is integrated.

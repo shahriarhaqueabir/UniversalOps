@@ -37,6 +37,7 @@ func NewSysOps() *SysOps {
 
 // GetCPUInfo returns current CPU usage and information.
 func (s *SysOps) GetCPUInfo() CPUInfo {
+	defer common.RecoverPanic()
 	stats, err := sysops.GetCPUStats()
 	if err != nil {
 		return CPUInfo{}
@@ -56,6 +57,7 @@ func (s *SysOps) GetCPUInfo() CPUInfo {
 
 // GetMemoryInfo returns current memory and swap usage.
 func (s *SysOps) GetMemoryInfo() MemoryInfo {
+	defer common.RecoverPanic()
 	stats, err := sysops.GetMemoryStats()
 	if err != nil {
 		return MemoryInfo{}
@@ -76,6 +78,7 @@ func (s *SysOps) GetMemoryInfo() MemoryInfo {
 
 // GetDiskInfo returns disk partition and usage information.
 func (s *SysOps) GetDiskInfo() DiskInfo {
+	defer common.RecoverPanic()
 	stats, err := sysops.GetDiskStats()
 	if err != nil {
 		return DiskInfo{}
@@ -97,6 +100,7 @@ func (s *SysOps) GetDiskInfo() DiskInfo {
 
 // GetTopProcesses returns the top N processes by CPU usage.
 func (s *SysOps) GetTopProcesses(n int) []ProcessInfo {
+	defer common.RecoverPanic()
 	procs, err := sysops.GetTopProcesses(n)
 	if err != nil {
 		return []ProcessInfo{}
@@ -204,6 +208,7 @@ func (f *sysopsFacade) CollectAllStats() (*common.SystemStats, error) {
 
 // ListAllProcesses returns all processes by CPU usage.
 func (s *SysOps) ListAllProcesses(limit int) []ProcessInfo {
+	defer common.RecoverPanic()
 	return s.GetTopProcesses(limit)
 }
 
@@ -215,6 +220,7 @@ type ProcessNode struct {
 
 // GetProcessTreeGraph returns a recursive hierarchical structure of processes.
 func (s *SysOps) GetProcessTreeGraph() ProcessNode {
+	defer common.RecoverPanic()
 	procs, err := sysops.GetTopProcesses(0) // Get all for full mapping
 	if err != nil {
 		return ProcessNode{}
@@ -264,6 +270,7 @@ func (s *SysOps) GetProcessTreeGraph() ProcessNode {
 
 // GetProcessTree returns processes grouped/sorted by CPU.
 func (s *SysOps) GetProcessTree() []ProcessInfo {
+	defer common.RecoverPanic()
 	procs := s.GetTopProcesses(200)
 	sort.Slice(procs, func(i, j int) bool {
 		return procs[i].CPU > procs[j].CPU
@@ -273,6 +280,7 @@ func (s *SysOps) GetProcessTree() []ProcessInfo {
 
 // GetRecommendations returns heuristic system health recommendations.
 func (s *SysOps) GetRecommendations() []SystemRecommendation {
+	defer common.RecoverPanic()
 	var recs []SystemRecommendation
 
 	// CPU check
@@ -353,6 +361,7 @@ func (s *SysOps) GetRecommendations() []SystemRecommendation {
 
 // GetDiskIO returns disk I/O throughput statistics.
 func (s *SysOps) GetDiskIO() DiskIOData {
+	defer common.RecoverPanic()
 	stats, err := sysops.GetDiskIO()
 	if err != nil {
 		return DiskIOData{}
@@ -376,6 +385,7 @@ func (s *SysOps) GetDiskIO() DiskIOData {
 
 // GetLoggedInUsers returns all currently logged-in users.
 func (s *SysOps) GetLoggedInUsers() []LoggedInUserData {
+	defer common.RecoverPanic()
 	users, err := sysops.GetLoggedInUsers()
 	if err != nil {
 		return []LoggedInUserData{}
@@ -394,6 +404,7 @@ func (s *SysOps) GetLoggedInUsers() []LoggedInUserData {
 
 // GetPerformanceStats returns system performance metrics.
 func (s *SysOps) GetPerformanceStats() PerformanceData {
+	defer common.RecoverPanic()
 	stats, err := sysops.GetPerformanceStats()
 	if err != nil {
 		return PerformanceData{}
@@ -418,6 +429,7 @@ func (s *SysOps) GetPerformanceStats() PerformanceData {
 
 // RunSystemAction requests a safety handshake for a system-level action.
 func (s *SysOps) RunSystemAction(action string) common.ActionPreview {
+	defer common.RecoverPanic()
 	command := ""
 	description := ""
 	risks := []string{"Potential temporary service disruption"}
@@ -582,6 +594,7 @@ func (s *SysOps) GetCPUExtended() (out CPUExtendedInfo) {
 
 // GetLHMStatus returns the current state of the bundled LHM instance.
 func (s *SysOps) GetLHMStatus() LHMStatusResult {
+	defer common.RecoverPanic()
 	mgr := common.GetLHMManager()
 	st := mgr.Status()
 	return LHMStatusResult{
@@ -597,6 +610,7 @@ func (s *SysOps) GetLHMStatus() LHMStatusResult {
 // elevation prompt.  This lets the app display exactly what the admin elevation
 // is required for, before triggering the Windows UAC dialog.
 func (s *SysOps) GetLHMAuthorization() LHMAuthorization {
+	defer common.RecoverPanic()
 	return LHMAuthorization{
 		Reason: "Universal-Ops needs admin privileges to start LibreHardwareMonitor, " +
 			"which reads low-level hardware sensor data (CPU temperature, GPU " +
@@ -620,6 +634,7 @@ func (s *SysOps) GetLHMAuthorization() LHMAuthorization {
 
 // DownloadLHM downloads the LHM binary (user consent already obtained via frontend).
 func (s *SysOps) DownloadLHM() LHMStatusResult {
+	defer common.RecoverPanic()
 	mgr := common.GetLHMManager()
 	if mgr.IsAvailable() {
 		return s.GetLHMStatus()
@@ -639,6 +654,7 @@ func (s *SysOps) DownloadLHM() LHMStatusResult {
 
 // StartLHM starts the LHM process with admin elevation (triggers Windows UAC).
 func (s *SysOps) StartLHM() LHMStatusResult {
+	defer common.RecoverPanic()
 	mgr := common.GetLHMManager()
 
 	// Ensure binary exists first
@@ -659,6 +675,7 @@ func (s *SysOps) StartLHM() LHMStatusResult {
 
 // StopLHM terminates the LHM background process.
 func (s *SysOps) StopLHM() LHMStatusResult {
+	defer common.RecoverPanic()
 	mgr := common.GetLHMManager()
 	_ = mgr.Stop()
 	return s.GetLHMStatus()
@@ -666,6 +683,7 @@ func (s *SysOps) StopLHM() LHMStatusResult {
 
 // GetSystemLogs retrieves OS system logs.
 func (s *SysOps) GetSystemLogs(n int, source string) SystemLogsResultData {
+	defer common.RecoverPanic()
 	result, err := sysops.GetSystemLogs(n, source)
 	if err != nil {
 		return SystemLogsResultData{}
@@ -688,6 +706,7 @@ func (s *SysOps) GetSystemLogs(n int, source string) SystemLogsResultData {
 
 // GetScheduledTasks returns all scheduled tasks.
 func (s *SysOps) GetScheduledTasks() []ScheduledTaskData {
+	defer common.RecoverPanic()
 	tasks, err := sysops.GetScheduledTasks()
 	if err != nil {
 		return []ScheduledTaskData{}
@@ -707,11 +726,13 @@ func (s *SysOps) GetScheduledTasks() []ScheduledTaskData {
 
 // RunDiagnostic runs a comprehensive system diagnostic and returns the result.
 func (s *SysOps) RunDiagnostic() ExtendedDiagnosticResult {
+	defer common.RecoverPanic()
 	return s.RunExtendedDiagnostics()
 }
 
 // RunExtendedDiagnostics runs a set of system health checks and returns a score from 0-100.
 func (s *SysOps) RunExtendedDiagnostics() ExtendedDiagnosticResult {
+	defer common.RecoverPanic()
 	result, err := sysops.RunExtendedDiagnostics()
 	if err != nil {
 		return ExtendedDiagnosticResult{}
@@ -756,6 +777,7 @@ func (s *SysOps) RunExtendedDiagnostics() ExtendedDiagnosticResult {
 
 // ListHistoricalHealthReports returns summary of all persisted health diagnostics.
 func (s *SysOps) ListHistoricalHealthReports() []common.ReportRecord {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return []common.ReportRecord{}
@@ -766,6 +788,7 @@ func (s *SysOps) ListHistoricalHealthReports() []common.ReportRecord {
 
 // GetHistoricalHealthReport retrieves a specific health diagnostic by ID.
 func (s *SysOps) GetHistoricalHealthReport(id string) (ExtendedDiagnosticResult, error) {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return ExtendedDiagnosticResult{}, fmt.Errorf("storage unavailable")
@@ -781,6 +804,7 @@ func (s *SysOps) GetHistoricalHealthReport(id string) (ExtendedDiagnosticResult,
 
 // GetInstalledPackages returns detected package managers and their installed packages.
 func (s *SysOps) GetInstalledPackages() []PackageManagerData {
+	defer common.RecoverPanic()
 	sysPkgs := sysops.GetInstalledPackages()
 	out := make([]PackageManagerData, 0, len(sysPkgs))
 	for _, p := range sysPkgs {

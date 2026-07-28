@@ -22,6 +22,7 @@ func NewSecOps(eventBus *common.EventBus) *SecOps {
 
 // GetFirewallRules returns current firewall rules.
 func (s *SecOps) GetFirewallRules() []FirewallRule {
+	defer common.RecoverPanic()
 	rules, err := secops.GetFirewallRules()
 	if err != nil {
 		return []FirewallRule{}
@@ -46,6 +47,7 @@ func (s *SecOps) GetFirewallRules() []FirewallRule {
 
 // GetUsers returns local user accounts.
 func (s *SecOps) GetUsers() []UserInfo {
+	defer common.RecoverPanic()
 	users, err := secops.GetUsers()
 	if err != nil {
 		return []UserInfo{}
@@ -66,6 +68,7 @@ func (s *SecOps) GetUsers() []UserInfo {
 
 // GetListeningPorts returns all listening network ports.
 func (s *SecOps) GetListeningPorts() []ListeningPort {
+	defer common.RecoverPanic()
 	ports, err := secops.GetListeningPorts()
 	if err != nil {
 		return []ListeningPort{}
@@ -88,6 +91,7 @@ func (s *SecOps) GetListeningPorts() []ListeningPort {
 
 // GetDefenderStatus returns Windows Defender status.
 func (s *SecOps) GetDefenderStatus() DefenderStatus {
+	defer common.RecoverPanic()
 	status, err := secops.GetDefenderStatus()
 	if err != nil {
 		return DefenderStatus{}
@@ -110,6 +114,7 @@ func (s *SecOps) GetDefenderStatus() DefenderStatus {
 
 // GetScheduledTasks returns scheduled tasks.
 func (s *SecOps) GetScheduledTasks() []ScheduledTask {
+	defer common.RecoverPanic()
 	tasks, err := secops.GetScheduledTasks()
 	if err != nil {
 		return []ScheduledTask{}
@@ -130,6 +135,7 @@ func (s *SecOps) GetScheduledTasks() []ScheduledTask {
 
 // GetSecurityEvents returns recent security event log entries.
 func (s *SecOps) GetSecurityEvents() []SecurityEvent {
+	defer common.RecoverPanic()
 	events, err := secops.GetSecurityEvents()
 	if err != nil {
 		return []SecurityEvent{}
@@ -150,6 +156,7 @@ func (s *SecOps) GetSecurityEvents() []SecurityEvent {
 
 // SetFirewallRuleHandshake requests a safety handshake for a firewall rule change.
 func (s *SecOps) SetFirewallRuleHandshake(name string, enable bool) common.ActionPreview {
+	defer common.RecoverPanic()
 	actionName := "Disable Firewall Rule"
 	command := fmt.Sprintf("netsh advfirewall firewall set rule name=\"%s\" new enable=no", name)
 	if enable {
@@ -226,6 +233,7 @@ func (s *SecOps) executeSetFirewallRuleState(name string, enable bool) bool {
 
 // GetSecurityScore computes a security posture score from existing data sources.
 func (s *SecOps) GetSecurityScore() SecurityScore {
+	defer common.RecoverPanic()
 	score := secops.ComputeSecurityScore()
 	return SecurityScore{
 		Score:           score.Score,
@@ -237,6 +245,7 @@ func (s *SecOps) GetSecurityScore() SecurityScore {
 
 // GetFirewallStatus returns the global firewall on/off status and per-profile status.
 func (s *SecOps) GetFirewallStatus() FirewallStatus {
+	defer common.RecoverPanic()
 	profiles, err := secops.GetFirewallProfiles()
 	if err != nil {
 		return FirewallStatus{
@@ -262,6 +271,7 @@ func (s *SecOps) GetFirewallStatus() FirewallStatus {
 
 // GetRisks returns a list of detected security risks.
 func (s *SecOps) GetRisks() []RiskInfo {
+	defer common.RecoverPanic()
 	var risks []RiskInfo
 	dangerousPorts := map[int]string{3389: "RDP", 445: "SMB", 23: "Telnet"}
 
@@ -381,6 +391,7 @@ func (s *SecOps) GetRisks() []RiskInfo {
 // It collects data from firewall, defender, ports, users, and events,
 // then generates a text summary with categorized risks and recommendations.
 func (s *SecOps) GetSecuritySummary() SecuritySummary {
+	defer common.RecoverPanic()
 	summary := secops.GetSecuritySummary()
 	return SecuritySummary{
 		Score:           summary.Score,
@@ -395,6 +406,7 @@ func (s *SecOps) GetSecuritySummary() SecuritySummary {
 
 // GetPasswordPolicy returns the system password policy.
 func (s *SecOps) GetPasswordPolicy() PasswordPolicy {
+	defer common.RecoverPanic()
 	p, err := secops.GetPasswordPolicy()
 	if err != nil {
 		return PasswordPolicy{}
@@ -410,6 +422,7 @@ func (s *SecOps) GetPasswordPolicy() PasswordPolicy {
 
 // GetFailedLogins returns recent failed login attempts.
 func (s *SecOps) GetFailedLogins() []FailedLogin {
+	defer common.RecoverPanic()
 	logins, err := secops.GetFailedLogins()
 	if err != nil {
 		return []FailedLogin{}
@@ -428,6 +441,7 @@ func (s *SecOps) GetFailedLogins() []FailedLogin {
 
 // GetAccountLockouts returns locked accounts.
 func (s *SecOps) GetAccountLockouts() []LockedAccount {
+	defer common.RecoverPanic()
 	locked, err := secops.GetAccountLockouts()
 	if err != nil {
 		return []LockedAccount{}
@@ -444,6 +458,7 @@ func (s *SecOps) GetAccountLockouts() []LockedAccount {
 
 // GetDiskEncryptionStatus returns disk encryption status.
 func (s *SecOps) GetDiskEncryptionStatus() []DiskEncryption {
+	defer common.RecoverPanic()
 	disks, err := secops.GetDiskEncryptionStatus()
 	if err != nil {
 		return []DiskEncryption{}
@@ -462,6 +477,7 @@ func (s *SecOps) GetDiskEncryptionStatus() []DiskEncryption {
 
 // GetSecureBootStatus returns secure boot status.
 func (s *SecOps) GetSecureBootStatus() SecureBoot {
+	defer common.RecoverPanic()
 	sb, err := secops.GetSecureBootStatus()
 	if err != nil {
 		return SecureBoot{}
@@ -474,6 +490,7 @@ func (s *SecOps) GetSecureBootStatus() SecureBoot {
 
 // GetRunningServices returns running system services.
 func (s *SecOps) GetRunningServices() []SystemService {
+	defer common.RecoverPanic()
 	services, err := secops.GetRunningServices()
 	if err != nil {
 		return []SystemService{}
@@ -492,6 +509,7 @@ func (s *SecOps) GetRunningServices() []SystemService {
 
 // GetTLSCertificates returns TLS certificate info.
 func (s *SecOps) GetTLSCertificates() []TLSCertificate {
+	defer common.RecoverPanic()
 	certs, err := secops.GetTLSCertificates()
 	if err != nil {
 		return []TLSCertificate{}
@@ -512,6 +530,7 @@ func (s *SecOps) GetTLSCertificates() []TLSCertificate {
 
 // GetPublicExposure returns externally-facing ports.
 func (s *SecOps) GetPublicExposure() []PublicExposure {
+	defer common.RecoverPanic()
 	exposed, err := secops.GetPublicExposure()
 	if err != nil {
 		return []PublicExposure{}
@@ -530,6 +549,7 @@ func (s *SecOps) GetPublicExposure() []PublicExposure {
 
 // GetHardeningChecks returns hardening check results.
 func (s *SecOps) GetHardeningChecks() []HardeningCheck {
+	defer common.RecoverPanic()
 	checks, err := secops.GetHardeningChecks()
 	if err != nil {
 		return []HardeningCheck{}
@@ -549,6 +569,7 @@ func (s *SecOps) GetHardeningChecks() []HardeningCheck {
 
 // GetSSHConfig returns SSH configuration.
 func (s *SecOps) GetSSHConfig() SSHConfig {
+	defer common.RecoverPanic()
 	sc, err := secops.GetSSHConfig()
 	if err != nil {
 		return SSHConfig{}
@@ -564,6 +585,7 @@ func (s *SecOps) GetSSHConfig() SSHConfig {
 
 // GetPrivilegeEvents returns privilege escalation events.
 func (s *SecOps) GetPrivilegeEvents() []PrivilegeEvent {
+	defer common.RecoverPanic()
 	events, err := secops.GetPrivilegeEvents()
 	if err != nil {
 		return []PrivilegeEvent{}
@@ -582,6 +604,7 @@ func (s *SecOps) GetPrivilegeEvents() []PrivilegeEvent {
 
 // GetEventTimeline returns merged chronological security events.
 func (s *SecOps) GetEventTimeline() []SecTimelineEvent {
+	defer common.RecoverPanic()
 	events, err := secops.GetEventTimeline()
 	if err != nil {
 		return []SecTimelineEvent{}
@@ -600,11 +623,13 @@ func (s *SecOps) GetEventTimeline() []SecTimelineEvent {
 
 // RunAudit runs a comprehensive security audit and returns the result.
 func (s *SecOps) RunAudit() SecurityAuditResult {
+	defer common.RecoverPanic()
 	return s.RunSecurityAuditChecklist()
 }
 
 // RunSecurityAuditChecklist runs a one-click security audit.
 func (s *SecOps) RunSecurityAuditChecklist() SecurityAuditResult {
+	defer common.RecoverPanic()
 	result, err := secops.RunSecurityAuditChecklist()
 	if err != nil {
 		return SecurityAuditResult{}
@@ -653,6 +678,7 @@ func (s *SecOps) RunSecurityAuditChecklist() SecurityAuditResult {
 
 // ListHistoricalSecurityReports returns summary of all persisted security audits.
 func (s *SecOps) ListHistoricalSecurityReports() []common.ReportRecord {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return []common.ReportRecord{}
@@ -663,6 +689,7 @@ func (s *SecOps) ListHistoricalSecurityReports() []common.ReportRecord {
 
 // GetHistoricalSecurityReport retrieves a specific security audit by ID.
 func (s *SecOps) GetHistoricalSecurityReport(id string) (SecurityAuditResult, error) {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return SecurityAuditResult{}, fmt.Errorf("storage unavailable")
@@ -678,6 +705,7 @@ func (s *SecOps) GetHistoricalSecurityReport(id string) (SecurityAuditResult, er
 
 // IsolateHost requests a safety handshake for isolating the host.
 func (s *SecOps) IsolateHost(confirm bool, autoExpireSeconds int) common.ActionPreview {
+	defer common.RecoverPanic()
 	command := "netsh advfirewall set allprofiles firewallpolicy blockinbound,blockoutbound"
 	id := common.GetHandshakeRegistry().Register("", "IsolateHost", command, map[string]interface{}{
 		"confirm":           confirm,
@@ -706,6 +734,7 @@ func (s *SecOps) executeIsolateHost(confirm bool, autoExpireSeconds int) common.
 
 // KillProcess requests a safety handshake for terminating a process.
 func (s *SecOps) KillProcess(pid int) common.ActionPreview {
+	defer common.RecoverPanic()
 	command := fmt.Sprintf("taskkill /F /PID %d", pid)
 	id := common.GetHandshakeRegistry().Register("", "KillProcess", command, map[string]interface{}{"pid": pid})
 
@@ -731,6 +760,7 @@ func (s *SecOps) executeKillProcess(pid int) common.SecActionResult {
 
 // KillProcessTree requests a safety handshake for terminating a process and its children.
 func (s *SecOps) KillProcessTree(pid int) common.ActionPreview {
+	defer common.RecoverPanic()
 	command := fmt.Sprintf("Get-Process -Id %d | Stop-Process -Force", pid)
 	id := common.GetHandshakeRegistry().Register("", "KillProcessTree", command, map[string]interface{}{"pid": pid})
 
@@ -756,6 +786,7 @@ func (s *SecOps) executeKillProcessTree(pid int) common.SecActionResult {
 
 // BlockIP requests a safety handshake for blocking an IP address.
 func (s *SecOps) BlockIP(ip string) common.ActionPreview {
+	defer common.RecoverPanic()
 	command := fmt.Sprintf("netsh advfirewall firewall add rule name=\"Block %s\" dir=in action=block remoteip=%s", ip, ip)
 	id := common.GetHandshakeRegistry().Register("", "BlockIP", command, map[string]interface{}{"ip": ip})
 
@@ -781,6 +812,7 @@ func (s *SecOps) executeBlockIP(ip string) common.SecActionResult {
 
 // DisableAccount requests a safety handshake for disabling a local user account.
 func (s *SecOps) DisableAccount(username string) common.ActionPreview {
+	defer common.RecoverPanic()
 	command := fmt.Sprintf("net user %s /active:no", username)
 	id := common.GetHandshakeRegistry().Register("", "DisableAccount", command, map[string]interface{}{"username": username})
 
@@ -806,6 +838,7 @@ func (s *SecOps) executeDisableAccount(username string) common.SecActionResult {
 
 // ListForensics returns all forensic snapshots.
 func (s *SecOps) ListForensics() []common.ForensicRecord {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return []common.ForensicRecord{}
@@ -819,6 +852,7 @@ func (s *SecOps) ListForensics() []common.ForensicRecord {
 
 // GetForensic returns a full forensic snapshot by ID.
 func (s *SecOps) GetForensic(id string) common.ForensicRecord {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return common.ForensicRecord{}
@@ -841,6 +875,7 @@ type ForensicDiff struct {
 
 // DiffForensics compares two snapshots and identifies structural changes.
 func (s *SecOps) DiffForensics(idA, idB string) (ForensicDiff, error) {
+	defer common.RecoverPanic()
 	storage := common.GetStorage()
 	if storage == nil {
 		return ForensicDiff{}, fmt.Errorf("storage unavailable")
@@ -910,6 +945,7 @@ func (s *SecOps) DiffForensics(idA, idB string) (ForensicDiff, error) {
 
 // CaptureEvidence requests a safety handshake for collecting forensic evidence.
 func (s *SecOps) CaptureEvidence() common.ActionPreview {
+	defer common.RecoverPanic()
 	command := "Forensic Snapshot (Process List, Connections, Environment)"
 	id := common.GetHandshakeRegistry().Register("", "CaptureEvidence", command, nil)
 
@@ -935,6 +971,7 @@ func (s *SecOps) executeCaptureEvidence() common.SecActionResult {
 
 // ExportForensicBundle requests a safety handshake for exporting evidence.
 func (s *SecOps) ExportForensicBundle(snapshotID string) common.ActionPreview {
+	defer common.RecoverPanic()
 	command := fmt.Sprintf("Export snapshot %s to local archive", snapshotID)
 	id := common.GetHandshakeRegistry().Register("", "ExportForensicBundle", command, map[string]interface{}{"id": snapshotID})
 

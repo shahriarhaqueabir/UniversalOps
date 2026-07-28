@@ -13,24 +13,39 @@ type Dashboard struct {
 	alerts       *common.AlertEngine
 	sysOps       *SysOps
 	netOps       *NetOps
+	secOps       *SecOps
+	devOps       *DevOps
+	aiOps        *AIOps
 	timeline     *Timeline
+	sloEngine    *common.SLOEngine
 	uptimeGetter func() string
 }
 
 // NewDashboard creates a new Dashboard facade.
-func NewDashboard(pipeline *common.DataPipeline, alerts *common.AlertEngine, sysOps *SysOps, netOps *NetOps, timeline *Timeline, uptimeGetter func() string) *Dashboard {
+func NewDashboard(pipeline *common.DataPipeline, alerts *common.AlertEngine, sysOps *SysOps, netOps *NetOps, secOps *SecOps, devOps *DevOps, aiOps *AIOps, timeline *Timeline, sloEngine *common.SLOEngine, uptimeGetter func() string) *Dashboard {
 	return &Dashboard{
 		pipeline:     pipeline,
 		alerts:       alerts,
 		sysOps:       sysOps,
 		netOps:       netOps,
+		secOps:       secOps,
+		devOps:       devOps,
+		aiOps:        aiOps,
 		timeline:     timeline,
+		sloEngine:    sloEngine,
 		uptimeGetter: uptimeGetter,
 	}
 }
 
+// SetSLOEngine sets the SLO engine on the Dashboard (called after storage init).
+func (d *Dashboard) SetSLOEngine(engine *common.SLOEngine) {
+	defer common.RecoverPanic()
+	d.sloEngine = engine
+}
+
 // RunQuickDiag performs a quick system diagnostic and returns categorized results.
 func (d *Dashboard) RunQuickDiag() []DiagnosticResult {
+	defer common.RecoverPanic()
 	p := d.pipeline
 
 	cpuMF := p.GetMetricWithForecast(common.MetricCPU)
@@ -63,6 +78,7 @@ func (d *Dashboard) RunQuickDiag() []DiagnosticResult {
 
 // GenerateDashboardBriefing generates a full operations briefing from pipeline data.
 func (d *Dashboard) GenerateDashboardBriefing() []BriefingSection {
+	defer common.RecoverPanic()
 	p := d.pipeline
 
 	cpuMF := p.GetMetricWithForecast(common.MetricCPU)
@@ -143,6 +159,33 @@ func (d *Dashboard) GetDashboardData() (out DashboardData) {
 		uptime = d.uptimeGetter()
 	}
 
+	// Fetch health score trend from storage
+	healthScore := 100
+	var healthTrend []HealthScorePoint
+	if s := common.GetStorage(); s != nil {
+		trend, err := s.GetHealthScoreTrend(7)
+		if err == nil && len(trend) > 0 {
+			// Most recent day's score is the current health score
+			var latestDay string
+			var latestScore int
+			for day, score := range trend {
+				if day > latestDay {
+					latestDay = day
+					latestScore = score
+				}
+			}
+			healthScore = latestScore
+
+			// Build ordered trend slice (ascending by day)
+			for i := 6; i >= 0; i-- {
+				day := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
+				if score, ok := trend[day]; ok {
+					healthTrend = append(healthTrend, HealthScorePoint{Day: day, Score: score})
+				}
+			}
+		}
+	}
+
 	return DashboardData{
 		CPU: GaugeMetric{
 			Value:    cpuMF.LastValue,
@@ -191,6 +234,8 @@ func (d *Dashboard) GetDashboardData() (out DashboardData) {
 		Connections: len(d.netOps.GetConnections()),
 		Alerts:      d.alerts.AlertCount(),
 		Uptime:      uptime,
+		HealthScore: healthScore,
+		HealthTrend: healthTrend,
 	}
 }
 
@@ -224,6 +269,131 @@ func (d *Dashboard) GetSystemSnapshot() (out SystemSnapshot) {
 		Timeline:  timeline,
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}
+}
+
+// ── Cross-Pillar Summary Methods ──────────────────────────────────────────────
+
+// GetSecuritySummary returns a lightweight security posture summary for the dashboard.
+func (d *Dashboard) GetSecuritySummary() SecuritySummary {
+	defer common.RecoverPanic()
+	if d.secOps == nil {
+		return SecuritySummary{}
+	}
+	return d.secOps.GetSecuritySummary()
+}
+
+// GetSecurityScore returns the current security score for the dashboard.
+func (d *Dashboard) GetSecurityScore() SecurityScore {
+	defer common.RecoverPanic()
+	if d.secOps == nil {
+		return SecurityScore{}
+	}
+	return d.secOps.GetSecurityScore()
+}
+
+// GetDevOpsSummary returns a lightweight DevOps health summary for the dashboard.
+func (d *Dashboard) GetDevOpsSummary() DevOpsSummary {
+	defer common.RecoverPanic()
+	if d.devOps == nil {
+		return DevOpsSummary{}
+	}
+	svcSummary := d.devOps.GetServiceGroupSummary()
+	dockerStatus := d.devOps.GetDockerStatus()
+	k8sStatus := d.devOps.GetKubernetesStatus()
+
+	totalSvcs := svcSummary.Databases + svcSummary.MessageQueues + svcSummary.WebServers + svcSummary.Containers + svcSummary.Other
+	summary := "All services nominal"
+	if svcSummary.Stopped > 0 {
+		summary = fmt.Sprintf("%d service(s) stopped", svcSummary.Stopped)
+	}
+	if !dockerStatus.Running {
+		summary = "Docker daemon not running"
+	}
+
+	return DevOpsSummary{
+		ServiceCount:    totalSvcs,
+		RunningCount:    svcSummary.Running,
+		DockerInstalled: dockerStatus.Installed,
+		DockerRunning:   dockerStatus.Running,
+		ContainerCount:  dockerStatus.Containers.Running,
+		K8sInstalled:    k8sStatus.Installed,
+		K8sConnected:    k8sStatus.Connected,
+		K8sPods:         k8sStatus.Pods,
+		Summary:         summary,
+	}
+}
+
+// GetDockerStatus returns Docker daemon status for the dashboard.
+func (d *Dashboard) GetDockerStatus() DockerStatus {
+	defer common.RecoverPanic()
+	if d.devOps == nil {
+		return DockerStatus{}
+	}
+	return d.devOps.GetDockerStatus()
+}
+
+// GetKubernetesStatus returns Kubernetes cluster status for the dashboard.
+func (d *Dashboard) GetKubernetesStatus() KubernetesStatus {
+	defer common.RecoverPanic()
+	if d.devOps == nil {
+		return KubernetesStatus{}
+	}
+	return d.devOps.GetKubernetesStatus()
+}
+
+// GetAIOpsSummary returns a lightweight AIOps status summary for the dashboard.
+func (d *Dashboard) GetAIOpsSummary() AIOpsSummary {
+	defer common.RecoverPanic()
+	if d.aiOps == nil {
+		return AIOpsSummary{}
+	}
+	ollamaStatus := d.aiOps.GetOllamaStatus()
+	anomalies := d.aiOps.DetectAnomalies()
+	insights := d.aiOps.GetAIInsights()
+
+	anomalyCount := len(anomalies)
+	criticalAnomalies := 0
+	for _, a := range anomalies {
+		if a.Severity == "critical" {
+			criticalAnomalies++
+		}
+	}
+
+	return AIOpsSummary{
+		OllamaAvailable:   ollamaStatus.Available,
+		OllamaModel:       ollamaStatus.Model,
+		AnomalyCount:      anomalyCount,
+		CriticalAnomalies: criticalAnomalies,
+		RecentInsights:    insights,
+	}
+}
+
+// GetSLOSummary evaluates all SLO definitions and returns the summary.
+func (d *Dashboard) GetSLOSummary() common.SLOSummary {
+	defer common.RecoverPanic()
+	if d.sloEngine == nil {
+		return common.SLOSummary{}
+	}
+	summary, err := d.sloEngine.EvaluateAll()
+	if err != nil {
+		common.LogWarn("Dashboard: GetSLOSummary failed: %v", err)
+		return common.SLOSummary{}
+	}
+	return summary
+}
+
+// GetSLODefinitions returns all SLO definitions.
+func (d *Dashboard) GetSLODefinitions() []common.SLODefinition {
+	defer common.RecoverPanic()
+	if s := common.GetStorage(); s != nil {
+		defs, err := s.ListSLODefinitions()
+		if err != nil {
+			common.LogWarn("Dashboard: GetSLODefinitions failed: %v", err)
+			return nil
+		}
+		return defs
+	}
+	return nil
 }
 
 // ── Diagnostic helpers ─────────────────────────────────────────────────────────

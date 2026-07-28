@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { DashboardData, AlertInfo } from '@/types'
+import type { DashboardData, AlertInfo, HealthScorePoint } from '@/types'
 
 interface TimelineEvent {
   id: string
@@ -17,6 +17,7 @@ interface MetricsState {
   latest: DashboardData | null
   alerts: AlertInfo[]
   timeline: TimelineEvent[]
+  healthTrend: HealthScorePoint[]
   history: {
     cpu: { time: string; value: number }[]
     memory: { time: string; value: number }[]
@@ -30,6 +31,7 @@ export const useMetricsStore = create<MetricsState>((set) => ({
   latest: null,
   alerts: [],
   timeline: [],
+  healthTrend: [],
   history: {
     cpu: [],
     memory: [],
@@ -39,6 +41,7 @@ export const useMetricsStore = create<MetricsState>((set) => ({
     const time = new Date().toLocaleTimeString('en-US', { hour12: false })
     set((state) => ({
       latest: data,
+      healthTrend: data.health_trend ?? [],
       history: {
         cpu: [...state.history.cpu.slice(-59), { time, value: data.cpu.value }],
         memory: [...state.history.memory.slice(-59), { time, value: data.memory.value }],
@@ -52,6 +55,7 @@ export const useMetricsStore = create<MetricsState>((set) => ({
       latest: snap.metrics,
       alerts: snap.alerts ?? [],
       timeline: snap.timeline ?? [],
+      healthTrend: snap.metrics.health_trend ?? [],
       history: {
         cpu: [...state.history.cpu.slice(-59), { time, value: snap.metrics.cpu.value }],
         memory: [...state.history.memory.slice(-59), { time, value: snap.metrics.memory.value }],

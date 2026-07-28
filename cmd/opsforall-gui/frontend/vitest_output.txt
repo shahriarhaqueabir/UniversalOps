@@ -1,0 +1,1389 @@
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mE:/Projects/projectx/UniversalOps/cmd/opsforall-gui/frontend[39m
+
+ [32m✓[39m src/components/ui/ProgressBar.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[32m 104[2mms[22m[39m
+ [32m✓[39m src/components/ui/SectionBriefing.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 79[2mms[22m[39m
+ [32m✓[39m src/components/ui/StatCard.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 80[2mms[22m[39m
+ [32m✓[39m src/components/ui/MiniStat.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 86[2mms[22m[39m
+ [32m✓[39m src/components/dialogs/ConfirmDialog.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 116[2mms[22m[39m
+ [32m✓[39m src/components/layout/TopBar.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 217[2mms[22m[39m
+ [32m✓[39m src/pages/SysOps/PackageManagerTab.test.tsx [2m([22m[2m18 tests[22m[2m)[22m[33m 1084[2mms[22m[39m
+ [32m✓[39m src/pages/Settings.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 468[2mms[22m[39m
+   [33m[2m✓[22m[39m Settings Page[2m > [22mrenders control plane heading [33m 309[2mms[22m[39m
+ [32m✓[39m src/components/layout/Sidebar.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 548[2mms[22m[39m
+ [32m✓[39m src/pages/NetOps.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 2630[2mms[22m[39m
+   [33m[2m✓[22m[39m NetOps Page[2m > [22mswitches categories via sidebar [33m 2310[2mms[22m[39m
+ [32m✓[39m src/pages/SecOps.test.tsx [2m([22m[2m11 tests[22m[2m)[22m[33m 3477[2mms[22m[39m
+   [33m[2m✓[22m[39m SecOps Page[2m > [22mshows overview by default with score [33m 389[2mms[22m[39m
+   [33m[2m✓[22m[39m SecOps Page[2m > [22mnavigates to Identity & Access sidebar category [33m 413[2mms[22m[39m
+   [33m[2m✓[22m[39m SecOps Page[2m > [22mnavigates to Network Security sidebar category [33m 455[2mms[22m[39m
+   [33m[2m✓[22m[39m SecOps Page[2m > [22mnavigates to Endpoint Security sidebar category [33m 384[2mms[22m[39m
+   [33m[2m✓[22m[39m SecOps Page[2m > [22mnavigates to Log & Events sidebar category [33m 386[2mms[22m[39m
+   [33m[2m✓[22m[39m SecOps Page[2m > [22mnavigates to Security Hardening sidebar category [33m 392[2mms[22m[39m
+   [33m[2m✓[22m[39m SecOps Page[2m > [22mnavigates to Security Audit sidebar category [33m 384[2mms[22m[39m
+   [33m[2m✓[22m[39m SecOps Page[2m > [22mnavigates to Incident Response sidebar category [33m 396[2mms[22m[39m
+ [32m✓[39m src/test/utils.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m src/stores/useSettingsStore.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+stderr | src/hooks/useBackend.test.ts > useBackend > throws when method is not found
+[useBackend] Wails method not found: Nonexistent.DoSomething
+[useBackend] Wails call failed for Nonexistent.DoSomething: Error: Wails method not found: Nonexistent.DoSomething
+    at Object.call (E:\Projects\projectx\UniversalOps\cmd\opsforall-gui\frontend\src\hooks\useBackend.ts:28:21)
+    at E:\Projects\projectx\UniversalOps\cmd\opsforall-gui\frontend\src\hooks\useBackend.test.ts:47:22
+    at file:///E:/Projects/projectx/UniversalOps/cmd/opsforall-gui/frontend/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11
+    at file:///E:/Projects/projectx/UniversalOps/cmd/opsforall-gui/frontend/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26
+    at file:///E:/Projects/projectx/UniversalOps/cmd/opsforall-gui/frontend/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///E:/Projects/projectx/UniversalOps/cmd/opsforall-gui/frontend/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)
+    at runTest (file:///E:/Projects/projectx/UniversalOps/cmd/opsforall-gui/frontend/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at runSuite (file:///E:/Projects/projectx/UniversalOps/cmd/opsforall-gui/frontend/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+
+stderr | src/hooks/useBackend.test.ts > useBackend > throws on Wails error
+[useBackend] Wails call failed for SysOps.GetCPUInfo: Error: backend failure
+    at E:\Projects\projectx\UniversalOps\cmd\opsforall-gui\frontend\src\hooks\useBackend.test.ts:52:46
+    at file:///E:/Projects/projectx/UniversalOps/cmd/opsforall-gui/frontend/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11
+    at file:///E:/Projects/projectx/UniversalOps/cmd/opsforall-gui/frontend/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26
+    at file:///E:/Projects/projectx/UniversalOps/cmd/opsforall-gui/frontend/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///E:/Projects/projectx/UniversalOps/cmd/opsforall-gui/frontend/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)
+    at runTest (file:///E:/Projects/projectx/UniversalOps/cmd/opsforall-gui/frontend/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at runSuite (file:///E:/Projects/projectx/UniversalOps/cmd/opsforall-gui/frontend/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+    at runSuite (file:///E:/Projects/projectx/UniversalOps/cmd/opsforall-gui/frontend/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+
+ [32m✓[39m src/hooks/useBackend.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 60[2mms[22m[39m
+ [32m✓[39m src/hooks/useEvents.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 54[2mms[22m[39m
+ [32m✓[39m src/pages/DevOps.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 1751[2mms[22m[39m
+   [33m[2m✓[22m[39m DevOps Page[2m > [22mrenders page header [33m 333[2mms[22m[39m
+ [32m✓[39m src/components/ui/StatusBadge.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[32m 126[2mms[22m[39m
+ [32m✓[39m src/components/ui/ErrorBoundary.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 85[2mms[22m[39m
+ [32m✓[39m src/stores/useOllamaStore.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/pages/AIOps.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 802[2mms[22m[39m
+ [32m✓[39m src/pages/Logs.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 605[2mms[22m[39m
+   [33m[2m✓[22m[39m Logs Page[2m > [22mswitches tabs between Overview, Live Stream, and Audit [33m 339[2mms[22m[39m
+ [31m❯[39m src/pages/Dashboard.test.tsx [2m([22m[2m4 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 2484[2mms[22m[39m
+   [32m✓[39m Dashboard Page[2m > [22mrenders without crashing[32m 215[2mms[22m[39m
+[31m   [31m×[31m Dashboard Page[2m > [22mdisplays CPU metric value[39m[33m 1116[2mms[22m[39m
+[31m     → Found multiple elements with the text: /45/
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<span[31m
+  [33mclass[31m=[32m"text-3xl font-bold text-[var(--color-text)] tabular-nums"[31m
+[36m>[31m
+  [0m45[0m
+[36m</span>[31m
+
+Ignored nodes: comments, script, style
+[36m<p[31m
+  [33mclass[31m=[32m"text-xs text-text-dim leading-relaxed mb-4"[31m
+[36m>[31m
+  [0mCPU sustained at [0m
+  [0m45[0m
+  [0m% — above the 70% threshold. Consider terminating high-consumption processes or scaling compute resources.[0m
+[36m</p>[31m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"space-y-10 p-10 pb-12 scroll-smooth max-w-[1400px] mx-auto"[31m
+      [33mstyle[31m=[32m"opacity: 1;"[31m
+    [36m>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"flex items-end justify-between border-b border-[var(--color-border)] pb-8 mb-4"[31m
+        [33mstyle[31m=[32m"opacity: 1; transform: none;"[31m
+      [36m>[31m
+        [36m<div>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"flex items-center gap-3 mb-2"[31m
+          [36m>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent border border-accent/20"[31m
+            [36m>[31m
+              [36m<svg[31m
+                [33maria-hidden[31m=[32m"true"[31m
+                [33mclass[31m=[32m"lucide lucide-layout-dashboard"[31m
+                [33mfill[31m=[32m"none"[31m
+                [33mheight[31m=[32m"18"[31m
+                [33mstroke[31m=[32m"currentColor"[31m
+                [33mstroke-linecap[31m=[32m"round"[31m
+                [33mstroke-linejoin[31m=[32m"round"[31m
+                [33mstroke-width[31m=[32m"2"[31m
+                [33mviewBox[31m=[32m"0 0 24 24"[31m
+                [33mwidth[31m=[32m"18"[31m
+                [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+              [36m>[31m
+                [36m<rect[31m
+                  [33mheight[31m=[32m"9"[31m
+                  [33mrx[31m=[32m"1"[31m
+                  [33mwidth[31m=[32m"7"[31m
+                  [33mx[31m=[32m"3"[31m
+                  [33my[31m=[32m"3"[31m
+                [36m/>[31m
+                [36m<rect[31m
+                  [33mheight[31m=[32m"5"[31m
+                  [33mrx[31m=[32m"1"[31m
+                  [33mwidth[31m=[32m"7"[31m
+                  [33mx[31m=[32m"14"[31m
+                  [33my[31m=[32m"3"[31m
+                [36m/>[31m
+                [36m<rect[31m
+                  [33mheight[31m=[32m"9"[31m
+                  [33mrx[31m=[32m"1"[31m
+                  [33mwidth[31m=[32m"7"[31m
+                  [33mx[31m=[32m"14"[31m
+                  [33my[31m=[32m"12"[31m
+                [36m/>[31m
+                [36m<rect[31m
+                  [33mheight[31m=[32m"5"[31m
+                  [33mrx[31m=[32m"1"[31m
+                  [33mwidth[31m=[32m"7"[31m
+                  [33mx[31m=[32m"3"[31m
+                  [33my[31m=[32m"16"[31m
+                [36m/>[31m
+              [36m</svg>[31m
+            [36m</div>[31m
+            [36m<h1[31m
+              [33mclass[31m=[32m"text-sm font-black text-[var(--color-text)] uppercase tracking-[0.25em]"[31m
+            [36m>[31m
+              [0mOperational Intelligence[0m
+            [36m</h1>[31m
+          [36m</div>[31m
+          [36m<p[31m
+            [33mclass[31m=[32m"text-3xl font-bold text-[var(--color-text)] tracking-tight"[31m
+          [36m>[31m
+            [0mSystem Overview[0m
+          [36m</p>[31m
+          [36m<span[31m
+            [33mclass[31m=[32m"inline-flex items-center gap-1.5 text-xs tabular-nums text-[var(--color-text-dim)] mt-4"[31m
+          [36m>[31m
+            [36m<svg[31m
+              [33maria-hidden[31m=[32m"true"[31m
+              [33mclass[31m=[32m"lucide lucide-refresh-cw h-3 w-3"[31m
+              [33mfill[31m=[32m"none"[31m
+              [33mheight[31m=[32m"24"[31m
+              [33mstroke[31m=[32m"currentColor"[31m
+              [33mstroke-linecap[31m=[32m"round"[31m
+              [33mstroke-linejoin[31m=[32m"round"[31m
+              [33mstroke-width[31m=[32m"2"[31m
+              [33mviewBox[31m=[32m"0 0 24 24"[31m
+              [33mwidth[31m=[32m"24"[31m
+              [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+            [36m>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M21 3v5h-5"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M8 16H3v5"[31m
+              [36m/>[31m
+            [36m</svg>[31m
+            [0mLast updated[0m
+            [0m: [0m
+            [0mjust now[0m
+          [36m</span>[31m
+        [36m</div>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"flex gap-4"[31m
+        [36m>[31m
+          [36m<button[31m
+            [33mclass[31m=[32m"flex items-center gap-2.5 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-[var(--color-text)] text-sm font-bold hover:bg-white/10 transition-all active:scale-95 shadow-lg group"[31m
+          [36m>[31m
+            [36m<svg[31m
+              [33maria-hidden[31m=[32m"true"[31m
+              [33mclass[31m=[32m"lucide lucide-zap text-warning group-hover:scale-110 transition-transform"[31m
+              [33mfill[31m=[32m"none"[31m
+              [33mheight[31m=[32m"16"[31m
+              [33mstroke[31m=[32m"currentColor"[31m
+              [33mstroke-linecap[31m=[32m"round"[31m
+              [33mstroke-linejoin[31m=[32m"round"[31m
+              [33mstroke-width[31m=[32m"2"[31m
+              [33mviewBox[31m=[32m"0 0 24 24"[31m
+              [33mwidth[31m=[32m"16"[31m
+              [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+            [36m>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"[31m
+              [36m/>[31m
+            [36m</svg>[31m
+            [0mRun Diagnostics[0m
+          [36m</button>[31m
+          [36m<button[31m
+            [33mclass[31m=[32m"flex items-center gap-2.5 px-6 py-3 rounded-xl bg-accent text-white text-sm font-bold hover:opacity-90 transition-all active:scale-95 shadow-[0_0_20px_rgba(var(--color-accent-rgb),0.3)]"[31m
+          [36m>[31m
+            [36m<svg[31m
+              [33maria-hidden[31m=[32m"true"[31m
+              [33mclass[31m=[32m"lucide lucide-file-search"[31m
+              [33mfill[31m=[32m"none"[31m
+              [33mheight[31m=[32m"16"[31m
+              [33mstroke[31m=[32m"currentColor"[31m
+              [33mstroke-linecap[31m=[32m"round"[31m
+              [33mstroke-linejoin[31m=[32m"round"[31m
+              [33mstroke-width[31m=[32m"2"[31m
+              [33mviewBox[31m=[32m"0 0 24 24"[31m
+              [33mwidth[31m=[32m"16"[31m
+              [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+           ...
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"space-y-10 p-10 pb-12 scroll-smooth max-w-[1400px] mx-auto"[31m
+      [33mstyle[31m=[32m"opacity: 1;"[31m
+    [36m>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"flex items-end justify-between border-b border-[var(--color-border)] pb-8 mb-4"[31m
+        [33mstyle[31m=[32m"opacity: 1; transform: none;"[31m
+      [36m>[31m
+        [36m<div>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"flex items-center gap-3 mb-2"[31m
+          [36m>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent border border-accent/20"[31m
+            [36m>[31m
+              [36m<svg[31m
+                [33maria-hidden[31m=[32m"true"[31m
+                [33mclass[31m=[32m"lucide lucide-layout-dashboard"[31m
+                [33mfill[31m=[32m"none"[31m
+                [33mheight[31m=[32m"18"[31m
+                [33mstroke[31m=[32m"currentColor"[31m
+                [33mstroke-linecap[31m=[32m"round"[31m
+                [33mstroke-linejoin[31m=[32m"round"[31m
+                [33mstroke-width[31m=[32m"2"[31m
+                [33mviewBox[31m=[32m"0 0 24 24"[31m
+                [33mwidth[31m=[32m"18"[31m
+                [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+              [36m>[31m
+                [36m<rect[31m
+                  [33mheight[31m=[32m"9"[31m
+                  [33mrx[31m=[32m"1"[31m
+                  [33mwidth[31m=[32m"7"[31m
+                  [33mx[31m=[32m"3"[31m
+                  [33my[31m=[32m"3"[31m
+                [36m/>[31m
+                [36m<rect[31m
+                  [33mheight[31m=[32m"5"[31m
+                  [33mrx[31m=[32m"1"[31m
+                  [33mwidth[31m=[32m"7"[31m
+                  [33mx[31m=[32m"14"[31m
+                  [33my[31m=[32m"3"[31m
+                [36m/>[31m
+                [36m<rect[31m
+                  [33mheight[31m=[32m"9"[31m
+                  [33mrx[31m=[32m"1"[31m
+                  [33mwidth[31m=[32m"7"[31m
+                  [33mx[31m=[32m"14"[31m
+                  [33my[31m=[32m"12"[31m
+                [36m/>[31m
+                [36m<rect[31m
+                  [33mheight[31m=[32m"5"[31m
+                  [33mrx[31m=[32m"1"[31m
+                  [33mwidth[31m=[32m"7"[31m
+                  [33mx[31m=[32m"3"[31m
+                  [33my[31m=[32m"16"[31m
+                [36m/>[31m
+              [36m</svg>[31m
+            [36m</div>[31m
+            [36m<h1[31m
+              [33mclass[31m=[32m"text-sm font-black text-[var(--color-text)] uppercase tracking-[0.25em]"[31m
+            [36m>[31m
+              [0mOperational Intelligence[0m
+            [36m</h1>[31m
+          [36m</div>[31m
+          [36m<p[31m
+            [33mclass[31m=[32m"text-3xl font-bold text-[var(--color-text)] tracking-tight"[31m
+          [36m>[31m
+            [0mSystem Overview[0m
+          [36m</p>[31m
+          [36m<span[31m
+            [33mclass[31m=[32m"inline-flex items-center gap-1.5 text-xs tabular-nums text-[var(--color-text-dim)] mt-4"[31m
+          [36m>[31m
+            [36m<svg[31m
+              [33maria-hidden[31m=[32m"true"[31m
+              [33mclass[31m=[32m"lucide lucide-refresh-cw h-3 w-3"[31m
+              [33mfill[31m=[32m"none"[31m
+              [33mheight[31m=[32m"24"[31m
+              [33mstroke[31m=[32m"currentColor"[31m
+              [33mstroke-linecap[31m=[32m"round"[31m
+              [33mstroke-linejoin[31m=[32m"round"[31m
+              [33mstroke-width[31m=[32m"2"[31m
+              [33mviewBox[31m=[32m"0 0 24 24"[31m
+              [33mwidth[31m=[32m"24"[31m
+              [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+            [36m>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M21 3v5h-5"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M8 16H3v5"[31m
+              [36m/>[31m
+            [36m</svg>[31m
+            [0mLast updated[0m
+            [0m: [0m
+            [0mjust now[0m
+          [36m</span>[31m
+        [36m</div>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"flex gap-4"[31m
+        [36m>[31m
+          [36m<button[31m
+            [33mclass[31m=[32m"flex items-center gap-2.5 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-[var(--color-text)] text-sm font-bold hover:bg-white/10 transition-all active:scale-95 shadow-lg group"[31m
+          [36m>[31m
+            [36m<svg[31m
+              [33maria-hidden[31m=[32m"true"[31m
+              [33mclass[31m=[32m"lucide lucide-zap text-warning group-hover:scale-110 transition-transform"[31m
+              [33mfill[31m=[32m"none"[31m
+              [33mheight[31m=[32m"16"[31m
+              [33mstroke[31m=[32m"currentColor"[31m
+              [33mstroke-linecap[31m=[32m"round"[31m
+              [33mstroke-linejoin[31m=[32m"round"[31m
+              [33mstroke-width[31m=[32m"2"[31m
+              [33mviewBox[31m=[32m"0 0 24 24"[31m
+              [33mwidth[31m=[32m"16"[31m
+              [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+            [36m>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"[31m
+              [36m/>[31m
+            [36m</svg>[31m
+            [0mRun Diagnostics[0m
+          [36m</button>[31m
+          [36m<button[31m
+            [33mclass[31m=[32m"flex items-center gap-2.5 px-6 py-3 rounded-xl bg-accent text-white text-sm font-bold hover:opacity-90 transition-all active:scale-95 shadow-[0_0_20px_rgba(var(--color-accent-rgb),0.3)]"[31m
+          [36m>[31m
+            [36m<svg[31m
+              [33maria-hidden[31m=[32m"true"[31m
+              [33mclass[31m=[32m"lucide lucide-file-search"[31m
+              [33mfill[31m=[32m"none"[31m
+              [33mheight[31m=[32m"16"[31m
+              [33mstroke[31m=[32m"currentColor"[31m
+              [33mstroke-linecap[31m=[32m"round"[31m
+              [33mstroke-linejoin[31m=[32m"round"[31m
+              [33mstroke-width[31m=[32m"2"[31m
+              [33mviewBox[31m=[32m"0 0 24 24"[31m
+              [33mwidth[31m=[32m"16"[31m
+              [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+           ...[39m
+[31m   [31m×[31m Dashboard Page[2m > [22mdisplays Memory metric value[39m[33m 1073[2mms[22m[39m
+[31m     → Found multiple elements with the text: /62/
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<span[31m
+  [33mclass[31m=[32m"text-3xl font-bold text-[var(--color-text)] tabular-nums"[31m
+[36m>[31m
+  [0m62[0m
+[36m</span>[31m
+
+Ignored nodes: comments, script, style
+[36m<p[31m
+  [33mclass[31m=[32m"text-xs text-text-dim leading-relaxed mb-4"[31m
+[36m>[31m
+  [0mMemory at [0m
+  [0m62[0m
+  [0m% — browser processes consuming significant RAM. Close unused tabs or consider a memory management extension.[0m
+[36m</p>[31m
+
+Ignored nodes: comments, script, style
+[36m<span[31m
+  [33mclass[31m=[32m"text-[10px] text-text-faint font-bold uppercase tracking-wider"[31m
+[36m>[31m
+  [0mMemory: [0m
+  [0m62[0m
+  [0m%[0m
+[36m</span>[31m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"space-y-10 p-10 pb-12 scroll-smooth max-w-[1400px] mx-auto"[31m
+      [33mstyle[31m=[32m"opacity: 1;"[31m
+    [36m>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"flex items-end justify-between border-b border-[var(--color-border)] pb-8 mb-4"[31m
+        [33mstyle[31m=[32m"opacity: 1; transform: none;"[31m
+      [36m>[31m
+        [36m<div>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"flex items-center gap-3 mb-2"[31m
+          [36m>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent border border-accent/20"[31m
+            [36m>[31m
+              [36m<svg[31m
+                [33maria-hidden[31m=[32m"true"[31m
+                [33mclass[31m=[32m"lucide lucide-layout-dashboard"[31m
+                [33mfill[31m=[32m"none"[31m
+                [33mheight[31m=[32m"18"[31m
+                [33mstroke[31m=[32m"currentColor"[31m
+                [33mstroke-linecap[31m=[32m"round"[31m
+                [33mstroke-linejoin[31m=[32m"round"[31m
+                [33mstroke-width[31m=[32m"2"[31m
+                [33mviewBox[31m=[32m"0 0 24 24"[31m
+                [33mwidth[31m=[32m"18"[31m
+                [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+              [36m>[31m
+                [36m<rect[31m
+                  [33mheight[31m=[32m"9"[31m
+                  [33mrx[31m=[32m"1"[31m
+                  [33mwidth[31m=[32m"7"[31m
+                  [33mx[31m=[32m"3"[31m
+                  [33my[31m=[32m"3"[31m
+                [36m/>[31m
+                [36m<rect[31m
+                  [33mheight[31m=[32m"5"[31m
+                  [33mrx[31m=[32m"1"[31m
+                  [33mwidth[31m=[32m"7"[31m
+                  [33mx[31m=[32m"14"[31m
+                  [33my[31m=[32m"3"[31m
+                [36m/>[31m
+                [36m<rect[31m
+                  [33mheight[31m=[32m"9"[31m
+                  [33mrx[31m=[32m"1"[31m
+                  [33mwidth[31m=[32m"7"[31m
+                  [33mx[31m=[32m"14"[31m
+                  [33my[31m=[32m"12"[31m
+                [36m/>[31m
+                [36m<rect[31m
+                  [33mheight[31m=[32m"5"[31m
+                  [33mrx[31m=[32m"1"[31m
+                  [33mwidth[31m=[32m"7"[31m
+                  [33mx[31m=[32m"3"[31m
+                  [33my[31m=[32m"16"[31m
+                [36m/>[31m
+              [36m</svg>[31m
+            [36m</div>[31m
+            [36m<h1[31m
+              [33mclass[31m=[32m"text-sm font-black text-[var(--color-text)] uppercase tracking-[0.25em]"[31m
+            [36m>[31m
+              [0mOperational Intelligence[0m
+            [36m</h1>[31m
+          [36m</div>[31m
+          [36m<p[31m
+            [33mclass[31m=[32m"text-3xl font-bold text-[var(--color-text)] tracking-tight"[31m
+          [36m>[31m
+            [0mSystem Overview[0m
+          [36m</p>[31m
+          [36m<span[31m
+            [33mclass[31m=[32m"inline-flex items-center gap-1.5 text-xs tabular-nums text-[var(--color-text-dim)] mt-4"[31m
+          [36m>[31m
+            [36m<svg[31m
+              [33maria-hidden[31m=[32m"true"[31m
+              [33mclass[31m=[32m"lucide lucide-refresh-cw h-3 w-3"[31m
+              [33mfill[31m=[32m"none"[31m
+              [33mheight[31m=[32m"24"[31m
+              [33mstroke[31m=[32m"currentColor"[31m
+              [33mstroke-linecap[31m=[32m"round"[31m
+              [33mstroke-linejoin[31m=[32m"round"[31m
+              [33mstroke-width[31m=[32m"2"[31m
+              [33mviewBox[31m=[32m"0 0 24 24"[31m
+              [33mwidth[31m=[32m"24"[31m
+              [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+            [36m>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M21 3v5h-5"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M8 16H3v5"[31m
+              [36m/>[31m
+            [36m</svg>[31m
+            [0mLast updated[0m
+            [0m: [0m
+            [0mjust now[0m
+          [36m</span>[31m
+        [36m</div>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"flex gap-4"[31m
+        [36m>[31m
+          [36m<button[31m
+            [33mclass[31m=[32m"flex items-center gap-2.5 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-[var(--color-text)] text-sm font-bold hover:bg-white/10 transition-all active:scale-95 shadow-lg group"[31m
+          [36m>[31m
+            [36m<svg[31m
+              [33maria-hidden[31m=[32m"true"[31m
+              [33mclass[31m=[32m"lucide lucide-zap text-warning group-hover:scale-110 transition-transform"[31m
+              [33mfill[31m=[32m"none"[31m
+              [33mheight[31m=[32m"16"[31m
+              [33mstroke[31m=[32m"currentColor"[31m
+              [33mstroke-linecap[31m=[32m"round"[31m
+              [33mstroke-linejoin[31m=[32m"round"[31m
+              [33mstroke-width[31m=[32m"2"[31m
+              [33mviewBox[31m=[32m"0 0 24 24"[31m
+              [33mwidth[31m=[32m"16"[31m
+              [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+            [36m>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"[31m
+              [36m/>[31m
+            [36m</svg>[31m
+            [0mRun Diagnostics[0m
+          [36m</button>[31m
+          [36m<button[31m
+            [33mclass[31m=[32m"flex items-center gap-2.5 px-6 py-3 rounded-xl bg-accent text-white text-sm font-bold hover:opacity-90 transition-all active:scale-95 shadow-[0_0_20px_rgba(var(--color-accent-rgb),0.3)]"[31m
+          [36m>[31m
+            [36m<svg[31m
+              [33maria-hidden[31m=[32m"true"[31m
+              [33mclass[31m=[32m"lucide lucide-file-search"[31m
+              [33mfill[31m=[32m"none"[31m
+              [33mheight[31m=[32m"16"[31m
+              [33mstroke[31m=[32m"currentColor"[31m
+              [33mstroke-linecap[31m=[32m"round"[31m
+              [33mstroke-linejoin[31m=[32m"round"[31m
+              [33mstroke-width[31m=[32m"2"[31m
+              [33mviewBox[31m=[32m"0 0 24 24"[31m
+              [33mwidth[31m=[32m"16"[31m
+              [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+           ...
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"space-y-10 p-10 pb-12 scroll-smooth max-w-[1400px] mx-auto"[31m
+      [33mstyle[31m=[32m"opacity: 1;"[31m
+    [36m>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"flex items-end justify-between border-b border-[var(--color-border)] pb-8 mb-4"[31m
+        [33mstyle[31m=[32m"opacity: 1; transform: none;"[31m
+      [36m>[31m
+        [36m<div>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"flex items-center gap-3 mb-2"[31m
+          [36m>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent border border-accent/20"[31m
+            [36m>[31m
+              [36m<svg[31m
+                [33maria-hidden[31m=[32m"true"[31m
+                [33mclass[31m=[32m"lucide lucide-layout-dashboard"[31m
+                [33mfill[31m=[32m"none"[31m
+                [33mheight[31m=[32m"18"[31m
+                [33mstroke[31m=[32m"currentColor"[31m
+                [33mstroke-linecap[31m=[32m"round"[31m
+                [33mstroke-linejoin[31m=[32m"round"[31m
+                [33mstroke-width[31m=[32m"2"[31m
+                [33mviewBox[31m=[32m"0 0 24 24"[31m
+                [33mwidth[31m=[32m"18"[31m
+                [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+              [36m>[31m
+                [36m<rect[31m
+                  [33mheight[31m=[32m"9"[31m
+                  [33mrx[31m=[32m"1"[31m
+                  [33mwidth[31m=[32m"7"[31m
+                  [33mx[31m=[32m"3"[31m
+                  [33my[31m=[32m"3"[31m
+                [36m/>[31m
+                [36m<rect[31m
+                  [33mheight[31m=[32m"5"[31m
+                  [33mrx[31m=[32m"1"[31m
+                  [33mwidth[31m=[32m"7"[31m
+                  [33mx[31m=[32m"14"[31m
+                  [33my[31m=[32m"3"[31m
+                [36m/>[31m
+                [36m<rect[31m
+                  [33mheight[31m=[32m"9"[31m
+                  [33mrx[31m=[32m"1"[31m
+                  [33mwidth[31m=[32m"7"[31m
+                  [33mx[31m=[32m"14"[31m
+                  [33my[31m=[32m"12"[31m
+                [36m/>[31m
+                [36m<rect[31m
+                  [33mheight[31m=[32m"5"[31m
+                  [33mrx[31m=[32m"1"[31m
+                  [33mwidth[31m=[32m"7"[31m
+                  [33mx[31m=[32m"3"[31m
+                  [33my[31m=[32m"16"[31m
+                [36m/>[31m
+              [36m</svg>[31m
+            [36m</div>[31m
+            [36m<h1[31m
+              [33mclass[31m=[32m"text-sm font-black text-[var(--color-text)] uppercase tracking-[0.25em]"[31m
+            [36m>[31m
+              [0mOperational Intelligence[0m
+            [36m</h1>[31m
+          [36m</div>[31m
+          [36m<p[31m
+            [33mclass[31m=[32m"text-3xl font-bold text-[var(--color-text)] tracking-tight"[31m
+          [36m>[31m
+            [0mSystem Overview[0m
+          [36m</p>[31m
+          [36m<span[31m
+            [33mclass[31m=[32m"inline-flex items-center gap-1.5 text-xs tabular-nums text-[var(--color-text-dim)] mt-4"[31m
+          [36m>[31m
+            [36m<svg[31m
+              [33maria-hidden[31m=[32m"true"[31m
+              [33mclass[31m=[32m"lucide lucide-refresh-cw h-3 w-3"[31m
+              [33mfill[31m=[32m"none"[31m
+              [33mheight[31m=[32m"24"[31m
+              [33mstroke[31m=[32m"currentColor"[31m
+              [33mstroke-linecap[31m=[32m"round"[31m
+              [33mstroke-linejoin[31m=[32m"round"[31m
+              [33mstroke-width[31m=[32m"2"[31m
+              [33mviewBox[31m=[32m"0 0 24 24"[31m
+              [33mwidth[31m=[32m"24"[31m
+              [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+            [36m>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M21 3v5h-5"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"[31m
+              [36m/>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M8 16H3v5"[31m
+              [36m/>[31m
+            [36m</svg>[31m
+            [0mLast updated[0m
+            [0m: [0m
+            [0mjust now[0m
+          [36m</span>[31m
+        [36m</div>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"flex gap-4"[31m
+        [36m>[31m
+          [36m<button[31m
+            [33mclass[31m=[32m"flex items-center gap-2.5 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-[var(--color-text)] text-sm font-bold hover:bg-white/10 transition-all active:scale-95 shadow-lg group"[31m
+          [36m>[31m
+            [36m<svg[31m
+              [33maria-hidden[31m=[32m"true"[31m
+              [33mclass[31m=[32m"lucide lucide-zap text-warning group-hover:scale-110 transition-transform"[31m
+              [33mfill[31m=[32m"none"[31m
+              [33mheight[31m=[32m"16"[31m
+              [33mstroke[31m=[32m"currentColor"[31m
+              [33mstroke-linecap[31m=[32m"round"[31m
+              [33mstroke-linejoin[31m=[32m"round"[31m
+              [33mstroke-width[31m=[32m"2"[31m
+              [33mviewBox[31m=[32m"0 0 24 24"[31m
+              [33mwidth[31m=[32m"16"[31m
+              [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+            [36m>[31m
+              [36m<path[31m
+                [33md[31m=[32m"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"[31m
+              [36m/>[31m
+            [36m</svg>[31m
+            [0mRun Diagnostics[0m
+          [36m</button>[31m
+          [36m<button[31m
+            [33mclass[31m=[32m"flex items-center gap-2.5 px-6 py-3 rounded-xl bg-accent text-white text-sm font-bold hover:opacity-90 transition-all active:scale-95 shadow-[0_0_20px_rgba(var(--color-accent-rgb),0.3)]"[31m
+          [36m>[31m
+            [36m<svg[31m
+              [33maria-hidden[31m=[32m"true"[31m
+              [33mclass[31m=[32m"lucide lucide-file-search"[31m
+              [33mfill[31m=[32m"none"[31m
+              [33mheight[31m=[32m"16"[31m
+              [33mstroke[31m=[32m"currentColor"[31m
+              [33mstroke-linecap[31m=[32m"round"[31m
+              [33mstroke-linejoin[31m=[32m"round"[31m
+              [33mstroke-width[31m=[32m"2"[31m
+              [33mviewBox[31m=[32m"0 0 24 24"[31m
+              [33mwidth[31m=[32m"16"[31m
+              [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+           ...[39m
+   [32m✓[39m Dashboard Page[2m > [22mshows loading state initially[32m 77[2mms[22m[39m
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pages/Dashboard.test.tsx > Dashboard Page > displays CPU metric value
+TestingLibraryElementError: Found multiple elements with the text: /45/
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+<span
+  class="text-3xl font-bold text-[var(--color-text)] tabular-nums"
+>
+  45
+</span>
+
+Ignored nodes: comments, script, style
+<p
+  class="text-xs text-text-dim leading-relaxed mb-4"
+>
+  CPU sustained at 
+  45
+  % — above the 70% threshold. Consider terminating high-consumption processes or scaling compute resources.
+</p>
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="space-y-10 p-10 pb-12 scroll-smooth max-w-[1400px] mx-auto"
+      style="opacity: 1;"
+    >
+      <div
+        class="flex items-end justify-between border-b border-[var(--color-border)] pb-8 mb-4"
+        style="opacity: 1; transform: none;"
+      >
+        <div>
+          <div
+            class="flex items-center gap-3 mb-2"
+          >
+            <div
+              class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent border border-accent/20"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-layout-dashboard"
+                fill="none"
+                height="18"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="18"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="3"
+                />
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="3"
+                />
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="12"
+                />
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="16"
+                />
+              </svg>
+            </div>
+            <h1
+              class="text-sm font-black text-[var(--color-text)] uppercase tracking-[0.25em]"
+            >
+              Operational Intelligence
+            </h1>
+          </div>
+          <p
+            class="text-3xl font-bold text-[var(--color-text)] tracking-tight"
+          >
+            System Overview
+          </p>
+          <span
+            class="inline-flex items-center gap-1.5 text-xs tabular-nums text-[var(--color-text-dim)] mt-4"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-refresh-cw h-3 w-3"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+              />
+              <path
+                d="M21 3v5h-5"
+              />
+              <path
+                d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"
+              />
+              <path
+                d="M8 16H3v5"
+              />
+            </svg>
+            Last updated
+            : 
+            just now
+          </span>
+        </div>
+        <div
+          class="flex gap-4"
+        >
+          <button
+            class="flex items-center gap-2.5 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-[var(--color-text)] text-sm font-bold hover:bg-white/10 transition-all active:scale-95 shadow-lg group"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-zap text-warning group-hover:scale-110 transition-transform"
+              fill="none"
+              height="16"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="16"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"
+              />
+            </svg>
+            Run Diagnostics
+          </button>
+          <button
+            class="flex items-center gap-2.5 px-6 py-3 rounded-xl bg-accent text-white text-sm font-bold hover:opacity-90 transition-all active:scale-95 shadow-[0_0_20px_rgba(var(--color-accent-rgb),0.3)]"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-search"
+              fill="none"
+              height="16"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="16"
+              xmlns="http://www.w3.org/2000/svg"
+           ...
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="space-y-10 p-10 pb-12 scroll-smooth max-w-[1400px] mx-auto"
+      style="opacity: 1;"
+    >
+      <div
+        class="flex items-end justify-between border-b border-[var(--color-border)] pb-8 mb-4"
+        style="opacity: 1; transform: none;"
+      >
+        <div>
+          <div
+            class="flex items-center gap-3 mb-2"
+          >
+            <div
+              class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent border border-accent/20"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-layout-dashboard"
+                fill="none"
+                height="18"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="18"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="3"
+                />
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="3"
+                />
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="12"
+                />
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="16"
+                />
+              </svg>
+            </div>
+            <h1
+              class="text-sm font-black text-[var(--color-text)] uppercase tracking-[0.25em]"
+            >
+              Operational Intelligence
+            </h1>
+          </div>
+          <p
+            class="text-3xl font-bold text-[var(--color-text)] tracking-tight"
+          >
+            System Overview
+          </p>
+          <span
+            class="inline-flex items-center gap-1.5 text-xs tabular-nums text-[var(--color-text-dim)] mt-4"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-refresh-cw h-3 w-3"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+              />
+              <path
+                d="M21 3v5h-5"
+              />
+              <path
+                d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"
+              />
+              <path
+                d="M8 16H3v5"
+              />
+            </svg>
+            Last updated
+            : 
+            just now
+          </span>
+        </div>
+        <div
+          class="flex gap-4"
+        >
+          <button
+            class="flex items-center gap-2.5 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-[var(--color-text)] text-sm font-bold hover:bg-white/10 transition-all active:scale-95 shadow-lg group"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-zap text-warning group-hover:scale-110 transition-transform"
+              fill="none"
+              height="16"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="16"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"
+              />
+            </svg>
+            Run Diagnostics
+          </button>
+          <button
+            class="flex items-center gap-2.5 px-6 py-3 rounded-xl bg-accent text-white text-sm font-bold hover:opacity-90 transition-all active:scale-95 shadow-[0_0_20px_rgba(var(--color-accent-rgb),0.3)]"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-search"
+              fill="none"
+              height="16"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="16"
+              xmlns="http://www.w3.org/2000/svg"
+           ...
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/pages/Dashboard.test.tsx:74:25
+     72|     render(<Dashboard />)
+     73|     // Be more flexible with matcher
+     74|     expect(await screen.findByText(/45/)).toBeInTheDocument()
+       |                         ^
+     75|   })
+     76| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/pages/Dashboard.test.tsx > Dashboard Page > displays Memory metric value
+TestingLibraryElementError: Found multiple elements with the text: /62/
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+<span
+  class="text-3xl font-bold text-[var(--color-text)] tabular-nums"
+>
+  62
+</span>
+
+Ignored nodes: comments, script, style
+<p
+  class="text-xs text-text-dim leading-relaxed mb-4"
+>
+  Memory at 
+  62
+  % — browser processes consuming significant RAM. Close unused tabs or consider a memory management extension.
+</p>
+
+Ignored nodes: comments, script, style
+<span
+  class="text-[10px] text-text-faint font-bold uppercase tracking-wider"
+>
+  Memory: 
+  62
+  %
+</span>
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="space-y-10 p-10 pb-12 scroll-smooth max-w-[1400px] mx-auto"
+      style="opacity: 1;"
+    >
+      <div
+        class="flex items-end justify-between border-b border-[var(--color-border)] pb-8 mb-4"
+        style="opacity: 1; transform: none;"
+      >
+        <div>
+          <div
+            class="flex items-center gap-3 mb-2"
+          >
+            <div
+              class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent border border-accent/20"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-layout-dashboard"
+                fill="none"
+                height="18"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="18"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="3"
+                />
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="3"
+                />
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="12"
+                />
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="16"
+                />
+              </svg>
+            </div>
+            <h1
+              class="text-sm font-black text-[var(--color-text)] uppercase tracking-[0.25em]"
+            >
+              Operational Intelligence
+            </h1>
+          </div>
+          <p
+            class="text-3xl font-bold text-[var(--color-text)] tracking-tight"
+          >
+            System Overview
+          </p>
+          <span
+            class="inline-flex items-center gap-1.5 text-xs tabular-nums text-[var(--color-text-dim)] mt-4"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-refresh-cw h-3 w-3"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+              />
+              <path
+                d="M21 3v5h-5"
+              />
+              <path
+                d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"
+              />
+              <path
+                d="M8 16H3v5"
+              />
+            </svg>
+            Last updated
+            : 
+            just now
+          </span>
+        </div>
+        <div
+          class="flex gap-4"
+        >
+          <button
+            class="flex items-center gap-2.5 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-[var(--color-text)] text-sm font-bold hover:bg-white/10 transition-all active:scale-95 shadow-lg group"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-zap text-warning group-hover:scale-110 transition-transform"
+              fill="none"
+              height="16"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="16"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"
+              />
+            </svg>
+            Run Diagnostics
+          </button>
+          <button
+            class="flex items-center gap-2.5 px-6 py-3 rounded-xl bg-accent text-white text-sm font-bold hover:opacity-90 transition-all active:scale-95 shadow-[0_0_20px_rgba(var(--color-accent-rgb),0.3)]"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-search"
+              fill="none"
+              height="16"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="16"
+              xmlns="http://www.w3.org/2000/svg"
+           ...
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="space-y-10 p-10 pb-12 scroll-smooth max-w-[1400px] mx-auto"
+      style="opacity: 1;"
+    >
+      <div
+        class="flex items-end justify-between border-b border-[var(--color-border)] pb-8 mb-4"
+        style="opacity: 1; transform: none;"
+      >
+        <div>
+          <div
+            class="flex items-center gap-3 mb-2"
+          >
+            <div
+              class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent border border-accent/20"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-layout-dashboard"
+                fill="none"
+                height="18"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="18"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="3"
+                />
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="3"
+                />
+                <rect
+                  height="9"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="12"
+                />
+                <rect
+                  height="5"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="16"
+                />
+              </svg>
+            </div>
+            <h1
+              class="text-sm font-black text-[var(--color-text)] uppercase tracking-[0.25em]"
+            >
+              Operational Intelligence
+            </h1>
+          </div>
+          <p
+            class="text-3xl font-bold text-[var(--color-text)] tracking-tight"
+          >
+            System Overview
+          </p>
+          <span
+            class="inline-flex items-center gap-1.5 text-xs tabular-nums text-[var(--color-text-dim)] mt-4"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-refresh-cw h-3 w-3"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+              />
+              <path
+                d="M21 3v5h-5"
+              />
+              <path
+                d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"
+              />
+              <path
+                d="M8 16H3v5"
+              />
+            </svg>
+            Last updated
+            : 
+            just now
+          </span>
+        </div>
+        <div
+          class="flex gap-4"
+        >
+          <button
+            class="flex items-center gap-2.5 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-[var(--color-text)] text-sm font-bold hover:bg-white/10 transition-all active:scale-95 shadow-lg group"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-zap text-warning group-hover:scale-110 transition-transform"
+              fill="none"
+              height="16"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="16"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"
+              />
+            </svg>
+            Run Diagnostics
+          </button>
+          <button
+            class="flex items-center gap-2.5 px-6 py-3 rounded-xl bg-accent text-white text-sm font-bold hover:opacity-90 transition-all active:scale-95 shadow-[0_0_20px_rgba(var(--color-accent-rgb),0.3)]"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-file-search"
+              fill="none"
+              height="16"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="16"
+              xmlns="http://www.w3.org/2000/svg"
+           ...
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/pages/Dashboard.test.tsx:79:25
+     77|   it('displays Memory metric value', async () => {
+     78|     render(<Dashboard />)
+     79|     expect(await screen.findByText(/62/)).toBeInTheDocument()
+       |                         ^
+     80|   })
+     81| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m21 passed[39m[22m[90m (22)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m140 passed[39m[22m[90m (142)[39m
+[2m   Start at [22m 21:05:30
+[2m   Duration [22m 12.40s[2m (transform 3.39s, setup 7.04s, collect 40.73s, tests 14.90s, environment 44.29s, prepare 6.53s)[22m
+

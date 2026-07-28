@@ -37,4 +37,4 @@ If you discover a security vulnerability in Universal-Ops, please report it priv
 
 ## Community standards
 
-This project follows the [Contributor Covenant Code of Conduct](../CODE_OF_CONDUCT.md). All contributors are expected to uphold these standards.
+This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). All contributors are expected to uphold these standards.

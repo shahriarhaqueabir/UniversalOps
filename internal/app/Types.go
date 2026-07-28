@@ -53,16 +53,18 @@ type BatteryData = BatteryInfo
 
 // DashboardData is the top-level dashboard snapshot.
 type DashboardData struct {
-	CPU         GaugeMetric   `json:"cpu"`
-	Memory      GaugeMetric   `json:"memory"`
-	Disk        GaugeMetric   `json:"disk"`
-	GPU         GPUInfo       `json:"gpu"`
-	Battery     BatteryInfo   `json:"battery"`
-	Network     NetworkMetric `json:"network"`
-	Processes   int           `json:"processes"`
-	Connections int           `json:"connections"`
-	Alerts      int           `json:"alerts"`
-	Uptime      string        `json:"uptime"`
+	CPU         GaugeMetric        `json:"cpu"`
+	Memory      GaugeMetric        `json:"memory"`
+	Disk        GaugeMetric        `json:"disk"`
+	GPU         GPUInfo            `json:"gpu"`
+	Battery     BatteryInfo        `json:"battery"`
+	Network     NetworkMetric      `json:"network"`
+	Processes   int                `json:"processes"`
+	Connections int                `json:"connections"`
+	Alerts      int                `json:"alerts"`
+	Uptime      string             `json:"uptime"`
+	HealthScore int                `json:"health_score"`
+	HealthTrend []HealthScorePoint `json:"health_trend"`
 }
 
 // SystemSnapshot provides a single-call state for Batch IPC.
@@ -93,6 +95,12 @@ type NetworkMetric struct {
 type DataPoint struct {
 	Time  string  `json:"time"`
 	Value float64 `json:"value"`
+}
+
+// HealthScorePoint represents a single day's health score for trend display.
+type HealthScorePoint struct {
+	Day   string `json:"day"`
+	Score int    `json:"score"`
 }
 
 // MetricDef describes a tracked metric.
@@ -887,6 +895,28 @@ type ServiceGroupSummary struct {
 	Stopped       int `json:"stopped"`
 }
 
+// DevOpsSummary holds a lightweight DevOps health summary for the dashboard.
+type DevOpsSummary struct {
+	ServiceCount    int    `json:"serviceCount"`
+	RunningCount    int    `json:"runningCount"`
+	DockerInstalled bool   `json:"dockerInstalled"`
+	DockerRunning   bool   `json:"dockerRunning"`
+	ContainerCount  int    `json:"containerCount"`
+	K8sInstalled    bool   `json:"k8sInstalled"`
+	K8sConnected    bool   `json:"k8sConnected"`
+	K8sPods         int    `json:"k8sPods"`
+	Summary         string `json:"summary"`
+}
+
+// AIOpsSummary holds a lightweight AIOps status summary for the dashboard.
+type AIOpsSummary struct {
+	OllamaAvailable   bool        `json:"ollamaAvailable"`
+	OllamaModel       string      `json:"ollamaModel"`
+	AnomalyCount      int         `json:"anomalyCount"`
+	CriticalAnomalies int         `json:"criticalAnomalies"`
+	RecentInsights    []AIInsight `json:"recentInsights"`
+}
+
 // ── Pipeline Types ───────────────────────────────────────────────────────────
 
 // ── AIOps Types ──────────────────────────────────────────────────────────────
@@ -1158,6 +1188,57 @@ type NetOpsFirewallRuleData struct {
 	Destination string `json:"destination"`
 }
 
+// ── Topology Types ───────────────────────────────────────────────────────────
+
+// TopologyDeviceData holds a device node in the network topology graph.
+type TopologyDeviceData struct {
+	ID       string  `json:"id"`
+	Type     string  `json:"type"`
+	Label    string  `json:"label"`
+	IP       string  `json:"ip,omitempty"`
+	MAC      string  `json:"mac,omitempty"`
+	Subnet   string  `json:"subnet,omitempty"`
+	Vendor   string  `json:"vendor,omitempty"`
+	Hostname string  `json:"hostname,omitempty"`
+	Status   string  `json:"status"`
+	X        float64 `json:"x"`
+	Y        float64 `json:"y"`
+	Online   bool    `json:"online"`
+	Notes    string  `json:"notes,omitempty"`
+}
+
+// TopologyConnectionData holds an edge between two devices.
+type TopologyConnectionData struct {
+	ID       string `json:"id"`
+	SourceID string `json:"source_id"`
+	TargetID string `json:"target_id"`
+	Type     string `json:"type"`
+	Label    string `json:"label,omitempty"`
+	Metric   int    `json:"metric,omitempty"`
+}
+
+// NetworkTopologyData holds the full topology graph for the frontend.
+type NetworkTopologyData struct {
+	Devices     []TopologyDeviceData     `json:"devices"`
+	Connections []TopologyConnectionData `json:"connections"`
+	GeneratedAt string                   `json:"generated_at"`
+	Subnet      string                   `json:"subnet"`
+}
+
+// DiscoveryTemplateData holds a named discovery strategy for the frontend.
+type DiscoveryTemplateData struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	RunPing     bool   `json:"run_ping"`
+	RunDNS      bool   `json:"run_dns"`
+	RunTrace    bool   `json:"run_trace"`
+	RunARP      bool   `json:"run_arp"`
+	RunRouting  bool   `json:"run_routing"`
+	RunPortScan bool   `json:"run_port_scan"`
+	PingCount   int    `json:"ping_count"`
+}
+
 // ── DevOps Extended Types ──
 
 // DockerStatsEntry holds a single container's stats.
@@ -1254,4 +1335,28 @@ type K8sActionResult struct {
 	Action  string `json:"action"`
 	Message string `json:"message"`
 	Success bool   `json:"success"`
+}
+
+// ── AIOps Live Context Types ──────────────────────────────────────────────
+
+// AIWorkflowEvent is emitted in real time during AI operations so the
+// frontend Live Context view can display each stage of inference, MCP
+// tool execution, and synthesis.
+type AIWorkflowEvent struct {
+	SessionID string `json:"sessionId"`
+	Stage     string `json:"stage"`
+	Status    string `json:"status"` // "running", "completed", "error"
+	Detail    string `json:"detail"`
+	Timestamp string `json:"timestamp"`
+}
+
+// DataStreamMetric is a snapshot of one metric in the pipeline ring buffer,
+// returned by GetDataStreamSnapshot for the Live Context view.
+type DataStreamMetric struct {
+	Name      string  `json:"name"`
+	Unit      string  `json:"unit"`
+	LastValue float64 `json:"lastValue"`
+	Samples   int     `json:"samples"`
+	Trend     string  `json:"trend"` // "rising", "falling", "stable"
+	UpdatedAt string  `json:"updatedAt"`
 }

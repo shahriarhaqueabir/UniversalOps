@@ -70,13 +70,13 @@ describe('Dashboard Page', () => {
 
   it('displays CPU metric value', async () => {
     render(<Dashboard />)
-    // Be more flexible with matcher
-    expect(await screen.findByText(/45/)).toBeInTheDocument()
+    // May appear in both KPI cards and Top Issues — at least one must exist
+    expect((await screen.findAllByText(/45/)).length).toBeGreaterThanOrEqual(1)
   })
 
   it('displays Memory metric value', async () => {
     render(<Dashboard />)
-    expect(await screen.findByText(/62/)).toBeInTheDocument()
+    expect((await screen.findAllByText(/62/)).length).toBeGreaterThanOrEqual(1)
   })
 
   it('shows loading state initially', async () => {

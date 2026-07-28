@@ -3,7 +3,7 @@ import { Activity, CheckCircle, AlertTriangle, XCircle, Clock, ChevronRight, His
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import type { ExtendedDiagnosticResult, ReportRecord } from '@/types'
-import { cn } from '@/lib/utils'
+import { cn, formatSafeDate } from '@/lib/utils'
 import { useState } from 'react'
 
 // ── Helpers ──
@@ -230,7 +230,7 @@ export function DiagnosticsTab() {
               </div>
               <div className="bg-panel-2 rounded-2xl p-5 border border-border">
                 <p className="text-[10px] font-black text-text-faint uppercase tracking-widest mb-1">Timestamp</p>
-                <p className="text-sm font-bold text-text tabular-nums">{new Date(detailReport.timestamp).toLocaleString()}</p>
+                <p className="text-sm font-bold text-text tabular-nums">{formatSafeDate(detailReport.timestamp)}</p>
               </div>
             </div>
             <div className="space-y-3">
@@ -268,8 +268,8 @@ export function DiagnosticsTab() {
                         <Clock size={18} className={hColor} />
                       </div>
                       <div className="text-left">
-                        <p className="text-xs font-black text-text uppercase tracking-wider">{new Date(report.timestamp).toLocaleDateString()}</p>
-                        <p className="text-[10px] font-bold text-text-faint uppercase tracking-widest mt-0.5">{new Date(report.timestamp).toLocaleTimeString()}</p>
+                        <p className="text-xs font-black text-text uppercase tracking-wider">{formatSafeDate(report.timestamp, (d) => d.toLocaleDateString())}</p>
+                        <p className="text-[10px] font-bold text-text-faint uppercase tracking-widest mt-0.5">{formatSafeDate(report.timestamp, (d) => d.toLocaleTimeString())}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
