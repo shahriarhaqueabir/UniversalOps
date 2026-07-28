@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -24,7 +24,6 @@ jobs:
           cache: true
 
       - name: Set up MSVC for Windows
-        if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
 
       - name: Set up Node
@@ -42,10 +41,14 @@ jobs:
         run: cd cmd/opsforall-gui/frontend && npm run build
         shell: bash
 
-      - name: Generate Wails TypeScript bindings
+      - name: Install Wails CLI
         run: |
           go install github.com/wailsapp/wails/v2/cmd/wails@latest
-          wails generate module
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+        shell: bash
+
+      - name: Generate Wails TypeScript bindings
+        run: wails generate module
         shell: bash
 
       - name: Vet
@@ -55,8 +58,8 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v2.1
-          args: --timeout=5m ./...
+          version: latest
+          args: --timeout=10m ./...
 
       - name: Go test
         run: go test -race ./internal/... -coverprofile=coverage.out -covermode=atomic -count=1
@@ -74,9 +77,26 @@ jobs:
         run: cd cmd/opsforall-gui/frontend && npm run lint
         shell: bash
 
+      - name: Build app for E2E tests
+        run: wails build -platform windows/amd64 -o universal-ops.exe
+        shell: bash
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: pip install pytest pywinauto
+        shell: bash
+
       - name: E2E tests
         run: python run_e2e_tests.py
         shell: bash
+        env:
+          APP_PATH: ${{ github.workspace }}/build/bin/universal-ops.exe
+          E2E_ENABLE_UIA_DOM: "1"
         continue-on-error: true
 
       - name: npm audit
