@@ -46,8 +46,9 @@ issues:
   max-same-issues: 0
   
   exclude-rules:
-    # Ignore "var-naming" and "hugeParam" noise from gocritic/revive (if enabled)
-    - text: "ST1003"
+    # Ignore ST1003 (deprecated identifier naming) from staticcheck
+    - linters: [staticcheck]
+      text: "ST1003"
     - text: "var-naming"
     - text: "hugeParam"
     # Allow some common patterns in tests
