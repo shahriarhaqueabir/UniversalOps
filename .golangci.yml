@@ -4,13 +4,6 @@
 run:
   timeout: 10m
   tests: true
-  # Using skip-dirs for compatibility, ignoring deprecation warning for now
-  skip-dirs:
-    - node_modules
-    - scripts
-    - vendor
-    - build
-    - data
 
 linters:
   disable-all: true
@@ -44,13 +37,17 @@ linters-settings:
 
 issues:
   max-same-issues: 0
+  exclude-dirs:
+    - node_modules
+    - scripts
+    - vendor
+    - build
+    - data
   
   exclude-rules:
     # Ignore ST1003 (deprecated identifier naming) from staticcheck
     - linters: [staticcheck]
       text: "ST1003"
-    - text: "var-naming"
-    - text: "hugeParam"
     # Allow some common patterns in tests
     - path: _test\.go
       linters:
