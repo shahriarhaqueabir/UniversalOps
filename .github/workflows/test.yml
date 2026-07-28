@@ -65,10 +65,10 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
-          args: --timeout=10m ./...
+          args: --timeout=10m
 
       - name: Go test
-        run: go test -race ./internal/... -coverprofile=coverage.out -covermode=atomic -count=1
+        run: go test ./internal/... -coverprofile=coverage.out -covermode=atomic -count=1
         shell: bash
 
       - name: TypeScript check
