@@ -6,7 +6,17 @@ import path from 'path'
 import compression from 'vite-plugin-compression'
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), compression()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    compression({
+      verbose: false,
+      disable: false,
+      threshold: 10240,
+      algorithm: 'gzip',
+      ext: '.gz',
+    }),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
