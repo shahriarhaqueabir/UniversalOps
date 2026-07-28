@@ -27,18 +27,70 @@
   </a>
 </p>
 
-**UniversalOps** is a native desktop studio designed for SREs, developers, and security enthusiasts who require instant, high-density telemetry without the latency or privacy risks of cloud-based monitoring.
+**UniversalOps** is an open-source, local-first desktop application designed for SREs, DevOps engineers, and security professionals. It unifies real-time system observability, network diagnostics, security auditing, and container management into a single native interface—without relying on cloud backends or collecting telemetry.
 
-> [!IMPORTANT]
-> **100% Private. 100% Local. Zero Cloud.** Your data never leaves your hardware.
+### Key Capabilities
+
+- **System Observability:** Real-time metrics for CPU, memory, disk I/O, and process tracking.
+- **Network Diagnostics:** Integrated utilities for DNS resolution, ICMP ping, port scanning, and Whois lookups.
+- **Security Auditing:** Live visibility into listening ports, active firewall rules, and process integrity checks.
+- **DevOps Tools:** Local management for Docker containers and execution tracking for CI/CD pipelines.
+- **Local AI Analysis:** Privacy-focused incident analysis, log parsing, and remediation suggestions powered by local LLMs via Ollama.
+- **Data Sovereignty:** All state and metric history are stored locally in SQLite with zero outbound data collection.
+
+### Tech Stack
+| **Component** | **Technology** |
+|---|---|
+| **Backend & System APIs** | Go 1.22+ |
+| **Desktop Runtime** | Wails v2 |
+| **Frontend** | React 19, TypeScript, TailwindCSS |
+| **Persistence** | SQLite |
+| **AI Runtime** | Ollama API (Local) |
 
 ---
 
-## 🚀 One-Line Installation (Windows)
-Run this command in PowerShell to instantly set up UniversalOps on your desktop:
+## ✨ Highlights
+
+| | |
+|---|---|
+| 🖥️ **5 Operations Layers** | SysOps, NetOps, SecOps, DevOps, AIOps — unified single pane of glass |
+| ⚡ **Native Performance** | Go/Wails backend with sub-second telemetry — no network roundtrips |
+| 🔒 **100% Private** | Zero telemetry, zero cloud sync. All data stays on your machine |
+| 🤖 **Local AI (Hawk)** | Autonomous RCA via Ollama — no data ever leaves your hardware |
+| 🧪 **Battle-Tested** | 142 frontend tests + 7 Go packages — CI on Windows, Linux, macOS |
+| 📦 **One-Click Install** | PowerShell one-liner or portable binary — running in under 60 seconds |
+
+---
+
+## 📋 Table of Contents
+
+- [✨ Highlights](#-highlights)
+- [🚀 Quick Install](#-quick-install)
+- [🎯 Mission & Vision](#-mission--vision)
+- [🖥️ The Solution](#️-the-solution)
+- [🖼️ Visual Gallery](#️-visual-gallery)
+- [🛠️ Architecture](#️-architecture)
+- [🧪 Testing & Quality](#-testing--quality)
+- [📖 Documentation](#-documentation)
+- [🧩 Known Issues & Trade-offs](#-known-issues--trade-offs)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+
+---
+
+## 🚀 Quick Install
+
+### Windows (PowerShell)
 ```powershell
 irm https://raw.githubusercontent.com/shahriarhaqueabir/UniversalOps/main/install.ps1 | iex
 ```
+
+### Linux / macOS (Terminal)
+```bash
+curl -fsSL https://raw.githubusercontent.com/shahriarhaqueabir/UniversalOps/main/install.sh | bash
+```
+
+> Or download the portable binary directly from the [Releases page](https://github.com/shahriarhaqueabir/UniversalOps/releases).
 
 ---
 
@@ -112,11 +164,61 @@ Pre-built automation workflows with one-click execution and customizable paramet
 
 ## 🛠️ Architecture
 Built for performance and portability.
+
+```mermaid
+flowchart TD
+    UI[React 19 Frontend] <--> IPC[Wails v2 IPC Bridge]
+    IPC <--> APP[Go Application Layer]
+    APP --> EL[Engine Loop]
+    EL --> DP[Data Pipeline]
+    DP --> DB[(SQLite WAL)]
+    EL --> AE[Alert Engine]
+    EL --> AI[Hawk AI - Ollama]
+    COLL[System Collectors] --> DP
+    COLL --> HW[OS / Hardware]
+    style UI fill:#1a1a2e,color:#fff
+    style DB fill:#2d4a22,color:#fff
+    style AI fill:#4a1a2e,color:#fff
+```
+
 - **Backend**: Go (Wails v2 bindings) using `gopsutil/v4`, `yusufpapurcu/wmi`, and `modernc.org/sqlite`.
 - **Frontend**: React 19 + TypeScript + Tailwind v4 + Radix UI.
 - **Storage**: SQLite with WAL (Write-Ahead Logging) for high-frequency time-series data.
 
 **Full Architecture Deep-Dive**: [Documentation](./docs/ARCHITECTURE.md)
+
+---
+
+## 🧪 Testing & Quality
+
+| Metric | Status |
+|--------|--------|
+| **Frontend Tests** | 142 tests across 22 files (Vitest + React Testing Library) |
+| **Backend Tests** | 7 Go packages — `internal/{app,common,sysops,netops,secops,devops,aiops}` |
+| **CI Matrix** | Windows, Linux, macOS — every push to `main` and `develop` |
+| **TypeScript** | Strict mode — `tsc --noEmit` clean |
+| **Linting** | `golangci-lint` (Go) + ESLint (TypeScript) |
+| **E2E** | Python-based end-to-end test suite (Windows) |
+
+```bash
+# Run all tests
+cd UniversalOps
+go test ./internal/... -count=1 -timeout 120s
+cd cmd/opsforall-gui/frontend && npx vitest run
+```
+
+---
+
+## 📖 Documentation
+
+| Guide | Description |
+|-------|-------------|
+| [📥 Installation Guide](docs/INSTALL.md) | Easy setup (download & run) + advanced build from source |
+| [🚀 Quick Start](docs/QUICKSTART.md) | Get up and running in 2 minutes |
+| [📘 User Guide](docs/USER_GUIDE.md) | Full feature walkthrough for all 5 ops layers |
+| [🏗️ Architecture](docs/ARCHITECTURE.md) | System design, data flow, and component tree |
+| [🛠️ Development Guide](docs/developing.md) | Setup, debugging, profiling, and contribution workflow |
+| [📚 Documentation Hub](docs/readme.md) | Complete index of all documentation |
 
 ---
 
@@ -127,6 +229,15 @@ We welcome contributions to enhance the Command Center.
 - Browse the [Documentation Hub](docs/readme.md) for all docs in one place.
 - Join the discussion in [Issues](https://github.com/shahriarhaqueabir/UniversalOps/issues).
 - This project adheres to the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).
+
+## 🧩 Known Issues & Trade-offs
+
+| Issue | Impact | Status |
+|-------|--------|--------|
+| **Windows-optimized collectors** | Linux/macOS use fallback paths with reduced sensor data | 🏗️ Improving |
+| **Ollama required for AI features** | AIOps tab shows limited functionality without local LLM | 📖 Documented |
+| **SQLite WAL write amplification** | High-frequency metric ingestion increases disk I/O under load | 🔍 Under investigation |
+| **Single-user session** | No multi-user or role-based access — designed for local desktop use | ✅ By design |
 
 ---
 

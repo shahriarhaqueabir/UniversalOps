@@ -244,6 +244,11 @@ func (a *App) Startup(ctx context.Context) {
 		a.sloEngine = common.NewSLOEngine(s)
 		a.sloEngine.SeedDefaultSLOs()
 		a.Dash.SetSLOEngine(a.sloEngine)
+
+		// Restore alert history from DB so it survives restarts
+		if records, err := s.QueryAlertHistory(2000); err == nil && len(records) > 0 {
+			a.alerts.RestoreFromDB(records)
+		}
 	}
 
 	// Initialize the session logger locally

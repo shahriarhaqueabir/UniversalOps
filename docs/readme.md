@@ -34,6 +34,7 @@
 | [collector-architecture.md](collector-architecture.md) | Collector system design — goroutine-per-collector, sharded data stores, exponential backoff, ring buffer |
 | [DATA_FLOW.md](DATA_FLOW.md) | Telemetry lifecycle and command flow — sequence diagrams for inbound pipeline and outbound commands |
 | [STANDARDS.md](STANDARDS.md) | Development standards — Go conventions, naming patterns, error handling, frontend component guidelines |
+| [adr/](./adr/) | Architecture Decision Records — key design decisions with context, alternatives, and rationale |
 
 ---
 
@@ -43,6 +44,7 @@
 |-----|----------------|
 | [MustHaves.md](MustHaves.md) | Product requirements — dashboard health score, resource summaries, module overview pages |
 | [ToolsCommands.md](ToolsCommands.md) | Tools & commands reference — data source hierarchy, system information tables, network/security tool mappings |
+| [production.md](production.md) | Production runbook — build pipeline, release process, logging, database maintenance, troubleshooting |
 
 ---
 
@@ -52,6 +54,7 @@
 |-----|----------------|
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Contribution process, testing standards, commit conventions, project structure, coding standards |
 | [developing.md](developing.md) | Deep development guide — git strategy, environment setup, debugging, PR workflow, project tree |
+| [design-language.md](design-language.md) | Visual design principles — color palette, typography, spacing, component conventions, motion |
 | [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) | Community standards and enforcement guidelines |
 
 ---
@@ -82,8 +85,18 @@ docs/
 ├── ToolsCommands.md       — Tools & commands reference
 ├── TROUBLESHOOTING.md     — Common issues & solutions
 ├── USER_GUIDE.md          — Full user guide
+├── design-language.md     — Visual design principles & component conventions
 ├── developing.md          — Deep development guide
+├── production.md          — Production runbook & operations
 ├── reviewprompt.md        — Internal AI review prompt (not user-facing)
+├── adr/                   — Architecture Decision Records
+│   ├── README.md          — ADR index
+│   ├── template.md        — ADR template
+│   ├── ADR-0001-wails-v2-framework.md
+│   ├── ADR-0002-sqlite-wal-storage.md
+│   ├── ADR-0003-collector-architecture.md
+│   ├── ADR-0004-alert-engine-design.md
+│   └── ADR-0005-local-ai-integration.md
 ├── screenshots/           — Application screenshots
 │   ├── final_execution_1_dashboard.png
 │   ├── final_execution_2_reports.png

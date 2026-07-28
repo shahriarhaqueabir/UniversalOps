@@ -14,7 +14,7 @@ Welcome to UniversalOps, the premium native GUI operations platform. This guide 
 ## 1. Installation & Setup
 
 ### Prerequisites
-- **Go 1.22+**: Required for building from source.
+- **Go 1.26+**: Required for building from source.
 - **Wails v2 CLI**: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
 - **Node.js**: Required for frontend builds.
 - **Windows / Linux / macOS**: UniversalOps is cross-platform.

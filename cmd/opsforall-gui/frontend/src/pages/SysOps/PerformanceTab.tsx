@@ -31,19 +31,19 @@ export function PerformanceTab() {
         </div>
         <div className="grid grid-cols-4 gap-6">
           <div className="text-center">
-            <p className="text-2xl font-bold text-[var(--color-accent)] tabular-nums">{cpuUserPct.toFixed(1)}%</p>
+            <p className="text-2xl font-bold text-[var(--color-accent)] tabular-nums">{Math.round(cpuUserPct)}%</p>
             <p className="text-xs font-bold text-[var(--color-text-faint)] uppercase">User</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-[var(--color-warning)] tabular-nums">{cpuSystemPct.toFixed(1)}%</p>
+            <p className="text-2xl font-bold text-[var(--color-warning)] tabular-nums">{Math.round(cpuSystemPct)}%</p>
             <p className="text-xs font-bold text-[var(--color-text-faint)] uppercase">System</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-[var(--color-success)] tabular-nums">{cpuIdlePct.toFixed(1)}%</p>
+            <p className="text-2xl font-bold text-[var(--color-success)] tabular-nums">{Math.round(cpuIdlePct)}%</p>
             <p className="text-xs font-bold text-[var(--color-text-faint)] uppercase">Idle</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-[var(--color-danger)] tabular-nums">{perf.io_wait.toFixed(1)}%</p>
+            <p className="text-2xl font-bold text-[var(--color-danger)] tabular-nums">{Math.round(perf.io_wait)}%</p>
             <p className="text-xs font-bold text-[var(--color-text-faint)] uppercase">I/O Wait</p>
           </div>
         </div>

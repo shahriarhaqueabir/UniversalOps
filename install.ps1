@@ -1,7 +1,16 @@
 # UniversalOps Installation Script for Windows (Portable Mode)
 # Usage: irm https://raw.githubusercontent.com/shahriarhaqueabir/UniversalOps/main/install.ps1 | iex
 
-$Version = "1.3.0"
+# Fetch latest version from GitHub releases
+$apiUrl = "https://api.github.com/repos/shahriarhaqueabir/UniversalOps/releases/latest"
+try {
+    $latest = Invoke-RestMethod -Uri $apiUrl -ErrorAction Stop
+    $Version = $latest.tag_name -replace '^v', ''
+} catch {
+    Write-Host "Could not fetch latest version. Falling back to default." -ForegroundColor Yellow
+    $Version = "1.3.1"
+}
+
 $Url = "https://github.com/shahriarhaqueabir/UniversalOps/releases/download/v$Version/UniversalOps-v$Version-windows-amd64.exe"
 $Dest = "$HOME\Desktop\UniversalOps"
 $Exe = "$Dest\UniversalOps.exe"

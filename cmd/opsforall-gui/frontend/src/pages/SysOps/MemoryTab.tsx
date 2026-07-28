@@ -36,7 +36,7 @@ export function MemoryTab({ memInfo }: MemoryTabProps) {
             <MemoryStick size={20} className="text-[var(--color-success)]" />
             <h3 className="text-lg font-bold text-[var(--color-text)] uppercase tracking-widest">RAM Usage</h3>
           </div>
-          <span className="text-3xl font-bold text-[var(--color-success)] tabular-nums">{memInfo.used_percent.toFixed(1)}%</span>
+          <span className="text-3xl font-bold text-[var(--color-success)] tabular-nums">{Math.round(memInfo.used_percent)}%</span>
         </div>
         <div className="h-6 bg-[var(--color-panel-3)] rounded-full overflow-hidden border border-[var(--color-border)] mb-6">
           <div className="h-full rounded-full bg-gradient-to-r from-[var(--color-success)]/60 to-[var(--color-success)] transition-all duration-700" style={{ width: `${memInfo.used_percent}%` }} />
@@ -64,7 +64,7 @@ export function MemoryTab({ memInfo }: MemoryTabProps) {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-black text-[var(--color-accent)] tabular-nums">{p.memory.toFixed(0)} MB</p>
-                  <p className="text-[10px] font-bold text-[var(--color-text-dim)] tabular-nums">{(p.mem_pct).toFixed(1)}%</p>
+                  <p className="text-[10px] font-bold text-[var(--color-text-dim)] tabular-nums">{Math.round(p.mem_pct)}%</p>
                 </div>
               </div>
             ))}
@@ -75,7 +75,7 @@ export function MemoryTab({ memInfo }: MemoryTabProps) {
           <Panel variant="elevated" padding="lg" category="system">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-sm font-black text-[var(--color-text)] uppercase tracking-widest">Swap Usage</h3>
-              <span className="text-2xl font-bold text-[var(--color-warning)] tabular-nums">{memInfo.swap_percent.toFixed(1)}%</span>
+              <span className="text-2xl font-bold text-[var(--color-warning)] tabular-nums">{Math.round(memInfo.swap_percent)}%</span>
             </div>
             <div className="h-4 bg-[var(--color-panel-3)] rounded-full overflow-hidden border border-[var(--color-border)]">
               <div className="h-full rounded-full bg-gradient-to-r from-[var(--color-warning)]/60 to-[var(--color-warning)] transition-all duration-700" style={{ width: `${memInfo.swap_percent}%` }} />
