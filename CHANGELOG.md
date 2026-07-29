@@ -5,7 +5,31 @@ All notable changes to Universal-Ops will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.4.0] - Unreleased
+## [1.4.2] - 2026-07-29
+
+### Fixed
+- Dependabot npm groups split into production/development — major bumps get individual PRs.
+- `brace-expansion` + `minimatch` npm overrides to fix vitest coverage CJS compat and eliminate high vulns.
+- `golangci-lint` config fully repaired (invalid rules, skip-dirs, exclusions).
+- Compilation errors in `events.go` and `baselines.go` resolved.
+- Docker container query returns empty slice instead of nil.
+- CI/CD pipeline hardened end-to-end (build order, lint, test, audit).
+
+### Changed
+- Dependabot configuration: npm groups separated, `update_types: ["minor", "patch"]` for safe updates.
+- `install.ps1` fallback version → 1.4.2, README badge → v1.4.2.
+
+## [1.4.1] - 2026-07-27
+
+### Fixed
+- Various compilation errors in `events.go`, `baselines.go`, `App.go` (missing imports).
+
+### Changed
+- `linter` field added to golangci-lint config.
+- SLO engine tests added.
+- `HealthBadge` wired into Dashboard.
+
+## [1.4.0] - 2026-07-25
 
 ### Fixed
 - CI pipeline: removed invalid `shell: bash` from golangci-lint action step (blocked all runs since July 24).

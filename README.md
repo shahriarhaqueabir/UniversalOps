@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://github.com/shahriarhaqueabir/UniversalOps/releases">
-    <img src="https://img.shields.io/badge/version-v1.4.0-7c6cff?style=flat-square" alt="Version">
+    <img src="https://img.shields.io/badge/version-v1.4.2-7c6cff?style=flat-square" alt="Version">
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-2ea44f?style=flat-square" alt="License">
