@@ -8,7 +8,7 @@ try {
     $Version = $latest.tag_name -replace '^v', ''
 } catch {
     Write-Host "Could not fetch latest version. Falling back to default." -ForegroundColor Yellow
-    $Version = "1.4.0"
+    $Version = "1.4.2"
 }
 
 $Url = "https://github.com/shahriarhaqueabir/UniversalOps/releases/download/v$Version/UniversalOps-v$Version-windows-amd64.exe"
