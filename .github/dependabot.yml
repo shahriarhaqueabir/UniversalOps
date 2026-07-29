@@ -20,7 +20,18 @@ updates:
       - "dependencies"
       - "npm"
     groups:
-      npm-dependencies:
+      npm-production:
+        dependency-type: "production"
+        update_types:
+          - "minor"
+          - "patch"
+        patterns:
+          - "*"
+      npm-development:
+        dependency-type: "development"
+        update_types:
+          - "minor"
+          - "patch"
         patterns:
           - "*"
 
