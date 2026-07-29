@@ -124,6 +124,8 @@ jobs:
           path: build/bin/*
 
   publish:
+    permissions:
+      contents: write
     timeout-minutes: 15
     needs: [build-windows]
     runs-on: ubuntu-latest
@@ -143,11 +145,10 @@ jobs:
           cat checksums.txt
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            checksums.txt
-            windows-release/*
-          generate_release_notes: true
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --notes "See CHANGELOG.md for details." \
+            windows-release/* checksums.txt
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
