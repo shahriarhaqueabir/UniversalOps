@@ -64,6 +64,7 @@ test.err
 vet.err
 
 # Internal / agent / audit artifacts (not for public distribution)
+npm-audit.json
 .agents/
 .memory/
 .playwright-mcp/
