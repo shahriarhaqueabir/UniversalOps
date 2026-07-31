@@ -193,10 +193,10 @@ flowchart TD
 
 | Metric | Status |
 |--------|--------|
-| **Frontend Tests** | 142 tests across 22 files (Vitest + React Testing Library) |
+| **Frontend Tests** | 188 tests across 26 files (Vitest + React Testing Library) |
 | **Backend Tests** | 7 Go packages — `internal/{app,common,sysops,netops,secops,devops,aiops}` |
 | **CI Matrix** | Windows, Linux, macOS — every push to `main` and `develop` |
-| **TypeScript** | Strict mode — `tsc --noEmit` clean |
+| **TypeScript** | Strict mode — `tsc -b` clean (build mode; root tsconfig is project references) |
 | **Linting** | `golangci-lint` (Go) + ESLint (TypeScript) |
 | **E2E** | Python-based end-to-end test suite (Windows) |
 

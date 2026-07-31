@@ -445,7 +445,7 @@ go tool cover -html=coverage.out -o coverage.html     # Visual coverage report
 # ── Frontend ──
 npm test --prefix cmd/opsforall-gui/frontend                    # Unit tests
 npx vitest run --coverage --prefix cmd/opsforall-gui/frontend   # With coverage
-npx tsc --noEmit --prefix cmd/opsforall-gui/frontend            # Type check
+npx tsc -b --prefix cmd/opsforall-gui/frontend                 # Type check (build mode — root tsconfig is project references)
 npm run lint --prefix cmd/opsforall-gui/frontend                 # Lint
 
 # ── E2E (Windows) ──
@@ -526,7 +526,7 @@ Every PR must pass this checklist before merge:
 ### ✅ Testing Checklist
 - [ ] Backend unit tests pass
 - [ ] Frontend unit tests pass
-- [ ] TypeScript compiles (`tsc --noEmit`)
+- [ ] TypeScript compiles (`tsc -b` — build mode, not `--noEmit` which is a false green)
 - [ ] ESLint passes
 - [ ] New backend code has ≥60% coverage
 - [ ] New frontend code has tests (component + store + hook as applicable)

@@ -113,7 +113,7 @@ go vet ./...
 
 # Frontend
 cd cmd/opsforall-gui/frontend
-npx tsc --noEmit
+npx tsc -b      # build mode — root tsconfig is project references, --noEmit is a false green
 npm run lint
 npx vitest run
 ```
