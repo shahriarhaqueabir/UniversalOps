@@ -2,7 +2,8 @@ import { useCallback } from 'react'
 
 export interface WailsRuntime {
   EventsOn: (event: string, handler: (...args: unknown[]) => void) => void
-  EventsOff: (event: string, handler: (...args: unknown[]) => void) => void
+  // handler is optional — wails runtime accepts bare event names: EventsOff('name')
+  EventsOff: (event: string, handler?: (...args: unknown[]) => void) => void
 }
 
 export interface WailsApp {

@@ -32,7 +32,7 @@ function App() {
         const method = app?.App?.IsOnboarded
         if (method) {
           const res = await method()
-          if (!cancelled) setOnboarded(res)
+          if (!cancelled) setOnboarded(res as boolean)
         } else if (attempt < 20) {
           // Retry up to 20 times (10s total) then assume onboarded
           retryTimer = setTimeout(() => checkOnboarded(attempt + 1), 500)

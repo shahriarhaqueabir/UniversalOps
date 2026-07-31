@@ -86,7 +86,9 @@ jobs:
         shell: bash
 
       - name: TypeScript check
-        run: cd cmd/opsforall-gui/frontend && npx tsc --noEmit
+        # tsc -b (build mode) — the root tsconfig is project-references only, so
+        # plain `tsc --noEmit` type-checks nothing. -b matches `npm run build`.
+        run: cd cmd/opsforall-gui/frontend && npx tsc -b
         shell: bash
 
       - name: Frontend test
