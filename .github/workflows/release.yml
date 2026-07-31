@@ -108,18 +108,22 @@ jobs:
         shell: bash
 
       - name: Compute release version (strip leading v from git tag)
+        # NOTE: use a direct string write to GITHUB_OUTPUT. `Write-Host ... >>
+        # $env:GITHUB_OUTPUT` silently writes NOTHING (information stream vs
+        # success stream), which left steps.ver.outputs.ver empty and produced
+        # universal-ops--windows-amd64.exe (double dash) in release run 30651957345.
         id: ver
         shell: pwsh
         run: |
           $ver = "${{ github.ref_name }}".TrimStart('v')
-          Write-Host "VER=$ver" >> $env:GITHUB_OUTPUT
+          "VER=$ver" >> $env:GITHUB_OUTPUT
 
       - name: Build standalone executable
+        # windows/amd64 only — per project scope (no mac/linux for this turn).
+        # The NSIS step was removed: windows-latest runners have no makensis, so
+        # it was a silent no-op that left a 21 MB extension-less duplicate in the
+        # artifact. Re-add only if makensis is provisioned on the runner.
         run: wails build -platform windows/amd64 -o universal-ops-${{ steps.ver.outputs.ver }}-windows-amd64.exe
-        shell: bash
-
-      - name: Build NSIS installer
-        run: wails build -platform windows/amd64 -nsis -o universal-ops-${{ steps.ver.outputs.ver }}-windows-amd64-installer
         shell: bash
 
       - name: Generate individual checksums
@@ -152,15 +156,19 @@ jobs:
           path: windows-release
 
       - name: Compute version and SHA256
+        # Same GITHUB_OUTPUT trap as build-windows: Write-Host writes to the
+        # information stream and `>>` captures nothing. Use direct string writes
+        # so steps.ver.outputs.sha256 actually reaches package-scoop.ps1.
         id: ver
         shell: pwsh
         run: |
           $ver = "${{ github.ref_name }}".TrimStart('v')
+          $files = (Get-ChildItem "windows-release" -File | Select-Object -ExpandProperty Name) -join ", "
           $exe = Get-ChildItem "windows-release" -Filter "universal-ops-$ver-windows-amd64.exe" | Select-Object -First 1
-          if (-not $exe) { throw "Expected artifact universal-ops-$ver-windows-amd64.exe not found" }
+          if (-not $exe) { throw "Expected artifact universal-ops-$ver-windows-amd64.exe not found. Actual artifact contents: $files" }
           $sha = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-          Write-Host "VER=$ver" >> $env:GITHUB_OUTPUT
-          Write-Host "SHA256=$sha" >> $env:GITHUB_OUTPUT
+          "VER=$ver" >> $env:GITHUB_OUTPUT
+          "SHA256=$sha" >> $env:GITHUB_OUTPUT
 
       - name: Generate Scoop manifest (real hash injected)
         shell: pwsh
