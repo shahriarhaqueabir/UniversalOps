@@ -24,10 +24,10 @@ func ollamaReachable() bool {
 
 func TestQwen3FallbackForRAM(t *testing.T) {
 	tests := []struct {
-		name        string
-		ramGB       float64
-		wantModel   string
-		wantLabel   string
+		name      string
+		ramGB     float64
+		wantModel string
+		wantLabel string
 	}{
 		{name: "high RAM ≥8GB → 4B", ramGB: 16, wantModel: qwen3_4B_Model, wantLabel: qwen3_4B_Label + " (recommended for 16GB RAM)"},
 		{name: "exactly 8GB → 4B", ramGB: 8, wantModel: qwen3_4B_Model, wantLabel: qwen3_4B_Label + " (recommended for 8GB RAM)"},
