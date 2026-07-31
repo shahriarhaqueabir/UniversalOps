@@ -151,6 +151,55 @@ func TestScanPorts(t *testing.T) {
 	}
 }
 
+func TestScanPorts_CapLimit(t *testing.T) {
+	// A port list beyond maxTotalPorts must be rejected before any dialing.
+	ports := make([]int, maxTotalPorts+1)
+	for i := range ports {
+		ports[i] = i + 1
+	}
+	_, err := ScanPorts("127.0.0.1", ports)
+	if err == nil {
+		t.Fatalf("expected error for %d ports (max %d)", len(ports), maxTotalPorts)
+	}
+}
+
+func TestScanPorts_InvalidPort(t *testing.T) {
+	_, err := ScanPorts("127.0.0.1", []int{80, 0})
+	if err == nil {
+		t.Fatal("expected error for port 0")
+	}
+	_, err = ScanPorts("127.0.0.1", []int{80, 65536})
+	if err == nil {
+		t.Fatal("expected error for port 65536")
+	}
+}
+
+func TestScanPorts_EmptyPorts(t *testing.T) {
+	results, err := ScanPorts("127.0.0.1", nil)
+	if err != nil {
+		t.Fatalf("ScanPorts with nil ports failed: %v", err)
+	}
+	if results == nil {
+		t.Fatal("expected non-nil empty result slice")
+	}
+	if len(results) != 0 {
+		t.Fatalf("expected 0 results, got %d", len(results))
+	}
+}
+
+func TestScanPorts_Deduplicates(t *testing.T) {
+	results, err := ScanPorts("127.0.0.1", []int{80, 80, 443})
+	if err != nil {
+		t.Fatalf("ScanPorts failed: %v", err)
+	}
+	if len(results) != 2 {
+		t.Fatalf("expected 2 unique results, got %d", len(results))
+	}
+	if results[0].Port != 80 || results[1].Port != 443 {
+		t.Fatalf("unexpected port order: %v", results)
+	}
+}
+
 func TestGetConnections(t *testing.T) {
 	conns, err := GetConnections()
 	if err != nil {
