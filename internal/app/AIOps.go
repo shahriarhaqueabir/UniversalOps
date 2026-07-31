@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -17,6 +18,8 @@ import (
 	"golang.org/x/text/language"
 
 	"github.com/ollama/ollama/api"
+	"github.com/shirou/gopsutil/v4/mem"
+
 	"github.com/shahriarhaqueabir/UniversalOps/internal/aiops"
 	"github.com/shahriarhaqueabir/UniversalOps/internal/aiops/mcp"
 
@@ -69,6 +72,15 @@ func NewAIOps(ctx context.Context, pipeline *common.DataPipeline, knowledge *Kno
 		mcpServer:    mcp.NewServer(pipeline),
 		contextCache: &systemContextCache{},
 	}
+}
+
+// requestContext returns a.ctx when non-nil, otherwise context.Background().
+// This avoids repeating the nil-check + fallback pattern throughout the facade.
+func (a *AIOps) requestContext() context.Context {
+	if a.ctx != nil {
+		return a.ctx
+	}
+	return context.Background()
 }
 
 func (a *AIOps) SetDataDir(dir string) {
@@ -235,11 +247,7 @@ func (a *AIOps) Chat(sessionID, message string) ChatResponse {
 	messages = append(messages, aiops.ChatMessage{Role: "user", Content: wrappedMessage})
 
 	// 2. Execute Chat with per-request timeout
-	// Use context.Background() fallback when a.ctx is nil (e.g. in tests)
-	chatParent := a.ctx
-	if chatParent == nil {
-		chatParent = context.Background()
-	}
+	chatParent := a.requestContext()
 	chatCtx, cancel := context.WithTimeout(chatParent, 120*time.Second)
 	defer cancel()
 
@@ -253,7 +261,7 @@ func (a *AIOps) Chat(sessionID, message string) ChatResponse {
 
 	if err != nil {
 		common.LogWarn("AI Chat failed after %v: %v", chatElapsed, err)
-		return ChatResponse{Content: "Error: " + err.Error()}
+		return ChatResponse{Content: "AI assistant unavailable. Please verify Ollama is running and the model is downloaded."}
 	}
 
 	common.LogInfo("AI Chat completed in %v (session=%s)", chatElapsed, sessionID)
@@ -365,18 +373,39 @@ func isTrivialMessage(msg string) bool {
 	return true
 }
 
+// getCachedSnapshot returns the cached system context snapshot if it's still
+// within the TTL and forceRefresh is false. Returns ("", false) if no valid
+// cache entry is available.
+func (a *AIOps) getCachedSnapshot(forceRefresh bool) (string, bool) {
+	cache := a.contextCache
+	if cache == nil {
+		return "", false
+	}
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+	if !forceRefresh && cache.snapshot != "" && time.Since(cache.timestamp) < contextCacheTTL {
+		return cache.snapshot, true
+	}
+	return "", false
+}
+
+// setCachedSnapshot atomically stores a system context snapshot in the cache.
+func (a *AIOps) setCachedSnapshot(snapshot string) {
+	cache := a.contextCache
+	if cache == nil {
+		return
+	}
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+	cache.snapshot = snapshot
+	cache.timestamp = time.Now()
+}
+
 // buildSystemContextSnapshot loads metrics, events and anomalies in parallel
 // and returns a formatted context string. Results are cached with a 5-second TTL.
 func (a *AIOps) buildSystemContextSnapshot(forceRefresh bool) string {
-	cache := a.contextCache
-	if cache != nil {
-		cache.mu.Lock()
-		if !forceRefresh && cache.snapshot != "" && time.Since(cache.timestamp) < contextCacheTTL {
-			snap := cache.snapshot
-			cache.mu.Unlock()
-			return snap
-		}
-		cache.mu.Unlock()
+	if snap, ok := a.getCachedSnapshot(forceRefresh); ok {
+		return snap
 	}
 
 	storage := common.GetStorage()
@@ -447,13 +476,7 @@ func (a *AIOps) buildSystemContextSnapshot(forceRefresh bool) string {
 		strings.Join(eventStrs, "\n"),
 		strings.Join(anomStrs, "\n"))
 
-	// Cache the snapshot
-	if cache != nil {
-		cache.mu.Lock()
-		cache.snapshot = snapshot
-		cache.timestamp = time.Now()
-		cache.mu.Unlock()
-	}
+	a.setCachedSnapshot(snapshot)
 
 	return snapshot
 }
@@ -523,11 +546,7 @@ func (a *AIOps) ChatStream(sessionID, message string) ChatResponse {
 	// Apply a per-request timeout so a hung Ollama process doesn't
 	// block the facade indefinitely. The underlying HTTP client has its
 	// own 60s timeout, but this gives us an extra layer of protection.
-	// Use context.Background() fallback when a.ctx is nil (e.g. in tests).
-	chatParent := a.ctx
-	if chatParent == nil {
-		chatParent = context.Background()
-	}
+	chatParent := a.requestContext()
 	chatCtx, cancel := context.WithTimeout(chatParent, 120*time.Second)
 	defer cancel()
 
@@ -554,12 +573,12 @@ func (a *AIOps) ChatStream(sessionID, message string) ChatResponse {
 
 	if err != nil {
 		common.LogWarn("AI ChatStream failed after %v: %v", chatElapsed, err)
-		a.emitWorkflowEvent(sessionID, "inference", "error", "Ollama error: "+err.Error())
+		a.emitWorkflowEvent(sessionID, "inference", "error", "AI stream generation failed")
 		wailsruntime.EventsEmit(a.ctx, "chat:error", map[string]string{
 			"sessionId": sessionID,
-			"error":     err.Error(),
+			"error":     "AI stream generation failed",
 		})
-		return ChatResponse{Content: "Error: " + err.Error()}
+		return ChatResponse{Content: "AI assistant unavailable. Please verify Ollama is running and try again."}
 	}
 
 	a.emitWorkflowEvent(sessionID, "inference", "completed",
@@ -690,10 +709,7 @@ func (a *AIOps) GenerateReport(sections []string) string {
 		title = aiops.SanitizeInput(title)
 		prompt := "Generate a brief operations report section for: " + title +
 			". Include key metrics and observations based on recent system data."
-		genParent := a.ctx
-		if genParent == nil {
-			genParent = context.Background()
-		}
+		genParent := a.requestContext()
 		genCtx, cancel := context.WithTimeout(genParent, 120*time.Second)
 		defer cancel()
 		genStart := time.Now()
@@ -860,7 +876,9 @@ func (a *AIOps) SetOllamaModel(modelName string) {
 func (a *AIOps) PullModel(modelName string) error {
 	defer common.RecoverPanic()
 	common.LogInfo("AIOps: Pulling model %q", modelName)
-	err := aiops.PullModelWithContext(a.ctx, modelName, func(resp api.ProgressResponse) error {
+	// Use background context so pull survives window lifecycle changes
+	pullCtx := context.Background()
+	err := aiops.PullModelWithContext(pullCtx, modelName, func(resp api.ProgressResponse) error {
 		if a.ctx != nil {
 			percent := 0.0
 			if resp.Total > 0 {
@@ -888,6 +906,232 @@ func (a *AIOps) DeleteModel(modelName string) error {
 	defer common.RecoverPanic()
 	common.LogInfo("AIOps: Deleting model %q", modelName)
 	return aiops.DeleteModelWithContext(a.ctx, modelName)
+}
+
+// ── AI Model Constants ──────────────────────────────────────────────────────
+
+const (
+	// Qwythos-9B is the primary default — a custom GGUF from HuggingFace.
+	// Based on Qwen3.5-9B with 1M context window, Q6_K quant = ~6.85 GiB.
+	qwythosModel = "hf.co/empero-ai/Qwythos-9B-Claude-Mythos-5-1M-GGUF:Q6_K"
+	qwythosLabel = "Qwythos-9B"
+
+	// Qwen3 fallbacks use Ollama-native tags (no HF GGUF URL needed).
+	// All verified via ollama.com/library/qwen3 (33M+ downloads).
+	// See: https://ollama.com/library/qwen3
+	qwen3_8B_Model = "qwen3:8b"
+	qwen3_8B_Label = "Qwen3-8B"
+
+	qwen3_4B_Model = "qwen3:4b"
+	qwen3_4B_Label = "Qwen3-4B"
+
+	// qwen3:1.7b is the nearest to the original "1.5B" target;
+	// there is no qwen3:1.5b on Ollama.
+	qwen3_1_7B_Model = "qwen3:1.7b"
+	qwen3_1_7B_Label = "Qwen3-1.7B"
+
+	qwen3_0_6B_Model = "qwen3:0.6b"
+	qwen3_0_6B_Label = "Qwen3-0.6B"
+)
+
+// analystSystemPrompt is the shared system prompt for the Universal-Ops
+// System Analyst persona. Both SetupOllamaPersona and CreateOpsPersona
+// reference this constant so the prompt text cannot drift between code paths.
+const analystSystemPrompt = `You are the Universal-Ops System Analyst, a high-density technical co-pilot.
+Objective: Synthesize complex telemetry into factual technical briefings.
+
+### Operational Protocol
+1. Use your <thought> block to correlate telemetry history and identify root causes.
+2. Provide a concise technical justification for any proposed action.
+3. Emit action requests using: <action_request name="ACTION_NAME" param1="VALUE" />
+
+### Available Actions
+- kill_process (pid): Stop a specific process.
+- restart_service (name): Restart a system service.
+- disk_cleanup: Initiate temporary file removal.
+- defrag: Optimize primary drive storage.
+
+Anchor all findings in the provided System History and live Metrics.`
+
+// qwen3FallbackForRAM returns the best QWEN 3.x alternative for the available RAM.
+// Thresholds account for OS + app overhead leaving enough headroom for the model.
+func qwen3FallbackForRAM(ramGB float64) (modelName, label string) {
+	switch {
+	case ramGB >= 8:
+		return qwen3_4B_Model, qwen3_4B_Label + " (recommended for " + fmt.Sprintf("%.0fGB RAM", ramGB) + ")"
+	case ramGB >= 4:
+		return qwen3_1_7B_Model, qwen3_1_7B_Label + " (recommended for " + fmt.Sprintf("%.0fGB RAM", ramGB) + ")"
+	default:
+		return qwen3_0_6B_Model, qwen3_0_6B_Label + " (recommended for " + fmt.Sprintf("%.0fGB RAM", ramGB) + ")"
+	}
+}
+
+// GetAISetupRecommendation evaluates the user's system (CPU cores, available RAM)
+// and recommends the best AI model. Qwythos-9B is always preferred when the system
+// can support it (≥12 GB RAM + ≥4 CPU cores). Otherwise a QWEN 3.x fallback is chosen
+// based on available memory. The timestamp is recorded for present-day awareness.
+func (a *AIOps) GetAISetupRecommendation() AISetupRecommendation {
+	defer common.RecoverPanic()
+
+	// 1. Snapshot system resources
+	v, err := mem.VirtualMemory()
+	totalMemGB := float64(0)
+	if err == nil && v != nil {
+		totalMemGB = float64(v.Total) / 1024 / 1024 / 1024
+	}
+	cpuThreads := goruntime.NumCPU()
+
+	rec := AISetupRecommendation{
+		SystemRAMGB:      totalMemGB,
+		SystemCPUThreads: cpuThreads,
+		Timestamp:        time.Now().Format("2006-01-02 15:04:05 MST"),
+	}
+
+	// 2. Can the system host Qwythos-9B (~8 GB weights + ~2 GB context + OS overhead)?
+	canRunQwythos := totalMemGB >= 12 && cpuThreads >= 4
+	rec.CanRunQwythos = canRunQwythos
+
+	// 3. Discover what models Ollama already has
+	ollamaModels := []string{}
+	if status, err := aiops.CheckOllamaWithContext(a.ctx); err == nil && status.Available {
+		ollamaModels = status.AvailableModels
+	}
+
+	// 4. Check if the recommendation already exists locally
+	modelExists := func(name string) bool {
+		for _, m := range ollamaModels {
+			if m == name || strings.HasPrefix(m, name+":") {
+				return true
+			}
+		}
+		return false
+	}
+
+	// 5. Build recommendation
+	if canRunQwythos {
+		rec.RecommendedModel = qwythosModel
+		rec.RecommendedLabel = qwythosLabel
+		rec.QwythosExists = modelExists(qwythosModel)
+		rec.PullRequired = !rec.QwythosExists
+	} else {
+		rec.RecommendedModel, rec.RecommendedLabel = qwen3FallbackForRAM(totalMemGB)
+		rec.PullRequired = !modelExists(rec.RecommendedModel)
+	}
+
+	// 6. Always populate the full QWEN 3.x fallback list (Ollama-native tags)
+	rec.FallbackModels = []ModelOption{
+		{Name: qwen3_8B_Model, Label: qwen3_8B_Label, SizeGB: 5.2},
+		{Name: qwen3_4B_Model, Label: qwen3_4B_Label, SizeGB: 2.5},
+		{Name: qwen3_1_7B_Model, Label: qwen3_1_7B_Label, SizeGB: 1.4},
+		{Name: qwen3_0_6B_Model, Label: qwen3_0_6B_Label, SizeGB: 0.5},
+	}
+
+	common.LogInfo("AIOps: SetupRecommendation → canRunQwythos=%t, pullRequired=%t, model=%s",
+		rec.CanRunQwythos, rec.PullRequired, rec.RecommendedModel)
+	return rec
+}
+
+// SetupOllamaPersona drives the full AI setup flow for the onboarding wizard.
+// It accepts a base model (from GetAISetupRecommendation), pulls it if missing,
+// creates the "universalops" persona in Ollama, persists the model setting,
+// and runs a quick connection test.
+func (a *AIOps) SetupOllamaPersona(baseModel string) error {
+	defer common.RecoverPanic()
+	common.LogInfo("AIOps: SetupOllamaPersona starting (base: %s)", baseModel)
+
+	// 1. Single CheckOllamaWithContext call — checks for universalops persona + base model
+	common.LogInfo("AIOps: Checking Ollama status for persona setup (base: %s)", baseModel)
+	universalopsExists := false
+	baseModelFound := false
+
+	if status, err := aiops.CheckOllamaWithContext(a.ctx); err == nil && status.Available {
+		for _, m := range status.AvailableModels {
+			switch {
+			case m == "universalops" || strings.HasPrefix(m, "universalops:"):
+				universalopsExists = true
+			case m == baseModel || strings.HasPrefix(m, baseModel+":"):
+				baseModelFound = true
+			}
+		}
+	}
+
+	// If universalops already exists, activate and test
+	if universalopsExists {
+		common.LogInfo("AIOps: universalops already exists — activating")
+		aiops.SetModel("universalops")
+		a.SetModelForCapability("analyst", "universalops")
+		return a.testPersonaConnection()
+	}
+
+	// 2. Ensure base model is pulled locally
+	if !baseModelFound {
+		common.LogInfo("AIOps: Base model %s not found — pulling from registry", baseModel)
+		if err := a.PullModel(baseModel); err != nil {
+			return fmt.Errorf("failed to pull base model %s: %w", baseModel, err)
+		}
+	}
+
+	// 3. Write a correct modelfile to data/ for transparency and later editing
+	modelfilePath := filepath.Join(a.dataDir, "universalops.modelfile")
+	modelfileContent := fmt.Sprintf(`FROM %s
+
+# System message for Universal-Ops System Analyst
+SYSTEM """
+%s
+"""
+
+# Parameters for technical precision and consistency
+PARAMETER temperature 0.1
+PARAMETER num_ctx 32768
+PARAMETER stop "</action_request>"
+PARAMETER stop "──"
+`, baseModel, analystSystemPrompt)
+	if err := os.WriteFile(modelfilePath, []byte(modelfileContent), 0644); err != nil {
+		common.LogWarn("AIOps: failed to write modelfile: %v", err)
+	}
+
+	// 4. Create the universalops persona via the Ollama SDK
+	common.LogInfo("AIOps: Creating universalops model from %s", baseModel)
+
+	params := map[string]any{
+		"temperature": 0.1,
+		"num_ctx":     32768,
+		"stop":        []string{"</action_request>", "──"},
+	}
+
+	if err := aiops.CreateModelWithContext(a.ctx, "universalops", baseModel, analystSystemPrompt, params); err != nil {
+		return fmt.Errorf("persona creation failed for base %s: %w", baseModel, err)
+	}
+
+	// 5. Persist the model setting so future sessions remember it
+	a.SetModelForCapability("analyst", "universalops")
+
+	// 6. Activate
+	aiops.SetModel("universalops")
+
+	// 7. Quick sanity check — can the model respond?
+	if err := a.testPersonaConnection(); err != nil {
+		// Model was created but inference is broken — surface the error with context
+		return fmt.Errorf("model created but connection verification failed: %w", err)
+	}
+
+	common.LogInfo("AIOps: SetupOllamaPersona completed successfully (base: %s)", baseModel)
+	return nil
+}
+
+// testPersonaConnection sends a minimal chat to verify the active model can respond.
+func (a *AIOps) testPersonaConnection() error {
+	resp, err := aiops.ChatWithModelAndContext(a.ctx, []aiops.ChatMessage{
+		{Role: "user", Content: "Respond with exactly: OK"},
+	}, "universalops")
+	if err != nil {
+		return fmt.Errorf("persona connection test failed — Ollama may be overloaded or the model incompatible: %w", err)
+	}
+	if resp == "" {
+		return fmt.Errorf("persona returned empty response — the model may not be fully loaded")
+	}
+	common.LogInfo("AIOps: Persona connection test passed (response: %.60s)", resp)
+	return nil
 }
 
 // CreateOpsPersona creates or activates the specialized 'universalops' model from the local modelfile.
@@ -922,26 +1166,12 @@ func (a *AIOps) CreateOpsPersona() error {
 
 	// 2. Ensure universalops.modelfile exists in data/
 	if _, err := os.Stat(modelfilePath); os.IsNotExist(err) {
-		common.LogInfo("AIOps: universalops.modelfile missing in data/. Creating default (MiniCPM-Thinking).")
-		content := `FROM hf.co/GnLOLot/MiniCPM5-1B-Claude-Opus-Fable5-V2-Thinking-GGUF:Q8_0
+		common.LogInfo("AIOps: universalops.modelfile missing in data/. Creating default (Qwythos-9B).")
+		content := fmt.Sprintf(`FROM %s
 
 # System message for Universal-Ops System Analyst
 SYSTEM """
-You are the Universal-Ops System Analyst, a high-density technical co-pilot.
-Objective: Synthesize complex telemetry into factual technical briefings.
-
-### Operational Protocol
-1. Use your <thought> block to correlate telemetry history and identify root causes.
-2. Provide a concise technical justification for any proposed action.
-3. Emit action requests using: <action_request name="ACTION_NAME" param1="VALUE" />
-
-### Available Actions
-- kill_process (pid): Stop a specific process.
-- restart_service (name): Restart a system service.
-- disk_cleanup: Initiate temporary file removal.
-- defrag: Optimize primary drive storage.
-
-Anchor all findings in the provided System History and live Metrics.
+%s
 """
 
 # Parameters for technical precision and consistency
@@ -949,7 +1179,7 @@ PARAMETER temperature 0.1
 PARAMETER num_ctx 32768
 PARAMETER stop "</action_request>"
 PARAMETER stop "──"
-`
+`, qwythosModel, analystSystemPrompt)
 		if err := os.WriteFile(modelfilePath, []byte(content), 0644); err != nil {
 			common.LogWarn("AIOps: Failed to create modelfile: %v", err)
 		}
@@ -958,10 +1188,10 @@ PARAMETER stop "──"
 	// 3. Parse Modelfile
 	config, err := aiops.ParseModelfile(modelfilePath)
 	if err != nil {
-		common.LogWarn("AIOps: Failed to parse Modelfile: %v. Using hardcoded defaults (MiniCPM).", err)
+		common.LogWarn("AIOps: Failed to parse Modelfile: %v. Using hardcoded defaults (Qwythos-9B).", err)
 		config = &aiops.ModelfileConfig{
-			From:   "hf.co/GnLOLot/MiniCPM5-1B-Claude-Opus-Fable5-V2-Thinking-GGUF:Q8_0",
-			System: "You are the Universal-Ops System Analyst, a high-density technical co-pilot.\nObjective: Synthesize complex telemetry into factual technical briefings.\nUse your <thought> block to correlate telemetry history and identify root causes.",
+			From:   qwythosModel,
+			System: analystSystemPrompt,
 			Parameters: map[string]any{
 				"temperature": 0.1,
 				"num_ctx":     32768,
@@ -983,7 +1213,9 @@ PARAMETER stop "──"
 		// If creation fails because base is missing, attempt an explicit pull
 		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "pull") {
 			common.LogInfo("AIOps: Base model missing. Attempting explicit pull of %s", config.From)
-			_ = a.PullModel(config.From)
+			if pErr := a.PullModel(config.From); pErr != nil {
+				common.LogWarn("AIOps: Pull of base model %s failed: %v", config.From, pErr)
+			}
 			// Retry creation after pull attempt
 			err = aiops.CreateModelWithContext(a.ctx, "universalops", config.From, config.System, config.Parameters)
 		}
@@ -1364,10 +1596,7 @@ If no changes are needed, return the current settings in the payload.`,
 		settings["refreshInterval"], settings["pingCount"], settings["dnsTimeout"])
 
 	// 2. Call AI with Optimizer model override (with per-request timeout)
-	optParent := a.ctx
-	if optParent == nil {
-		optParent = context.Background()
-	}
+	optParent := a.requestContext()
 	optCtx, cancel := context.WithTimeout(optParent, 120*time.Second)
 	defer cancel()
 
@@ -1380,7 +1609,7 @@ If no changes are needed, return the current settings in the payload.`,
 
 	if err != nil {
 		common.LogWarn("RequestOptimization failed after %v: %v", optElapsed, err)
-		return ChatResponse{Content: "Optimization analysis failed: " + err.Error()}
+		return ChatResponse{Content: "Optimization analysis unavailable. Please check that Ollama is running."}
 	}
 
 	common.LogInfo("RequestOptimization completed in %v", optElapsed)
@@ -1485,7 +1714,8 @@ Keep it technical and focused on system/network/security ops.`, objective)
 	}, a.OptimizerModel)
 
 	if err != nil {
-		return ChatResponse{Content: "Workflow planning failed: " + err.Error()}
+		common.LogWarn("RequestWorkflowPlan failed: %v", err)
+		return ChatResponse{Content: "Workflow planning unavailable. Please check that Ollama is running."}
 	}
 
 	// Simple JSON Extraction

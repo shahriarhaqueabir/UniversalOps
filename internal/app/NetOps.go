@@ -670,6 +670,97 @@ func (n *NetOps) SaveTopology(data NetworkTopologyData) bool {
 		})
 	}
 	topologyEngine.SetTopology(topo)
+
+	// Persist to SQLite for durability across restarts
+	if storage := common.GetStorage(); storage != nil {
+		devRows := make([]common.TopologyDeviceRow, len(topo.Devices))
+		for i, d := range topo.Devices {
+			devRows[i] = common.TopologyDeviceRow{
+				ID:       d.ID,
+				Type:     string(d.Type),
+				Label:    d.Label,
+				IP:       d.IP,
+				MAC:      d.MAC,
+				Subnet:   d.Subnet,
+				Vendor:   d.Vendor,
+				Hostname: d.Hostname,
+				Status:   string(d.Status),
+				X:        d.X,
+				Y:        d.Y,
+				Online:   d.Online,
+				Notes:    d.Notes,
+			}
+		}
+		connRows := make([]common.TopologyConnectionRow, len(topo.Connections))
+		for i, c := range topo.Connections {
+			connRows[i] = common.TopologyConnectionRow{
+				ID:       c.ID,
+				SourceID: c.SourceID,
+				TargetID: c.TargetID,
+				Type:     string(c.Type),
+				Label:    c.Label,
+				Metric:   c.Metric,
+			}
+		}
+		if err := storage.SaveTopologyData(devRows, connRows); err != nil {
+			common.LogWarn("NETOPS | SaveTopology: failed to persist topology: %v", err)
+		}
+	}
+
+	return true
+}
+
+// LoadTopology loads persisted topology from storage and seeds the in-memory engine.
+// Returns true if topology was found and loaded.
+func (n *NetOps) LoadTopology() bool {
+	defer common.RecoverPanic()
+	storage := common.GetStorage()
+	if storage == nil {
+		return false
+	}
+
+	devRows, connRows, err := storage.LoadTopologyData()
+	if err != nil {
+		common.LogWarn("NETOPS | LoadTopology: failed to load: %v", err)
+		return false
+	}
+
+	if len(devRows) == 0 {
+		return false
+	}
+
+	topo := netops.GraphTopology{
+		Devices:     make([]netops.TopologyDevice, 0, len(devRows)),
+		Connections: make([]netops.TopologyConnection, 0, len(connRows)),
+	}
+	for _, d := range devRows {
+		topo.Devices = append(topo.Devices, netops.TopologyDevice{
+			ID:       d.ID,
+			Type:     netops.DeviceType(d.Type),
+			Label:    d.Label,
+			IP:       d.IP,
+			MAC:      d.MAC,
+			Subnet:   d.Subnet,
+			Vendor:   d.Vendor,
+			Hostname: d.Hostname,
+			Status:   netops.TopologyStatus(d.Status),
+			X:        d.X,
+			Y:        d.Y,
+			Online:   d.Online,
+			Notes:    d.Notes,
+		})
+	}
+	for _, c := range connRows {
+		topo.Connections = append(topo.Connections, netops.TopologyConnection{
+			ID:       c.ID,
+			SourceID: c.SourceID,
+			TargetID: c.TargetID,
+			Type:     netops.ConnectionType(c.Type),
+			Label:    c.Label,
+			Metric:   c.Metric,
+		})
+	}
+	topologyEngine.SetTopology(topo)
 	return true
 }
 

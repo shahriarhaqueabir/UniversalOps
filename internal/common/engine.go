@@ -456,7 +456,29 @@ func (e *EngineLoop) autonomousAudit(workflowID, reason string) {
 			e.auditMu.Unlock()
 		}()
 
-		reportID, err := e.invoker.TriggerWorkflow(workflowID)
+		// Timeout prevents hanging if Ollama stalls during workflow execution
+		type workflowResult struct {
+			reportID string
+			err      error
+		}
+		resultCh := make(chan workflowResult, 1)
+
+		go func() {
+			id, err := e.invoker.TriggerWorkflow(workflowID)
+			resultCh <- workflowResult{id, err}
+		}()
+
+		var reportID string
+		var err error
+		select {
+		case res := <-resultCh:
+			reportID = res.reportID
+			err = res.err
+		case <-time.After(30 * time.Second):
+			LogInfo("Autonomous audit timed out for workflow %s", workflowID)
+			return
+		}
+
 		if err == nil && e.eventBus != nil {
 			e.eventBus.Emit(NewEventWithMeta(
 				CatAlert, EventInfo, "engine",

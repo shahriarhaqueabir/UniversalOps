@@ -432,6 +432,43 @@ func (s *Storage) migrate() error {
 		}
 	}
 
+	// Version 5: Add network topology tables.
+	if currentVersion < 5 {
+		v5Queries := []string{
+			`INSERT OR IGNORE INTO schema_versions (version) VALUES (5)`,
+			`CREATE TABLE IF NOT EXISTS topology_devices (
+				id TEXT PRIMARY KEY,
+				type TEXT NOT NULL DEFAULT 'unknown',
+				label TEXT NOT NULL,
+				ip TEXT NOT NULL DEFAULT '',
+				mac TEXT NOT NULL DEFAULT '',
+				subnet TEXT NOT NULL DEFAULT '',
+				vendor TEXT NOT NULL DEFAULT '',
+				hostname TEXT NOT NULL DEFAULT '',
+				status TEXT NOT NULL DEFAULT 'healthy',
+				x REAL NOT NULL DEFAULT 0,
+				y REAL NOT NULL DEFAULT 0,
+				online INTEGER NOT NULL DEFAULT 0,
+				notes TEXT NOT NULL DEFAULT '',
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			)`,
+			`CREATE TABLE IF NOT EXISTS topology_connections (
+				id TEXT PRIMARY KEY,
+				source_id TEXT NOT NULL,
+				target_id TEXT NOT NULL,
+				type TEXT NOT NULL DEFAULT 'ethernet',
+				label TEXT NOT NULL DEFAULT '',
+				metric INTEGER NOT NULL DEFAULT 0,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			)`,
+		}
+		for _, q := range v5Queries {
+			if _, err := s.db.Exec(q); err != nil {
+				return fmt.Errorf("migration v5: %w", err)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -452,15 +489,16 @@ func (s *Storage) writerLoop() {
 		case w, ok := <-s.metricsCh:
 			if !ok {
 				// Drain remaining log items before flushing
+			drainLogsLoop:
 				for i := 0; i < 1000; i++ {
 					select {
 					case l, ok2 := <-s.logsCh:
 						if !ok2 {
-							break
+							break drainLogsLoop
 						}
 						logsBatch = append(logsBatch, l)
 					default:
-						break
+						break drainLogsLoop
 					}
 				}
 				s.insertMetricsBatch(metricsBatch)
@@ -479,15 +517,16 @@ func (s *Storage) writerLoop() {
 		case l, ok := <-s.logsCh:
 			if !ok {
 				// Drain remaining metric items before flushing
+			drainMetricsLoop:
 				for i := 0; i < 1000; i++ {
 					select {
 					case w, ok2 := <-s.metricsCh:
 						if !ok2 {
-							break
+							break drainMetricsLoop
 						}
 						metricsBatch = append(metricsBatch, w)
 					default:
-						break
+						break drainMetricsLoop
 					}
 				}
 				s.insertMetricsBatch(metricsBatch)
@@ -602,6 +641,7 @@ func (s *Storage) insertMetricsBatch(batch []MetricWrite) {
 		LogInfo("Batch insert metrics begin tx: %v", err)
 		return
 	}
+	defer func() { _ = tx.Rollback() }()
 
 	stmt := tx.Stmt(s.insertStmt)
 	for _, m := range batch {
@@ -612,7 +652,6 @@ func (s *Storage) insertMetricsBatch(batch []MetricWrite) {
 
 	if err := tx.Commit(); err != nil {
 		LogInfo("Batch insert metrics commit: %v", err)
-		tx.Rollback()
 		return
 	}
 
@@ -634,6 +673,7 @@ func (s *Storage) insertLogsBatch(batch []LogWrite) {
 		LogInfo("Batch insert logs begin tx: %v", err)
 		return
 	}
+	defer func() { _ = tx.Rollback() }()
 
 	query := `INSERT INTO logs (level, module, message, timestamp) VALUES (?, ?, ?, ?)`
 	for _, l := range batch {
@@ -644,7 +684,6 @@ func (s *Storage) insertLogsBatch(batch []LogWrite) {
 
 	if err := tx.Commit(); err != nil {
 		LogInfo("Batch insert logs commit: %v", err)
-		tx.Rollback()
 		return
 	}
 }
@@ -1982,4 +2021,121 @@ func boolToInt(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+// ── Topology Persistence ──────────────────────────────────────────────────
+
+// TopologyDeviceRow mirrors netops.TopologyDevice for SQL storage.
+type TopologyDeviceRow struct {
+	ID       string  `json:"id"`
+	Type     string  `json:"type"`
+	Label    string  `json:"label"`
+	IP       string  `json:"ip"`
+	MAC      string  `json:"mac"`
+	Subnet   string  `json:"subnet"`
+	Vendor   string  `json:"vendor"`
+	Hostname string  `json:"hostname"`
+	Status   string  `json:"status"`
+	X        float64 `json:"x"`
+	Y        float64 `json:"y"`
+	Online   bool    `json:"online"`
+	Notes    string  `json:"notes"`
+}
+
+// TopologyConnectionRow mirrors netops.TopologyConnection for SQL storage.
+type TopologyConnectionRow struct {
+	ID       string `json:"id"`
+	SourceID string `json:"source_id"`
+	TargetID string `json:"target_id"`
+	Type     string `json:"type"`
+	Label    string `json:"label"`
+	Metric   int    `json:"metric"`
+}
+
+// SaveTopologyData replaces all topology devices and connections in a single transaction.
+// This is an upsert-replace strategy: clear old data, insert new.
+func (s *Storage) SaveTopologyData(devices []TopologyDeviceRow, connections []TopologyConnectionRow) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("save topology begin tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(`DELETE FROM topology_devices`); err != nil {
+		return fmt.Errorf("save topology clear devices: %w", err)
+	}
+	if _, err := tx.Exec(`DELETE FROM topology_connections`); err != nil {
+		return fmt.Errorf("save topology clear connections: %w", err)
+	}
+
+	devStmt, err := tx.Prepare(`INSERT INTO topology_devices (id, type, label, ip, mac, subnet, vendor, hostname, status, x, y, online, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	if err != nil {
+		return fmt.Errorf("save topology prepare devices: %w", err)
+	}
+	defer devStmt.Close()
+
+	for _, d := range devices {
+		online := 0
+		if d.Online {
+			online = 1
+		}
+		if _, err := devStmt.Exec(d.ID, d.Type, d.Label, d.IP, d.MAC, d.Subnet, d.Vendor, d.Hostname, d.Status, d.X, d.Y, online, d.Notes); err != nil {
+			return fmt.Errorf("save topology device %s: %w", d.ID, err)
+		}
+	}
+
+	connStmt, err := tx.Prepare(`INSERT INTO topology_connections (id, source_id, target_id, type, label, metric) VALUES (?, ?, ?, ?, ?, ?)`)
+	if err != nil {
+		return fmt.Errorf("save topology prepare connections: %w", err)
+	}
+	defer connStmt.Close()
+
+	for _, c := range connections {
+		if _, err := connStmt.Exec(c.ID, c.SourceID, c.TargetID, c.Type, c.Label, c.Metric); err != nil {
+			return fmt.Errorf("save topology connection %s: %w", c.ID, err)
+		}
+	}
+
+	return tx.Commit()
+}
+
+// LoadTopologyData reads all topology devices and connections from storage.
+func (s *Storage) LoadTopologyData() (devices []TopologyDeviceRow, connections []TopologyConnectionRow, err error) {
+	devRows, err := s.db.Query(`SELECT id, type, label, ip, mac, subnet, vendor, hostname, status, x, y, online, notes FROM topology_devices`)
+	if err != nil {
+		return nil, nil, fmt.Errorf("load topology devices: %w", err)
+	}
+	defer devRows.Close()
+
+	for devRows.Next() {
+		var d TopologyDeviceRow
+		var online int
+		if err := devRows.Scan(&d.ID, &d.Type, &d.Label, &d.IP, &d.MAC, &d.Subnet, &d.Vendor, &d.Hostname, &d.Status, &d.X, &d.Y, &online, &d.Notes); err != nil {
+			return nil, nil, fmt.Errorf("load topology scan device: %w", err)
+		}
+		d.Online = online != 0
+		devices = append(devices, d)
+	}
+	if devices == nil {
+		devices = []TopologyDeviceRow{}
+	}
+
+	connRows, err := s.db.Query(`SELECT id, source_id, target_id, type, label, metric FROM topology_connections`)
+	if err != nil {
+		return nil, nil, fmt.Errorf("load topology connections: %w", err)
+	}
+	defer connRows.Close()
+
+	for connRows.Next() {
+		var c TopologyConnectionRow
+		if err := connRows.Scan(&c.ID, &c.SourceID, &c.TargetID, &c.Type, &c.Label, &c.Metric); err != nil {
+			return nil, nil, fmt.Errorf("load topology scan connection: %w", err)
+		}
+		connections = append(connections, c)
+	}
+	if connections == nil {
+		connections = []TopologyConnectionRow{}
+	}
+
+	return devices, connections, nil
 }

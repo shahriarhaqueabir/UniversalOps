@@ -231,17 +231,17 @@ func (c *OllamaClient) CheckStatus(ctx context.Context) (*OllamaStatus, error) {
 		}
 	}
 
-	if !found && len(listResp.Models) > 0 {
-		currentModel = listResp.Models[0].Name
+	// When the configured model isn't found in Ollama, do NOT silently
+	// overwrite effectiveModel with the first available model (e.g., qwen2.5:7b).
+	// Keeping the configured value lets the frontend detect the persona is
+	// missing and show the "Initialize Persona" action button.
+	if found {
+		c.SetModel(currentModel)
 	}
 
-	c.SetModel(currentModel)
-
 	version := "detected"
-	if len(listResp.Models) > 0 {
-		if v := listResp.Models[0].Details.Family; v != "" {
-			version = v
-		}
+	if v, err := c.api.Version(ctx); err == nil && v != "" {
+		version = v
 	}
 
 	return &OllamaStatus{
