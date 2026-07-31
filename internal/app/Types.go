@@ -945,6 +945,27 @@ type OllamaProgress struct {
 	Completed int64   `json:"completed"`
 }
 
+// AISetupRecommendation holds the AI model onboarding recommendation
+// based on system capabilities and available Ollama models.
+type AISetupRecommendation struct {
+	CanRunQwythos    bool          `json:"can_run_qwythos"`
+	RecommendedModel string        `json:"recommended_model"`
+	RecommendedLabel string        `json:"recommended_label"`
+	QwythosExists    bool          `json:"qwythos_exists"`
+	PullRequired     bool          `json:"pull_required"`
+	SystemRAMGB      float64       `json:"system_ram_gb"`
+	SystemCPUThreads int           `json:"system_cpu_threads"`
+	Timestamp        string        `json:"timestamp"`
+	FallbackModels   []ModelOption `json:"fallback_models,omitempty"`
+}
+
+// ModelOption describes a fallback AI model option.
+type ModelOption struct {
+	Name   string  `json:"name"`
+	Label  string  `json:"label"`
+	SizeGB float64 `json:"size_gb"`
+}
+
 // AnomalyInfo holds a detected anomaly.
 type AnomalyInfo struct {
 	Metric    string  `json:"metric"`

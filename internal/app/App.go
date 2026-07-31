@@ -13,6 +13,7 @@ import (
 	"time"
 
 	goruntime "runtime"
+	godebug "runtime/debug"
 
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -624,7 +625,20 @@ func (a *App) OpenFileDialog(title string, filters []string) (string, error) {
 
 // ReadTextFile reads the content of a text file and returns it as a string.
 func (a *App) ReadTextFile(path string) (string, error) {
-	content, err := os.ReadFile(path)
+	// Resolve to absolute path to prevent path traversal
+	cleanPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", fmt.Errorf("invalid path: %w", err)
+	}
+	// Only allow reading regular files (not directories)
+	info, err := os.Stat(cleanPath)
+	if err != nil {
+		return "", err
+	}
+	if info.IsDir() {
+		return "", fmt.Errorf("cannot read directory: %s", path)
+	}
+	content, err := os.ReadFile(cleanPath)
 	if err != nil {
 		return "", err
 	}
@@ -689,7 +703,8 @@ func (a *App) startProcessWorker() {
 				}
 				tickCount++
 				if tickCount%12 == 0 { // Every 60s
-					goruntime.GC()
+					goruntime.GC()         // reclaim cycles
+					godebug.FreeOSMemory() // release freed memory back to OS
 				}
 			case <-memTicker.C:
 				var m goruntime.MemStats

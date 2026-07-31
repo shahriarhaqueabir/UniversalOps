@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 )
@@ -705,5 +706,91 @@ func TestEvaluateOne_TimestampFormat(t *testing.T) {
 	_, err = time.Parse(time.RFC3339, result.EvaluatedAt)
 	if err != nil {
 		t.Errorf("EvaluatedAt is not RFC3339: %q — %v", result.EvaluatedAt, err)
+	}
+}
+
+// ── evaluateOne — invalid comparison operator ────────────────────────────
+
+func TestEvaluateOne_InvalidComparison(t *testing.T) {
+	s := newTestStorage(t)
+	engine := NewSLOEngine(s)
+
+	// An unknown comparison ("eq") should silently yield 0% compliance
+	// since the switch has no default case.
+	slo := SLODefinition{
+		ID: "slo-invalid-op", Name: "Invalid Op", Metric: "invalid_op",
+		Comparison: "eq", Threshold: 50, TargetPct: 100,
+		WindowDays: 7, Enabled: true,
+	}
+
+	seedMetric(t, s, "invalid_op", 50) // equal to threshold but "eq" is unknown
+	seedMetric(t, s, "invalid_op", 30) // below threshold
+	seedMetric(t, s, "invalid_op", 10) // below threshold
+
+	result, err := engine.evaluateOne(slo)
+	if err != nil {
+		t.Fatalf("evaluateOne invalid comparison: %v", err)
+	}
+	if result.CompliantPct != 0.0 {
+		t.Errorf("expected 0%% compliant for unknown comparison %q, got %.1f",
+			slo.Comparison, result.CompliantPct)
+	}
+	if result.Met {
+		t.Errorf("expected Met=false for unknown comparison %q", slo.Comparison)
+	}
+	if result.Samples != 3 {
+		t.Errorf("expected 3 samples, got %d", result.Samples)
+	}
+}
+
+// ── EvaluateAll — storage error propagation ───────────────────────────────
+
+func TestEvaluateAll_ListError(t *testing.T) {
+	s := newTestStorage(t)
+	engine := NewSLOEngine(s)
+
+	// Seed one valid SLO and metric
+	seedSLO(t, s, SLODefinition{
+		ID: "slo-survivor", Name: "Survivor", Metric: "survivor",
+		Comparison: "lt", Threshold: 80, TargetPct: 100,
+		WindowDays: 7, Enabled: true,
+	})
+	seedMetric(t, s, "survivor", 50)
+
+	// Close the storage to trigger a DB error on ListSLODefinitions
+	s.Close()
+
+	_, err := engine.EvaluateAll()
+	if err == nil {
+		t.Fatal("expected error from EvaluateAll after storage close, got nil")
+	}
+	// Verify the error mentions the root cause
+	if !strings.Contains(err.Error(), "list SLOs") {
+		t.Errorf("expected error wrapping 'list SLOs', got: %v", err)
+	}
+}
+
+// ── evaluateOne — storage error ──────────────────────────────────────────
+
+func TestEvaluateOne_StorageError(t *testing.T) {
+	s := newTestStorage(t)
+	engine := NewSLOEngine(s)
+
+	slo := SLODefinition{
+		ID: "slo-db-error", Name: "DB Error", Metric: "db_error_metric",
+		Comparison: "lt", Threshold: 80, TargetPct: 100,
+		WindowDays: 7, Enabled: true,
+	}
+	seedMetric(t, s, "db_error_metric", 50)
+
+	// Close storage so GetMetricValuesInWindow fails
+	s.Close()
+
+	_, err := engine.evaluateOne(slo)
+	if err == nil {
+		t.Fatal("expected error from evaluateOne after storage close, got nil")
+	}
+	if !strings.Contains(err.Error(), "get metric values") {
+		t.Errorf("expected error wrapping 'get metric values', got: %v", err)
 	}
 }

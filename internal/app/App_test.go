@@ -5,25 +5,17 @@ import (
 	"time"
 
 	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewApp(t *testing.T) {
 	a := NewApp()
-	if a == nil {
-		t.Fatal("NewApp() returned nil")
-	}
-	if a.pipeline == nil {
-		t.Error("pipeline is nil")
-	}
-	if a.alerts == nil {
-		t.Error("alerts is nil")
-	}
-	if a.SysOps == nil {
-		t.Error("SysOps is nil")
-	}
-	if a.NetOps == nil {
-		t.Error("NetOps is nil")
-	}
+	require.NotNil(t, a, "NewApp() returned nil")
+	assert.NotNil(t, a.pipeline, "pipeline is nil")
+	assert.NotNil(t, a.alerts, "alerts is nil")
+	assert.NotNil(t, a.SysOps, "SysOps is nil")
+	assert.NotNil(t, a.NetOps, "NetOps is nil")
 }
 
 func TestGetAppInfo(t *testing.T) {
@@ -31,12 +23,8 @@ func TestGetAppInfo(t *testing.T) {
 	a.startedAt = time.Now().Add(-1 * time.Hour)
 	info := a.GetAppInfo()
 
-	if info.Name != "Universal-Ops Operations Platform" {
-		t.Errorf("Name = %q, want %q", info.Name, "Universal-Ops Operations Platform")
-	}
-	if info.Uptime == "" {
-		t.Error("Uptime is empty")
-	}
+	assert.Equal(t, "Universal-Ops Operations Platform", info.Name)
+	assert.NotEmpty(t, info.Uptime, "Uptime should not be empty")
 }
 
 func TestSafeLastN(t *testing.T) {
@@ -56,9 +44,7 @@ func TestSafeLastN(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := safeLastN(values, tt.n)
-			if len(got) != tt.want {
-				t.Errorf("len(safeLastN) = %d, want %d", len(got), tt.want)
-			}
+			assert.Len(t, got, tt.want)
 		})
 	}
 }
@@ -78,9 +64,7 @@ func TestLastValue(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := lastValue(tt.values)
-			if got != tt.want {
-				t.Errorf("lastValue() = %v, want %v", got, tt.want)
-			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -99,9 +83,7 @@ func TestTrendDirectionString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.want, func(t *testing.T) {
 			got := trendDirectionString(tt.dir)
-			if got != tt.want {
-				t.Errorf("trendDirectionString(%v) = %q, want %q", tt.dir, got, tt.want)
-			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -136,13 +118,7 @@ func TestConvertAlert(t *testing.T) {
 
 	got := convertAlert(alert)
 
-	if got.ID != alert.ID {
-		t.Errorf("ID = %q, want %q", got.ID, alert.ID)
-	}
-	if got.Level != "CRITICAL" {
-		t.Errorf("Level = %q, want %q", got.Level, "CRITICAL")
-	}
-	if got.Timestamp == "" {
-		t.Error("Timestamp is empty")
-	}
+	assert.Equal(t, alert.ID, got.ID)
+	assert.Equal(t, "CRITICAL", got.Level)
+	assert.NotEmpty(t, got.Timestamp, "Timestamp should not be empty")
 }
