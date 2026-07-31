@@ -5,6 +5,10 @@ on:
     tags:
       - "v*"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     timeout-minutes: 60
@@ -28,9 +32,9 @@ jobs:
           cache: "npm"
           cache-dependency-path: cmd/opsforall-gui/frontend/package-lock.json
 
-      - name: Install Wails CLI
+      - name: Install Wails CLI (pinned to v2 — matches go.mod; @latest drifts to v3)
         run: |
-          go install github.com/wailsapp/wails/v2/cmd/wails@latest
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.13.0
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
         shell: bash
 
@@ -91,9 +95,9 @@ jobs:
           cache: "npm"
           cache-dependency-path: cmd/opsforall-gui/frontend/package-lock.json
 
-      - name: Install Wails CLI
+      - name: Install Wails CLI (pinned to v2 — matches go.mod; @latest drifts to v3)
         run: |
-          go install github.com/wailsapp/wails/v2/cmd/wails@latest
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.13.0
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
         shell: bash
 
@@ -101,12 +105,19 @@ jobs:
         run: cd cmd/opsforall-gui/frontend && npm ci
         shell: bash
 
+      - name: Compute release version (strip leading v from git tag)
+        id: ver
+        shell: pwsh
+        run: |
+          $ver = "${{ github.ref_name }}".TrimStart('v')
+          Write-Host "VER=$ver" >> $env:GITHUB_OUTPUT
+
       - name: Build standalone executable
-        run: wails build -platform windows/amd64 -o universal-ops-${{ github.ref_name }}-windows-amd64.exe
+        run: wails build -platform windows/amd64 -o universal-ops-${{ steps.ver.outputs.ver }}-windows-amd64.exe
         shell: bash
 
       - name: Build NSIS installer
-        run: wails build -platform windows/amd64 -nsis -o universal-ops-${{ github.ref_name }}-windows-amd64-installer
+        run: wails build -platform windows/amd64 -nsis -o universal-ops-${{ steps.ver.outputs.ver }}-windows-amd64-installer
         shell: bash
 
       - name: Generate individual checksums
@@ -138,29 +149,32 @@ jobs:
           name: windows-release
           path: windows-release
 
-      - name: Generate checksums
+      - name: Compute version and SHA256
+        id: ver
+        shell: pwsh
         run: |
-          echo "## Checksums" > checksums.txt
-          sha256sum windows-release/* >> checksums.txt
+          $ver = "${{ github.ref_name }}".TrimStart('v')
+          $exe = Get-ChildItem "windows-release" -Filter "universal-ops-$ver-windows-amd64.exe" | Select-Object -First 1
+          if (-not $exe) { throw "Expected artifact universal-ops-$ver-windows-amd64.exe not found" }
+          $sha = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          Write-Host "VER=$ver" >> $env:GITHUB_OUTPUT
+          Write-Host "SHA256=$sha" >> $env:GITHUB_OUTPUT
+
+      - name: Generate Scoop manifest (real hash injected)
+        shell: pwsh
+        run: |
+          & scripts/package-scoop.ps1 -Version "${{ github.ref_name }}" -Sha256 "${{ steps.ver.outputs.sha256 }}"
+
+      - name: Generate checksums (release assets only — skip .sha256 sidecars)
+        run: |
+          find windows-release -type f ! -name '*.sha256' -exec sha256sum {} + > checksums.txt
           cat checksums.txt
-
-      - name: Generate Homebrew formula
-        shell: pwsh
-        run: |
-          $ver = "${{ github.ref_name }}" -replace '^v', ''
-          & scripts/package-homebrew.ps1 -Version $ver
-
-      - name: Generate Scoop manifest
-        shell: pwsh
-        run: |
-          $ver = "${{ github.ref_name }}" -replace '^v', ''
-          & scripts/package-scoop.ps1 -Version $ver
 
       - name: Create release
         run: |
           gh release create "${{ github.ref_name }}" \
-            --title "${{ github.ref_name }}" \
+            --title "UniversalOps ${{ github.ref_name }}" \
             --generate-notes \
-            windows-release/* checksums.txt universal-ops.rb universal-ops.json
+            windows-release/* checksums.txt universal-ops.json
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}

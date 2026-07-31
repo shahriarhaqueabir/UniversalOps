@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     timeout-minutes: 60
@@ -41,14 +45,14 @@ jobs:
           cache: "npm"
           cache-dependency-path: cmd/opsforall-gui/frontend/package-lock.json
 
-      - name: Install Wails CLI
+      - name: Install Wails CLI (pinned to v2 — matches go.mod; @latest drifts to v3)
         run: |
-          go install github.com/wailsapp/wails/v2/cmd/wails@latest
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.13.0
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
         shell: bash
 
-      - name: Install golangci-lint (Build from source for Go 1.26 compatibility)
-        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+      - name: Install golangci-lint (pinned v1.x — .golangci.yml is v1 config; @latest is now v2)
+        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
         shell: bash
 
       - name: Create placeholder for embed
