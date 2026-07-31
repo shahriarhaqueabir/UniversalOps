@@ -23,7 +23,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useBackend } from '@/hooks/useBackend'
+import { useBackend, getRuntime } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { DependencyChecklist } from '../onboarding/DependencyChecklist'
 import type {
@@ -33,6 +33,8 @@ import type {
   SafetyPolicy,
   OnboardingConfig,
   OnboardingStep,
+  AISetupRecommendation,
+  OllamaProgress,
 } from '@/types/onboarding'
 import { ONBOARDING_STEPS } from '@/types/onboarding'
 
@@ -40,7 +42,6 @@ import { ONBOARDING_STEPS } from '@/types/onboarding'
 
 const MAX_NAME_LENGTH = 32
 const NAME_PATTERN = /^[a-zA-Z0-9\s_-]+$/
-const AI_MODEL_BASE = 'hf.co/GnLOLot/MiniCPM5-1B-Claude-Opus-Fable5-V2-Thinking-GGUF:Q8_0'
 const DEFAULT_CONFIG: OnboardingConfig = {
   companionName: 'Hawk',
   storagePath: 'data',
@@ -81,6 +82,8 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
   const [config, setConfig] = useState<OnboardingConfig>(DEFAULT_CONFIG)
   const [setupRunning, setSetupRunning] = useState(false)
   const [snapshotDone, setSnapshotDone] = useState(false)
+  const [aiRecommendation, setAiRecommendation] = useState<AISetupRecommendation | null>(null)
+  const [aiProgress, setAiProgress] = useState<OllamaProgress | null>(null)
   const [isCapturing, setIsCapturing] = useState(false)
   const [nameError, setNameError] = useState('')
   const [discoveryError, setDiscoveryError] = useState(false)
@@ -106,6 +109,15 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
       return () => clearTimeout(timer)
     }
   }, [step, isLastStep])
+
+  // ── Subscribe to Ollama pull progress ──
+  useEffect(() => {
+    const runtime = getRuntime()
+    if (!runtime?.EventsOn) return
+    const handler = (p: any) => setAiProgress(p as OllamaProgress)
+    runtime.EventsOn('ollama:progress', handler)
+    return () => runtime.EventsOff('ollama:progress')
+  }, [])
 
   // ── Actions (declared before keyboard handler) ──
 
@@ -229,18 +241,33 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
   // ── AI setup ──
 
   const handleAISetup = async () => {
+    const rec = aiRecommendation
+    if (!rec) {
+      toast.error('No AI recommendation available. Run system check first.')
+      return
+    }
     setSetupRunning(true)
+    setAiProgress(null)
     try {
-      await call('AIOps.PullModel', AI_MODEL_BASE)
-      await call('AIOps.CreateOpsPersona')
+      await call('AIOps.SetupOllamaPersona', rec.recommended_model)
       setStep('finished')
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'AI setup failed'
       toast.error(msg)
     } finally {
       setSetupRunning(false)
+      setAiProgress(null)
     }
   }
+
+  const fetchAiRecommendation = useCallback(async () => {
+    try {
+      const rec = await call('AIOps.GetAISetupRecommendation')
+      setAiRecommendation(rec as AISetupRecommendation)
+    } catch {
+      setAiRecommendation(null)
+    }
+  }, [call])
 
   // ── Navigation ──
 
@@ -253,6 +280,7 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
         fetchDependencies()
       }
       if (next === 'snapshot' && !snapshotDone) generateSnapshot()
+      if (next === 'ai-setup') fetchAiRecommendation()
       setStep(next)
     }
   }
@@ -376,9 +404,9 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
                   { icon: <Globe size={18} />, title: 'Private', desc: 'No data leaves this machine. Zero cloud sync or tracking.' },
                   { icon: <BrainCircuit size={18} />, title: 'Local AI', desc: 'Intelligence powered by models running on your hardware.' },
                   { icon: <Activity size={18} />, title: 'Telemetry', desc: 'Real-time monitoring of local system resources.' },
-                ].map((item, i) => (
+                ].map((item) => (
                   <div
-                    key={i}
+                    key={item.title}
                     className="p-6 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)] space-y-3 text-left"
                   >
                     <div className="text-[var(--color-accent)]">{item.icon}</div>
@@ -461,9 +489,9 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
                   { icon: <Database size={16} />, title: 'Database', path: `${config.storagePath}/universalops.db`, desc: 'Local SQLite database for metrics and alerts.', action: () => pickFolder('storagePath'), pathKey: 'storagePath' as const },
                   { icon: <HardDrive size={16} />, title: 'AI Configuration', path: config.modelPath || './data/universalops.modelfile', desc: 'Local assistant settings and rules.', action: pickModelfile, pathKey: 'modelPath' as const },
                   { icon: <ScrollText size={16} />, title: 'Logs', path: `${config.logsPath}/universalops.log`, desc: 'System event logs for auditing.', action: () => pickFolder('logsPath'), pathKey: 'logsPath' as const },
-                ].map((item, i) => (
+                ].map((item) => (
                   <div
-                    key={i}
+                    key={item.title}
                     className="p-5 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)] flex items-center justify-between gap-4"
                   >
                     <div className="flex items-center gap-4 min-w-0">
@@ -538,8 +566,8 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
                       { label: 'Processor', value: envReport!.cpu, icon: <Cpu size={12} />, color: 'text-[var(--color-accent)]' },
                       { label: 'Memory', value: envReport!.memory, icon: <MemoryStick size={12} /> },
                       { label: 'OS Platform', value: `${envReport!.os} (${envReport!.arch})`, icon: <Globe size={12} /> },
-                    ].map((item, i) => (
-                      <div key={i} className="space-y-1 min-w-0">
+                    ].map((item) => (
+                      <div key={item.label} className="space-y-1 min-w-0">
                         <div className="flex items-center gap-2 opacity-40">
                           {item.icon}
                           <span className="text-[10px] font-bold uppercase tracking-[0.1em]">{item.label}</span>
@@ -665,9 +693,9 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3 w-full">
-                {['Hardware', 'Software', 'Network', 'Security'].map((label, i) => (
+                {['Hardware', 'Software', 'Network', 'Security'].map((label) => (
                   <div
-                    key={i}
+                    key={label}
                     className="p-4 rounded-lg bg-[var(--color-panel-2)] border border-[var(--color-border)] flex items-center justify-between"
                   >
                     <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text-faint)]">{label}</span>
@@ -694,7 +722,7 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
             </div>
           )}
 
-          {/* ── AI SETUP (merged with governance) ── */}
+          {/* ── AI SETUP (recommendation + progress) ── */}
           {step === 'ai-setup' && (
             <div
               className="max-w-2xl mx-auto h-full flex flex-col justify-center space-y-6"
@@ -710,20 +738,40 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
               {setupRunning ? (
                 <div className="space-y-6 flex flex-col items-center">
                   <RefreshCw size={40} className="animate-spin text-[var(--color-accent)]" />
-                  <div className="w-full max-w-xs space-y-2">
-                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-accent)]">
-                      <span>Downloading model...</span>
-                      <span className="animate-pulse">In progress</span>
+                  <div className="w-full max-w-sm space-y-3">
+                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-[0.1em]">
+                      <span className="text-[var(--color-accent)]">
+                        {aiProgress?.status || 'Downloading model...'}
+                      </span>
+                      <span className="text-[var(--color-text-faint)]">
+                        {aiProgress && aiProgress.total > 0
+                          ? `${Math.round(aiProgress.percent)}%`
+                          : 'In progress'}
+                      </span>
                     </div>
-                    <div className="h-1.5 bg-[var(--color-panel-3)] rounded-full overflow-hidden">
+                    <div className="h-2 bg-[var(--color-panel-3)] rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-[var(--color-accent)] rounded-full"
+                        className="h-full bg-[var(--color-accent)] rounded-full transition-all duration-300 ease-out"
                         style={{
-                          animation: 'onb-progress-indeterminate 2s ease-in-out infinite',
-                          width: '40%',
+                          width: aiProgress && aiProgress.total > 0
+                            ? `${aiProgress.percent}%`
+                            : '30%',
+                          animation: aiProgress?.total
+                            ? 'none'
+                            : 'onb-progress-indeterminate 2s ease-in-out infinite',
                         }}
                       />
                     </div>
+                    {aiProgress && aiProgress.total > 0 && (
+                      <p className="text-[10px] text-[var(--color-text-faint)] text-center font-mono">
+                        {Math.round(aiProgress.completed / 1_000_000)} MB / {Math.round(aiProgress.total / 1_000_000)} MB
+                      </p>
+                    )}
+                    {aiRecommendation && (
+                      <p className="text-[10px] text-[var(--color-text-dim)] text-center">
+                        Setting up <span className="font-bold text-[var(--color-accent)]">{aiRecommendation.recommended_label}</span> ...
+                      </p>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -765,30 +813,61 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
                     </div>
                   </div>
 
-                  {/* AI profile card */}
-                  <div className="p-6 rounded-xl bg-[var(--color-accent)]/5 border border-[var(--color-accent)]/20 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <BrainCircuit size={20} className="text-[var(--color-accent)]" />
-                      <p className="text-[11px] font-bold text-[var(--color-text)] uppercase">AI Assistant Profile</p>
-                    </div>
-                    <div className="bg-[var(--color-bg)]/60 p-5 rounded-lg border border-[var(--color-border)] font-mono text-[10px] leading-relaxed text-[var(--color-text-dim)]">
-                      <div className="grid grid-cols-3 gap-2">
-                        <span className="text-[var(--color-text-faint)]">ROLE:</span>
-                        <span className="col-span-2">System Analyst</span>
-                        <span className="text-[var(--color-text-faint)]">MODEL:</span>
-                        <span className="col-span-2">Private / Local</span>
-                        <span className="text-[var(--color-text-faint)]">NAME:</span>
-                        <span className="col-span-2 text-[var(--color-accent)]">{config.companionName}</span>
+                  {/* AI recommendation card */}
+                  {aiRecommendation ? (
+                    <div className="p-6 rounded-xl bg-[var(--color-accent)]/5 border border-[var(--color-accent)]/20 space-y-4">
+                      <div className="flex items-center gap-3">
+                        <BrainCircuit size={20} className="text-[var(--color-accent)]" />
+                        <p className="text-[11px] font-bold text-[var(--color-text)] uppercase">AI Model Recommendation</p>
                       </div>
+                      <div className="bg-[var(--color-bg)]/60 p-5 rounded-lg border border-[var(--color-border)] font-mono text-[10px] leading-relaxed space-y-2">
+                        <div className="grid grid-cols-3 gap-2">
+                          <span className="text-[var(--color-text-faint)]">MODEL:</span>
+                          <span className="col-span-2 text-[var(--color-accent)] font-bold">{aiRecommendation.recommended_label}</span>
+                          <span className="text-[var(--color-text-faint)]">RAM:</span>
+                          <span className="col-span-2">{aiRecommendation.system_ram_gb.toFixed(0)} GB</span>
+                          <span className="text-[var(--color-text-faint)]">CPU:</span>
+                          <span className="col-span-2">{aiRecommendation.system_cpu_threads} threads</span>
+                          <span className="text-[var(--color-text-faint)]">STATUS:</span>
+                          <span className="col-span-2">
+                            {aiRecommendation.pull_required
+                              ? <span className="text-[var(--color-warning)]">Download required</span>
+                              : <span className="text-[var(--color-success)]">Ready to use</span>}
+                          </span>
+                        </div>
+                      </div>
+                      {aiRecommendation.fallback_models && aiRecommendation.fallback_models.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-[9px] font-bold text-[var(--color-text-faint)] uppercase tracking-[0.12em]">Fallback options</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {aiRecommendation.fallback_models.map((m) => (
+                              <span key={m.name} className="px-2 py-0.5 bg-[var(--color-panel-2)] rounded text-[9px] font-mono text-[var(--color-text-dim)] border border-[var(--color-border)]">
+                                {m.label} ({m.size_gb.toFixed(1)} GB)
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  ) : (
+                    <div className="py-8 flex flex-col items-center gap-3 text-[var(--color-text-faint)]">
+                      <RefreshCw size={24} className="animate-spin opacity-20" />
+                      <p className="text-[11px] font-bold uppercase tracking-[0.12em]">Analyzing system...</p>
+                    </div>
+                  )}
 
                   <div className="flex flex-col gap-3">
                     <button
                       onClick={handleAISetup}
-                      className="w-full py-4 min-h-[48px] rounded-xl bg-[var(--color-accent)] text-white font-bold uppercase tracking-[0.1em] text-xs shadow-lg hover:brightness-110 active:scale-[0.99] transition-all"
+                      disabled={!aiRecommendation}
+                      className={cn(
+                        'w-full py-4 min-h-[48px] rounded-xl font-bold uppercase tracking-[0.1em] text-xs shadow-lg transition-all',
+                        aiRecommendation
+                          ? 'bg-[var(--color-accent)] text-white hover:brightness-110 active:scale-[0.99] cursor-pointer'
+                          : 'bg-[var(--color-panel-3)] text-[var(--color-text-faint)] cursor-not-allowed'
+                      )}
                     >
-                      Initialize Assistant
+                      {aiRecommendation?.pull_required ? 'Download & Initialize' : 'Initialize Assistant'}
                     </button>
                     <button
                       onClick={nextStep}

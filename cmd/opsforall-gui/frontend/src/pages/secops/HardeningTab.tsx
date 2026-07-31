@@ -46,8 +46,8 @@ export function HardeningTab() {
       <Panel padding="lg" category="security">
         <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6">Hardening Checks</h3>
         <div className="space-y-3">
-          {checks.map((c, i) => (
-            <div key={i} className={`flex items-center justify-between bg-panel-2 border rounded-xl px-5 py-3 ${c.passed ? 'border-border' : 'border-danger/30 bg-danger/5'}`}>
+          {checks.map((c) => (
+            <div key={c.check} className={`flex items-center justify-between bg-panel-2 border rounded-xl px-5 py-3 ${c.passed ? 'border-border' : 'border-danger/30 bg-danger/5'}`}>
               <div className="flex items-center gap-4">
                 {c.passed ? (
                   <CheckCircle2 size={18} className="text-success shrink-0" />

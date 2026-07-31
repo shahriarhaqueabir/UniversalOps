@@ -49,3 +49,30 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   'ai-setup',
   'finished',
 ]
+
+// ── AI Onboarding Types ──
+
+export interface ModelOption {
+  name: string
+  label: string
+  size_gb: number
+}
+
+export interface AISetupRecommendation {
+  can_run_qwythos: boolean
+  recommended_model: string
+  recommended_label: string
+  qwythos_exists: boolean
+  pull_required: boolean
+  system_ram_gb: number
+  system_cpu_threads: number
+  timestamp: string
+  fallback_models?: ModelOption[]
+}
+
+export interface OllamaProgress {
+  status: string
+  percent: number
+  total: number
+  completed: number
+}

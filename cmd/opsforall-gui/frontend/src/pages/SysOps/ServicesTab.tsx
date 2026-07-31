@@ -52,8 +52,8 @@ export function ServicesTab() {
               </tr>
             </thead>
             <tbody>
-              {services.map((s, i) => (
-                <tr key={i} className="border-b border-[var(--color-border)]/20 hover:bg-[var(--color-sidebar-hover)]">
+              {services.map((s) => (
+                <tr key={s.name} className="border-b border-[var(--color-border)]/20 hover:bg-[var(--color-sidebar-hover)]">
                   <td className="px-4 py-3">
                     <span className="text-sm font-medium text-[var(--color-text)]">{s.display_name || s.name}</span>
                   </td>

@@ -549,8 +549,8 @@ export function OverviewTab() {
                 <p className="text-xs font-bold text-warning uppercase tracking-wider flex items-center gap-2">
                   <AlertTriangle size={12} /> Issues Detected
                 </p>
-                {netSummary.issues.map((issue, i) => (
-                  <div key={i} className="flex items-start gap-2 text-sm text-text-dim">
+                {netSummary.issues.map((issue) => (
+                  <div key={issue} className="flex items-start gap-2 text-sm text-text-dim">
                     <CheckCircle2 size={14} className="text-warning shrink-0 mt-0.5" />
                     <span>{issue}</span>
                   </div>

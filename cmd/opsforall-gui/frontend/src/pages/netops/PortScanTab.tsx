@@ -86,8 +86,8 @@ export function PortScanTab() {
                 </tr>
               </thead>
               <tbody>
-                {portScanMutation.data.map((p, i) => (
-                  <tr key={i} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all group">
+                {portScanMutation.data.map((p) => (
+                  <tr key={p.port} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)] transition-all group">
                     <td className="px-8 py-5">
                       <span className="text-2xl font-bold text-accent tabular-nums">{p.port}</span>
                     </td>

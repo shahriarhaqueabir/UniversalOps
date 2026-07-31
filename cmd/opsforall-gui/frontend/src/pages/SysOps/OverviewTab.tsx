@@ -360,8 +360,8 @@ export function OverviewTab() {
         <Panel padding="md">
           <PanelHeader icon={<AlertTriangle size={20} />} title="Recommendations" />
           <div className="space-y-2">
-            {recommendations.map((rec, i) => (
-              <div key={i} className="flex items-start gap-3 py-3 px-4 rounded-xl bg-warning/5 border border-warning/10 hover:border-warning/20 transition-colors">
+            {recommendations.map((rec) => (
+              <div key={rec.message} className="flex items-start gap-3 py-3 px-4 rounded-xl bg-warning/5 border border-warning/10 hover:border-warning/20 transition-colors">
                 <AlertTriangle size={16} className="text-warning mt-0.5 shrink-0" />
                 <div>
                   <p className="text-xs font-bold text-text">{rec.message}</p>
@@ -378,8 +378,8 @@ export function OverviewTab() {
         <Panel padding="md">
           <PanelHeader icon={<Users size={20} />} title="Active Sessions" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {users.map((u, i) => (
-              <div key={i} className="flex items-center gap-3 bg-panel-2 rounded-xl p-4 border border-border/50">
+            {users.map((u) => (
+              <div key={`${u.user}-${u.terminal}`} className="flex items-center gap-3 bg-panel-2 rounded-xl p-4 border border-border/50">
                 <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
                   <Users size={16} />
                 </div>

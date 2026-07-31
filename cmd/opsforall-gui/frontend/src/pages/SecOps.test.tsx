@@ -3,6 +3,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { SecOps } from './SecOps'
 import { useQuery } from '@tanstack/react-query'
 import { useBackend } from '@/hooks/useBackend'
+import { mockQueryReturn } from '@/test/mockQuery'
 
 vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn(),
@@ -36,29 +37,29 @@ describe('SecOps Page', () => {
     vi.mocked(useBackend).mockReturnValue({ call: mockCall })
     vi.mocked(useQuery).mockImplementation((opts: any) => {
       const key = opts.queryKey[0]
-      if (key === 'secops-score') return { data: mockScore, isLoading: false } as any
-      if (key === 'secops-defender') return { data: mockDefender, isLoading: false } as any
-      if (key === 'secops-firewall-status') return { data: mockFwStatus, isLoading: false } as any
-      if (key === 'secops-users') return { data: [], isLoading: false } as any
-      if (key === 'secops-listening') return { data: [], isLoading: false } as any
-      if (key === 'secops-events') return { data: [], isLoading: false } as any
-      if (key === 'secops-health') return { data: {}, isLoading: false } as any
-      if (key === 'secops-password-policy') return { data: { max_age: 90, min_length: 8, complexity: true, lockout_threshold: 5, lockout_duration: 30 }, isLoading: false } as any
-      if (key === 'secops-failed-logins') return { data: [], isLoading: false } as any
-      if (key === 'secops-lockouts') return { data: [], isLoading: false } as any
-      if (key === 'secops-tls-certs') return { data: [], isLoading: false } as any
-      if (key === 'secops-public-exposure') return { data: [], isLoading: false } as any
-      if (key === 'secops-disk-encryption') return { data: [], isLoading: false } as any
-      if (key === 'secops-secure-boot') return { data: { enabled: true, state: 'OK' }, isLoading: false } as any
-      if (key === 'secops-services') return { data: [], isLoading: false } as any
-      if (key === 'secops-tasks') return { data: [], isLoading: false } as any
-      if (key === 'secops-privilege-events') return { data: [], isLoading: false } as any
-      if (key === 'secops-timeline') return { data: [], isLoading: false } as any
-      if (key === 'secops-hardening') return { data: [], isLoading: false } as any
-      if (key === 'secops-ssh-config') return { data: null, isLoading: false } as any
-      if (key === 'secops-firewall-rules') return { data: [], isLoading: false } as any
-      if (key === 'secops-listening-ports') return { data: [], isLoading: false } as any
-      return { data: null, isLoading: false } as any
+      if (key === 'secops-score') return mockQueryReturn({ data: mockScore })
+      if (key === 'secops-defender') return mockQueryReturn({ data: mockDefender })
+      if (key === 'secops-firewall-status') return mockQueryReturn({ data: mockFwStatus })
+      if (key === 'secops-users') return mockQueryReturn({ data: [] })
+      if (key === 'secops-listening') return mockQueryReturn({ data: [] })
+      if (key === 'secops-events') return mockQueryReturn({ data: [] })
+      if (key === 'secops-health') return mockQueryReturn({ data: {} })
+      if (key === 'secops-password-policy') return mockQueryReturn({ data: { max_age: 90, min_length: 8, complexity: true, lockout_threshold: 5, lockout_duration: 30 } })
+      if (key === 'secops-failed-logins') return mockQueryReturn({ data: [] })
+      if (key === 'secops-lockouts') return mockQueryReturn({ data: [] })
+      if (key === 'secops-tls-certs') return mockQueryReturn({ data: [] })
+      if (key === 'secops-public-exposure') return mockQueryReturn({ data: [] })
+      if (key === 'secops-disk-encryption') return mockQueryReturn({ data: [] })
+      if (key === 'secops-secure-boot') return mockQueryReturn({ data: { enabled: true, state: 'OK' } })
+      if (key === 'secops-services') return mockQueryReturn({ data: [] })
+      if (key === 'secops-tasks') return mockQueryReturn({ data: [] })
+      if (key === 'secops-privilege-events') return mockQueryReturn({ data: [] })
+      if (key === 'secops-timeline') return mockQueryReturn({ data: [] })
+      if (key === 'secops-hardening') return mockQueryReturn({ data: [] })
+      if (key === 'secops-ssh-config') return mockQueryReturn({ data: null })
+      if (key === 'secops-firewall-rules') return mockQueryReturn({ data: [] })
+      if (key === 'secops-listening-ports') return mockQueryReturn({ data: [] })
+      return mockQueryReturn({ data: null })
     })
     mockCall.mockResolvedValue(null)
   })

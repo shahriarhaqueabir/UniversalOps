@@ -44,6 +44,7 @@ export function AuditTab() {
             <div className="h-6 w-32 bg-panel-3 rounded animate-pulse ml-auto" />
           </div>
           <div className="space-y-4">
+            {/* static skeleton */}
             {[1,2,3,4,5,6,7,8].map((i) => (
               <div key={i} className="flex items-center gap-4">
                 <div className="h-5 w-5 bg-panel-3 rounded animate-pulse" />
@@ -93,8 +94,8 @@ export function AuditTab() {
           <Panel padding="lg" category="security">
             <h3 className="text-lg font-bold text-text uppercase tracking-widest mb-6">Audit Results</h3>
             <div className="space-y-3">
-              {auditMutation.data.items.map((item, i) => (
-                <div key={i} className={`flex items-center justify-between bg-panel-2 border rounded-xl px-5 py-3 ${item.passed ? 'border-border' : 'border-danger/30 bg-danger/5'}`}>
+                {auditMutation.data.items.map((item) => (
+                <div key={item.check} className={`flex items-center justify-between bg-panel-2 border rounded-xl px-5 py-3 ${item.passed ? 'border-border' : 'border-danger/30 bg-danger/5'}`}>
                   <div className="flex items-center gap-4">
                     {item.passed ? (
                       <CheckCircle2 size={18} className="text-success shrink-0" />

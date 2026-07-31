@@ -72,8 +72,8 @@ export function PerimeterTab() {
           Active Firewall Policy
         </h3>
         <div className="space-y-3">
-          {rules.map((rule, i) => (
-            <div key={i} className={cn(
+          {rules.map((rule) => (
+            <div key={rule.name} className={cn(
               "flex items-center justify-between p-5 rounded-2xl border transition-all duration-300 group",
               rule.is_high_risk && rule.enabled ? "bg-danger/5 border-danger/30" : "bg-panel-2 border-border/50 hover:border-accent/40"
             )}>
@@ -115,7 +115,7 @@ export function PerimeterTab() {
           Listening Ports
         </h3>
         <div className="max-h-[500px] overflow-y-auto pr-2 space-y-2">
-          {ports.map((p, i) => {
+          {ports.map((p) => {
             const riskStyle = p.risk_level === 'high'
               ? "bg-danger/5 border-danger/30"
               : p.risk_level === 'medium'
@@ -127,7 +127,7 @@ export function PerimeterTab() {
                 ? "bg-warning/10 border-warning/20 text-warning"
                 : "bg-success/10 border-success/20 text-success"
             return (
-              <div key={i} className={cn(
+              <div key={`${p.port}-${p.protocol}`} className={cn(
                 "flex items-center justify-between p-5 rounded-xl border transition-all duration-300",
                 riskStyle
               )}>

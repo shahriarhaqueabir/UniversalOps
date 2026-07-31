@@ -4,6 +4,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { AIOps } from './AIOps'
 import { useQuery } from '@tanstack/react-query'
 import { useBackend } from '@/hooks/useBackend'
+import { mockQueryReturn } from '@/test/mockQuery'
 
 vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn(),
@@ -50,14 +51,14 @@ describe('AIOps Page', () => {
     vi.mocked(useBackend).mockReturnValue({ call: mockCall })
     vi.mocked(useQuery).mockImplementation((opts: any) => {
       const key = opts.queryKey[0]
-      if (key === 'chat-sessions') return { data: mockSessions, isLoading: false, refetch: vi.fn() } as any
+      if (key === 'chat-sessions') return mockQueryReturn({ data: mockSessions })
       if (key === 'ollama-status') {
-        return { data: { available: true, binary_exists: true, model: 'universalops', version: '1.0' }, isLoading: false, refetch: vi.fn() } as any
+        return mockQueryReturn({ data: { available: true, binary_exists: true, model: 'universalops', version: '1.0' } })
       }
-      if (key === 'anomalies') return { data: mockAnomalies, isLoading: false } as any
-      if (key === 'ai-insights') return { data: mockInsights, isLoading: false } as any
-      if (key === 'dashboard-mini') return { data: { cpu: { value: 45 }, memory: { value: 62 }, disk: { value: 55 } }, isLoading: false } as any
-      return { data: { available: true, binary_exists: true, model: 'universalops', version: '1.0' }, isLoading: false, refetch: vi.fn() } as any
+      if (key === 'anomalies') return mockQueryReturn({ data: mockAnomalies })
+      if (key === 'ai-insights') return mockQueryReturn({ data: mockInsights })
+      if (key === 'dashboard-mini') return mockQueryReturn({ data: { cpu: { value: 45 }, memory: { value: 62 }, disk: { value: 55 } } })
+      return mockQueryReturn({ data: { available: true, binary_exists: true, model: 'universalops', version: '1.0' } })
     })
     mockCall.mockResolvedValue(null)
   })
@@ -106,10 +107,10 @@ describe('AIOps Page', () => {
     vi.mocked(useQuery).mockImplementation((opts: any) => {
       const key = opts.queryKey[0]
       if (key === 'ollama-status') {
-        return { data: null, isLoading: false, refetch: vi.fn() } as any
+        return mockQueryReturn({ data: null })
       }
-      if (key === 'chat-sessions') return { data: [], isLoading: false, refetch: vi.fn() } as any
-      return { data: null, isLoading: false } as any
+      if (key === 'chat-sessions') return mockQueryReturn({ data: [] })
+      return mockQueryReturn({ data: null })
     })
     render(<AIOps />)
     expect(await screen.findByText(/Ollama Offline/i)).toBeInTheDocument()

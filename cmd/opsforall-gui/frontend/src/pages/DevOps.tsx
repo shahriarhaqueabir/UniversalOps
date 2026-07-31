@@ -156,6 +156,7 @@ function DiagnosticsTab() {
 
       {diagnosticsMutation.isPending && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* static skeleton */}
           {[1,2,3,4,5,6].map((i) => (
             <div key={i} className="p-6 rounded-2xl border border-border bg-panel-2">
               <div className="flex items-center justify-between mb-4">
@@ -181,8 +182,8 @@ function DiagnosticsTab() {
 
       {diagnosticsMutation.data && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {diagnosticsMutation.data.checks.map((check, i) => (
-            <div key={i} className={cn("p-6 rounded-2xl border transition-all hover:scale-[1.02]",
+          {diagnosticsMutation.data.checks.map((check) => (
+            <div key={check.name} className={cn("p-6 rounded-2xl border transition-all hover:scale-[1.02]",
               check.status === 'pass' ? "bg-success/5 border-success/20 hover:border-success/40" :
               check.status === 'warn' ? "bg-warning/5 border-warning/20 hover:border-warning/40" :
               "bg-danger/5 border-danger/20 hover:border-danger/40")}>
@@ -367,8 +368,8 @@ function OverviewTab() {
             <span className="ml-auto text-[10px] font-bold text-text-faint tabular-nums">{tools.filter(t => t.status === 'installed').length} / {tools.length} installed</span>
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3">
-            {tools.map((t, i) => (
-              <div key={i} className={cn(
+            {tools.map((t) => (
+              <div key={t.name} className={cn(
                 "flex flex-col items-center gap-2 p-4 rounded-xl border transition-all",
                 t.status === 'installed'
                   ? "bg-success/5 border-success/20 hover:border-success/40"
@@ -410,8 +411,8 @@ function OverviewTab() {
                 </tr>
               </thead>
               <tbody>
-                {localServers.map((s, i) => (
-                  <tr key={i} className="border-b border-border/30 hover:bg-panel-2 transition-colors">
+                {localServers.map((s) => (
+                  <tr key={`${s.port}-${s.protocol}`} className="border-b border-border/30 hover:bg-panel-2 transition-colors">
                     <td className="py-3 pr-4 text-sm font-bold text-text tabular-nums">{s.port}</td>
                     <td className="py-3 pr-4 text-xs font-semibold text-text-dim">{s.protocol}</td>
                     <td className="py-3 pr-4 text-xs font-semibold text-text-dim">{s.process}</td>
@@ -447,8 +448,8 @@ function OverviewTab() {
               <div>
                 <p className="text-[10px] font-black text-text-faint uppercase tracking-wider mb-3">SDKs</p>
                 <div className="space-y-2">
-                  {envInfo.sdks.map((sdk, i) => (
-                    <div key={i} className="flex items-center justify-between bg-panel-2 border border-border/50 rounded-lg px-4 py-2.5">
+                  {envInfo.sdks.map((sdk) => (
+                    <div key={sdk.name} className="flex items-center justify-between bg-panel-2 border border-border/50 rounded-lg px-4 py-2.5">
                       <span className="text-xs font-bold text-text">{sdk.name}</span>
                       <span className="text-[10px] font-semibold text-text-dim tabular-nums">{sdk.version}</span>
                     </div>
@@ -460,8 +461,8 @@ function OverviewTab() {
               <div>
                 <p className="text-[10px] font-black text-text-faint uppercase tracking-wider mb-3">Package Managers</p>
                 <div className="space-y-2">
-                  {envInfo.package_managers.map((pm, i) => (
-                    <div key={i} className="flex items-center justify-between bg-panel-2 border border-border/50 rounded-lg px-4 py-2.5">
+                  {envInfo.package_managers.map((pm) => (
+                    <div key={pm.name} className="flex items-center justify-between bg-panel-2 border border-border/50 rounded-lg px-4 py-2.5">
                       <span className="text-xs font-bold text-text">{pm.name}</span>
                       <span className="text-[10px] font-semibold text-text-dim tabular-nums">{pm.version}</span>
                     </div>
@@ -473,8 +474,8 @@ function OverviewTab() {
               <div>
                 <p className="text-[10px] font-black text-text-faint uppercase tracking-wider mb-3">Key Variables</p>
                 <div className="space-y-2">
-                  {envInfo.key_vars.slice(0, 8).map((v, i) => (
-                    <div key={i} className="flex items-center justify-between bg-panel-2 border border-border/50 rounded-lg px-4 py-2.5">
+                  {envInfo.key_vars.slice(0, 8).map((v) => (
+                    <div key={v.name} className="flex items-center justify-between bg-panel-2 border border-border/50 rounded-lg px-4 py-2.5">
                       <span className="text-xs font-bold text-text">{v.name}</span>
                       <span className="text-[9px] font-semibold text-text-dim max-w-[120px] truncate" title={v.value}>{v.value}</span>
                     </div>
@@ -494,8 +495,8 @@ function OverviewTab() {
             AI Suggestions
           </h3>
           <div className="space-y-3">
-            {suggestions.map((s, i) => (
-              <div key={i} className={cn(
+            {suggestions.map((s) => (
+              <div key={s.message} className={cn(
                 "flex items-start gap-4 p-4 rounded-xl border transition-all",
                 s.severity === 'critical' ? "bg-danger/5 border-danger/20" :
                 s.severity === 'warning' ? "bg-warning/5 border-warning/20" :
@@ -933,8 +934,8 @@ function KubernetesTab() {
             <span className={cn('text-xs font-bold', r.ready ? 'text-success' : 'text-warning')}>{r.ready ? 'Ready' : 'In Progress'}</span>
           </div>
         ))}
-        {subTab === 'events' && events.map((e, i) => (
-          <div key={i} className="bg-panel border border-border rounded-xl p-3 flex items-start gap-3">
+        {subTab === 'events' && events.map((e) => (
+          <div key={`${e.last_seen}-${e.object}-${e.reason}`} className="bg-panel border border-border rounded-xl p-3 flex items-start gap-3">
             <span className={cn('w-2 h-2 rounded-full mt-1 shrink-0', e.type === 'Normal' ? 'bg-success' : 'bg-warning')} />
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-tight"><span className="text-text-faint">{e.last_seen}</span> {e.reason} \u2022 {e.object}</p>

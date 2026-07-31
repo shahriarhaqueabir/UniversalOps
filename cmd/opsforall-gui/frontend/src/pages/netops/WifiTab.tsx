@@ -24,6 +24,7 @@ function SignalBar({ percent }: { percent: number }) {
 
   return (
     <div className="flex items-end gap-0.5" title={`${clamped}%`}>
+      {/* static skeleton — fixed 5 signal bars */}
       {Array.from({ length: bars }).map((_, i) => (
         <div
           key={i}
@@ -129,6 +130,7 @@ export function WifiTab() {
         <PanelHeader icon={<Wifi size={20} />} title="Active Handshake" category="network" />
         {infoLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {/* static skeleton */}
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="h-24 bg-panel-2 border border-border rounded-2xl animate-pulse" />
             ))}
@@ -209,6 +211,7 @@ export function WifiTab() {
 
           {networksLoading ? (
             <div className="space-y-3">
+              {/* static skeleton */}
               {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="h-14 bg-panel-2 border border-border rounded-xl animate-pulse" />
               ))}

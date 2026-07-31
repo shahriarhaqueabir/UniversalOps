@@ -60,8 +60,8 @@ export function DiskTab({ diskInfo }: { diskInfo: DiskInfo }) {
           <h3 className="text-lg font-bold text-[var(--color-text)] uppercase tracking-widest">Disk Usage</h3>
         </div>
         <div className="space-y-6">
-          {diskInfo.partitions.map((p, i) => (
-            <div key={i}>
+          {diskInfo.partitions.map((p) => (
+            <div key={p.mountpoint}>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-bold text-[var(--color-text)]">{p.mountpoint}</span>
                 <span className="text-sm font-bold text-[var(--color-text)] tabular-nums">{Math.round(p.used_percent)}%</span>
@@ -95,8 +95,8 @@ export function DiskTab({ diskInfo }: { diskInfo: DiskInfo }) {
             </div>
           </div>
           <div className="space-y-3">
-            {diskIO.disks.map((d, i) => (
-              <div key={i} className="flex items-center justify-between py-2 border-b border-[var(--color-border)]/50 last:border-0">
+            {diskIO.disks.map((d) => (
+              <div key={d.name} className="flex items-center justify-between py-2 border-b border-[var(--color-border)]/50 last:border-0">
                 <span className="text-sm font-bold text-[var(--color-text)]">{d.name}</span>
                 <div className="flex gap-6 text-xs">
                   <span className="text-[var(--color-accent)] tabular-nums">R: {(d.read_bytes / 1e6).toFixed(1)} MB</span>

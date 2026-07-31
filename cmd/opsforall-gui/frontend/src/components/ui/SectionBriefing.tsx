@@ -36,8 +36,8 @@ export function SectionBriefing({
         <div className="space-y-4">
           <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-faint)]">Checklist</h4>
           <div className="grid grid-cols-1 gap-3">
-            {checklist.map((item, i) => (
-              <div key={i} className="flex items-center gap-3">
+            {checklist.map((item) => (
+              <div key={item} className="flex items-center gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] shadow-[0_0_6px_var(--color-accent)]" />
                 <span className="text-sm font-bold text-[var(--color-text-dim)]">{item}</span>
               </div>
@@ -63,8 +63,8 @@ export function SectionBriefing({
                 <AlertTriangle size={12} /> Risks
               </h4>
               <ul className="space-y-1.5">
-                {risks.map((r, i) => (
-                  <li key={i} className="text-[10px] text-[var(--color-text-dim)] font-medium">• {r}</li>
+                {risks.map((r) => (
+                  <li key={r} className="text-[10px] text-[var(--color-text-dim)] font-medium">• {r}</li>
                 ))}
               </ul>
             </div>
@@ -85,8 +85,8 @@ export function SectionBriefing({
                 <Zap size={12} /> Recommended
               </h4>
               <ul className="space-y-1.5">
-                {recommendedActions.map((a, i) => (
-                  <li key={i} className="text-[10px] text-[var(--color-text-dim)] font-medium">• {a}</li>
+                {recommendedActions.map((a) => (
+                  <li key={a} className="text-[10px] text-[var(--color-text-dim)] font-medium">• {a}</li>
                 ))}
               </ul>
             </div>

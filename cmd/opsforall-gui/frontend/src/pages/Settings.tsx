@@ -664,8 +664,8 @@ export function Settings() {
                     </tr>
                   </thead>
                   <tbody>
-                    {rules.map((rule, i) => (
-                      <tr key={i} className="border-b border-[var(--color-border)]/20 hover:bg-[var(--color-panel-2)] transition-colors group">
+                    {rules.map((rule) => (
+                      <tr key={`${rule.metric}-${rule.threshold}`} className="border-b border-[var(--color-border)]/20 hover:bg-[var(--color-panel-2)] transition-colors group">
                         <td className="px-4 py-3">
                           <p className="text-xs font-bold text-[var(--color-text)] uppercase">{rule.metric.replace('.percent', '')}</p>
                         </td>

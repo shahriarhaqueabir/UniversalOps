@@ -180,8 +180,8 @@ function ChatBubble({ role, content, actions, sessionID, onAssistantReply }: Cha
                   <div>
                     <p className="text-xs font-bold text-text-faint uppercase tracking-tighter mb-2">Technical Risks</p>
                     <ul className="space-y-1">
-                      {action.risks.map((risk, i) => (
-                        <li key={i} className="text-xs text-danger/80 flex items-start gap-2">
+                      {action.risks.map((risk) => (
+                        <li key={risk} className="text-xs text-danger/80 flex items-start gap-2">
                           <span className="mt-1.5 w-1 h-1 rounded-full bg-danger shrink-0" />
                           {risk}
                         </li>
@@ -670,7 +670,7 @@ function OverviewTab() {
           <div className="space-y-3">
             {insights.slice(0, 5).map((insight, i) => (
               <div
-                key={i}
+                key={insight.title + '-' + i}
                 className={cn(
                   "flex items-start gap-4 p-4 rounded-xl border transition-all cursor-pointer hover:border-accent/30",
                   insight.severity === 'critical' ? "bg-danger/5 border-danger/20" :
@@ -931,7 +931,7 @@ function ChatTab() {
               <div ref={chatRef} className="flex-1 overflow-y-auto p-10 space-y-8 relative z-10 scroll-smooth">
                 {messages.map((msg, i) => (
                   <ChatBubble
-                    key={i}
+                    key={msg.role + '-' + i}
                     role={msg.role}
                     content={msg.content}
                     actions={msg.actions}
@@ -1334,7 +1334,7 @@ function AnomaliesTab() {
           ) : (
             <div className="grid grid-cols-1 gap-3">
               {anomalies.map((a, i) => (
-                <div key={i} className="flex items-center justify-between p-5 bg-panel-2 border border-border/50 rounded-xl hover:border-accent/30 transition-all group">
+                <div key={a.metric + '-' + a.timestamp} className="flex items-center justify-between p-5 bg-panel-2 border border-border/50 rounded-xl hover:border-accent/30 transition-all group">
                   <div className="flex items-center gap-6">
                     <div className="w-10 h-10 rounded-lg bg-panel-3 border border-border flex items-center justify-center text-warning group-hover:scale-110 transition-transform">
                        <Zap size={20} />
@@ -1439,7 +1439,7 @@ function InsightsTab() {
             const SevIcon = cfg.icon
             return (
               <div
-                key={i}
+                key={insight.title + '-' + insight.timestamp}
                 className={cn(
                   'bg-[var(--color-panel)] border rounded-2xl p-6 transition-all hover:border-accent/30 hover:shadow-2xl group relative overflow-hidden',
                   cfg.border,

@@ -86,6 +86,7 @@ export function DiagnosticsTab() {
   })
 
   if (isLoading) {
+    // static skeleton
     return <div className="animate-pulse space-y-4">{[1, 2, 3].map(i => <div key={i} className="h-16 bg-[var(--color-panel-2)] rounded-xl" />)}</div>
   }
 
@@ -108,13 +109,13 @@ export function DiagnosticsTab() {
           Diagnostic Core Signals
         </h3>
         <div className="space-y-3">
-          {diagnostics?.checks.map((check, i) => {
+          {diagnostics?.checks.map((check) => {
             const pct = extractPercent(check.value)
             const v = statusVisuals(check.status)
             const Icon = check.status === 'pass' ? CheckCircle : check.status === 'warn' ? AlertTriangle : XCircle
 
             return (
-              <div key={i} className={cn('p-5 rounded-2xl border transition-all hover:translate-x-1 duration-300 group', v.bg, v.border)}>
+              <div key={check.name} className={cn('p-5 rounded-2xl border transition-all hover:translate-x-1 duration-300 group', v.bg, v.border)}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-4">
                     <div className={cn('p-2.5 rounded-xl border bg-panel transition-transform duration-300 group-hover:scale-110', v.border)}>
@@ -169,7 +170,7 @@ export function DiagnosticsTab() {
 
           return (
             <div className="grid grid-cols-2 gap-4">
-              {baselines.map((item, i) => {
+              {baselines.map((item) => {
                 const ok = item.pass
                 const status = item.check?.status || 'pass'
                 const color = ok ? 'text-success' : 'text-danger'
@@ -177,7 +178,7 @@ export function DiagnosticsTab() {
                 const border = ok ? 'border-success/20' : status === 'warn' ? 'border-warning/20' : 'border-danger/20'
 
                 return (
-                  <div key={i} className={cn('p-4 rounded-2xl border transition-all active:scale-[0.98]', bg, border)}>
+                  <div key={item.label} className={cn('p-4 rounded-2xl border transition-all active:scale-[0.98]', bg, border)}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-3">
                         <div className={cn('p-1 rounded-full border', ok ? 'border-success/30' : 'border-danger/30')}>
@@ -234,11 +235,11 @@ export function DiagnosticsTab() {
               </div>
             </div>
             <div className="space-y-3">
-              {detailReport.checks.map((check, i) => {
+              {detailReport.checks.map((check) => {
                 const Icon = check.status === 'pass' ? CheckCircle : check.status === 'warn' ? AlertTriangle : XCircle
                 const color = check.status === 'pass' ? 'text-success' : check.status === 'warn' ? 'text-warning' : 'text-danger'
                 return (
-                  <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-panel-2 border border-border">
+                  <div key={check.name} className="flex items-center justify-between p-4 rounded-xl bg-panel-2 border border-border">
                     <div className="flex items-center gap-3">
                       <Icon size={16} className={color} />
                       <span className="text-xs font-black text-text uppercase tracking-wider">{check.name}</span>

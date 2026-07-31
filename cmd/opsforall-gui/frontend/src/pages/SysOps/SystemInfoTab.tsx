@@ -73,8 +73,8 @@ export function SystemInfoTab({ sysInfo, cpuInfo }: SystemInfoTabProps) {
           <p className="text-[var(--color-text-dim)] text-sm">No users detected</p>
         ) : (
           <div className="space-y-3">
-            {users.map((u, i) => (
-              <div key={i} className="flex items-center justify-between py-2 border-b border-[var(--color-border)] last:border-0">
+            {users.map((u) => (
+              <div key={`${u.user}-${u.terminal}`} className="flex items-center justify-between py-2 border-b border-[var(--color-border)] last:border-0">
                 <span className="text-sm font-bold text-[var(--color-text)]">{u.user}</span>
                 <span className="text-xs text-[var(--color-text-faint)]">{u.terminal} from {u.host || 'local'}</span>
               </div>

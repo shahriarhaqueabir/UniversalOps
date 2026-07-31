@@ -44,8 +44,8 @@ function LHMElevationDialog({
           <div>
             <p className="text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-widest mb-2">What sensors will be available</p>
             <ul className="space-y-1.5">
-              {auth.capabilities.map((cap, i) => (
-                <li key={i} className="flex items-start gap-2">
+              {auth.capabilities.map((cap) => (
+                <li key={cap} className="flex items-start gap-2">
                   <CheckCircle2 size={13} className="text-success mt-0.5 shrink-0" />
                   <span className="text-xs text-[var(--color-text)]">{cap}</span>
                 </li>
@@ -57,8 +57,8 @@ function LHMElevationDialog({
           <div className="rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]/50 p-4">
             <p className="text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-widest mb-2">Safety & transparency</p>
             <ul className="space-y-1.5">
-              {auth.risks.map((risk, i) => (
-                <li key={i} className="flex items-start gap-2">
+              {auth.risks.map((risk) => (
+                <li key={risk} className="flex items-start gap-2">
                   <AlertTriangle size={13} className="text-[var(--color-text-dim)] mt-0.5 shrink-0" />
                   <span className="text-[11px] text-[var(--color-text-dim)]">{risk}</span>
                 </li>
@@ -395,8 +395,8 @@ export function HardwareTab() {
               <p className="text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-widest">Active Hardware Sensors</p>
               {hw.sensors && hw.sensors.length > 0 ? (
                 <div className="grid grid-cols-2 gap-4">
-                  {hw.sensors.map((s: SensorData, i: number) => (
-                    <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]">
+                  {hw.sensors.map((s: SensorData) => (
+                    <div key={s.name} className="flex items-center justify-between p-3 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]">
                       <div className="flex items-center gap-2">
                         {s.type === 'Fan' ? <Wind size={14} className="text-accent" /> : <Thermometer size={14} className="text-accent" />}
                         <span className="text-xs font-bold text-[var(--color-text)] truncate w-24">{s.name}</span>
