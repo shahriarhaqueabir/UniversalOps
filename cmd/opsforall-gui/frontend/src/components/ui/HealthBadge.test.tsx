@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { HealthBadge } from './HealthBadge'
-import type { HealthStatus } from './HealthBadge'
 
 describe('HealthBadge', () => {
   it('renders healthy status with correct label', () => {
