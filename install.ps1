@@ -8,10 +8,11 @@ try {
     $Version = $latest.tag_name -replace '^v', ''
 } catch {
     Write-Host "Could not fetch latest version. Falling back to default." -ForegroundColor Yellow
-    $Version = "1.4.2"
+    $Version = "1.5.0"
 }
 
-$Url = "https://github.com/shahriarhaqueabir/UniversalOps/releases/download/v$Version/UniversalOps-v$Version-windows-amd64.exe"
+# Asset name matches release.yml CI output (lowercase, no v prefix)
+$Url = "https://github.com/shahriarhaqueabir/UniversalOps/releases/download/v$Version/universal-ops-$Version-windows-amd64.exe"
 $Dest = "$HOME\Desktop\UniversalOps"
 $Exe = "$Dest\UniversalOps.exe"
 

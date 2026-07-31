@@ -5,6 +5,23 @@ All notable changes to Universal-Ops will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-07-31
+
+### Added
+- AI onboarding test coverage: `AIOps_setup_test.go` (18 tests — RAM-based model fallback, setup recommendation structure/logic, trivial-message classification, context cache TTL, modelfile presence, Ollama persona setup).
+- Port scan hardening: max 1024 ports cap, range validation, dedup + fuzz tests.
+- SLO tests and topology persistence (`feat(app)` hardening batch).
+- Typed Wails bridge: `mockQueryReturn<T>()` removed 51 `as any` casts; stable list keys across 33 frontend files.
+
+### Fixed
+- gopsutil v4.26.6 (DiskIO IOCTL failure on FAT32/Google Drive), Prometheus client v1.24.1, Wails restored to v2.13.0.
+- GC + FreeOSMemory, workflow timeout guard, AIOps request-context hardening.
+- CI/CD pipeline: toolchains pinned (`wails@v2.13.0`, `golangci-lint@v1.64.8` — `.golangci.yml` is v1 config and `@latest` drifted to v2); Scoop manifest now gets the **real SHA256** (placeholder hashes would fail every install); version handling standardized (assets/URLs no longer split between `v1.5.0` and `1.5.0`); broken Homebrew formula removed from CI (macOS binaries aren't built there); `checksums.txt` no longer includes `.sha256` sidecars; `package-*.ps1` un-ignored so CI checkout contains them.
+- `install.ps1` fallback URL matched CI asset naming (`universal-ops-<ver>-windows-amd64.exe`).
+
+### Changed
+- Version bumped to 1.5.0 (wails.json, package.json, install.ps1, README badge).
+
 ## [1.4.2] - 2026-07-29
 
 ### Fixed
