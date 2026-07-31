@@ -14,7 +14,7 @@ import { vi } from 'vitest'
 export function mockQueryReturn<T>(
   overrides: { data: T } & Record<string, unknown>,
 ): UseQueryResult<T, Error> {
-  const base: Omit<UseQueryResult<T, Error>, 'data'> & { data: T } = {
+  const base: Partial<UseQueryResult<T, Error>> = {
     data: overrides.data,
     isLoading: false,
     error: null,
@@ -22,6 +22,8 @@ export function mockQueryReturn<T>(
     isSuccess: true,
     isFetching: false,
     status: 'success',
+    fetchStatus: 'idle',
+    isEnabled: true,
     dataUpdatedAt: Date.now(),
     errorUpdatedAt: 0,
     failureCount: 0,
@@ -30,7 +32,6 @@ export function mockQueryReturn<T>(
     isFetched: true,
     isFetchedAfterMount: true,
     isPlaceholderData: false,
-    isPreviousData: false,
     isRefetching: false,
     isStale: false,
     isInitialLoading: false,
