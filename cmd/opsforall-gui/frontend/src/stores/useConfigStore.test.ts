@@ -70,9 +70,6 @@ describe('useConfigStore', () => {
   })
 
   it('clearValidationError removes a single error', () => {
-    // First create an error by staging something that might fail
-    const store = useConfigStore.getState()
-
     // Manually set a validation error to test clearValidationError
     act(() => {
       useConfigStore.setState({

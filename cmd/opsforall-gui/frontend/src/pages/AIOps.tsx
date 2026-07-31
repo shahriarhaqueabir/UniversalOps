@@ -1333,7 +1333,7 @@ function AnomaliesTab() {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3">
-              {anomalies.map((a, i) => (
+              {anomalies.map((a) => (
                 <div key={a.metric + '-' + a.timestamp} className="flex items-center justify-between p-5 bg-panel-2 border border-border/50 rounded-xl hover:border-accent/30 transition-all group">
                   <div className="flex items-center gap-6">
                     <div className="w-10 h-10 rounded-lg bg-panel-3 border border-border flex items-center justify-center text-warning group-hover:scale-110 transition-transform">
@@ -1434,7 +1434,7 @@ function InsightsTab() {
             />
           </div>
         ) : (
-          insights.map((insight, i) => {
+          insights.map((insight) => {
             const cfg = severityConfig[insight.severity] || severityConfig.info
             const SevIcon = cfg.icon
             return (
