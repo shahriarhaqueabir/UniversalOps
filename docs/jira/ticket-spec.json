@@ -1,0 +1,402 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "UniversalOps Jira Ticket Spec — Complete Project Timeline",
+  "description": "Single source of truth for all ~100 Jira tickets. Generated 2026-07-30 from ROADMAP.md, plan files, ADRs, and repo memory. For team-managed (simplified) KAN project — Epic-child links use parent field, not customfield_10014.",
+  "meta": {
+    "project": "KAN (universalops)",
+    "cloudId": "d9df71a2-df1a-4d8c-8b72-c93426971e56",
+    "issueTypeIds": {
+      "Epic": 10001,
+      "Task": 10003,
+      "Bug": 10006
+    },
+    "teamManagedConstraint": "Use parent.key for Epic-child linking. Fields like customfield_10014 (Epic Link) are NOT available in team-managed projects.",
+    "labelConstraint": "Team-managed projects require flat string arrays. JSON add/remove syntax does not work."
+  },
+  "epics": [
+    {
+      "key": "KAN-6",
+      "summary": "Performance Optimization",
+      "status": "To Do",
+      "horizon": "v1.4.0",
+      "description": "Multi-phase performance optimization plan covering batch collection, efficient polling, and frontend rendering. See docs/plans/2026-07-20-performance-optimization-roadmap.md and ADR-0003. Four phases: Batch Collection (pipeline batching), Smart Polling (adaptive intervals), Frontend (memoization, virtualization), and Transport (binary serialization).",
+      "children": [
+        {
+          "summary": "Batch collection pipeline",
+          "description": "Implement batch collection in internal/common/pipeline.go where collectors emit batches instead of single events.",
+          "labels": ["horizon:v1.4.0", "area:backend"]
+        },
+        {
+          "summary": "Adaptive smart polling",
+          "description": "Implement adaptive polling intervals — slow polling for stable metrics, fast polling for volatile metrics.",
+          "labels": ["horizon:v1.4.0", "area:backend"]
+        },
+        {
+          "summary": "Frontend rendering optimization",
+          "description": "Virtual scrolling for large tables, memoization of expensive Recharts renders, React.memo on collector cards.",
+          "labels": ["horizon:v1.4.0", "area:frontend"]
+        },
+        {
+          "summary": "Binary transport serialization",
+          "description": "Replace JSON with protobuf/flatbuffers for Wails bridge calls with large payloads.",
+          "labels": ["horizon:v1.4.0", "area:backend"]
+        }
+      ]
+    },
+    {
+      "key": "KAN-7",
+      "summary": "Test Coverage & Quality",
+      "status": "To Do",
+      "horizon": "Foundation",
+      "description": "Achieve 80%+ coverage across all subsystems. Add unit tests, integration tests, and maintain the E2E test harness. See plans/2026-07-24-sprint-ci-cd-and-test-audit.md and coverage/ summaries.",
+      "children": [
+        {
+          "summary": "SysOps unit test expansion",
+          "description": "Add unit tests for CPU, memory, disk, process, and network collectors in internal/sysops/. Target: 80%+ coverage.",
+          "labels": ["horizon:foundation", "area:backend", "subsystem:sysops"]
+        },
+        {
+          "summary": "NetOps unit test expansion",
+          "description": "Add unit tests for DNS resolution, latency checks, port scanning, and topology discovery. Target: 80%+ coverage.",
+          "labels": ["horizon:foundation", "area:backend", "subsystem:netops"]
+        },
+        {
+          "summary": "SecOps unit test expansion",
+          "description": "Add unit tests for port scanning, firewall rule analysis, process ancestry checks, and listening endpoint enumeration. Target: 80%+ coverage.",
+          "labels": ["horizon:foundation", "area:backend", "subsystem:secops"]
+        },
+        {
+          "summary": "DevOps unit test expansion",
+          "description": "Add unit tests for Docker stats, container lifecycle, and compose parsing. Target: 80%+ coverage.",
+          "labels": ["horizon:foundation", "area:backend", "subsystem:devops"]
+        },
+        {
+          "summary": "AIOps unit test expansion",
+          "description": "Add unit tests for analyst engine, anomaly detection, state queries, and workflow evaluation. Target: 80%+ coverage.",
+          "labels": ["horizon:foundation", "area:backend", "subsystem:aiops"]
+        },
+        {
+          "summary": "Common package test expansion",
+          "description": "Add unit tests for Pipeline, Storage, Alerts, Sandbox, and SLO services. Target: 80%+ coverage.",
+          "labels": ["horizon:foundation", "area:backend", "subsystem:common"]
+        },
+        {
+          "summary": "App facade test expansion",
+          "description": "Add tests for all Wails bound facades in internal/app/. Covers error handling, input validation, and panic recovery.",
+          "labels": ["horizon:foundation", "area:backend"]
+        },
+        {
+          "summary": "Frontend component tests",
+          "description": "Add Vitest + React Testing Library tests for key UI components: dashboard, collector cards, charts, settings panels.",
+          "labels": ["horizon:foundation", "area:frontend"]
+        },
+        {
+          "summary": "Maintain E2E test harness",
+          "description": "Keep run_e2e_tests.py working with current collector interfaces. Add new E2E scenarios for cross-subsystem flows.",
+          "labels": ["horizon:foundation", "area:qa"]
+        }
+      ]
+    },
+    {
+      "key": "KAN-8",
+      "summary": "AI & Intelligence (v1.5.0)",
+      "status": "To Do",
+      "horizon": "v1.5.0",
+      "description": "Extend AI capabilities beyond Ollama. Multi-model provider support, predictive analytics, natural language system query, and automated RCA report generation. See ADR-0005 and internal/aiops/. Also covers the MCP server in internal/aiops/mcp/.",
+      "children": [
+        {
+          "summary": "Multi-model AI provider support",
+          "description": "OpenAI/Anthropic API integration alongside existing Ollama support. Provider abstraction layer with fallback.",
+          "labels": ["horizon:v1.5.0", "area:backend", "subsystem:aiops"]
+        },
+        {
+          "summary": "Predictive analytics engine",
+          "description": "Trend forecasting for disk, memory, CPU utilization using linear regression or simple time-series models.",
+          "labels": ["horizon:v1.5.0", "area:backend", "subsystem:aiops"]
+        },
+        {
+          "summary": "Natural language system query",
+          "description": "Ask questions about system state in plain English. LLM translates to structured queries against collector data.",
+          "labels": ["horizon:v1.5.0", "area:backend", "subsystem:aiops"]
+        },
+        {
+          "summary": "Automated RCA report generation",
+          "description": "Scheduled root cause analysis digests from anomaly data and system logs.",
+          "labels": ["horizon:v1.5.0", "area:backend", "subsystem:aiops"]
+        },
+        {
+          "summary": "MCP server feature expansion",
+          "description": "Extend internal/aiops/mcp/ with additional tools/resources for collector data access and alert management.",
+          "labels": ["horizon:v1.5.0", "area:backend", "subsystem:aiops"]
+        }
+      ]
+    },
+    {
+      "key": "KAN-9",
+      "summary": "Sprint: Surface & Polish",
+      "status": "In Progress",
+      "horizon": "Current Sprint",
+      "description": "Active sprint (2026-07-28). Focus on completing the 80% implementation and shipping surface-level improvements. See plans/2026-07-28-sprint-surface-and-polish.md.",
+      "children": [
+        {
+          "key": "KAN-17",
+          "summary": "Wire Homebrew/Scoop packaging into release.yml",
+          "labels": ["sprint:active", "area:devops"],
+          "blocks": ["KAN-22"]
+        },
+        {
+          "key": "KAN-18",
+          "summary": "Write SLO engine tests",
+          "labels": ["sprint:active", "area:backend"]
+        },
+        {
+          "key": "KAN-19",
+          "summary": "Add topology persistence to storage.go",
+          "labels": ["sprint:active", "area:backend"]
+        },
+        {
+          "key": "KAN-20",
+          "summary": "Wire HealthBadge into Dashboard",
+          "labels": ["sprint:active", "area:frontend"]
+        },
+        {
+          "key": "KAN-21",
+          "summary": "Initialize Continuous Learning v2",
+          "labels": ["sprint:active", "area:infra"]
+        },
+        {
+          "key": "KAN-22",
+          "summary": "Add changelog generation to release.yml",
+          "labels": ["sprint:active", "area:devops"],
+          "blockedBy": ["KAN-17"]
+        }
+      ]
+    },
+    {
+      "key": "KAN-10",
+      "summary": "Platform Evolution (v2.0)",
+      "status": "To Do",
+      "horizon": "v2.0",
+      "description": "Long-term platform expansion: plugin system for community-contributed collectors, remote lightweight agent for headless servers, mobile companion app (read-only), and optional web UI mode.",
+      "children": [
+        {
+          "summary": "Plugin system",
+          "description": "Community-contributed collectors and analyzers via a plugin SDK. Go plugin or WASM-based extension architecture.",
+          "labels": ["horizon:v2.0", "area:backend", "area:infra"]
+        },
+        {
+          "summary": "Remote lightweight agent",
+          "description": "Small-footprint collector daemon for monitoring headless servers. Forward metrics to main instance.",
+          "labels": ["horizon:v2.0", "area:backend", "area:infra"]
+        },
+        {
+          "summary": "Mobile companion app",
+          "description": "Read-only dashboard for iOS/Android. Push notifications for critical alerts.",
+          "labels": ["horizon:v2.0", "area:mobile"]
+        },
+        {
+          "summary": "Web UI mode",
+          "description": "Optional web-based interface for browser access. Wails serve mode or separate web server.",
+          "labels": ["horizon:v2.0", "area:frontend"]
+        }
+      ]
+    },
+    {
+      "key": "KAN-11",
+      "summary": "Features & UX (v1.4.0)",
+      "status": "To Do",
+      "horizon": "v1.4.0",
+      "description": "User-facing features for v1.4.0: custom dashboard layouts, configurable alert rules engine, export/reporting, and multi-workspace support.",
+      "children": [
+        {
+          "summary": "Custom dashboard layouts",
+          "description": "Drag-and-drop widget arrangement using react-grid-layout or custom implementation. Layout persisted to SQLite per workspace.",
+          "labels": ["horizon:v1.4.0", "area:frontend"]
+        },
+        {
+          "summary": "Alert rules engine",
+          "description": "User-configurable threshold-based alerts (CPU > 90%, disk > 95%) with desktop notifications via Wails notification API.",
+          "labels": ["horizon:v1.4.0", "area:backend", "area:frontend"]
+        },
+        {
+          "summary": "Export & reporting",
+          "description": "PDF/CSV export for dashboard metrics and system reports. Client-side generation from Recharts data.",
+          "labels": ["horizon:v1.4.0", "area:frontend"]
+        },
+        {
+          "summary": "Multi-workspace support",
+          "description": "Create and switch between multiple system profiles. All collector state scoped to active workspace. SQLite model.",
+          "labels": ["horizon:v1.4.0", "area:backend", "area:frontend"]
+        }
+      ]
+    },
+    {
+      "key": "KAN-12",
+      "summary": "Security (v1.5.0)",
+      "status": "To Do",
+      "horizon": "v1.5.0",
+      "description": "Security feature expansion: file integrity monitoring (hash-based change detection), local CVE vulnerability scanning, and CIS benchmark compliance reporting.",
+      "children": [
+        {
+          "summary": "File integrity monitoring",
+          "description": "Hash-based (SHA-256) change detection on critical system files. Baseline snapshot with periodic verification.",
+          "labels": ["horizon:v1.5.0", "area:backend", "subsystem:secops"]
+        },
+        {
+          "summary": "Local CVE vulnerability scanning",
+          "description": "Match installed software against local CVE database. Offline-compatible with periodic update.",
+          "labels": ["horizon:v1.5.0", "area:backend", "subsystem:secops"]
+        },
+        {
+          "summary": "CIS benchmark compliance reporting",
+          "description": "CIS benchmark checks for Windows/Linux with pass/fail scoring and remediation guidance.",
+          "labels": ["horizon:v1.5.0", "area:backend", "subsystem:secops"]
+        }
+      ]
+    },
+    {
+      "key": "KAN-13",
+      "summary": "Platform & Stability (v1.4.0)",
+      "status": "To Do",
+      "horizon": "v1.4.0",
+      "description": "Platform infrastructure for v1.4.0: macOS code signing, Linux AppImage packaging, auto-update mechanism, and performance profiling with pprof.",
+      "children": [
+        {
+          "summary": "macOS code signing automation",
+          "description": "Full notarization pipeline in CI. Apple Developer certificate managed in secrets. Use gon or xcrun altool.",
+          "labels": ["horizon:v1.4.0", "area:devops", "platform:macos"]
+        },
+        {
+          "summary": "Linux AppImage packaging",
+          "description": "AppImage distribution for broader Linux support. appimagetool or linuxdeploy in release workflow.",
+          "labels": ["horizon:v1.4.0", "area:devops", "platform:linux"]
+        },
+        {
+          "summary": "Auto-update mechanism",
+          "description": "In-app update checker via GitHub Releases API. One-click download. Manual opt-in on first launch.",
+          "labels": ["horizon:v1.4.0", "area:frontend", "area:backend"]
+        },
+        {
+          "summary": "Performance profiling with pprof",
+          "description": "pprof HTTP endpoint in debug mode. Flamegraph export. Documented in developing.md.",
+          "labels": ["horizon:v1.4.0", "area:backend"]
+        }
+      ]
+    },
+    {
+      "key": "KAN-14",
+      "summary": "Ecosystem (v2.0)",
+      "status": "To Do",
+      "horizon": "v2.0",
+      "description": "Long-term ecosystem vision: community marketplace for dashboards/alerts/workflows, REST API gateway for third-party integration, and team collaboration with role-based access.",
+      "children": [
+        {
+          "summary": "Community marketplace",
+          "description": "Share and discover custom dashboards, alert rules, and workflows. Local registry with import/export.",
+          "labels": ["horizon:v2.0", "area:infra"]
+        },
+        {
+          "summary": "REST API gateway",
+          "description": "REST API for third-party integration and automation. API key authentication with scoped permissions.",
+          "labels": ["horizon:v2.0", "area:backend"]
+        },
+        {
+          "summary": "Team collaboration",
+          "description": "Shared workspaces with role-based access. Multi-user support on shared infrastructure.",
+          "labels": ["horizon:v2.0", "area:backend", "area:infra"]
+        }
+      ]
+    },
+    {
+      "key": "KAN-15",
+      "summary": "CI/CD & Release Pipeline",
+      "status": "To Do",
+      "horizon": "Foundation",
+      "description": "Complete CI/CD infrastructure: cross-platform test matrix, release automation with artifact publishing, Codecov integration, dependency updates via Dependabot, and contributing guidelines. See plans/2026-07-24-sprint-ci-cd-and-test-audit.md.",
+      "children": [
+        {
+          "summary": "Cross-platform CI test matrix",
+          "description": "GitHub Actions matrix across ubuntu-latest, windows-latest, macos-latest. Go build + test + vet on all three.",
+          "labels": ["horizon:foundation", "area:devops"]
+        },
+        {
+          "summary": "Codecov integration",
+          "description": "Upload coverage reports to Codecov. Status check on PRs. Coverage targets per package.",
+          "labels": ["horizon:foundation", "area:devops"]
+        },
+        {
+          "summary": "Dependabot configuration",
+          "description": "Automated dependency update PRs for Go modules and npm packages. Weekly schedule.",
+          "labels": ["horizon:foundation", "area:devops"]
+        },
+        {
+          "summary": "Release automation workflow",
+          "description": "GitHub Actions release workflow triggered by tags. Build, sign, package, and publish across all platforms.",
+          "labels": ["horizon:foundation", "area:devops"]
+        },
+        {
+          "summary": "Release artifact checksums",
+          "description": "SHA-256 checksum generation and GPG signing for all release artifacts.",
+          "labels": ["horizon:foundation", "area:devops"]
+        },
+        {
+          "summary": "Contributing guide & templates",
+          "description": "CONTRIBUTING.md, PR template, issue templates for bug reports and feature requests.",
+          "labels": ["horizon:foundation", "area:docs"]
+        },
+        {
+          "summary": "Linting in CI pipeline",
+          "description": "golangci-lint run in CI. ESLint for frontend. Block PRs on lint failures.",
+          "labels": ["horizon:foundation", "area:devops"]
+        }
+      ]
+    },
+    {
+      "key": "KAN-16",
+      "summary": "Network (v1.5.0)",
+      "status": "To Do",
+      "horizon": "v1.5.0",
+      "description": "Network feature expansion: integrated pcap viewer with protocol dissection, per-process bandwidth monitoring, and VPN detection with routing table audit.",
+      "children": [
+        {
+          "summary": "Packet capture viewer",
+          "description": "Integrated pcap analysis with protocol dissection. Load and browse captures in-app.",
+          "labels": ["horizon:v1.5.0", "area:backend", "subsystem:netops"]
+        },
+        {
+          "summary": "Per-process bandwidth monitoring",
+          "description": "Track network usage per process. Real-time and historical views.",
+          "labels": ["horizon:v1.5.0", "area:backend", "subsystem:netops"]
+        },
+        {
+          "summary": "VPN detection & audit",
+          "description": "Tunnel interface identification and routing table analysis. Detect active VPN connections.",
+          "labels": ["horizon:v1.5.0", "area:backend", "subsystem:netops"]
+        }
+      ]
+    }
+  ],
+  "adrs": {
+    "ADR-0001": "Wails v2 framework decision — docs/adr/ADR-0001-wails-v2-framework.md",
+    "ADR-0002": "SQLite WAL storage — docs/adr/ADR-0002-sqlite-wal-storage.md",
+    "ADR-0003": "Collector architecture — docs/adr/ADR-0003-collector-architecture.md",
+    "ADR-0004": "Alert engine design — docs/adr/ADR-0004-alert-engine-design.md",
+    "ADR-0005": "Local AI integration — docs/adr/ADR-0005-local-ai-integration.md"
+  },
+  "planReferences": {
+    "2026-07-20-performance-optimization-roadmap.md": "docs/plans/2026-07-20-performance-optimization-roadmap.md",
+    "2026-07-24-sprint-ci-cd-and-test-audit.md": "plans/2026-07-24-sprint-ci-cd-and-test-audit.md",
+    "2026-07-25-storage-and-hardening-remediation.md": "plans/2026-07-25-storage-and-hardening-remediation.md",
+    "2026-07-26-tier-1-2-implementation.md": "plans/2026-07-26-tier-1-2-implementation.md",
+    "2026-07-28-sprint-surface-and-polish.md": "plans/2026-07-28-sprint-surface-and-polish.md"
+  },
+  "bulkCreateInstructions": "Call mcp_atlassian-mcp_createJiraIssue for each item. For Epics: issueTypeName='Epic'. For children: issueTypeName='Task', parent='KAN-X'. Use labels array for tagging. Team-managed project constraint: DO NOT use customfield_10014 — use parent.key instead.",
+  "labelTaxonomy": {
+    "area": ["backend", "frontend", "devops", "infra", "qa", "docs", "mobile"],
+    "horizon": ["foundation", "v1.4.0", "v1.5.0", "v2.0"],
+    "subsystem": ["sysops", "netops", "secops", "devops", "aiops", "common"],
+    "platform": ["linux", "macos", "windows"],
+    "sprint": ["active"],
+    "status": ["needs-triage", "ready-for-agent"]
+  }
+}

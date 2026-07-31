@@ -66,3 +66,15 @@ Before claiming completion of any task:
 - Write observations to `~/.agents/homunculus/observations/YYYY-MM-DD.jsonl`
 - Update kanban board
 - Promote repeated patterns to instincts
+
+## Agent skills
+
+This repo uses the mattpocock/skills engineering pipeline. The following files in `docs/agents/` define how agents interact with the issue tracker, domain docs, and triage labels:
+
+| File | Purpose | When to read it |
+|------|---------|-----------------|
+| `docs/agents/issue-tracker.md` | How to create, read, search, transition Jira issues; wayfinding operations | Before any Jira interaction |
+| `docs/agents/domain.md` | How to consume domain docs and ADRs | Before proposing architecture changes |
+| `docs/agents/triage-labels.md` | Label strings used in Jira | Before applying triage labels |
+
+Jira is the single source of truth for all issue tracking. All `/wayfinder`, `/to-tickets`, `/triage`, and `/to-spec` operations route through the Atlassian MCP server tools defined in `.vscode/mcp.json`.
