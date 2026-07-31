@@ -193,7 +193,7 @@ UniversalOps/
 3. **Build**: `go build ./...` — catch compilation errors early
 4. **Lint**: `golangci-lint run ./...` — follow Go idioms
 5. **Backend Tests**: `go test ./internal/... -count=1 -timeout 120s`
-6. **Frontend Build**: `cd cmd/opsforall-gui/frontend && npx tsc --noEmit`
+6. **Frontend Build**: `cd cmd/opsforall-gui/frontend && npx tsc -b` — build mode; the root tsconfig is project-references only, so plain `tsc --noEmit` type-checks nothing
 7. **Frontend Tests**: `npm test --prefix cmd/opsforall-gui/frontend`
 8. **ESLint**: `npm run lint --prefix cmd/opsforall-gui/frontend`
 9. **Push & PR**: Push branch, open PR with template
@@ -282,7 +282,7 @@ go tool pprof mem.out
 
 - [ ] Run `go build ./...` and `go vet ./...` — zero errors
 - [ ] Run `go test ./internal/... -count=1 -timeout 120s` — all green
-- [ ] Run `npx tsc --noEmit` in frontend directory — no type errors
+- [ ] Run `npx tsc -b` in frontend directory — no type errors (build mode — `--noEmit` is a false green on the project-references root)
 - [ ] Run `npm test --prefix cmd/opsforall-gui/frontend` — all green
 - [ ] Run `golangci-lint run ./...` — no lint warnings
 - [ ] Test on Windows (primary target) — everything works

@@ -61,7 +61,7 @@ npm run test:ui     # Vitest UI mode
 
 # Linting & Type Checking
 npm run lint        # ESLint
-npx tsc --noEmit    # TypeScript check
+npx tsc -b      # TypeScript check (build mode; matches npm run build — --noEmit is a false green on the project-references root)
 
 # Build (run via `wails build` from project root)
 npm run build

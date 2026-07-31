@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GC + FreeOSMemory, workflow timeout guard, AIOps request-context hardening.
 - CI/CD pipeline: toolchains pinned (`wails@v2.13.0`, `golangci-lint@v1.64.8` — `.golangci.yml` is v1 config and `@latest` drifted to v2); Scoop manifest now gets the **real SHA256** (placeholder hashes would fail every install); version handling standardized (assets/URLs no longer split between `v1.5.0` and `1.5.0`); broken Homebrew formula removed from CI (macOS binaries aren't built there); `checksums.txt` no longer includes `.sha256` sidecars; `package-*.ps1` un-ignored so CI checkout contains them.
 - `install.ps1` fallback URL matched CI asset naming (`universal-ops-<ver>-windows-amd64.exe`).
+- TypeScript build errors resolved (`tsc -b`): onboarded result cast in `App.tsx`, optional `EventsOff` handler in `useBackend.ts`, `isPreviousData` dropped for TanStack Query v5. CI TypeScript check switched from `tsc --noEmit` (false green on the project-references root) to `tsc -b`.
 
 ### Changed
 - Version bumped to 1.5.0 (wails.json, package.json, install.ps1, README badge).

@@ -26,7 +26,7 @@ assignees: ''
 ### Running Tests
 - [ ] Backend tests pass (`go test ./internal/... -count=1`)
 - [ ] Frontend tests pass (`npm test --prefix cmd/opsforall-gui/frontend`)
-- [ ] TypeScript compiles clean (`tsc --noEmit`)
+- [ ] TypeScript compiles clean (`tsc -b` — build mode; root tsconfig is project references, `--noEmit` is a false green)
 - [ ] ESLint clean (`npm run lint --prefix cmd/opsforall-gui/frontend`)
 - [ ] Race detection clean (`go test -race ./internal/... -count=1 -timeout 180s`)
 - [ ] E2E smoke tests pass (`python tests/e2e/run_e2e_tests.py`, Windows only)
