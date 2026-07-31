@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest]
+        os: [windows-latest, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -23,7 +23,15 @@ jobs:
           go-version: "1.26.x"
           cache: true
 
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+        shell: bash
+
       - name: Set up MSVC for Windows
+        if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
 
       - name: Set up Node
@@ -81,20 +89,29 @@ jobs:
         run: cd cmd/opsforall-gui/frontend && npx vitest run --coverage
         shell: bash
 
-      - name: Build app for E2E tests
+      - name: Build app for E2E tests (Windows)
+        if: runner.os == 'Windows'
         run: wails build -platform windows/amd64 -o universal-ops.exe
         shell: bash
 
-      - name: Set up Python
+      - name: Build app (native)
+        if: runner.os != 'Windows'
+        run: wails build -o universal-ops
+        shell: bash
+
+      - name: Set up Python (Windows E2E)
+        if: runner.os == 'Windows'
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Install Python dependencies
+      - name: Install Python dependencies (Windows E2E)
+        if: runner.os == 'Windows'
         run: pip install pytest pywinauto
         shell: bash
 
-      - name: E2E tests
+      - name: E2E tests (Windows only)
+        if: runner.os == 'Windows'
         run: python run_e2e_tests.py
         shell: bash
         env:

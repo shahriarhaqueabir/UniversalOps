@@ -54,6 +54,7 @@ vendor/
 coverage
 coverage.out
 coverage.txt
+coverage.html
 coverage_devops
 coverage_secops
 coverage_sysops
