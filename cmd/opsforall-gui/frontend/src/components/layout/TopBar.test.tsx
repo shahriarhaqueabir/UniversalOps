@@ -5,6 +5,7 @@ import { useAlertStore, useThemeStore } from '../../stores/useSettingsStore'
 
 import { useQuery } from '@tanstack/react-query'
 import type { AlertInfo } from '@/types'
+import { mockQueryReturn } from '@/test/mockQuery'
 
 // Mock react-query hooks
 vi.mock('@tanstack/react-query', () => ({
@@ -21,7 +22,7 @@ vi.mock('@/hooks/useBackend', () => ({
 describe('TopBar Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useQuery).mockReturnValue({ data: [], isLoading: false } as any)
+    vi.mocked(useQuery).mockReturnValue(mockQueryReturn({ data: [] }))
     act(() => {
       useAlertStore.getState().clearAlerts()
       useThemeStore.getState().setTheme('dark')
@@ -62,7 +63,7 @@ describe('TopBar Component', () => {
     const alert: AlertInfo = { id: '1', level: 'warning', metric: 'Memory', message: 'Usage > 90%', value: 0, threshold: 0, timestamp: '12:00:00', resolved: false }
 
     // Mock useQuery to return the alert when the panel is open
-    vi.mocked(useQuery).mockReturnValue({ data: [alert], isLoading: false } as any)
+    vi.mocked(useQuery).mockReturnValue(mockQueryReturn({ data: [alert] }))
 
     act(() => {
       useAlertStore.getState().addAlert(alert)
@@ -80,7 +81,7 @@ describe('TopBar Component', () => {
 
   it('clears alerts when Clear button is clicked', () => {
     const alert: AlertInfo = { id: '1', level: 'info', metric: 'Disk', message: 'Full', value: 0, threshold: 0, timestamp: '12:00:00', resolved: false }
-    vi.mocked(useQuery).mockReturnValue({ data: [alert], isLoading: false } as any)
+    vi.mocked(useQuery).mockReturnValue(mockQueryReturn({ data: [alert] }))
 
     act(() => {
       useAlertStore.getState().addAlert(alert)

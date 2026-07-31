@@ -27,8 +27,8 @@ export function UsersTab() {
           <p className="text-[var(--color-text-dim)] text-center py-8">No active users detected</p>
         ) : (
           <div className="space-y-3">
-            {users.map((u, i) => (
-              <div key={i} className="flex items-center justify-between p-4 bg-[var(--color-panel-2)] rounded-xl border border-[var(--color-border)]">
+            {users.map((u) => (
+              <div key={`${u.user}-${u.terminal}`} className="flex items-center justify-between p-4 bg-[var(--color-panel-2)] rounded-xl border border-[var(--color-border)]">
                 <div>
                   <p className="text-sm font-bold text-[var(--color-text)]">{u.user}</p>
                   <p className="text-xs text-[var(--color-text-faint)]">{u.terminal} from {u.host || 'local'}</p>

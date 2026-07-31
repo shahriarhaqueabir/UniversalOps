@@ -41,8 +41,8 @@ export function SchedulerTab() {
                 </tr>
               </thead>
               <tbody>
-                {tasks.map((t, i) => (
-                  <tr key={i} className="border-b border-[var(--color-border)]/20 hover:bg-[var(--color-sidebar-hover)]">
+                {tasks.map((t) => (
+                  <tr key={t.name} className="border-b border-[var(--color-border)]/20 hover:bg-[var(--color-sidebar-hover)]">
                     <td className="px-4 py-3 text-sm font-medium text-[var(--color-text)]">{t.name}</td>
                     <td className="px-4 py-3 text-sm text-[var(--color-text-dim)] font-mono">{t.schedule}</td>
                     <td className="px-4 py-3">

@@ -7,18 +7,8 @@ import { MainContent } from './components/layout/MainContent'
 import { HawkSidebar } from './components/layout/HawkSidebar'
 import { OnboardingModal } from './components/dialogs/OnboardingModal'
 import { useThemeStore, useAlertStore, useSettingsStore, useNavigationStore, type Page } from './stores'
+import { getGo, getRuntime } from './hooks/useBackend'
 import type { AlertInfo } from './types'
-
-
-interface WailsRuntime {
-  EventsOn: (event: string, handler: (...args: unknown[]) => void) => void
-  EventsOff: (event: string, handler: (...args: unknown[]) => void) => void
-}
-
-function getRuntime(): WailsRuntime | null {
-  const w = window as { runtime?: WailsRuntime }
-  return w.runtime ?? null
-}
 
 function App() {
   const { currentPage, navigate } = useNavigationStore()
@@ -38,8 +28,8 @@ function App() {
 
     const checkOnboarded = async (attempt = 0) => {
       try {
-        const go = (window as any).go
-        const method = go?.app?.App?.IsOnboarded
+        const app = getGo()
+        const method = app?.App?.IsOnboarded
         if (method) {
           const res = await method()
           if (!cancelled) setOnboarded(res)
@@ -65,12 +55,12 @@ function App() {
   useEffect(() => {
     const syncSettings = async () => {
       try {
-        const go = (window as any).go
-        if (go?.app?.PipelineAPI?.UpdateSettings) {
-          await go.app.PipelineAPI.UpdateSettings(refreshInterval, 0, pingCount, dnsTimeout)
+        const app = getGo()
+        if (app?.PipelineAPI?.UpdateSettings) {
+          await app.PipelineAPI.UpdateSettings(refreshInterval, 0, pingCount, dnsTimeout)
         }
-        if (go?.app?.AIOps?.SetCompanionName) {
-          await go.app.AIOps.SetCompanionName(companionName)
+        if (app?.AIOps?.SetCompanionName) {
+          await app.AIOps.SetCompanionName(companionName)
         }
       } catch { /* ignore — Backend not ready yet */ }
     }

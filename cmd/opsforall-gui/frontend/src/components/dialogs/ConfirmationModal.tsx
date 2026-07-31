@@ -35,8 +35,8 @@ export function ConfirmationModal({ preview, onConfirm, onCancel }: Confirmation
             <div className="p-6 rounded-2xl bg-danger/5 border border-danger/10 space-y-3">
               <p className="text-[10px] font-black text-danger uppercase tracking-[0.2em]">Operational Risks</p>
               <ul className="space-y-2">
-                {preview.risks.map((risk, i) => (
-                  <li key={i} className="flex items-start gap-3 text-sm font-bold text-text-dim leading-snug">
+                {preview.risks.map((risk) => (
+                  <li key={risk} className="flex items-start gap-3 text-sm font-bold text-text-dim leading-snug">
                     <XCircle size={14} className="text-danger mt-0.5 shrink-0" />
                     {risk}
                   </li>

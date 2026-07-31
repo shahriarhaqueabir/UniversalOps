@@ -1,12 +1,24 @@
 import { useCallback } from 'react'
 
-interface WailsApp {
+export interface WailsRuntime {
+  EventsOn: (event: string, handler: (...args: unknown[]) => void) => void
+  EventsOff: (event: string, handler: (...args: unknown[]) => void) => void
+}
+
+export interface WailsApp {
   [key: string]: Record<string, (...args: unknown[]) => Promise<unknown>> | undefined
 }
 
-function getGo(): WailsApp | undefined {
+/** Access the Wails Go backend bindings (window.go.app). */
+export function getGo(): WailsApp | undefined {
   const w = window as { go?: { app?: WailsApp } }
   return w.go?.app
+}
+
+/** Access the Wails runtime API (window.runtime) for event subscriptions. */
+export function getRuntime(): WailsRuntime | null {
+  const w = window as { runtime?: WailsRuntime }
+  return w.runtime ?? null
 }
 
 export function useBackend() {

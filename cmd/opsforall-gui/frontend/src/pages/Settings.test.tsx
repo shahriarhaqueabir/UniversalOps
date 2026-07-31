@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { Settings } from './Settings'
+import { mockQueryReturn } from '@/test/mockQuery'
 
 // Mock react-query
 vi.mock('@tanstack/react-query', async (importOriginal) => {
@@ -59,12 +60,12 @@ describe('Settings Page', () => {
     vi.clearAllMocks()
     vi.mocked(useQuery).mockImplementation(({ queryKey }: any) => {
       if (queryKey.includes('app-info')) {
-        return { data: { name: 'Universal-Ops', version: '1.3.0', go_version: 'go1.26', uptime: '1h' }, isLoading: false } as any
+        return mockQueryReturn({ data: { name: 'Universal-Ops', version: '1.3.0', go_version: 'go1.26', uptime: '1h' } })
       }
       if (queryKey.includes('alert-rules')) {
-        return { data: [], isLoading: false } as any
+        return mockQueryReturn({ data: [] })
       }
-      return { data: null, isLoading: false } as any
+      return mockQueryReturn({ data: null })
     })
   })
 

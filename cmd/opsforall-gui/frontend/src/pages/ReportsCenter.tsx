@@ -87,8 +87,8 @@ function HealthReportView({ data }: { data: HealthReportData }) {
         <span className="text-lg font-black">{data.score}</span>
         <span className="text-[10px] text-text-dim font-medium">/ 100 — {data.checks?.length ?? 0} checks</span>
       </div>
-      {(data.checks ?? []).map((c, i) => (
-        <div key={i} className="flex items-start gap-3 px-3 py-2.5 rounded-lg bg-black/20 border border-white/5">
+      {(data.checks ?? []).map((c) => (
+        <div key={c.name} className="flex items-start gap-3 px-3 py-2.5 rounded-lg bg-black/20 border border-white/5">
           {statusIcon(c.status)}
           <div className="flex-1 min-w-0">
             <p className="text-[11px] font-bold text-white">{c.name}</p>
@@ -121,8 +121,8 @@ function SecurityReportView({ data }: { data: SecurityReportData }) {
         <div key={category}>
           <p className="text-[9px] font-black uppercase tracking-widest text-text-faint mb-2">{category}</p>
           <div className="space-y-1.5">
-            {items.map((item, i) => (
-              <div key={i} className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-black/20 border border-white/5">
+            {items.map((item) => (
+              <div key={item.check} className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-black/20 border border-white/5">
                 {item.passed
                   ? <CheckCircle size={11} className="text-emerald-500 shrink-0 mt-0.5" />
                   : <XCircle size={11} className="text-red-500 shrink-0 mt-0.5" />
@@ -161,7 +161,7 @@ function AutoDiagReportView({ data }: { data: AutoDiagReportData }) {
           const title = headerMatch?.[1] ?? `Section ${i + 1}`
           const body = part.replace(/^##\s+.+/, '').trim()
           return (
-            <div key={i}>
+            <div key={title}>
               <p className="text-[10px] font-bold text-white uppercase tracking-wider mb-1.5">{title}</p>
               <div className="text-[10px] text-text-dim leading-relaxed whitespace-pre-wrap font-sans">
                 {body || 'No content'}
@@ -172,8 +172,8 @@ function AutoDiagReportView({ data }: { data: AutoDiagReportData }) {
       ) : (
         <>
           <p className="text-[9px] font-black uppercase tracking-widest text-text-faint mb-2">Sections</p>
-          {(data.sections ?? []).map((s, i) => (
-            <div key={i} className="px-3 py-2 rounded-lg bg-black/20 border border-white/5">
+          {(data.sections ?? []).map((s) => (
+            <div key={s} className="px-3 py-2 rounded-lg bg-black/20 border border-white/5">
               <p className="text-[10px] font-bold text-white">{s}</p>
             </div>
           ))}

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useBackend } from '@/hooks/useBackend'
+import { useBackend, getRuntime } from '@/hooks/useBackend'
 import { Database, Trash2, Box, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useState, useEffect } from 'react'
@@ -27,7 +27,7 @@ export function ModelManager() {
 
   // Listen for pull progress from backend
   useEffect(() => {
-    const runtime = (window as any).runtime
+    const runtime = getRuntime()
     if (runtime) {
       const handler = (p: any) => setProgress(p as OllamaProgress)
       runtime.EventsOn('ollama:progress', handler)

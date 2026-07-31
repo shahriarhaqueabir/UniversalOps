@@ -37,6 +37,7 @@ function PageSkeleton() {
         </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* static skeleton */}
         {[1, 2, 3].map(i => (
           <div key={i} className="h-48 bg-[var(--color-panel-2)] rounded-[var(--radius-lg)]" />
         ))}

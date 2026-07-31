@@ -60,6 +60,7 @@ export function TracerouteTab() {
             <div className="h-6 w-48 bg-panel-3 rounded animate-pulse" />
           </div>
           <div className="space-y-4">
+            {/* static skeleton */}
             {[1,2,3,4,5].map((i) => (
               <div key={i} className="flex items-center gap-6">
                 <div className="h-4 w-16 bg-panel-3 rounded animate-pulse" />

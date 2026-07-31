@@ -395,9 +395,9 @@ function OverviewTab() {
 
           return (
             <div className="space-y-2">
-              {items.map((item, i) => (
+              {items.map((item) => (
                 <div
-                  key={i}
+                  key={item.message}
                   className={cn(
                     "flex items-start gap-3 rounded-xl p-3.5 border",
                     item.level === 'critical' ? 'bg-danger/10 border-danger/20' :
@@ -466,8 +466,8 @@ function OverviewTab() {
             <p className="text-sm text-[var(--color-text-faint)] italic">No source data available.</p>
           ) : (
             <div className="space-y-2">
-              {(stats?.topSources ?? []).map((src, i) => (
-                <div key={i} className="flex items-center justify-between py-2 border-b border-[var(--color-border)]/30 last:border-0">
+              {(stats?.topSources ?? []).map((src) => (
+                <div key={src.source} className="flex items-center justify-between py-2 border-b border-[var(--color-border)]/30 last:border-0">
                   <span className="text-sm font-semibold text-[var(--color-text)]">{src.source}</span>
                   <span className="text-sm font-bold text-[var(--color-accent)] font-[Geist_Mono]">{src.count.toLocaleString()}</span>
                 </div>
@@ -486,8 +486,8 @@ function OverviewTab() {
             <p className="text-sm text-[var(--color-text-faint)] italic">No recent errors.</p>
           ) : (
             <div className="space-y-3">
-              {(stats?.trendingErrors ?? []).map((err, i) => (
-                <div key={i} className="bg-[var(--color-panel-2)] border border-[var(--color-border)]/50 rounded-lg p-3">
+              {(stats?.trendingErrors ?? []).map((err) => (
+                <div key={err.message} className="bg-[var(--color-panel-2)] border border-[var(--color-border)]/50 rounded-lg p-3">
                   <p className="text-sm font-medium text-[var(--color-text)] leading-snug line-clamp-2">{err.message}</p>
                   <div className="flex items-center gap-4 mt-2 text-xs text-[var(--color-text-faint)]">
                     <span className="font-bold text-[var(--color-danger)]">×{err.count}</span>

@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { NetOps } from './NetOps'
 import { useQuery } from '@tanstack/react-query'
+import { mockQueryReturn } from '@/test/mockQuery'
 
 // Mock useQuery
 vi.mock('@tanstack/react-query', () => ({
@@ -47,7 +48,7 @@ describe('NetOps Page', () => {
     vi.clearAllMocks()
 
     vi.mocked(useQuery).mockImplementation(() => {
-      return { data: [], isLoading: false, dataUpdatedAt: Date.now() } as any
+      return mockQueryReturn({ data: [], dataUpdatedAt: Date.now() })
     })
 
     mockCall.mockImplementation(async (method: string) => {

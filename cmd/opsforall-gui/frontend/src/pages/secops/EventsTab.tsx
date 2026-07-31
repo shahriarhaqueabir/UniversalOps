@@ -184,8 +184,8 @@ export function EventsTab() {
                 </tr>
               </thead>
               <tbody>
-                {tasks.map((t, i) => (
-                  <tr key={i} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)]">
+                {tasks.map((t) => (
+                  <tr key={t.name} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)]">
                     <td className="px-4 py-3 text-sm font-bold text-text">{t.name}</td>
                     <td className="px-4 py-3"><StatusBadge status={t.status} /></td>
                     <td className="px-4 py-3 text-sm text-text-dim tabular-nums">{t.last_run || 'Never'}</td>

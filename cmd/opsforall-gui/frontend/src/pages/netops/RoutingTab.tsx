@@ -112,6 +112,7 @@ export function RoutingTab() {
 
           {isLoading ? (
             <div className="space-y-3">
+              {/* static skeleton */}
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="h-14 bg-panel-2 border border-border rounded-xl animate-pulse" />
               ))}

@@ -163,8 +163,8 @@ export function OverviewTab() {
             Tactical Recommendations
           </h3>
           <div className="grid grid-cols-2 gap-4">
-            {score.recommendations.map((rec, i) => (
-              <div key={i} className="flex items-start gap-4 bg-panel-2 border border-border rounded-2xl px-6 py-5 hover:border-warning/40 transition-all group">
+            {score.recommendations.map((rec) => (
+              <div key={rec} className="flex items-start gap-4 bg-panel-2 border border-border rounded-2xl px-6 py-5 hover:border-warning/40 transition-all group">
                 <AlertTriangle size={18} className="text-warning mt-0.5 shrink-0 transition-transform group-hover:scale-110" />
                 <span className="text-sm font-bold text-text-dim leading-relaxed group-hover:text-text transition-colors">{rec}</span>
               </div>
@@ -197,8 +197,8 @@ export function OverviewTab() {
                 </tr>
               </thead>
               <tbody>
-                {ports.slice(0, 12).map((p, i) => (
-                  <tr key={i} className="border-b border-border/30 hover:bg-panel-2 transition-colors">
+                {ports.slice(0, 12).map((p) => (
+                  <tr key={`${p.port}-${p.protocol}`} className="border-b border-border/30 hover:bg-panel-2 transition-colors">
                     <td className="py-3 pr-4 text-sm font-bold text-text tabular-nums">{p.port}</td>
                     <td className="py-3 pr-4 text-xs font-semibold text-text-dim">{p.protocol}</td>
                     <td className="py-3 pr-4 text-xs font-semibold text-text-dim max-w-[160px] truncate">{p.process_name}</td>
@@ -277,8 +277,8 @@ export function OverviewTab() {
                 </tr>
               </thead>
               <tbody>
-                {users.slice(0, 10).map((u, i) => (
-                  <tr key={i} className="border-b border-border/30 hover:bg-panel-2 transition-colors">
+                {users.slice(0, 10).map((u) => (
+                  <tr key={u.username} className="border-b border-border/30 hover:bg-panel-2 transition-colors">
                     <td className="py-3 pr-4 text-sm font-bold text-text">{u.username}</td>
                     <td className="py-3 pr-4 text-xs font-semibold text-text-dim">{u.full_name || '—'}</td>
                     <td className="py-3 pr-4 text-xs font-semibold text-text-dim">{u.group || '—'}</td>
@@ -316,8 +316,8 @@ export function OverviewTab() {
             <span className="ml-auto text-xs font-bold text-text-faint tabular-nums">{events.length} events</span>
           </h3>
           <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-            {events.slice(0, 20).map((e, i) => (
-              <div key={i} className="flex items-start gap-4 p-4 rounded-xl bg-panel-2 border border-border/50 hover:border-border transition-all">
+            {events.slice(0, 20).map((e) => (
+              <div key={e.id} className="flex items-start gap-4 p-4 rounded-xl bg-panel-2 border border-border/50 hover:border-border transition-all">
                 <div className={cn(
                   "mt-0.5 w-2 h-2 rounded-full shrink-0",
                   e.level === 'Error' ? 'bg-danger shadow-[0_0_6px_var(--color-danger)]' :

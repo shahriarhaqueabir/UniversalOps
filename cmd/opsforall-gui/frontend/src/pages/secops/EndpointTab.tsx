@@ -58,8 +58,8 @@ export function EndpointTab() {
           <HardDrive size={22} className="text-accent" /> Disk Encryption
         </h3>
         <div className="space-y-3">
-          {disks.map((d, i) => (
-            <div key={i} className="flex items-center justify-between bg-panel-2 border border-border rounded-xl px-5 py-3">
+          {disks.map((d) => (
+            <div key={d.volume} className="flex items-center justify-between bg-panel-2 border border-border rounded-xl px-5 py-3">
               <span className="text-sm font-bold text-text">{d.volume}</span>
               <StatusBadge status={d.encrypted ? 'enabled' : 'disabled'} />
               <span className="text-sm text-text-dim">{d.method}</span>
@@ -98,8 +98,8 @@ export function EndpointTab() {
               </tr>
             </thead>
             <tbody>
-              {services.slice(0, 50).map((s, i) => (
-                <tr key={i} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)]">
+              {services.slice(0, 50).map((s) => (
+                <tr key={s.name} className="border-b border-border/20 hover:bg-[var(--color-sidebar-hover)]">
                   <td className="px-4 py-3 text-sm font-bold text-accent">{s.name}</td>
                   <td className="px-4 py-3 text-sm text-text">{s.display_name}</td>
                   <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
