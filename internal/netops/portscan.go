@@ -12,6 +12,12 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
+// maxTotalPorts caps the number of ports scanned per call as defense-in-depth.
+// The MCP layer enforces a stricter per-request limit (maxPortsPerScan=100);
+// this raw-function cap protects all other callers (Wails facade, workflows)
+// from unbounded port lists that would spawn excessive goroutines.
+const maxTotalPorts = 1024
+
 // PortResult holds the result of a single port scan.
 type PortResult struct {
 	Port    int
@@ -61,14 +67,34 @@ func ScanPorts(host string, ports []int) ([]PortResult, error) {
 	if host == "" {
 		return nil, fmt.Errorf("host is required")
 	}
+	if len(ports) == 0 {
+		return []PortResult{}, nil
+	}
+	if len(ports) > maxTotalPorts {
+		return nil, fmt.Errorf("too many ports (max %d)", maxTotalPorts)
+	}
 
-	results := make([]PortResult, len(ports))
+	// Deduplicate ports while preserving order to avoid redundant dials.
+	seen := make(map[int]struct{}, len(ports))
+	unique := make([]int, 0, len(ports))
+	for _, p := range ports {
+		if p < 1 || p > 65535 {
+			return nil, fmt.Errorf("invalid port: %d", p)
+		}
+		if _, ok := seen[p]; ok {
+			continue
+		}
+		seen[p] = struct{}{}
+		unique = append(unique, p)
+	}
+
+	results := make([]PortResult, len(unique))
 	var wg sync.WaitGroup
 	// Limit concurrency to 64 workers
 	sem := semaphore.NewWeighted(64)
 	ctx := context.Background()
 
-	for i, port := range ports {
+	for i, port := range unique {
 		wg.Add(1)
 		if err := sem.Acquire(ctx, 1); err != nil {
 			wg.Done()
