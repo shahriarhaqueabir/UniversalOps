@@ -61,6 +61,15 @@ export function AlertsDashboard() {
   const [showResolved, setShowResolved] = useState(false)
   const [search, setSearch] = useState('')
   const [tab, setTab] = useState<'alerts' | 'rules'>('alerts')
+  const [showAddRule, setShowAddRule] = useState(false)
+  const [newRule, setNewRule] = useState({
+    metric: '',
+    threshold: '',
+    severity: 'warning',
+    condition: 'gt',
+    flapCount: '2',
+    message: '',
+  })
 
   // ── Queries ──
 
@@ -104,6 +113,32 @@ export function AlertsDashboard() {
       toast.success('Rule removed')
     },
     onError: () => toast.error('Failed to remove rule'),
+  })
+
+  const addRuleMutation = useMutation({
+    mutationFn: async (input: {
+      metric: string
+      threshold: number
+      severity: string
+      condition: string
+      flapCount: number
+      message: string
+    }) => {
+      await call(
+        'AlertAPI.AddRule',
+        input.metric,
+        input.threshold,
+        input.severity,
+        input.condition,
+        input.flapCount,
+        input.message,
+      )
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['alertRules'] })
+      toast.success('Rule added')
+    },
+    onError: () => toast.error('Failed to add rule'),
   })
 
   // ── Derived data ──
@@ -350,16 +385,129 @@ export function AlertsDashboard() {
             <div className="mb-6 p-4 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]">
               <div className="flex items-start gap-3">
                 <Shield size={16} className="text-accent mt-0.5 shrink-0" />
-                <div>
+                <div className="flex-1">
                   <p className="text-xs font-bold text-[var(--color-text)] mb-1">Alert Rules</p>
                   <p className="text-[10px] text-[var(--color-text-faint)] leading-relaxed">
                     Rules define when alerts fire. Each rule monitors a metric (e.g. cpu, memory, disk)
                     and triggers when the value crosses the threshold. Default rules are added at startup.
-                    Custom rules can be added from here or programmatically.
+                    Custom rules are persisted and survive restarts.
                   </p>
                 </div>
+                <button
+                  onClick={() => setShowAddRule((v) => !v)}
+                  className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-accent/15 text-accent hover:bg-accent/25 transition-all shrink-0"
+                >
+                  {showAddRule ? 'Cancel' : '+ Add Rule'}
+                </button>
               </div>
             </div>
+
+            {/* Add Rule form */}
+            {showAddRule && (
+              <div className="mb-6 p-4 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]">
+                <p className="text-xs font-bold text-[var(--color-text)] mb-3">New Alert Rule</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-faint)]">Metric</span>
+                    <input
+                      value={newRule.metric}
+                      onChange={(e) => setNewRule({ ...newRule, metric: e.target.value })}
+                      placeholder="cpu.percent"
+                      className="px-2.5 py-1.5 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] text-xs text-[var(--color-text)] focus:outline-none focus:border-accent/50"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-faint)]">Condition</span>
+                    <select
+                      value={newRule.condition}
+                      onChange={(e) => setNewRule({ ...newRule, condition: e.target.value })}
+                      className="px-2.5 py-1.5 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] text-xs text-[var(--color-text)] focus:outline-none focus:border-accent/50"
+                    >
+                      <option value="gt">&gt; (greater than)</option>
+                      <option value="lt">&lt; (less than)</option>
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-faint)]">Threshold</span>
+                    <input
+                      type="number"
+                      value={newRule.threshold}
+                      onChange={(e) => setNewRule({ ...newRule, threshold: e.target.value })}
+                      placeholder="90"
+                      className="px-2.5 py-1.5 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] text-xs text-[var(--color-text)] focus:outline-none focus:border-accent/50"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-faint)]">Severity</span>
+                    <select
+                      value={newRule.severity}
+                      onChange={(e) => setNewRule({ ...newRule, severity: e.target.value })}
+                      className="px-2.5 py-1.5 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] text-xs text-[var(--color-text)] focus:outline-none focus:border-accent/50"
+                    >
+                      <option value="info">Info</option>
+                      <option value="warning">Warning</option>
+                      <option value="critical">Critical</option>
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-faint)]">Flap Count</span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={newRule.flapCount}
+                      onChange={(e) => setNewRule({ ...newRule, flapCount: e.target.value })}
+                      placeholder="2"
+                      className="px-2.5 py-1.5 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] text-xs text-[var(--color-text)] focus:outline-none focus:border-accent/50"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 col-span-2 md:col-span-3">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-faint)]">Message (optional)</span>
+                    <input
+                      value={newRule.message}
+                      onChange={(e) => setNewRule({ ...newRule, message: e.target.value })}
+                      placeholder="CPU usage high: {value}% (threshold {threshold})"
+                      className="px-2.5 py-1.5 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] text-xs text-[var(--color-text)] focus:outline-none focus:border-accent/50"
+                    />
+                  </label>
+                </div>
+                <div className="mt-4 flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => setShowAddRule(false)}
+                    className="px-3 py-1.5 rounded-lg text-[10px] font-bold text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      const threshold = parseFloat(newRule.threshold)
+                      const flapCount = parseInt(newRule.flapCount, 10)
+                      if (!newRule.metric.trim()) {
+                        toast.error('Metric is required')
+                        return
+                      }
+                      if (Number.isNaN(threshold)) {
+                        toast.error('Threshold must be a number')
+                        return
+                      }
+                      addRuleMutation.mutate({
+                        metric: newRule.metric.trim(),
+                        threshold,
+                        severity: newRule.severity,
+                        condition: newRule.condition,
+                        flapCount: Number.isNaN(flapCount) || flapCount < 1 ? 1 : flapCount,
+                        message: newRule.message.trim(),
+                      })
+                      setNewRule({ metric: '', threshold: '', severity: 'warning', condition: 'gt', flapCount: '2', message: '' })
+                      setShowAddRule(false)
+                    }}
+                    disabled={addRuleMutation.isPending}
+                    className="px-4 py-1.5 rounded-lg text-[10px] font-bold bg-accent text-white hover:bg-accent/90 transition-all disabled:opacity-50"
+                  >
+                    {addRuleMutation.isPending ? 'Adding…' : 'Add Rule'}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {rulesLoading && (
               <div className="flex items-center justify-center py-20">

@@ -248,6 +248,12 @@ func (a *App) Startup(ctx context.Context) {
 		if records, err := s.QueryAlertHistory(2000); err == nil && len(records) > 0 {
 			a.alerts.RestoreFromDB(records)
 		}
+
+		// Restore custom alert rules from DB so they survive restarts.
+		// If none were persisted, keep the in-memory defaults.
+		if records, err := s.QueryAlertRules(); err == nil && len(records) > 0 {
+			a.alerts.RestoreRulesFromDB(records)
+		}
 	}
 
 	// Initialize the session logger locally

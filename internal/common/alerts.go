@@ -125,23 +125,26 @@ func NewAlertEngine(pipeline *DataPipeline) *AlertEngine {
 	}
 }
 
-// AddRule registers a new alert rule.
+// AddRule registers a new alert rule and persists it to storage.
 func (ae *AlertEngine) AddRule(rule AlertRule) {
 	ae.mu.Lock()
-	defer ae.mu.Unlock()
 	ae.rules = append(ae.rules, rule)
+	ae.mu.Unlock()
+	ae.PersistRules()
 }
 
-// RemoveRule removes the first matching rule by metric and threshold.
+// RemoveRule removes the first matching rule by metric and threshold and
+// persists the change to storage.
 func (ae *AlertEngine) RemoveRule(metric string, threshold float64) {
 	ae.mu.Lock()
-	defer ae.mu.Unlock()
 	for i, r := range ae.rules {
 		if r.Metric == metric && r.Threshold == threshold {
 			ae.rules = append(ae.rules[:i], ae.rules[i+1:]...)
-			return
+			break
 		}
 	}
+	ae.mu.Unlock()
+	ae.PersistRules()
 }
 
 // AddDefaultRules registers sensible default thresholds for CPU, memory, disk,
@@ -490,4 +493,78 @@ func (ae *AlertEngine) RestoreFromDB(records []AlertRecord) {
 	}
 
 	LogInfo("AlertEngine: restored %d alerts from DB (%d active)", len(ae.alerts), len(ae.alertKeys))
+}
+
+// ── Rule Persistence ───────────────────────────────────────────────────────
+
+// parseAlertCondition converts a condition string back to AlertCondition.
+func parseAlertCondition(s string) AlertCondition {
+	switch strings.ToLower(s) {
+	case "<", "lt":
+		return AlertLT
+	default:
+		return AlertGT
+	}
+}
+
+// RestoreRulesFromDB loads persisted alert rules from storage into the engine,
+// replacing the current in-memory rule set. This is called once at startup so
+// custom rules survive restarts. Default rules are re-added by the caller if
+// no persisted rules exist.
+func (ae *AlertEngine) RestoreRulesFromDB(records []AlertRuleRecord) {
+	ae.mu.Lock()
+	defer ae.mu.Unlock()
+
+	if len(records) == 0 {
+		return
+	}
+
+	ae.rules = make([]AlertRule, 0, len(records))
+	for _, r := range records {
+		ae.rules = append(ae.rules, AlertRule{
+			Metric:    r.Metric,
+			Condition: parseAlertCondition(r.Condition),
+			Threshold: r.Threshold,
+			FlapCount: r.FlapCount,
+			Severity:  parseAlertLevel(r.Severity),
+			Message:   r.Message,
+		})
+	}
+
+	LogInfo("AlertEngine: restored %d rules from DB", len(ae.rules))
+}
+
+// PersistRules writes all current rules to storage. It is used to sync the
+// in-memory rule set to SQLite after add/remove operations.
+func (ae *AlertEngine) PersistRules() {
+	ae.mu.RLock()
+	rules := make([]AlertRule, len(ae.rules))
+	copy(rules, ae.rules)
+	ae.mu.RUnlock()
+
+	s := GetStorage()
+	if s == nil {
+		return
+	}
+
+	tx, err := s.Begin()
+	if err != nil {
+		LogWarn("AlertEngine: failed to begin rule persist tx: %v", err)
+		return
+	}
+	for _, r := range rules {
+		if err := s.InsertAlertRule(AlertRuleRecord{
+			Metric:    r.Metric,
+			Condition: r.Condition.String(),
+			Threshold: r.Threshold,
+			FlapCount: r.FlapCount,
+			Severity:  r.Severity.String(),
+			Message:   r.Message,
+		}, tx); err != nil {
+			LogWarn("AlertEngine: failed to persist rule %s: %v", r.Metric, err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		LogWarn("AlertEngine: failed to commit rule persist tx: %v", err)
+	}
 }

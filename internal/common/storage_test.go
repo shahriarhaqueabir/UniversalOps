@@ -1344,3 +1344,101 @@ func TestTopLogSources(t *testing.T) {
 		t.Errorf("alpha not found in top sources: %+v", sources)
 	}
 }
+
+func TestAlertRulePersistence(t *testing.T) {
+	s := newTestStorage(t)
+
+	// Insert a rule
+	rule := AlertRuleRecord{
+		Metric:    "cpu.percent",
+		Condition: ">",
+		Threshold: 85.0,
+		FlapCount: 3,
+		Severity:  "WARNING",
+		Message:   "CPU high: {value}",
+	}
+	if err := s.InsertAlertRule(rule, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	// Query it back
+	rules, err := s.QueryAlertRules()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rules) != 1 {
+		t.Fatalf("QueryAlertRules returned %d rules, want 1", len(rules))
+	}
+	got := rules[0]
+	if got.Metric != "cpu.percent" || got.Threshold != 85.0 || got.FlapCount != 3 ||
+		got.Severity != "WARNING" || got.Condition != ">" || got.Message != "CPU high: {value}" {
+		t.Errorf("rule round-trip mismatch: %+v", got)
+	}
+
+	// Upsert same metric+threshold updates in place (no duplicate)
+	rule.Threshold = 90.0
+	if err := s.InsertAlertRule(rule, nil); err != nil {
+		t.Fatal(err)
+	}
+	rules, err = s.QueryAlertRules()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rules) != 2 {
+		t.Fatalf("after upsert with new threshold, got %d rules, want 2", len(rules))
+	}
+
+	// Delete one
+	if err := s.DeleteAlertRule("cpu.percent", 85.0, nil); err != nil {
+		t.Fatal(err)
+	}
+	rules, err = s.QueryAlertRules()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rules) != 1 {
+		t.Fatalf("after delete, got %d rules, want 1", len(rules))
+	}
+	if rules[0].Threshold != 90.0 {
+		t.Errorf("remaining rule threshold = %v, want 90.0", rules[0].Threshold)
+	}
+}
+
+func TestAlertEngineRuleRestore(t *testing.T) {
+	s := newTestStorage(t)
+
+	// Persist a couple of rules directly to storage
+	_ = s.InsertAlertRule(AlertRuleRecord{Metric: "cpu.percent", Condition: ">", Threshold: 90, FlapCount: 2, Severity: "CRITICAL"}, nil)
+	_ = s.InsertAlertRule(AlertRuleRecord{Metric: "mem.used", Condition: "<", Threshold: 10, FlapCount: 1, Severity: "INFO"}, nil)
+
+	// Build an engine and restore rules from DB
+	dp := NewDataPipeline(DefaultCollectionConfig())
+	ae := NewAlertEngine(dp)
+	records, err := s.QueryAlertRules()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ae.RestoreRulesFromDB(records)
+
+	rules := ae.GetRules()
+	if len(rules) != 2 {
+		t.Fatalf("RestoreRulesFromDB restored %d rules, want 2", len(rules))
+	}
+
+	// Verify condition parsing (">" -> GT, "<" -> LT)
+	var cpuRule, memRule *AlertRule
+	for i := range rules {
+		switch rules[i].Metric {
+		case "cpu.percent":
+			cpuRule = &rules[i]
+		case "mem.used":
+			memRule = &rules[i]
+		}
+	}
+	if cpuRule == nil || cpuRule.Condition != AlertGT || cpuRule.Severity != AlertCritical {
+		t.Errorf("cpu rule restore mismatch: %+v", cpuRule)
+	}
+	if memRule == nil || memRule.Condition != AlertLT || memRule.Severity != AlertInfo {
+		t.Errorf("mem rule restore mismatch: %+v", memRule)
+	}
+}
