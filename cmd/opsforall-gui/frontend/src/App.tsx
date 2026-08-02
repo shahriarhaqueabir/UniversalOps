@@ -96,7 +96,7 @@ function App() {
     return () => window.removeEventListener('keydown', handler)
   }, [navigate])
 
-  // Subscribe to Wails alert events → sonner toasts
+  // Subscribe to Wails alert events → sonner toasts + desktop notifications
   const handleAlertEvent = useCallback((...args: unknown[]) => {
     const data = args[0] as Record<string, unknown> | undefined
     if (!data?.alert) return
@@ -118,6 +118,32 @@ function App() {
         break
       default:
         toast.info(msg, { description: ts })
+    }
+
+    // Desktop notification for critical alerts (Wails webview supports the
+    // browser Notification API). Best-effort — never throws.
+    if (level === 'critical' || level === 'error') {
+      try {
+        if ('Notification' in window) {
+          if (Notification.permission === 'granted') {
+            new Notification('Universal-Ops: Critical Alert', {
+              body: msg,
+              tag: `alert-${alert.id}`,
+            })
+          } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission().then((perm) => {
+              if (perm === 'granted') {
+                new Notification('Universal-Ops: Critical Alert', {
+                  body: msg,
+                  tag: `alert-${alert.id}`,
+                })
+              }
+            })
+          }
+        }
+      } catch {
+        // Notification API unavailable — fall back to toast only
+      }
     }
   }, [addAlert])
 

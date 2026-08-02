@@ -6,7 +6,7 @@ import { useBackend } from '@/hooks/useBackend'
 import { useOllamaStore } from '@/stores/useOllamaStore'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 interface ReviewModalProps {
   isOpen: boolean

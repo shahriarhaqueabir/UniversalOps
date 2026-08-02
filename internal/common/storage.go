@@ -292,6 +292,15 @@ func (s *Storage) migrate() error {
 			)`,
 			`CREATE INDEX IF NOT EXISTS idx_alerts_time ON alerts(timestamp)`,
 			`CREATE INDEX IF NOT EXISTS idx_alerts_metric ON alerts(metric)`,
+			`CREATE TABLE IF NOT EXISTS alert_rules (
+				metric TEXT NOT NULL,
+				condition TEXT NOT NULL,
+				threshold REAL NOT NULL,
+				flap_count INTEGER NOT NULL DEFAULT 2,
+				severity TEXT NOT NULL,
+				message TEXT NOT NULL DEFAULT '',
+				PRIMARY KEY (metric, threshold)
+			)`,
 			`CREATE TABLE IF NOT EXISTS conversations (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				session_id TEXT NOT NULL,
@@ -1437,6 +1446,77 @@ func (s *Storage) QueryAlertHistory(limit int) ([]AlertRecord, error) {
 		alerts = []AlertRecord{}
 	}
 	return alerts, nil
+}
+
+// ── Alert Rules Persistence ────────────────────────────────────────────────
+
+// AlertRuleRecord represents a persisted alert rule.
+type AlertRuleRecord struct {
+	Metric    string
+	Condition string
+	Threshold float64
+	FlapCount int
+	Severity  string
+	Message   string
+}
+
+// InsertAlertRule persists an alert rule to SQLite (upsert by metric+threshold).
+// NOTE: mu is NOT held across the DB call to prevent deadlock with Close().
+func (s *Storage) InsertAlertRule(r AlertRuleRecord, tx *sql.Tx) error {
+	s.mu.RLock()
+	closed := s.closed
+	s.mu.RUnlock()
+	if closed && tx == nil {
+		return fmt.Errorf("storage closed")
+	}
+	_, err := s.getDB(tx).Exec(
+		`INSERT OR REPLACE INTO alert_rules (metric, condition, threshold, flap_count, severity, message) VALUES (?, ?, ?, ?, ?, ?)`,
+		r.Metric, r.Condition, r.Threshold, r.FlapCount, r.Severity, r.Message,
+	)
+	if err != nil {
+		LogWarn("InsertAlertRule failed: %v", err)
+	}
+	return err
+}
+
+// DeleteAlertRule removes an alert rule by metric and threshold.
+// NOTE: mu is NOT held across the DB call to prevent deadlock with Close().
+func (s *Storage) DeleteAlertRule(metric string, threshold float64, tx *sql.Tx) error {
+	s.mu.RLock()
+	closed := s.closed
+	s.mu.RUnlock()
+	if closed && tx == nil {
+		return fmt.Errorf("storage closed")
+	}
+	_, err := s.getDB(tx).Exec(
+		`DELETE FROM alert_rules WHERE metric = ? AND threshold = ?`,
+		metric, threshold,
+	)
+	return err
+}
+
+// QueryAlertRules returns all persisted alert rules.
+func (s *Storage) QueryAlertRules() ([]AlertRuleRecord, error) {
+	rows, err := s.db.Query(
+		`SELECT metric, condition, threshold, flap_count, severity, message FROM alert_rules`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var rules []AlertRuleRecord
+	for rows.Next() {
+		var r AlertRuleRecord
+		if err := rows.Scan(&r.Metric, &r.Condition, &r.Threshold, &r.FlapCount, &r.Severity, &r.Message); err != nil {
+			return nil, err
+		}
+		rules = append(rules, r)
+	}
+	if rules == nil {
+		rules = []AlertRuleRecord{}
+	}
+	return rules, nil
 }
 
 // ── Conversations ───────────────────────────────────────────────────────────

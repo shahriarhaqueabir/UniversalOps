@@ -49,7 +49,9 @@ func TestAlertAPI_ResolveAlert_Nonexistent(t *testing.T) {
 func TestAlertAPI_AddRule(t *testing.T) {
 	a := NewApp()
 	api := NewAlertAPI(a.alerts)
-	api.AddRule("cpu.percent", 90.0, "critical", "gt")
+	if err := api.AddRule("cpu.percent", 90.0, "critical", "gt", 2, ""); err != nil {
+		t.Fatalf("AddRule returned error: %v", err)
+	}
 	rules := api.GetRules()
 	if len(rules) == 0 {
 		t.Error("GetRules returned empty after AddRule")
@@ -59,7 +61,7 @@ func TestAlertAPI_AddRule(t *testing.T) {
 func TestAlertAPI_RemoveRule(t *testing.T) {
 	a := NewApp()
 	api := NewAlertAPI(a.alerts)
-	api.AddRule("cpu.percent", 90.0, "critical", "gt")
+	_ = api.AddRule("cpu.percent", 90.0, "critical", "gt", 2, "")
 	api.RemoveRule("cpu.percent", 90.0)
 	rules := api.GetRules()
 	for _, r := range rules {
@@ -81,11 +83,11 @@ func TestAlertAPI_EvaluateNow(t *testing.T) {
 func TestAlertAPI_AddRule_InfoSeverity(t *testing.T) {
 	a := NewApp()
 	api := NewAlertAPI(a.alerts)
-	api.AddRule("mem.used", 85.0, "info", "gt")
+	_ = api.AddRule("mem.used", 85.0, "info", "gt", 2, "")
 }
 
 func TestAlertAPI_AddRule_LtCondition(t *testing.T) {
 	a := NewApp()
 	api := NewAlertAPI(a.alerts)
-	api.AddRule("disk.free", 10.0, "warning", "lt")
+	_ = api.AddRule("disk.free", 10.0, "warning", "lt", 2, "")
 }

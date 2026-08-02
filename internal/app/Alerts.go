@@ -1,6 +1,8 @@
 package app
 
 import (
+	"fmt"
+
 	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
 
@@ -59,7 +61,13 @@ func (a *AlertAPI) ResolveAlert(id string) {
 // AddRule adds a new alert rule.
 // severity: "info", "warning", "critical"
 // condition: "gt" (greater than) or "lt" (less than)
-func (a *AlertAPI) AddRule(metric string, threshold float64, severity string, condition string) {
+// flapCount: consecutive violations before firing (defaults to 2 if <= 0)
+// message: optional template; may contain {value}, {threshold}, {metric}
+func (a *AlertAPI) AddRule(metric string, threshold float64, severity string, condition string, flapCount int, message string) error {
+	if metric == "" {
+		return fmt.Errorf("metric is required")
+	}
+
 	level := common.AlertWarning
 	switch severity {
 	case "info":
@@ -73,14 +81,20 @@ func (a *AlertAPI) AddRule(metric string, threshold float64, severity string, co
 		cond = common.AlertLT
 	}
 
+	if flapCount <= 0 {
+		flapCount = 1
+	}
+
 	rule := common.AlertRule{
 		Metric:    metric,
 		Condition: cond,
 		Threshold: threshold,
-		FlapCount: 2,
+		FlapCount: flapCount,
 		Severity:  level,
+		Message:   message,
 	}
 	a.alerts.AddRule(rule)
+	return nil
 }
 
 // RemoveRule removes an alert rule by metric and threshold.
