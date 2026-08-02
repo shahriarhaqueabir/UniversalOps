@@ -4,13 +4,14 @@ import {
   FileText, Shield, HeartPulse, Bot,
   Search, Trash2, Download, ChevronRight,
   AlertTriangle, CheckCircle, XCircle,
-  RefreshCw, EyeOff, Plus, Clock,
+  RefreshCw, EyeOff, Plus, Clock, FileSpreadsheet,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
 import { toast } from 'sonner'
+import { toCSV, downloadText, safeFilename, reportToCSVRows } from '@/lib/export'
 import type { ReportRecord, PrebuiltTemplate } from '@/types'
 import { app, common } from '../../wailsjs/go/models'
 
@@ -438,6 +439,51 @@ export function ReportsCenter() {
     }
   }, [])
 
+  // EXP-01: CSV export of a single report (flattened data_json).
+  const handleExportCSV = useCallback((report: ReportRecord) => {
+    try {
+      const rows = reportToCSVRows(report)
+      downloadText(
+        `report-${report.type}-${safeFilename(report.id)}.csv`,
+        toCSV(rows),
+        'text/csv'
+      )
+      toast.success('Report exported as CSV')
+    } catch {
+      toast.error('CSV export failed')
+    }
+  }, [])
+
+  // EXP-01: PDF export via browser print-to-PDF on a printable view.
+  const handleExportPDF = useCallback((report: ReportRecord) => {
+    try {
+      const win = window.open('', '_blank', 'width=800,height=900')
+      if (!win) {
+        toast.error('Popup blocked — allow popups to export PDF')
+        return
+      }
+      const meta = getTypeMeta(report.type)
+      win.document.write(`<!doctype html><html><head><title>${meta.label} Report</title>
+        <style>
+          body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; padding: 40px; color: #111; }
+          h1 { font-size: 20px; margin: 0 0 4px; }
+          .meta { color: #666; font-size: 12px; margin-bottom: 24px; }
+          .score { font-size: 28px; font-weight: 800; margin-bottom: 24px; }
+          pre { background: #f5f5f5; padding: 16px; border-radius: 8px; font-size: 11px; white-space: pre-wrap; word-break: break-word; }
+        </style></head><body>
+        <h1>${meta.label} Report</h1>
+        <div class="meta">ID: ${report.id}<br>Generated: ${formatTimestamp(report.timestamp)}</div>
+        <div class="score">Score: ${report.score}/100</div>
+        <pre>${report.data_json ? JSON.stringify(JSON.parse(report.data_json), null, 2) : 'No data available'}</pre>
+        <script>window.onload = () => setTimeout(() => window.print(), 300)</script>
+        </body></html>`)
+      win.document.close()
+      toast.success('PDF export opened — use print dialog to save')
+    } catch {
+      toast.error('PDF export failed')
+    }
+  }, [])
+
   const handleExportAll = useCallback(() => {
     try {
       const data = filtered.map((r) => ({
@@ -456,6 +502,21 @@ export function ReportsCenter() {
       toast.success('All reports exported')
     } catch {
       toast.error('Export failed')
+    }
+  }, [filtered])
+
+  // EXP-01: CSV export of all filtered reports (one row per report).
+  const handleExportAllCSV = useCallback(() => {
+    try {
+      const rows = filtered.flatMap((r) => reportToCSVRows(r))
+      downloadText(
+        `all-reports-${new Date().toISOString().slice(0, 10)}.csv`,
+        toCSV(rows),
+        'text/csv'
+      )
+      toast.success('All reports exported as CSV')
+    } catch {
+      toast.error('CSV export failed')
     }
   }, [filtered])
 
@@ -558,6 +619,14 @@ export function ReportsCenter() {
           >
             <Download size={14} />
             Export All
+          </button>
+          <button
+            onClick={handleExportAllCSV}
+            disabled={filtered.length === 0}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)] text-xs font-bold text-[var(--color-text)] hover:bg-[var(--color-panel-hover)] transition-all disabled:opacity-40"
+          >
+            <FileSpreadsheet size={14} />
+            Export CSV
           </button>
           <button
             onClick={() => { queryClient.invalidateQueries({ queryKey: ['reports'] }) }}
@@ -872,9 +941,31 @@ export function ReportsCenter() {
                           handleExport(report)
                         }}
                         className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-[var(--color-text-faint)] hover:text-accent hover:bg-accent/10"
-                        title="Export report"
+                        title="Export report (JSON)"
                       >
                         <Download size={12} />
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleExportCSV(report)
+                        }}
+                        className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-[var(--color-text-faint)] hover:text-emerald-500 hover:bg-emerald-500/10"
+                        title="Export report (CSV)"
+                      >
+                        <FileSpreadsheet size={12} />
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleExportPDF(report)
+                        }}
+                        className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-[var(--color-text-faint)] hover:text-red-500 hover:bg-red-500/10"
+                        title="Export report (PDF)"
+                      >
+                        <FileText size={12} />
                       </button>
 
                       <button
