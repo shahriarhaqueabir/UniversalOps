@@ -1,6 +1,7 @@
 package aiops
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -128,5 +129,38 @@ func TestCreateModel_Mock(t *testing.T) {
 	err := CreateModel("test-persona", "llama3", "You are a test", map[string]any{"temperature": 0.1})
 	if err != nil {
 		t.Fatalf("CreateModel failed: %v", err)
+	}
+}
+
+func TestCreateModel_Progress(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/create" {
+			resp := api.ProgressResponse{Status: "success"}
+			json.NewEncoder(w).Encode(resp)
+		}
+	}))
+	defer server.Close()
+
+	os.Setenv("OLLAMA_HOST", server.URL)
+	defer os.Unsetenv("OLLAMA_HOST")
+	ResetDefaultClient()
+
+	var progressCalled bool
+	err := CreateModelWithContext(
+		context.Background(),
+		"test-persona",
+		"llama3",
+		"You are a test",
+		map[string]any{"temperature": 0.1},
+		func(p api.ProgressResponse) error {
+			progressCalled = true
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatalf("CreateModelWithContext failed: %v", err)
+	}
+	if !progressCalled {
+		t.Error("Expected progress callback to be called")
 	}
 }

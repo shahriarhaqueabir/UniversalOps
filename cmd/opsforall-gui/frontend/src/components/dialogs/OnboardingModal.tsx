@@ -23,8 +23,9 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useBackend, getRuntime } from '@/hooks/useBackend'
+import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useOllamaStore } from '@/stores/useOllamaStore'
 import { DependencyChecklist } from '../onboarding/DependencyChecklist'
 import type {
   EnvironmentReport,
@@ -34,7 +35,6 @@ import type {
   OnboardingConfig,
   OnboardingStep,
   AISetupRecommendation,
-  OllamaProgress,
 } from '@/types/onboarding'
 import { ONBOARDING_STEPS } from '@/types/onboarding'
 
@@ -83,7 +83,7 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
   const [setupRunning, setSetupRunning] = useState(false)
   const [snapshotDone, setSnapshotDone] = useState(false)
   const [aiRecommendation, setAiRecommendation] = useState<AISetupRecommendation | null>(null)
-  const [aiProgress, setAiProgress] = useState<OllamaProgress | null>(null)
+  const aiProgress = useOllamaStore((s) => s.progress)
   const [isCapturing, setIsCapturing] = useState(false)
   const [nameError, setNameError] = useState('')
   const [discoveryError, setDiscoveryError] = useState(false)
@@ -109,15 +109,6 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
       return () => clearTimeout(timer)
     }
   }, [step, isLastStep])
-
-  // ── Subscribe to Ollama pull progress ──
-  useEffect(() => {
-    const runtime = getRuntime()
-    if (!runtime?.EventsOn) return
-    const handler = (p: any) => setAiProgress(p as OllamaProgress)
-    runtime.EventsOn('ollama:progress', handler)
-    return () => runtime.EventsOff('ollama:progress')
-  }, [])
 
   // ── Actions (declared before keyboard handler) ──
 
@@ -247,7 +238,7 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
       return
     }
     setSetupRunning(true)
-    setAiProgress(null)
+    useOllamaStore.getState().setProgress(null)
     try {
       await call('AIOps.SetupOllamaPersona', rec.recommended_model)
       setStep('finished')
@@ -256,7 +247,7 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
       toast.error(msg)
     } finally {
       setSetupRunning(false)
-      setAiProgress(null)
+      useOllamaStore.getState().setProgress(null)
     }
   }
 

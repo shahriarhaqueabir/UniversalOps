@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import { useBackend, getRuntime } from '@/hooks/useBackend'
+import { useBackend } from '@/hooks/useBackend'
 import { Database, Trash2, Box, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import type { OllamaStatus, OllamaProgress } from '@/types'
+import { useOllamaStore } from '@/stores/useOllamaStore'
+import type { OllamaStatus } from '@/types'
 
 /**
  * ModelManager — Integrated interface for Ollama model lifecycle.
@@ -14,7 +15,7 @@ export function ModelManager() {
   const { call } = useBackend()
   const [pullName, setPullName] = useState('')
   const [isPulling, setIsPulling] = useState(false)
-  const [progress, setProgress] = useState<OllamaProgress | null>(null)
+  const progress = useOllamaStore((s) => s.progress)
 
   const { data: status, isLoading, refetch } = useQuery<OllamaStatus>({
     queryKey: ['ollama-status'],
@@ -25,19 +26,10 @@ export function ModelManager() {
     refetchInterval: 10000,
   })
 
-  // Listen for pull progress from backend
-  useEffect(() => {
-    const runtime = getRuntime()
-    if (runtime) {
-      const handler = (p: any) => setProgress(p as OllamaProgress)
-      runtime.EventsOn('ollama:progress', handler)
-      return () => runtime.EventsOff('ollama:progress')
-    }
-  }, [])
-
   const handlePull = async () => {
     if (!pullName) return
     setIsPulling(true)
+    useOllamaStore.getState().setProgress(null)
     const id = toast.loading(`Pulling ${pullName}...`)
     try {
       await call('AIOps.PullModel', pullName)
@@ -48,7 +40,7 @@ export function ModelManager() {
       toast.error(`Pull failed: ${err}`, { id })
     } finally {
       setIsPulling(false)
-      setProgress(null)
+      useOllamaStore.getState().setProgress(null)
     }
   }
 

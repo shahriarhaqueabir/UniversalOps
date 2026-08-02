@@ -32,6 +32,18 @@ const (
 	defaultOllamaURL   = "http://127.0.0.1:11434"
 	defaultOllamaModel = "universalops"
 	defaultHttpTimeout = 120 * time.Second
+
+	// longRunningHttpTimeout is used for model create/pull operations, which
+	// can take many minutes when Ollama must first download a large base model
+	// (e.g. Qwythos-9B ~6.85 GiB). The 120s chat timeout is far too short for
+	// these streaming requests and caused "context deadline exceeded" failures
+	// during persona deployment.
+	//
+	// A generous-but-finite bound is used (rather than 0 = no timeout) so that
+	// a stalled download or unresponsive daemon cannot hang the Wails binding
+	// call forever. 45 minutes comfortably covers even a slow multi-GiB pull
+	// while still guaranteeing the operation eventually returns.
+	longRunningHttpTimeout = 45 * time.Minute
 )
 
 func getOllamaURL() string {
@@ -49,12 +61,24 @@ func getOllamaModel() string {
 }
 
 func newClient() *api.Client {
+	return newClientWithTimeout(defaultHttpTimeout)
+}
+
+// newLongRunningClient returns an Ollama client with a generous (45-minute)
+// timeout, intended for long-running operations such as model create/pull that
+// may need to download large base models. The operation is still bounded by the
+// caller's context deadline, whichever comes first.
+func newLongRunningClient() *api.Client {
+	return newClientWithTimeout(longRunningHttpTimeout)
+}
+
+func newClientWithTimeout(timeout time.Duration) *api.Client {
 	baseURL := getOllamaURL()
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		u = &url.URL{Scheme: "http", Host: "127.0.0.1:11434"}
 	}
-	return api.NewClient(u, &http.Client{Timeout: defaultHttpTimeout})
+	return api.NewClient(u, &http.Client{Timeout: timeout})
 }
 
 // ── Global Compatibility Wrappers ───────────────────────────────────────────
@@ -135,12 +159,14 @@ func PullModelWithContext(ctx context.Context, name string, onProgress func(api.
 
 // CreateModel creates a model using the default client.
 func CreateModel(name, from, system string, parameters map[string]any) error {
-	return CreateModelWithContext(context.Background(), name, from, system, parameters)
+	return CreateModelWithContext(context.Background(), name, from, system, parameters, nil)
 }
 
 // CreateModelWithContext creates a model using the default client and context.
-func CreateModelWithContext(ctx context.Context, name, from, system string, parameters map[string]any) error {
-	return getDefaultClient().CreateModel(ctx, name, from, system, parameters)
+// onProgress, if non-nil, is invoked with each progress update from Ollama
+// (useful for surfacing base-model pull progress during persona creation).
+func CreateModelWithContext(ctx context.Context, name, from, system string, parameters map[string]any, onProgress func(api.ProgressResponse) error) error {
+	return getDefaultClient().CreateModel(ctx, name, from, system, parameters, onProgress)
 }
 
 // DeleteModel removes a model using the default client.
@@ -188,9 +214,11 @@ func CheckOllamaBinary() bool {
 }
 
 // PullModel downloads a model from the Ollama library.
+// Uses a long-running client because pulling a large base model can take
+// minutes and must not be cut off by the 120s chat timeout.
 func (c *OllamaClient) PullModel(ctx context.Context, name string, onProgress func(api.ProgressResponse) error) error {
 	req := &api.PullRequest{Model: name}
-	return c.api.Pull(ctx, req, onProgress)
+	return newLongRunningClient().Pull(ctx, req, onProgress)
 }
 
 // DeleteModel removes a local model.
@@ -200,7 +228,11 @@ func (c *OllamaClient) DeleteModel(ctx context.Context, name string) error {
 }
 
 // CreateModel creates a new model from structured parameters.
-func (c *OllamaClient) CreateModel(ctx context.Context, name string, from string, system string, parameters map[string]any) error {
+// Uses a long-running client because Ollama may need to pull the base model
+// first (e.g. Qwythos-9B ~6.85 GiB), which exceeds the 120s chat timeout.
+// onProgress, when non-nil, receives each progress update from the create
+// stream so the frontend can show live download/build progress.
+func (c *OllamaClient) CreateModel(ctx context.Context, name string, from string, system string, parameters map[string]any, onProgress func(api.ProgressResponse) error) error {
 	req := &api.CreateRequest{
 		Model:      name,
 		From:       from,
@@ -208,9 +240,10 @@ func (c *OllamaClient) CreateModel(ctx context.Context, name string, from string
 		Parameters: parameters,
 	}
 
-	return c.api.Create(ctx, req, func(resp api.ProgressResponse) error {
-		return nil
-	})
+	if onProgress == nil {
+		onProgress = func(resp api.ProgressResponse) error { return nil }
+	}
+	return newLongRunningClient().Create(ctx, req, onProgress)
 }
 
 // CheckStatus checks if the Ollama service is available.

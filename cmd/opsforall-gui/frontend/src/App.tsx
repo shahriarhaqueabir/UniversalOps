@@ -7,6 +7,7 @@ import { MainContent } from './components/layout/MainContent'
 import { HawkSidebar } from './components/layout/HawkSidebar'
 import { OnboardingModal } from './components/dialogs/OnboardingModal'
 import { useThemeStore, useAlertStore, useSettingsStore, useNavigationStore, type Page } from './stores'
+import { subscribeToOllamaProgress } from './stores/useOllamaStore'
 import { getGo, getRuntime } from './hooks/useBackend'
 import type { AlertInfo } from './types'
 
@@ -20,6 +21,13 @@ function App() {
   const dnsTimeout = useSettingsStore((s) => s.dnsTimeout)
   const companionName = useSettingsStore((s) => s.companionName)
   const addAlert = useAlertStore((s) => s.addAlert)
+
+  // Register the single 'ollama:progress' listener for the app's lifetime.
+  // Wails EventsOff only accepts event names (not handlers), so multiple
+  // subscribers would clobber each other — this singleton avoids that.
+  useEffect(() => {
+    subscribeToOllamaProgress()
+  }, [])
 
   // Check onboarding status on mount
   useEffect(() => {
