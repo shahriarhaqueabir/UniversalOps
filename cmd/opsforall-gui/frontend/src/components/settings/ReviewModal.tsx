@@ -1,10 +1,12 @@
 import * as Dialog from '@radix-ui/react-dialog'
-import { X, CheckCircle2, RotateCcw, Zap, ShieldAlert, Sparkles, AlertTriangle, FileCode } from 'lucide-react'
+import { X, CheckCircle2, RotateCcw, Zap, ShieldAlert, Sparkles, AlertTriangle, FileCode, Loader2 } from 'lucide-react'
 import { useConfigStore } from '@/stores/useConfigStore'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useBackend } from '@/hooks/useBackend'
+import { useOllamaStore } from '@/stores/useOllamaStore'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { useEffect, useState } from 'react'
 
 interface ReviewModalProps {
   isOpen: boolean
@@ -19,6 +21,8 @@ export function ReviewModal({ isOpen, onOpenChange }: ReviewModalProps) {
   const { stagedChanges, discardAll, getOriginalValue, getRiskLevel } = useConfigStore()
   const { setBatch } = useSettingsStore()
   const { call } = useBackend()
+  const deployProgress = useOllamaStore((s) => s.progress)
+  const [isDeploying, setIsDeploying] = useState(false)
 
   const changes = Array.from(stagedChanges.entries())
   const paramChanges = changes.filter(([key]) => key !== 'modelfile')
@@ -34,6 +38,8 @@ export function ReviewModal({ isOpen, onOpenChange }: ReviewModalProps) {
   const handleDeploy = async () => {
     try {
       const id = toast.loading('Initiating system deployment...')
+      setIsDeploying(true)
+      useOllamaStore.getState().setProgress(null)
 
       // 1. Handle standard settings via batch update (triggers App.tsx sync)
       const standardParams = ['refreshInterval', 'pingCount', 'dnsTimeout', 'companionName']
@@ -58,6 +64,9 @@ export function ReviewModal({ isOpen, onOpenChange }: ReviewModalProps) {
       onOpenChange(false)
     } catch (err) {
       toast.error('Deployment failed: ' + err)
+    } finally {
+      setIsDeploying(false)
+      useOllamaStore.getState().setProgress(null)
     }
   }
 
@@ -163,20 +172,45 @@ export function ReviewModal({ isOpen, onOpenChange }: ReviewModalProps) {
             </div>
           )}
 
+          {/* Live Ollama progress during model create/pull */}
+          {isDeploying && deployProgress && (
+            <div className="mt-4 p-4 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-accent)]/20 animate-in fade-in zoom-in-95">
+              <div className="flex justify-between mb-2 text-[10px] font-bold uppercase tracking-widest text-[var(--color-accent)]">
+                <span className="flex items-center gap-2">
+                  <Loader2 size={12} className="animate-spin" />
+                  {deployProgress.status || 'Working...'}
+                </span>
+                <span>{deployProgress.percent.toFixed(1)}%</span>
+              </div>
+              <div className="h-1.5 bg-[var(--color-bg)] rounded-full overflow-hidden border border-[var(--color-border)]">
+                <div
+                  className="h-full bg-[var(--color-accent)] transition-all duration-300"
+                  style={{ width: `${deployProgress.percent}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="mt-8 flex items-center justify-between gap-4">
             <button
               onClick={() => { discardAll(); onOpenChange(false); toast.info('All changes discarded') }}
-              className="px-6 py-3 rounded-xl bg-danger/10 text-danger text-xs font-black uppercase tracking-widest hover:bg-danger/20 transition-all border border-danger/20"
+              disabled={isDeploying}
+              className="px-6 py-3 rounded-xl bg-danger/10 text-danger text-xs font-black uppercase tracking-widest hover:bg-danger/20 transition-all border border-danger/20 disabled:opacity-50 disabled:grayscale"
             >
               <RotateCcw size={14} className="inline mr-2" />
               Discard All
             </button>
             <button
               onClick={handleDeploy}
-              className="flex-1 py-3 rounded-xl bg-[var(--color-accent)] text-white text-xs font-black uppercase tracking-widest hover:opacity-90 shadow-xl shadow-[var(--color-accent)]/20 transition-all active:scale-[0.98]"
+              disabled={isDeploying}
+              className="flex-1 py-3 rounded-xl bg-[var(--color-accent)] text-white text-xs font-black uppercase tracking-widest hover:opacity-90 shadow-xl shadow-[var(--color-accent)]/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:grayscale"
             >
-              <CheckCircle2 size={14} className="inline mr-2" />
-              Deploy to Engine
+              {isDeploying ? (
+                <Loader2 size={14} className="inline mr-2 animate-spin" />
+              ) : (
+                <CheckCircle2 size={14} className="inline mr-2" />
+              )}
+              {isDeploying ? 'Deploying...' : 'Deploy to Engine'}
             </button>
           </div>
         </Dialog.Content>

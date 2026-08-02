@@ -872,27 +872,33 @@ func (a *AIOps) SetOllamaModel(modelName string) {
 	aiops.SetModel(modelName)
 }
 
+// emitCreateProgress emits an ollama:progress event for model creation/pull.
+// It is safe to call from the create/pull progress callback (runs on a worker
+// goroutine) because wailsruntime.EventsEmit is thread-safe.
+func (a *AIOps) emitCreateProgress(resp api.ProgressResponse) error {
+	if a.ctx == nil {
+		return nil
+	}
+	percent := 0.0
+	if resp.Total > 0 {
+		percent = float64(resp.Completed) / float64(resp.Total) * 100
+	}
+	wailsruntime.EventsEmit(a.ctx, "ollama:progress", OllamaProgress{
+		Status:    resp.Status,
+		Percent:   percent,
+		Total:     resp.Total,
+		Completed: resp.Completed,
+	})
+	return nil
+}
+
 // PullModel initiates a model pull and emits progress events to the frontend.
 func (a *AIOps) PullModel(modelName string) error {
 	defer common.RecoverPanic()
 	common.LogInfo("AIOps: Pulling model %q", modelName)
 	// Use background context so pull survives window lifecycle changes
 	pullCtx := context.Background()
-	err := aiops.PullModelWithContext(pullCtx, modelName, func(resp api.ProgressResponse) error {
-		if a.ctx != nil {
-			percent := 0.0
-			if resp.Total > 0 {
-				percent = float64(resp.Completed) / float64(resp.Total) * 100
-			}
-			wailsruntime.EventsEmit(a.ctx, "ollama:progress", OllamaProgress{
-				Status:    resp.Status,
-				Percent:   percent,
-				Total:     resp.Total,
-				Completed: resp.Completed,
-			})
-		}
-		return nil
-	})
+	err := aiops.PullModelWithContext(pullCtx, modelName, a.emitCreateProgress)
 
 	if err != nil {
 		common.LogWarn("AIOps: PullModel failed: %v", err)
@@ -1099,7 +1105,10 @@ PARAMETER stop "──"
 		"stop":        []string{"</action_request>", "──"},
 	}
 
-	if err := aiops.CreateModelWithContext(a.ctx, "universalops", baseModel, analystSystemPrompt, params); err != nil {
+	// Use a lifecycle-independent context (matching PullModel) so a window/app
+	// shutdown mid-create cannot abort a multi-GiB base-model download. The
+	// operation is still bounded by the long-running client's 45-minute timeout.
+	if err := aiops.CreateModelWithContext(context.Background(), "universalops", baseModel, analystSystemPrompt, params, a.emitCreateProgress); err != nil {
 		return fmt.Errorf("persona creation failed for base %s: %w", baseModel, err)
 	}
 
@@ -1208,16 +1217,22 @@ PARAMETER stop "──"
 
 	// Note: Ollama's Create API handles pulling the base model automatically
 	// in recent versions if it's missing from the library.
-	err = aiops.CreateModelWithContext(a.ctx, "universalops", config.From, config.System, config.Parameters)
+	// Use a lifecycle-independent context (matching PullModel) so a window/app
+	// shutdown mid-create cannot abort a multi-GiB base-model download. The
+	// operation is still bounded by the long-running client's 45-minute timeout.
+	err = aiops.CreateModelWithContext(context.Background(), "universalops", config.From, config.System, config.Parameters, a.emitCreateProgress)
 	if err != nil {
 		// If creation fails because base is missing, attempt an explicit pull
 		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "pull") {
 			common.LogInfo("AIOps: Base model missing. Attempting explicit pull of %s", config.From)
 			if pErr := a.PullModel(config.From); pErr != nil {
-				common.LogWarn("AIOps: Pull of base model %s failed: %v", config.From, pErr)
+				// The pull is a hard prerequisite for creation — surface its
+				// error directly rather than retrying a create that will fail
+				// again against a still-missing base model.
+				return fmt.Errorf("failed to pull base model %s: %w", config.From, pErr)
 			}
-			// Retry creation after pull attempt
-			err = aiops.CreateModelWithContext(a.ctx, "universalops", config.From, config.System, config.Parameters)
+			// Retry creation after successful pull
+			err = aiops.CreateModelWithContext(context.Background(), "universalops", config.From, config.System, config.Parameters, a.emitCreateProgress)
 		}
 	}
 
