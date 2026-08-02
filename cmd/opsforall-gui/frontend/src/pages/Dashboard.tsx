@@ -887,6 +887,61 @@ export function Dashboard() {
     finally { setExplainingId(null) }
   }
 
+  // ── DASH-01: Drag-and-drop widget layout ──────────────────────────────────
+  const WIDGET_IDS = ['secops', 'devops', 'aiops', 'slo'] as const
+  type WidgetId = typeof WIDGET_IDS[number]
+  const WIDGET_LABELS: Record<WidgetId, string> = {
+    secops: 'Security Operations',
+    devops: 'DevOps Pipeline',
+    aiops: 'AI Analysis',
+    slo: 'Service Level Objectives',
+  }
+  const [widgetOrder, setWidgetOrder] = useState<WidgetId[]>(WIDGET_IDS as unknown as WidgetId[])
+  const [dragWidget, setDragWidget] = useState<WidgetId | null>(null)
+
+  // Load persisted layout once on mount.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const raw = await call('Dashboard.GetDashboardLayout') as string
+        if (cancelled || !raw) return
+        const parsed = JSON.parse(raw) as { id: string }[]
+        const ids = parsed.map(p => p.id).filter((id): id is WidgetId =>
+          (WIDGET_IDS as readonly string[]).includes(id))
+        // Only apply if it's a permutation of the known widgets (no dupes/missing).
+        if (ids.length === WIDGET_IDS.length && new Set(ids).size === WIDGET_IDS.length) {
+          setWidgetOrder(ids)
+        }
+      } catch { /* ignore malformed layout */ }
+    })()
+    return () => { cancelled = true }
+  }, [call])
+
+  const persistLayout = async (order: WidgetId[]) => {
+    const payload = JSON.stringify(order.map(id => ({ id })))
+    try { await call('Dashboard.SaveDashboardLayout', payload) }
+    catch (err: unknown) { console.error('[Dashboard] save layout failed:', err) }
+  }
+
+  const handleDrop = (target: WidgetId) => {
+    if (!dragWidget || dragWidget === target) { setDragWidget(null); return }
+    setWidgetOrder(prev => {
+      const next = prev.filter(id => id !== dragWidget)
+      const idx = next.indexOf(target)
+      next.splice(idx, 0, dragWidget)
+      persistLayout(next)
+      return next
+    })
+    setDragWidget(null)
+  }
+
+  const resetLayout = async () => {
+    setWidgetOrder(WIDGET_IDS as unknown as WidgetId[])
+    try { await call('Dashboard.ResetDashboardLayout') }
+    catch (err: unknown) { console.error('[Dashboard] reset layout failed:', err) }
+  }
+
   if (queryLoading && !latest) return (
     <div className="space-y-12 animate-pulse p-10">
       <div className="h-10 w-64 bg-panel-2 rounded-xl" />
@@ -1057,11 +1112,31 @@ export function Dashboard() {
 
       <motion.div variants={itemVariants} className="space-y-5">
         <div className="flex items-center gap-4"><div className="h-px flex-1 bg-[var(--color-border)]" /><h2 className="text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-widest">Cross-Pillar Operations</h2><div className="h-px flex-1 bg-[var(--color-border)]" /></div>
+        <div className="flex items-center justify-end gap-2 mb-1">
+          <span className="text-[10px] text-[var(--color-text-faint)] uppercase tracking-wider">Drag to reorder</span>
+          <button
+            onClick={resetLayout}
+            className="px-2.5 py-1 rounded-md bg-[var(--color-panel-2)] border border-[var(--color-border)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-dim)] hover:text-[var(--color-text)] hover:border-[var(--color-accent)]/40 transition-all"
+            title="Reset widget order to default"
+          >
+            Reset Layout
+          </button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-5">
-          <SecOpsPanel />
-          <DevOpsPanel />
-          <AIOpsPanel />
-          <SLOPanel />
+          {widgetOrder.map(id => {
+            const commonProps = {
+              draggable: true,
+              onDragStart: () => setDragWidget(id),
+              onDragEnd: () => setDragWidget(null),
+              onDragOver: (e: React.DragEvent) => { e.preventDefault() },
+              onDrop: () => handleDrop(id),
+              className: 'cursor-grab active:cursor-grabbing',
+            }
+            if (id === 'secops') return <div key={id} {...commonProps}><SecOpsPanel /></div>
+            if (id === 'devops') return <div key={id} {...commonProps}><DevOpsPanel /></div>
+            if (id === 'aiops') return <div key={id} {...commonProps}><AIOpsPanel /></div>
+            return <div key={id} {...commonProps}><SLOPanel /></div>
+          })}
         </div>
       </motion.div>
 

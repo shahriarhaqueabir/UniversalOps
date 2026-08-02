@@ -83,4 +83,20 @@ describe('Dashboard Page', () => {
     render(<Dashboard />)
     expect(await screen.findByText(/OPERATIONAL/i)).toBeInTheDocument()
   })
+
+  it('renders the drag-to-reorder hint and Reset Layout button', async () => {
+    render(<Dashboard />)
+    expect(await screen.findByText(/Drag to reorder/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Reset Layout/i })).toBeInTheDocument()
+  })
+
+  it('renders all four cross-pillar widgets', async () => {
+    render(<Dashboard />)
+    expect(await screen.findByText(/Cross-Pillar Operations/i)).toBeInTheDocument()
+    // The four widget panels render their section headings.
+    expect(screen.getAllByText(/Security Posture/i).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText(/DevOps Health/i).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText(/AI Operations/i).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText(/SLO \/ SLI/i).length).toBeGreaterThanOrEqual(1)
+  })
 })
