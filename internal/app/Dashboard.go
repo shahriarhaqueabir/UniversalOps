@@ -396,6 +396,58 @@ func (d *Dashboard) GetSLODefinitions() []common.SLODefinition {
 	return nil
 }
 
+// ── Dashboard Layout Persistence (DASH-01) ───────────────────────────────────
+
+const dashboardLayoutKey = "dashboardLayout"
+
+// SaveDashboardLayout persists the drag-and-drop widget layout as JSON.
+// The layout is a JSON array of widget descriptors (id + order). Stored in the
+// settings table so it survives restarts without a schema change.
+func (d *Dashboard) SaveDashboardLayout(layoutJSON string) error {
+	defer common.RecoverPanic()
+	if layoutJSON == "" {
+		return fmt.Errorf("layout is required")
+	}
+	s := common.GetStorage()
+	if s == nil {
+		return fmt.Errorf("storage not initialized")
+	}
+	if err := s.UpsertSetting(dashboardLayoutKey, layoutJSON); err != nil {
+		common.LogWarn("Dashboard: SaveDashboardLayout failed: %v", err)
+		return err
+	}
+	return nil
+}
+
+// GetDashboardLayout returns the persisted widget layout JSON, or "" if none.
+func (d *Dashboard) GetDashboardLayout() string {
+	defer common.RecoverPanic()
+	s := common.GetStorage()
+	if s == nil {
+		return ""
+	}
+	val, err := s.GetSetting(dashboardLayoutKey)
+	if err != nil {
+		common.LogWarn("Dashboard: GetDashboardLayout failed: %v", err)
+		return ""
+	}
+	return val
+}
+
+// ResetDashboardLayout clears the persisted layout so the default order is used.
+func (d *Dashboard) ResetDashboardLayout() error {
+	defer common.RecoverPanic()
+	s := common.GetStorage()
+	if s == nil {
+		return fmt.Errorf("storage not initialized")
+	}
+	if err := s.UpsertSetting(dashboardLayoutKey, ""); err != nil {
+		common.LogWarn("Dashboard: ResetDashboardLayout failed: %v", err)
+		return err
+	}
+	return nil
+}
+
 // ── Diagnostic helpers ─────────────────────────────────────────────────────────
 
 func diagStatus(value float64, warnAt, failAt float64) string {
