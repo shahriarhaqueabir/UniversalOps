@@ -1,6 +1,8 @@
 package app
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -16,6 +18,8 @@ func TestNewApp(t *testing.T) {
 	assert.NotNil(t, a.alerts, "alerts is nil")
 	assert.NotNil(t, a.SysOps, "SysOps is nil")
 	assert.NotNil(t, a.NetOps, "NetOps is nil")
+	assert.NotNil(t, a.DevOps, "DevOps is nil")
+	assert.NotNil(t, a.Workflows, "Workflows is nil")
 }
 
 func TestGetAppInfo(t *testing.T) {
@@ -121,4 +125,35 @@ func TestConvertAlert(t *testing.T) {
 	assert.Equal(t, alert.ID, got.ID)
 	assert.Equal(t, "CRITICAL", got.Level)
 	assert.NotEmpty(t, got.Timestamp, "Timestamp should not be empty")
+}
+
+func TestUpdateStorageConfig_RestoresPreviousStorageOnFailure(t *testing.T) {
+	tempRoot := t.TempDir()
+	oldDir := filepath.Join(tempRoot, "old")
+	newDir := filepath.Join(tempRoot, "new")
+	oldDBPath := filepath.Join(oldDir, "universalops.db")
+	newDBPath := filepath.Join(newDir, "universalops.db")
+
+	require.NoError(t, common.InitStorage(oldDBPath))
+	defer func() {
+		if s := common.GetStorage(); s != nil {
+			_ = s.Close()
+		}
+	}()
+
+	a := NewApp()
+	a.currentDataDir = oldDir
+
+	require.NoError(t, os.MkdirAll(newDir, 0755))
+	require.NoError(t, os.MkdirAll(newDBPath, 0755))
+
+	err := a.UpdateStorageConfig(newDir)
+	require.Error(t, err)
+	require.Equal(t, oldDir, a.GetDataDir())
+
+	storage := common.GetStorage()
+	require.NotNil(t, storage)
+	tx, err := storage.Begin()
+	require.NoError(t, err)
+	require.NoError(t, tx.Rollback())
 }

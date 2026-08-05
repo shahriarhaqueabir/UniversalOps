@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Sun, Moon, Bell, Trash2, RefreshCw, AlertTriangle, AlertOctagon, Info, CheckCircle2, Clock, Sparkles, ArrowLeft } from 'lucide-react'
+import { Sun, Moon, Bell, RefreshCw, AlertTriangle, AlertOctagon, Info, CheckCircle2, Clock, Sparkles, ArrowLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import type { Page } from '../../stores/useSettingsStore'
-import { useThemeStore, useAlertStore, useSettingsStore, useNavigationStore } from '../../stores'
+import { useThemeStore, useSettingsStore, useNavigationStore } from '../../stores'
 import type { AlertInfo } from '@/types'
 
 interface TopBarProps {
@@ -39,8 +39,6 @@ export function TopBar({ currentPage, onToggleHawk }: TopBarProps) {
   const { refreshInterval } = useSettingsStore()
   const { history, goBack } = useNavigationStore()
   const queryClient = useQueryClient()
-  const alertCount = useAlertStore((s) => s.alertCount)
-  const clearAlerts = useAlertStore((s) => s.clearAlerts)
   const [showAlertPanel, setShowAlertPanel] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -51,9 +49,10 @@ export function TopBar({ currentPage, onToggleHawk }: TopBarProps) {
       const res = await call('AlertAPI.GetActiveAlerts')
       return (res as AlertInfo[]) || []
     },
-    enabled: showAlertPanel,
-    refetchInterval: showAlertPanel ? refreshInterval : false,
+    enabled: true,
+    refetchInterval: refreshInterval,
   })
+  const activeAlertCount = activeAlerts.length
 
   const resolveMutation = useMutation({
     mutationFn: async (id: string) => { await call('AlertAPI.ResolveAlert', id) },
@@ -108,7 +107,11 @@ export function TopBar({ currentPage, onToggleHawk }: TopBarProps) {
             }}
           />
           <span className="text-xs text-[var(--color-text-faint)] hidden sm:inline">
-            {alertCount > 0 ? `${alertCount} Alert${alertCount > 1 ? 's' : ''} Active` : 'All Systems Nominal'}
+            {alertsLoading
+              ? 'Checking alerts...'
+              : activeAlertCount > 0
+                ? `${activeAlertCount} Alert${activeAlertCount > 1 ? 's' : ''} Active`
+                : 'All Systems Nominal'}
           </span>
         </div>
 
@@ -117,13 +120,13 @@ export function TopBar({ currentPage, onToggleHawk }: TopBarProps) {
           <button
             onClick={() => setShowAlertPanel(!showAlertPanel)}
             className="relative text-[var(--color-text-dim)] hover:text-[var(--color-text)] transition-colors p-1.5 rounded-lg hover:bg-[var(--color-sidebar-hover)]"
-            aria-label={`Notifications${alertCount > 0 ? `, ${alertCount} active alerts` : ''}`}
+            aria-label={`Notifications${activeAlertCount > 0 ? `, ${activeAlertCount} active alerts` : ''}`}
             aria-expanded={showAlertPanel}
           >
             <Bell size={18} />
-            {alertCount > 0 && (
+            {activeAlertCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-[var(--color-danger)] text-[10px] font-bold text-white flex items-center justify-center leading-none">
-                {alertCount > 99 ? '99+' : alertCount}
+                {activeAlertCount > 99 ? '99+' : activeAlertCount}
               </span>
             )}
           </button>
@@ -134,7 +137,7 @@ export function TopBar({ currentPage, onToggleHawk }: TopBarProps) {
               <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
                 <span className="text-sm font-bold text-[var(--color-text)]">
                   Active Alerts
-                  <span className="ml-2 text-xs font-normal text-[var(--color-text-faint)]">({activeAlerts.length})</span>
+                  <span className="ml-2 text-xs font-normal text-[var(--color-text-faint)]">({activeAlertCount})</span>
                 </span>
                 <div className="flex items-center gap-1.5">
                   <button
@@ -142,14 +145,14 @@ export function TopBar({ currentPage, onToggleHawk }: TopBarProps) {
                     disabled={evaluateMutation.isPending}
                     className="flex items-center gap-1 text-xs px-2 py-1 rounded-md text-[var(--color-text-faint)] hover:text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 transition-colors"
                     title="Force re-evaluation"
-                  >
+                    >
                     <RefreshCw size={12} className={cn(evaluateMutation.isPending && 'animate-spin')} /> Evaluate
                   </button>
                   <button
-                    onClick={() => { clearAlerts(); setShowAlertPanel(false) }}
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ['alertAPI', 'active'] })}
                     className="flex items-center gap-1 text-xs px-2 py-1 rounded-md text-[var(--color-text-faint)] hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 transition-colors"
                   >
-                    <Trash2 size={12} /> Clear
+                    <RefreshCw size={12} /> Refresh
                   </button>
                 </div>
               </div>

@@ -159,6 +159,7 @@ func TestPipelineClear(t *testing.T) {
 
 func TestPipelineMissingMetric(t *testing.T) {
 	dp := NewDataPipeline(DefaultCollectionConfig())
+	before := dp.NumSeries()
 
 	ts := dp.GetTimeSeries("nonexistent")
 	if ts != nil {
@@ -178,6 +179,10 @@ func TestPipelineMissingMetric(t *testing.T) {
 	mf := dp.GetMetricWithForecast("nonexistent")
 	if len(mf.Values) != 0 {
 		t.Error("expected empty values for nonexistent metric")
+	}
+
+	if after := dp.NumSeries(); after != before {
+		t.Errorf("expected read-only lookups to keep series count at %d, got %d", before, after)
 	}
 }
 

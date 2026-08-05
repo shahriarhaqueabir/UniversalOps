@@ -113,12 +113,12 @@ func NewApp() *App {
 	a.AlertAPI = NewAlertAPI(a.alerts)
 	a.Logs = NewLogs()
 	a.Knowledge = NewKnowledgeAPI()
-	a.Workflows = NewWorkflowAPI(a.workflowEngine, a.SysOps, a.SecOps, a.DevOps, a.AlertAPI)
 
 	// Initialize subsystems that might need context later
 	ctx := context.Background()
 	a.AIOps = NewAIOps(ctx, a.pipeline, a.Knowledge, a.capabilities, a.PipelineAPI, a.SysOps, a.currentDataDir)
 	a.DevOps = NewDevOps(ctx, a.eventBus)
+	a.Workflows = NewWorkflowAPI(a.workflowEngine, a.SysOps, a.SecOps, a.DevOps, a.AlertAPI)
 	a.Timeline = NewTimeline(a.eventBus, a.AIOps)
 	a.Reports = NewReportsAPI(a.SysOps, a.SecOps, a.AIOps)
 	a.Dash = NewDashboard(a.pipeline, a.alerts, a.SysOps, a.NetOps, a.SecOps, a.DevOps, a.AIOps, a.Timeline, nil, func() string {
@@ -487,6 +487,16 @@ func (a *App) UpdateStorageConfig(dbDir string) error {
 	os.Remove(testFile)
 
 	dbPath := filepath.Join(dbDir, "universalops.db")
+	oldDataDir := a.currentDataDir
+	oldDBPath := filepath.Join(oldDataDir, "universalops.db")
+	hadScheduler := a.scheduler != nil
+
+	restartScheduler := func() {
+		if hadScheduler {
+			a.scheduler = common.NewCollectorScheduler(a.collectorRegistry, a.pipeline)
+			a.scheduler.Start()
+		}
+	}
 
 	common.LogInfo("App: Suspending operations for storage relocation to %s", dbDir)
 
@@ -503,16 +513,18 @@ func (a *App) UpdateStorageConfig(dbDir string) error {
 
 	// 3. Initialize new storage
 	if err := common.InitStorage(dbPath); err != nil {
+		if restoreErr := common.InitStorage(oldDBPath); restoreErr != nil {
+			return fmt.Errorf("failed to re-init storage: %w (rollback failed: %v)", err, restoreErr)
+		}
+		restartScheduler()
+		common.LogWarn("App: storage relocation failed, restored previous storage at %s", oldDBPath)
 		return fmt.Errorf("failed to re-init storage: %w", err)
 	}
 
 	a.currentDataDir = dbDir
 
 	// 4. Restart the scheduler
-	if a.scheduler != nil {
-		a.scheduler = common.NewCollectorScheduler(a.collectorRegistry, a.pipeline)
-		a.scheduler.Start()
-	}
+	restartScheduler()
 
 	common.LogInfo("App: Storage successfully relocated and operations resumed.")
 	return nil

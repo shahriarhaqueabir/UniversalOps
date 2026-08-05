@@ -94,6 +94,14 @@ func dockerExecLongTimeout(timeout time.Duration, args ...string) (string, error
 	return strings.TrimSpace(stdout.String()), nil
 }
 
+func firstField(s string) string {
+	fields := strings.Fields(s)
+	if len(fields) == 0 {
+		return ""
+	}
+	return fields[0]
+}
+
 func GetDockerStats() ([]DockerStatsEntry, error) {
 	output, err := dockerExec("stats", "--no-stream", "--format", "{{.ID}}|{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}|{{.NetIO}}|{{.BlockIO}}|{{.PIDs}}")
 	if err != nil {
@@ -336,7 +344,7 @@ func GetDockerVolumes() ([]DockerVolumeInfo, error) {
 			v.Mountpoint = parts[2]
 		}
 		size, _ := dockerExec("run", "--rm", "-v", parts[1]+":/vol", "alpine", "du", "-sh", "/vol")
-		v.Size = strings.Fields(size)[0]
+		v.Size = firstField(size)
 		volumes = append(volumes, v)
 	}
 	return volumes, nil
