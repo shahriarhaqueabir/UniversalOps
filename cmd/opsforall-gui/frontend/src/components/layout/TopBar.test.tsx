@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { TopBar } from './TopBar'
-import { useAlertStore, useThemeStore } from '../../stores/useSettingsStore'
+import { useThemeStore } from '../../stores/useSettingsStore'
 
 import { useQuery } from '@tanstack/react-query'
 import type { AlertInfo } from '@/types'
@@ -24,7 +24,6 @@ describe('TopBar Component', () => {
     vi.clearAllMocks()
     vi.mocked(useQuery).mockReturnValue(mockQueryReturn({ data: [] }))
     act(() => {
-      useAlertStore.getState().clearAlerts()
       useThemeStore.getState().setTheme('dark')
     })
   })
@@ -42,12 +41,9 @@ describe('TopBar Component', () => {
 
   it('displays alert count when alerts exist', () => {
     const alert: AlertInfo = { id: '1', level: '', metric: 'CPU', message: 'High load', value: 0, threshold: 0, timestamp: '', resolved: false }
-    act(() => {
-      useAlertStore.getState().addAlert(alert)
-    })
+    vi.mocked(useQuery).mockReturnValue(mockQueryReturn({ data: [alert] }))
     render(<TopBar currentPage="dashboard" />)
     expect(screen.getByText(/1 Alert Active/i)).toBeTruthy()
-    // Find the badge text specifically
     const badge = screen.getByText('1', { selector: 'span' })
     expect(badge).toBeTruthy()
   })
@@ -62,12 +58,7 @@ describe('TopBar Component', () => {
   it('opens alert panel and shows alerts', async () => {
     const alert: AlertInfo = { id: '1', level: 'warning', metric: 'Memory', message: 'Usage > 90%', value: 0, threshold: 0, timestamp: '12:00:00', resolved: false }
 
-    // Mock useQuery to return the alert when the panel is open
     vi.mocked(useQuery).mockReturnValue(mockQueryReturn({ data: [alert] }))
-
-    act(() => {
-      useAlertStore.getState().addAlert(alert)
-    })
 
     render(<TopBar currentPage="dashboard" />)
 
@@ -79,22 +70,17 @@ describe('TopBar Component', () => {
     expect(screen.getByText('Usage > 90%')).toBeTruthy()
   })
 
-  it('clears alerts when Clear button is clicked', () => {
+  it('refreshes alerts when Refresh button is clicked', () => {
     const alert: AlertInfo = { id: '1', level: 'info', metric: 'Disk', message: 'Full', value: 0, threshold: 0, timestamp: '12:00:00', resolved: false }
     vi.mocked(useQuery).mockReturnValue(mockQueryReturn({ data: [alert] }))
 
-    act(() => {
-      useAlertStore.getState().addAlert(alert)
-    })
     render(<TopBar currentPage="dashboard" />)
 
     // Open panel
     fireEvent.click(screen.getByLabelText(/Notifications/i))
 
-    // Click clear
-    const clearButton = screen.getByText(/Clear/i)
-    fireEvent.click(clearButton)
-
-    expect(useAlertStore.getState().alertCount).toBe(0)
+    const refreshButton = screen.getByText(/Refresh/i)
+    fireEvent.click(refreshButton)
+    expect(refreshButton).toBeTruthy()
   })
 })

@@ -140,15 +140,21 @@ func (dp *DataPipeline) PushMetric(name, unit string, value float64) {
 
 // ── Retrieval ───────────────────────────────────────────────────────────────
 
+// LookupTimeSeries returns the raw time series for the named metric without
+// creating a new empty series.
+func (dp *DataPipeline) LookupTimeSeries(name string) *TimeSeries {
+	dp.store.mu.RLock()
+	defer dp.store.mu.RUnlock()
+	return dp.store.series[name]
+}
+
 // GetTimeSeries returns the raw time series for the named metric, or nil if
 // no data has been pushed yet.
 func (dp *DataPipeline) GetTimeSeries(name string) *TimeSeries {
 	dp.mu.RLock()
 	defer dp.mu.RUnlock()
 
-	// Since the store auto-creates series on Get, but we only want to return
-	// ones that have data, retrieve from the underlying map.
-	if ts := dp.store.Get(name, ""); ts != nil && ts.Count() > 0 {
+	if ts := dp.LookupTimeSeries(name); ts != nil && ts.Count() > 0 {
 		return ts
 	}
 	return nil
@@ -199,8 +205,8 @@ func (dp *DataPipeline) GetWindowStats(name string) WindowStats {
 	dp.mu.RLock()
 	defer dp.mu.RUnlock()
 
-	ts := dp.store.Get(name, "")
-	if ts == nil {
+	ts := dp.LookupTimeSeries(name)
+	if ts == nil || ts.Count() == 0 {
 		return WindowStats{}
 	}
 	return ts.GetStats()
@@ -212,7 +218,7 @@ func (dp *DataPipeline) GetMetricWithForecast(name string) MetricForecast {
 	dp.mu.RLock()
 	defer dp.mu.RUnlock()
 
-	ts := dp.store.Get(name, "")
+	ts := dp.LookupTimeSeries(name)
 	fe := dp.getForecastEngine(name)
 
 	mf := MetricForecast{Name: name}
@@ -276,7 +282,7 @@ func (dp *DataPipeline) NumSeries() int {
 
 // GetLastValue returns the most recent value for a metric without allocations.
 func (dp *DataPipeline) GetLastValue(name string) float64 {
-	ts := dp.store.Get(name, "")
+	ts := dp.LookupTimeSeries(name)
 	if ts == nil {
 		return 0
 	}

@@ -165,6 +165,12 @@ function formatThroughput(bps: number): string {
   return scaled >= 10 ? `${Math.round(scaled)}${units[magnitude]}` : `${scaled.toFixed(1)}${units[magnitude]}`
 }
 
+function batteryColor(pct: number): string {
+  if (pct <= 20) return 'var(--color-danger)'
+  if (pct <= 60) return 'var(--color-warning)'
+  return 'var(--color-success)'
+}
+
 /* ───────────────────────────────────────────
    Enhanced Components
    ─────────────────────────────────────────── */
@@ -375,7 +381,9 @@ const variantStyles = {
       ? (data?.detected ? (metricKey === 'gpu' ? data.vendor : val) : 'N/A')
       : val
 
-  const status: HealthStatus = (data?.value != null && data.value > 80) ? 'degraded' : 'healthy'
+  const status: HealthStatus = metricKey === 'network'
+    ? 'unknown'
+    : (data?.value != null && data.value > 80) ? 'degraded' : 'healthy'
 
   return (
     <div

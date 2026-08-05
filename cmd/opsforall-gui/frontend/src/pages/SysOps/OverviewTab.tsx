@@ -16,31 +16,25 @@ import type {
 
 /* ── Helpers ── */
 
-function parseUptimeDays(uptime: string): number {
-  if (!uptime) return 0
-  let days = 0, hours = 0, minutes = 0
-  const dMatch = uptime.match(/(\d+)d/)
-  const hMatch = uptime.match(/(\d+)h/)
-  const mMatch = uptime.match(/(\d+)m/)
-  if (dMatch) days = parseInt(dMatch[1])
-  if (hMatch) hours = parseInt(hMatch[1])
-  if (mMatch) minutes = parseInt(mMatch[1])
-  return days + hours / 24 + minutes / 1440
-}
-
 function healthColor(pct: number): string {
   if (pct >= 90) return 'var(--color-danger)'
   if (pct >= 75) return 'var(--color-warning)'
   return 'var(--color-success)'
 }
 
+function batteryColor(pct: number): string {
+  if (pct <= 20) return 'var(--color-danger)'
+  if (pct <= 60) return 'var(--color-warning)'
+  return 'var(--color-success)'
+}
+
 /* ── Health Ring ── */
 
-function HealthRing({ value, label, subtitle }: { value: number; label: string; subtitle?: string }) {
+function HealthRing({ value, label, subtitle, colorFn = healthColor }: { value: number; label: string; subtitle?: string; colorFn?: (pct: number) => string }) {
   const r = 36
   const circ = 2 * Math.PI * r
   const offset = circ - (value / 100) * circ
-  const color = healthColor(value)
+  const color = colorFn(value)
 
   return (
     <div className="flex flex-col items-center gap-2 group">
@@ -136,7 +130,6 @@ export function OverviewTab() {
 
   const cpuPct = cpuInfo?.percent ?? 0
   const memPct = memInfo?.used_percent ?? 0
-  const uptimeDays = parseUptimeDays(sysInfo?.uptime ?? '')
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -154,7 +147,12 @@ export function OverviewTab() {
             <HealthRing value={gpuInfo.utilization} label="GPU" subtitle={gpuInfo.name.split(' ').slice(0, 2).join(' ')} />
           )}
           {battInfo?.detected && (
-            <HealthRing value={battInfo.percent} label="Battery" subtitle={battInfo.charging ? 'Charging' : `${battInfo.percent}%`} />
+            <HealthRing
+              value={battInfo.percent}
+              label="Battery"
+              subtitle={battInfo.charging ? 'Charging' : `${battInfo.percent}%`}
+              colorFn={batteryColor}
+            />
           )}
         </div>
       </Panel>
@@ -165,7 +163,7 @@ export function OverviewTab() {
           variant={cpuPct < 75 ? 'success' : cpuPct < 90 ? 'warning' : 'danger'} />
         <MiniStat label="Memory" value={memInfo ? `${memInfo.used_gb.toFixed(1)} / ${memInfo.total_gb.toFixed(0)} GB` : '—'} icon={<MemoryStick size={24} />}
           variant={memPct < 75 ? 'success' : memPct < 90 ? 'warning' : 'danger'} />
-        <MiniStat label="Uptime" value={uptimeDays >= 1 ? `${uptimeDays.toFixed(1)}d` : `${(uptimeDays * 24).toFixed(0)}h`} icon={<Clock size={24} />} variant="success" />
+        <MiniStat label="Uptime" value={sysInfo?.uptime ?? '—'} icon={<Clock size={24} />} variant="success" />
         <MiniStat label="Users" value={users.length} icon={<Users size={24} />} variant="default" />
       </div>
 
