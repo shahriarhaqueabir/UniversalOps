@@ -9,6 +9,7 @@ import { OnboardingModal } from './components/dialogs/OnboardingModal'
 import { useThemeStore, useAlertStore, useSettingsStore, useNavigationStore, type Page } from './stores'
 import { subscribeToOllamaProgress } from './stores/useOllamaStore'
 import { getGo, getRuntime } from './hooks/useBackend'
+import { applyDocumentMetadata } from '@/lib/appMetadata'
 import type { AlertInfo } from './types'
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
   const dnsTimeout = useSettingsStore((s) => s.dnsTimeout)
   const companionName = useSettingsStore((s) => s.companionName)
   const addAlert = useAlertStore((s) => s.addAlert)
+  const activeAlertCount = useAlertStore((s) => s.alerts.length)
 
   // Register the single 'ollama:progress' listener for the app's lifetime.
   // Wails EventsOff only accepts event names (not handlers), so multiple
@@ -79,6 +81,10 @@ function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    applyDocumentMetadata(currentPage, activeAlertCount, theme)
+  }, [currentPage, activeAlertCount, theme])
 
   // Global keyboard shortcuts
   useEffect(() => {

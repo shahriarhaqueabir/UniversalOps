@@ -26,7 +26,6 @@ import {
   Shield,
   Terminal,
 } from 'lucide-react'
-import { format } from 'date-fns'
 import {
   AreaChart as RechartsAreaChart,
   Area,
@@ -38,7 +37,7 @@ import {
 } from 'recharts'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore, useMetricsStore, useNavigationStore } from '@/stores'
-import { cn, formatSafeDate } from '@/lib/utils'
+import { cn, formatSafeDate, formatTime24 } from '@/lib/utils'
 import { DataFreshnessIndicator } from '@/components/ui/DataFreshnessIndicator'
 import { Panel } from '@/components/ui/Panel'
 import { HealthBadge } from '@/components/ui/HealthBadge'
@@ -163,12 +162,6 @@ function formatThroughput(bps: number): string {
   const magnitude = Math.min(units.length - 1, Math.floor(Math.log10(bps) / 3))
   const scaled = bps / Math.pow(10, magnitude * 3)
   return scaled >= 10 ? `${Math.round(scaled)}${units[magnitude]}` : `${scaled.toFixed(1)}${units[magnitude]}`
-}
-
-function batteryColor(pct: number): string {
-  if (pct <= 20) return 'var(--color-danger)'
-  if (pct <= 60) return 'var(--color-warning)'
-  return 'var(--color-success)'
 }
 
 /* ───────────────────────────────────────────
@@ -315,13 +308,17 @@ const HeroSection = memo(function HeroSection() {
             <span className="text-2xl font-bold text-[var(--color-text)]">System Health Score</span>
           </div>
           <div className="text-right">
-            <p className="text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-widest">Active Uptime</p>
+            <p className="text-xs font-semibold text-[var(--color-text-faint)] uppercase tracking-widest">System Uptime</p>
             <p className="text-xl font-bold text-accent tabular-nums">{stats.uptime}</p>
+            <p className="text-[10px] font-medium text-[var(--color-text-faint)]">Since last restart</p>
           </div>
         </div>
 
         <p className="text-[var(--color-text-dim)] text-sm leading-relaxed mb-6 max-w-2xl">
           Drift-weighted health score computed by the backend engine from CPU, memory, and disk deviation analysis.
+          <span className="block text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-faint)] mt-2">
+            Overall status is derived from the score and active alert count.
+          </span>
           Current status indicates <span className={cn("font-semibold", systemHealth > 80 ? "text-success" : systemHealth > 50 ? "text-warning" : "text-danger")}>
             {systemHealth > 80 ? "Stable Operation" : systemHealth > 50 ? "Pressure Detected" : "High Instability Risks"}
           </span> across all monitored subsystems.
@@ -445,7 +442,7 @@ const RecentEventsPanel = memo(function RecentEventsPanel({ onExplain, explainin
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[var(--color-panel-3)] text-[var(--color-text-faint)] border border-[var(--color-border)]/50">{evt.category}</span>
-                <span className="text-[10px] text-[var(--color-text-faint)] tabular-nums ml-auto">{formatSafeDate(evt.timestamp, (d) => format(d, 'HH:mm:ss'))}</span>
+                <span className="text-[10px] text-[var(--color-text-faint)] tabular-nums ml-auto">{formatSafeDate(evt.timestamp, (d) => formatTime24(d, true))}</span>
               </div>
               <p className="text-xs font-semibold text-[var(--color-text)] leading-snug">{evt.title}</p>
               <div className="flex items-center justify-between gap-4 mt-1">
@@ -898,12 +895,6 @@ export function Dashboard() {
   // ── DASH-01: Drag-and-drop widget layout ──────────────────────────────────
   const WIDGET_IDS = ['secops', 'devops', 'aiops', 'slo'] as const
   type WidgetId = typeof WIDGET_IDS[number]
-  const WIDGET_LABELS: Record<WidgetId, string> = {
-    secops: 'Security Operations',
-    devops: 'DevOps Pipeline',
-    aiops: 'AI Analysis',
-    slo: 'Service Level Objectives',
-  }
   const [widgetOrder, setWidgetOrder] = useState<WidgetId[]>(WIDGET_IDS as unknown as WidgetId[])
   const [dragWidget, setDragWidget] = useState<WidgetId | null>(null)
 

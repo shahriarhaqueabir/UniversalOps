@@ -1,8 +1,12 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { Sidebar } from './Sidebar'
 
 describe('Sidebar', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+  })
+
   it('renders all navigation items', () => {
     const onNavigate = vi.fn()
     render(<Sidebar currentPage="dashboard" onNavigate={onNavigate} />)
@@ -54,6 +58,19 @@ describe('Sidebar', () => {
     expect(screen.queryByText('Dashboard')).not.toBeInTheDocument()
 
     // Toggle button should now say expand
+    expect(screen.getByLabelText('Expand sidebar')).toBeInTheDocument()
+  })
+
+  it('restores the collapsed preference after remount', () => {
+    const onNavigate = vi.fn()
+    const { unmount } = render(<Sidebar currentPage="dashboard" onNavigate={onNavigate} />)
+
+    fireEvent.click(screen.getByLabelText('Collapse sidebar'))
+    unmount()
+
+    render(<Sidebar currentPage="dashboard" onNavigate={onNavigate} />)
+
+    expect(screen.queryByText('Dashboard')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Expand sidebar')).toBeInTheDocument()
   })
 })
