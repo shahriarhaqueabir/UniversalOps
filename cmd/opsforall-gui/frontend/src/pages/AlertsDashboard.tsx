@@ -144,6 +144,13 @@ export function AlertsDashboard() {
   // ── Derived data ──
 
   const displayedAlerts = showResolved ? allAlerts : allAlerts.filter((a) => !a.resolved)
+  const hasActiveFilters = filterLevel !== 'all' || showResolved || search.trim().length > 0
+
+  const resetFilters = () => {
+    setFilterLevel('all')
+    setShowResolved(false)
+    setSearch('')
+  }
 
   const filteredAlerts = displayedAlerts.filter((a) => {
     if (filterLevel !== 'all' && a.level?.toLowerCase() !== filterLevel) return false
@@ -206,7 +213,7 @@ export function AlertsDashboard() {
       </div>
 
       {/* Stats bar */}
-      <div className="grid grid-cols-5 gap-4 px-10 py-5 border-b border-[var(--color-border)] bg-[var(--color-panel-1)]/30">
+      <div className="grid grid-cols-2 gap-4 px-10 py-5 border-b border-[var(--color-border)] bg-[var(--color-panel-1)]/30 lg:grid-cols-3 xl:grid-cols-5">
         {[
           { key: 'active', label: 'Active', count: stats.active, color: 'text-accent border-accent/20 bg-accent/10' },
           { key: 'critical', label: 'Critical', count: stats.critical, color: 'text-red-500 border-red-500/20 bg-red-500/10' },
@@ -226,7 +233,7 @@ export function AlertsDashboard() {
       </div>
 
       {/* Tabs + Filters */}
-      <div className="flex items-center justify-between px-10 py-3 border-b border-[var(--color-border)] bg-[var(--color-panel-1)]/20">
+      <div className="flex flex-col gap-3 px-10 py-3 border-b border-[var(--color-border)] bg-[var(--color-panel-1)]/20 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-1">
           <button
             onClick={() => setTab('alerts')}
@@ -237,6 +244,7 @@ export function AlertsDashboard() {
           >
             <Bell size={14} className="inline mr-1.5 -mt-0.5" />
             Alerts
+            <span className="ml-2 rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] font-black">{stats.active}</span>
           </button>
           <button
             onClick={() => setTab('rules')}
@@ -247,11 +255,12 @@ export function AlertsDashboard() {
           >
             <Shield size={14} className="inline mr-1.5 -mt-0.5" />
             Rules
+            <span className="ml-2 rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] font-black">{rules.length}</span>
           </button>
         </div>
 
         {tab === 'alerts' && (
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {/* Level filter */}
             <div className="flex items-center gap-1 bg-[var(--color-panel-2)] rounded-xl p-1 border border-[var(--color-border)]">
               {['all', 'critical', 'warning', 'info'].map((lvl) => (
@@ -277,9 +286,10 @@ export function AlertsDashboard() {
                   ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500'
                   : 'bg-[var(--color-panel-2)] border-[var(--color-border)] text-[var(--color-text-faint)]'
               )}
+              aria-pressed={showResolved}
             >
               <CheckCircle2 size={12} />
-              Resolved
+              Show resolved
             </button>
 
             {/* Search */}
@@ -287,12 +297,21 @@ export function AlertsDashboard() {
               <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
               <input
                 type="text"
-                placeholder="Search alerts..."
+                placeholder="Search metric, message, or id..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-48 pl-8 pr-3 py-1.5 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)] text-[11px] text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] outline-none focus:border-accent/40 transition-colors"
+                className="w-60 max-w-full pl-8 pr-3 py-1.5 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)] text-[11px] text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] outline-none focus:border-accent/40 transition-colors"
               />
             </div>
+
+            {hasActiveFilters && (
+              <button
+                onClick={resetFilters}
+                className="px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border border-[var(--color-border)] bg-[var(--color-panel-2)] text-[var(--color-text-dim)] hover:text-[var(--color-text)] hover:bg-[var(--color-panel-hover)] transition-all"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -301,6 +320,20 @@ export function AlertsDashboard() {
       <div className="flex-1 overflow-y-auto">
         {tab === 'alerts' && (
           <div className="p-6 space-y-2">
+            {hasActiveFilters && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel-2)] px-4 py-3 text-[11px] text-[var(--color-text-dim)]">
+                <span>
+                  Showing {filteredAlerts.length} alert{filteredAlerts.length === 1 ? '' : 's'} in scope from {displayedAlerts.length} visible alert{displayedAlerts.length === 1 ? '' : 's'}
+                </span>
+                <button
+                  onClick={resetFilters}
+                  className="font-bold text-accent hover:underline"
+                >
+                  Reset
+                </button>
+              </div>
+            )}
+
             {historyLoading && (
               <div className="flex items-center justify-center py-20">
                 <div className="w-6 h-6 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
@@ -312,7 +345,7 @@ export function AlertsDashboard() {
                 <Bell size={40} className="mb-3 opacity-30" />
                 <p className="text-xs font-bold uppercase tracking-wider">No alerts</p>
                 <p className="text-[10px] mt-1 opacity-60">
-                  {search ? 'Try a different search' : 'All clear — no matching alerts'}
+                  {hasActiveFilters ? 'No alerts match the current filters' : 'All clear — no matching alerts'}
                 </p>
               </div>
             )}
@@ -368,6 +401,7 @@ export function AlertsDashboard() {
                         onClick={() => resolveMutation.mutate(alert.id)}
                         className="p-1.5 rounded-lg text-[var(--color-text-faint)] hover:text-emerald-500 hover:bg-emerald-500/10 transition-all"
                         title="Resolve alert"
+                        aria-label={`Resolve alert ${alert.id}`}
                       >
                         <CheckCircle2 size={14} />
                       </button>
@@ -529,7 +563,7 @@ export function AlertsDashboard() {
                     key={`${rule.metric}-${rule.threshold}-${idx}`}
                     className="flex items-center gap-4 px-5 py-3 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]"
                   >
-                    <div className="flex-1 grid grid-cols-5 gap-4 text-xs">
+                    <div className="flex-1 grid grid-cols-2 gap-4 text-xs lg:grid-cols-5">
                       <div>
                         <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-faint)] mb-1">Metric</p>
                         <p className="font-mono font-bold text-[var(--color-text)]">{rule.metric}</p>
@@ -560,6 +594,7 @@ export function AlertsDashboard() {
                       onClick={() => removeRuleMutation.mutate({ metric: rule.metric, threshold: rule.threshold })}
                       className="p-1.5 rounded-lg text-[var(--color-text-faint)] hover:text-red-500 hover:bg-red-500/10 transition-all shrink-0"
                       title="Remove rule"
+                      aria-label={`Remove alert rule for ${rule.metric} at ${rule.threshold}`}
                     >
                       <Trash2 size={12} />
                     </button>

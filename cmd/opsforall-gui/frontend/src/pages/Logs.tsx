@@ -3,7 +3,6 @@ import { motion } from 'motion/react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { useQuery } from '@tanstack/react-query'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { format } from 'date-fns'
 import {
   ArrowDownToDot,
   ArrowUp,
@@ -36,7 +35,7 @@ import {
   Legend,
 } from 'recharts'
 
-import { cn, formatSafeDate } from '@/lib/utils'
+import { cn, formatSafeDate, formatMonthDayTime, formatTime24, formatTimestampFilePart } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import type { LogEntry, LogStats, LogTimelinePoint, LogSummary } from '@/types'
@@ -276,7 +275,7 @@ function OverviewTab() {
                 <CartesianGrid strokeDasharray="4 4" stroke="var(--color-border)" vertical={false} strokeOpacity={0.5} />
                 <XAxis
                   dataKey="timestamp"
-                  tickFormatter={(v: string) => formatSafeDate(v, (d) => format(d, 'HH:mm'))}
+                  tickFormatter={(v: string) => formatSafeDate(v, formatTime24)}
                   stroke="var(--color-text-faint)"
                   tick={{ fontSize: 11 }}
                 />
@@ -288,7 +287,7 @@ function OverviewTab() {
                     borderRadius: '12px',
                     color: 'var(--color-text)',
                   }}
-                  labelFormatter={(v: any) => formatSafeDate(v, (d) => format(d, 'MMM d, HH:mm'))}
+                  labelFormatter={(v: any) => formatSafeDate(v, formatMonthDayTime)}
                 />
                 <Legend
                   wrapperStyle={{ fontSize: 12, color: 'var(--color-text-dim)' }}
@@ -681,7 +680,7 @@ function LiveStreamTab() {
                     style={{ height: ROW_HEIGHT }}
                   >
                     <div className="px-6 py-5 text-sm text-[var(--color-text-faint)] font-medium font-[Geist_Mono] whitespace-nowrap truncate self-center">
-                      {entry.timestamp ? entry.timestamp.split(' ').pop() : format(new Date(), 'HH:mm:ss')}
+                      {entry.timestamp ? entry.timestamp.split(' ').pop() : formatTime24(new Date(), true)}
                     </div>
                     <div className="px-3 py-5 self-center">
                       <LogBadge level={entry.level} />
@@ -802,7 +801,7 @@ function AuditTab() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `logs-audit-${format(new Date(), 'yyyy-MM-dd-HHmm')}.json`
+    a.download = `logs-audit-${formatTimestampFilePart(new Date())}.json`
     a.click()
     URL.revokeObjectURL(url)
   }

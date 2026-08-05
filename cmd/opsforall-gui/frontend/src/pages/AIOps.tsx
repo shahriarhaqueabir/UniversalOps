@@ -33,11 +33,10 @@ import {
   Workflow,
   BarChart3,
 } from 'lucide-react'
-import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
 import { Panel } from '@/components/ui/Panel'
-import { cn, formatSafeDate } from '@/lib/utils'
+import { cn, formatSafeDate, formatMonthDayTime, formatTime24 } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { useEvents } from '@/hooks/useEvents'
 import { useSettingsStore } from '@/stores/useSettingsStore'
@@ -226,7 +225,7 @@ function ChatBubble({ role, content, actions, sessionID, onAssistantReply }: Cha
         ))}
 
         <span className={cn("text-[10px] font-bold text-[var(--color-text-faint)] px-1 uppercase tracking-tighter", !isAssistant ? "text-right" : "text-left")}>
-          {role} \u2022 {format(new Date(), 'HH:mm')}
+          {role} \u2022 {formatTime24(new Date())}
         </span>
       </div>
     </div>
@@ -637,7 +636,7 @@ function OverviewTab() {
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-[10px] font-black uppercase tracking-wider text-text-dim">{msg.role}</span>
                     <span className="text-[9px] text-text-faint tabular-nums">
-                      {formatSafeDate(msg.timestamp, (d) => format(d, 'MMM d, HH:mm'))}
+                      {formatSafeDate(msg.timestamp, formatMonthDayTime)}
                     </span>
                   </div>
                   <p className="text-xs font-medium text-text-dim leading-relaxed line-clamp-2">{msg.content}</p>
@@ -892,7 +891,7 @@ function ChatTab() {
                     <div className="flex items-center gap-3 mt-2 text-[10px] font-black text-text-faint uppercase tracking-tighter">
                       <span className="flex items-center gap-1.5"><MessageSquare size={10} className="text-accent/60" /> {s.msg_count}</span>
                       <span className="opacity-30">|</span>
-                      <span>{formatSafeDate(s.last_active, (d) => format(d, 'MMM d, HH:mm'))}</span>
+                      <span>{formatSafeDate(s.last_active, formatMonthDayTime)}</span>
                     </div>
                   </div>
                   <button
@@ -1176,7 +1175,7 @@ function ContextSidebar() {
                     </div>
                     {/* Timestamp */}
                     <span className="text-[8px] text-text-faint/60 tabular-nums shrink-0">
-                      {formatSafeDate(evt.timestamp, (d) => format(d, 'HH:mm:ss'))}
+                      {formatSafeDate(evt.timestamp, (d) => formatTime24(d, true))}
                     </span>
                   </div>
                 ))

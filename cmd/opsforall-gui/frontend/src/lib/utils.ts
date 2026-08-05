@@ -36,3 +36,25 @@ export function formatSafeDate(
   if (!d) return fallback
   return formatter ? formatter(d) : d.toLocaleString()
 }
+
+function pad2(value: number): string {
+  return String(value).padStart(2, '0')
+}
+
+export function formatTime24(date: Date, includeSeconds = false): string {
+  const hours = pad2(date.getHours())
+  const minutes = pad2(date.getMinutes())
+  const seconds = pad2(date.getSeconds())
+  return includeSeconds ? `${hours}:${minutes}:${seconds}` : `${hours}:${minutes}`
+}
+
+export function formatMonthDayTime(date: Date): string {
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  }) + `, ${formatTime24(date)}`
+}
+
+export function formatTimestampFilePart(date: Date): string {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}-${pad2(date.getHours())}${pad2(date.getMinutes())}`
+}

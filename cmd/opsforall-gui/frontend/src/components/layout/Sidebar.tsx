@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import {
   LayoutDashboard,
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { type Page } from '../../stores'
 import { cn } from '../../lib/utils'
+import { preloadPage } from '@/lib/pageRegistry'
 
 interface NavItem {
   id: Page
@@ -25,6 +26,8 @@ interface NavItem {
   icon: React.ReactNode
   shortcut?: number
 }
+
+const SIDEBAR_COLLAPSED_KEY = 'universalops_sidebarCollapsed'
 
 const opsItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, shortcut: 1 },
@@ -50,7 +53,25 @@ interface SidebarProps {
 }
 
 export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return typeof window !== 'undefined' && window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed))
+    } catch {
+      // Ignore storage failures and keep the UI usable.
+    }
+  }, [collapsed])
+
+  const getItemLabel = (item: NavItem) => (
+    item.shortcut ? `${item.label} (shortcut ${item.shortcut})` : item.label
+  )
 
   return (
     <aside
@@ -100,6 +121,8 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             <li key={item.id} className="relative">
               <button
                 onClick={() => onNavigate(item.id)}
+                onMouseEnter={() => preloadPage(item.id)}
+                onFocus={() => preloadPage(item.id)}
                 data-automation-id={`main-tab-${item.id}`}
                 className={cn(
                   'group flex items-center w-full rounded-xl transition-all duration-150 active:scale-[0.95]',
@@ -108,7 +131,8 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                     ? 'bg-accent text-white shadow-lg shadow-accent/20 font-black'
                     : 'text-text-dim hover:bg-[var(--color-sidebar-hover)] hover:text-text font-bold'
                 )}
-                title={collapsed ? item.label : undefined}
+                title={getItemLabel(item)}
+                aria-label={getItemLabel(item)}
                 aria-current={currentPage === item.id ? 'page' : undefined}
               >
                 <span className={cn("flex-shrink-0", currentPage === item.id ? "text-white" : "text-accent")}>{item.icon}</span>
@@ -145,6 +169,8 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             <li key={item.id} className="relative">
               <button
                 onClick={() => onNavigate(item.id)}
+                onMouseEnter={() => preloadPage(item.id)}
+                onFocus={() => preloadPage(item.id)}
                 data-automation-id={`main-tab-${item.id}`}
                 className={cn(
                   'group flex items-center w-full rounded-xl transition-all duration-150 active:scale-[0.95]',
@@ -153,7 +179,8 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                     ? 'bg-accent text-white shadow-lg shadow-accent/20 font-black'
                     : 'text-text-dim hover:bg-[var(--color-sidebar-hover)] hover:text-text font-bold'
                 )}
-                title={collapsed ? item.label : undefined}
+                title={getItemLabel(item)}
+                aria-label={getItemLabel(item)}
                 aria-current={currentPage === item.id ? 'page' : undefined}
               >
                 <span className={cn("flex-shrink-0", currentPage === item.id ? "text-white" : "text-accent")}>{item.icon}</span>

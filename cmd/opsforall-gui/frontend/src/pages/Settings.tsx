@@ -53,6 +53,29 @@ function SettingRow({ label, description, children }: { label: string; descripti
   )
 }
 
+function formatLastRun(date: Date): string {
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMinutes = Math.max(1, Math.round(Math.abs(diffMs) / 60000))
+
+  const relative =
+    diffMinutes < 60
+      ? `${diffMinutes}m ago`
+      : diffMinutes < 24 * 60
+        ? `${Math.round(diffMinutes / 60)}h ago`
+        : `${Math.round(diffMinutes / (60 * 24))}d ago`
+
+  const absolute = date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+  return `${absolute} - ${relative}`
+}
+
 // ── Collector Manager ──
 
 function CollectorList({ call }: { call: ReturnType<typeof useBackend>['call'] }) {
@@ -94,70 +117,79 @@ function CollectorList({ call }: { call: ReturnType<typeof useBackend>['call'] }
 
   return (
     <div className="space-y-2">
-      {collectors.map((c) => (
-        <div
-          key={c.id}
-          className="flex items-center justify-between gap-3 p-5 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]/50"
-        >
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-[var(--color-text)]">{c.name}</p>
-              <span
-                className={cn(
-                  'inline-block w-2 h-2 rounded-full',
-                  c.enabled ? 'bg-green-500' : 'bg-gray-500',
+      {collectors.map((c) => {
+        const lastRun = c.last_run ? safeDate(c.last_run) : null
+        const lastRunLabel = lastRun ? formatLastRun(lastRun) : null
+
+        return (
+          <div
+            key={c.id}
+            className="flex flex-col gap-4 p-5 rounded-xl bg-[var(--color-panel-2)] border border-[var(--color-border)]/50 md:flex-row md:items-start md:justify-between"
+          >
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-semibold text-[var(--color-text)]">{c.name}</p>
+                <span className={cn(
+                  'inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+                  c.enabled ? 'border-green-500/20 bg-green-500/10 text-green-500' : 'border-[var(--color-border)] bg-[var(--color-panel)] text-[var(--color-text-faint)]'
+                )}>
+                  {c.enabled ? 'Enabled' : 'Paused'}
+                </span>
+              </div>
+              <p className="text-xs text-[var(--color-text-faint)] truncate">{c.description}</p>
+              <div className="flex flex-wrap items-center gap-2 text-[10px] text-[var(--color-text-faint)]">
+                <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] px-2 py-0.5 font-mono uppercase tracking-wider">
+                  Every {c.interval_ms / 1000}s
+                </span>
+                {lastRunLabel && (
+                  <p className="font-mono">
+                    Last run: {lastRunLabel}
+                  </p>
                 )}
-              />
+              </div>
             </div>
-            <p className="text-xs text-[var(--color-text-faint)] truncate">{c.description}</p>
-            {(() => {
-              const lastRun = c.last_run ? safeDate(c.last_run) : null
-              return lastRun ? (
-                <p className="text-[10px] text-[var(--color-text-faint)] mt-0.5 font-mono">
-                  Last: {lastRun.toLocaleTimeString()}
-                </p>
-              ) : null
-            })()}
-          </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            {c.enabled && (
-              <select
-                value={c.interval_ms}
-                onChange={(e) => setInterval(c.id, Number(e.target.value))}
-                className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-lg px-2 py-1 text-xs font-medium text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)]"
-              >
-                {[1000, 3000, 5000, 10000, 15000, 30000].map((ms) => (
-                  <option key={ms} value={ms}>
-                    {ms / 1000}s
-                  </option>
-                ))}
-              </select>
-            )}
-
-            <button
-              onClick={() => trigger(c.id)}
-              className="p-2 rounded-lg hover:bg-[var(--color-accent-soft)] text-[var(--color-text-dim)] hover:text-[var(--color-accent)] transition-all"
-              title="Collect now"
-            >
-              <RefreshCw size={14} />
-            </button>
-
-            <button
-              onClick={() => toggleEnabled(c.id, c.enabled)}
-              className={cn(
-                'p-2 rounded-lg transition-all',
-                c.enabled
-                  ? 'hover:bg-[var(--color-danger)]/10 text-[var(--color-danger)]'
-                  : 'hover:bg-green-500/10 text-green-500',
+            <div className="flex flex-wrap items-center gap-2 shrink-0 md:justify-end">
+              {c.enabled && (
+                <select
+                  value={c.interval_ms}
+                  onChange={(e) => setInterval(c.id, Number(e.target.value))}
+                  className="bg-[var(--color-panel)] border border-[var(--color-border)] rounded-lg px-2 py-1 text-xs font-medium text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)]"
+                >
+                  {[1000, 3000, 5000, 10000, 15000, 30000].map((ms) => (
+                    <option key={ms} value={ms}>
+                      {ms / 1000}s
+                    </option>
+                  ))}
+                </select>
               )}
-              title={c.enabled ? 'Pause' : 'Resume'}
-            >
-              {c.enabled ? <Pause size={14} /> : <Play size={14} />}
-            </button>
+
+              <button
+                onClick={() => trigger(c.id)}
+                className="p-2 rounded-lg hover:bg-[var(--color-accent-soft)] text-[var(--color-text-dim)] hover:text-[var(--color-accent)] transition-all"
+                title="Collect now"
+                aria-label={`Collect ${c.name} now`}
+              >
+                <RefreshCw size={14} />
+              </button>
+
+              <button
+                onClick={() => toggleEnabled(c.id, c.enabled)}
+                className={cn(
+                  'p-2 rounded-lg transition-all',
+                  c.enabled
+                    ? 'hover:bg-[var(--color-danger)]/10 text-[var(--color-danger)]'
+                    : 'hover:bg-green-500/10 text-green-500',
+                )}
+                title={c.enabled ? 'Pause' : 'Resume'}
+                aria-label={c.enabled ? `Pause ${c.name}` : `Resume ${c.name}`}
+              >
+                {c.enabled ? <Pause size={14} /> : <Play size={14} />}
+              </button>
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

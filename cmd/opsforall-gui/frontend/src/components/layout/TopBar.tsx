@@ -5,26 +5,12 @@ import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import type { Page } from '../../stores/useSettingsStore'
 import { useThemeStore, useSettingsStore, useNavigationStore } from '../../stores'
+import { PAGE_METADATA } from '@/lib/appMetadata'
 import type { AlertInfo } from '@/types'
 
 interface TopBarProps {
   currentPage: Page
   onToggleHawk?: () => void
-}
-
-const pageLabels: Record<Page, string> = {
-  dashboard: 'Dashboard',
-  sysops: 'System Operations',
-  workflows: 'Operational Workflows',
-  'network-designer': 'Network Designer',
-  netops: 'Network Operations',
-  secops: 'Security Operations',
-  devops: 'Development Operations',
-  aiops: 'AI Operations',
-  reports: 'Reports Center',
-  alerts: 'Alerts Dashboard',
-  logs: 'Log Viewer',
-  settings: 'Settings',
 }
 
 const severityIcon: Record<string, { icon: typeof Info; color: string }> = {
@@ -41,6 +27,7 @@ export function TopBar({ currentPage, onToggleHawk }: TopBarProps) {
   const queryClient = useQueryClient()
   const [showAlertPanel, setShowAlertPanel] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
+  const pageMeta = PAGE_METADATA[currentPage]
 
   // ── Fetch active alerts from backend when panel is open ──
   const { data: activeAlerts = [], isLoading: alertsLoading } = useQuery<AlertInfo[]>({
@@ -93,7 +80,9 @@ export function TopBar({ currentPage, onToggleHawk }: TopBarProps) {
         )}
         <span className="text-[var(--color-text-faint)]">Universal-Ops</span>
         <span className="text-[var(--color-text-faint)] text-[10px]">/</span>
-        <span className="text-[var(--color-text)] font-medium">{pageLabels[currentPage]}</span>
+        <span className="text-[var(--color-text)] font-medium" title={pageMeta.description}>
+          {pageMeta.title}
+        </span>
       </div>
 
       {/* Right section */}
