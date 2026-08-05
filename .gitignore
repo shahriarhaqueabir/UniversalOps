@@ -105,7 +105,6 @@ scripts/fix-path.ps1
 scripts/build.sh
 scripts/release.sh
 scripts/release-gh.sh
-install.sh
 
 # NOTE: scripts/package-scoop.ps1 and scripts/package-homebrew.ps1 are intentionally
 # NOT ignored — release.yml's publish job invokes package-scoop.ps1 in CI, so it must
