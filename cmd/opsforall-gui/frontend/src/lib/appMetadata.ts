@@ -125,7 +125,4 @@ export function applyDocumentMetadata(page: Page, activeAlertCount = 0, theme: '
   setMetaTag('property', 'og:description', metadata.description)
   setMetaTag('property', 'og:site_name', APP_NAME)
   setMetaTag('property', 'og:type', 'website')
-  setMetaTag('name', 'twitter:card', 'summary')
-  setMetaTag('name', 'twitter:title', metadata.title)
-  setMetaTag('name', 'twitter:description', metadata.description)
 }
