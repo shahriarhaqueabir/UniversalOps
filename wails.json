@@ -13,7 +13,6 @@
     "copyright": "Copyright 2026 UniversalOps",
     "comments": "High-Performance Technical Operations Intelligence"
   },
-  "wailsjsdir": "cmd/opsforall-gui/frontend/wailsjs",
   "nsis": {
     "custom": ""
   },
