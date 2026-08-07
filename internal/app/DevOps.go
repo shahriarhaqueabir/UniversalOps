@@ -61,7 +61,6 @@ func (d *DevOps) RunCommand(cmd string) CommandResult {
 }
 
 // RunCommandLive executes a command and emits each output line as a Wails event.
-// The `id` parameter allows the frontend to correlate lines to a specific command.
 func (d *DevOps) RunCommandLive(cmd string, id string) CommandResult {
 	start := time.Now()
 	lineCh := make(chan string, 100)
@@ -105,7 +104,7 @@ func (d *DevOps) RunCommandLive(cmd string, id string) CommandResult {
 	}
 }
 
-// GetDevProcesses returns all processes by CPU usage (from system ops).
+// GetDevProcesses returns all processes by CPU usage.
 func (d *DevOps) GetDevProcesses() []ProcessInfo {
 	defer common.RecoverPanic()
 	procs, err := sysopsPkg.GetTopProcesses(100)
@@ -161,7 +160,6 @@ func (d *DevOps) GetServices() []ServiceEntry {
 // ControlService manages a service state.
 func (d *DevOps) ControlService(name, action string) bool {
 	defer common.RecoverPanic()
-	common.LogInfo("Service control: %s %s", action, name)
 	err := devops.ControlService(name, action)
 	if err != nil {
 		common.LogWarn("ControlService failed: %v", err)
@@ -181,7 +179,6 @@ func (d *DevOps) ControlService(name, action string) bool {
 }
 
 // RunPowerShellLive executes a PowerShell command and streams output.
-// Enforces safety policies before execution.
 func (d *DevOps) RunPowerShellLive(cmd string, id string) CommandResult {
 	if devops.ContainsShellMetachar(cmd) {
 		return CommandResult{Command: cmd, Error: sanitizeError(devops.ErrShellMetachar)}
@@ -233,7 +230,6 @@ func (d *DevOps) RunPowerShellLive(cmd string, id string) CommandResult {
 }
 
 // RunGitBashLive executes a command via Git Bash and streams output.
-// Enforces safety policies before execution.
 func (d *DevOps) RunGitBashLive(cmd string, id string) CommandResult {
 	if devops.ContainsShellMetachar(cmd) {
 		return CommandResult{Command: cmd, Error: sanitizeError(devops.ErrShellMetachar)}
@@ -369,33 +365,19 @@ func (d *DevOps) GetInstalledTools() []ToolInfo {
 	defer common.RecoverPanic()
 	tools := []toolSpec{
 		{
-			Name:    "Git",
-			Command: "git",
-			Args:    []string{"--version"},
-			Parse: func(out, _ string) string {
-				return firstLine(out)
-			},
+			Name: "Git", Command: "git", Args: []string{"--version"},
+			Parse: func(out, _ string) string { return firstLine(out) },
 		},
 		{
-			Name:    "Docker",
-			Command: "docker",
-			Args:    []string{"--version"},
-			Parse: func(out, _ string) string {
-				return firstLine(out)
-			},
+			Name: "Docker", Command: "docker", Args: []string{"--version"},
+			Parse: func(out, _ string) string { return firstLine(out) },
 		},
 		{
-			Name:    "Node.js",
-			Command: "node",
-			Args:    []string{"--version"},
-			Parse: func(out, _ string) string {
-				return firstLine(out)
-			},
+			Name: "Node.js", Command: "node", Args: []string{"--version"},
+			Parse: func(out, _ string) string { return firstLine(out) },
 		},
 		{
-			Name:    "Go",
-			Command: "go",
-			Args:    []string{"version"},
+			Name: "Go", Command: "go", Args: []string{"version"},
 			Parse: func(out, _ string) string {
 				fields := strings.Fields(firstLine(out))
 				if len(fields) >= 3 {
@@ -405,9 +387,7 @@ func (d *DevOps) GetInstalledTools() []ToolInfo {
 			},
 		},
 		{
-			Name:    "Python",
-			Command: "python",
-			Args:    []string{"--version"},
+			Name: "Python", Command: "python", Args: []string{"--version"},
 			Parse: func(out, _ string) string {
 				fields := strings.Fields(firstLine(out))
 				if len(fields) >= 2 {
@@ -417,9 +397,7 @@ func (d *DevOps) GetInstalledTools() []ToolInfo {
 			},
 		},
 		{
-			Name:    "Java",
-			Command: "java",
-			Args:    []string{"-version"},
+			Name: "Java", Command: "java", Args: []string{"-version"},
 			Parse: func(out, stderr string) string {
 				line := firstLine(stderr)
 				if line == "" {
@@ -429,9 +407,7 @@ func (d *DevOps) GetInstalledTools() []ToolInfo {
 			},
 		},
 		{
-			Name:    "Rust",
-			Command: "rustc",
-			Args:    []string{"--version"},
+			Name: "Rust", Command: "rustc", Args: []string{"--version"},
 			Parse: func(out, _ string) string {
 				fields := strings.Fields(firstLine(out))
 				if len(fields) >= 2 {
@@ -441,12 +417,8 @@ func (d *DevOps) GetInstalledTools() []ToolInfo {
 			},
 		},
 		{
-			Name:    ".NET",
-			Command: "dotnet",
-			Args:    []string{"--version"},
-			Parse: func(out, _ string) string {
-				return firstLine(out)
-			},
+			Name: ".NET", Command: "dotnet", Args: []string{"--version"},
+			Parse: func(out, _ string) string { return firstLine(out) },
 		},
 	}
 
@@ -457,14 +429,9 @@ func (d *DevOps) GetInstalledTools() []ToolInfo {
 	return results
 }
 
-// parseIntOr returns n or fallback if parsing fails.
-func parseIntOr(s string, fallback int) int {
-	n := 0
-	if _, err := fmt.Sscanf(s, "%d", &n); err != nil {
-		return fallback
-	}
-	return n
-}
+// ══════════════════════════════════════════════
+//  Docker Status
+// ══════════════════════════════════════════════
 
 // GetContainers returns Docker container status and summary.
 func (d *DevOps) GetContainers() ContainerSummary {
@@ -501,6 +468,72 @@ func (d *DevOps) GetContainersDomain() devops.ContainerSummary {
 	return res
 }
 
+// GetDockerStatus checks Docker installation, daemon status, and container counts.
+func (d *DevOps) GetDockerStatus() DockerStatus {
+	defer common.RecoverPanic()
+	res, _ := devops.GetDockerStatus()
+
+	summary := ContainerSummary{
+		Running: res.Summary.Running,
+		Stopped: res.Summary.Stopped,
+		Failed:  res.Summary.Failed,
+		Total:   res.Summary.Total,
+	}
+
+	containers := make([]ContainerInfo, len(res.Summary.Containers))
+	for i, c := range res.Summary.Containers {
+		containers[i] = ContainerInfo{
+			ID:     c.ID,
+			Name:   c.Name,
+			Image:  c.Image,
+			State:  c.State,
+			Status: c.Status,
+			Ports:  c.Ports,
+		}
+	}
+	summary.Containers = containers
+
+	return DockerStatus{
+		Installed:  res.Installed,
+		Running:    res.Running,
+		Version:    res.Version,
+		Containers: summary,
+	}
+}
+
+// ══════════════════════════════════════════════
+//  Kubernetes Status
+// ══════════════════════════════════════════════
+
+// GetKubernetesStatus checks kubectl availability and cluster connectivity.
+func (d *DevOps) GetKubernetesStatus() KubernetesStatus {
+	defer common.RecoverPanic()
+	res, _ := devops.GetKubernetesStatus()
+
+	return KubernetesStatus{
+		Installed: res.Installed,
+		Connected: res.Connected,
+		Cluster:   res.Cluster,
+		Nodes:     res.Nodes,
+		Pods:      res.Pods,
+	}
+}
+
+// GetKubernetesStatusDomain returns domain-level K8s status for MCP.
+func (d *DevOps) GetKubernetesStatusDomain() devops.KubernetesStatus {
+	res, _ := devops.GetKubernetesStatus()
+	return res
+}
+
+// parseIntOr returns n or fallback if parsing fails.
+func parseIntOr(s string, fallback int) int {
+	n := 0
+	if _, err := fmt.Sscanf(s, "%d", &n); err != nil {
+		return fallback
+	}
+	return n
+}
+
 // RunDevOpsDiagnostics runs a health check on all dev tools.
 func (d *DevOps) RunDevOpsDiagnostics() DevOpsDiagResult {
 	defer common.RecoverPanic()
@@ -512,7 +545,37 @@ func (d *DevOps) RunDevOpsDiagnostics() DevOpsDiagResult {
 	return DevOpsDiagResult{Checks: checks, Score: result.Score, Timestamp: result.Timestamp}
 }
 
-// healthCheckProbe attempts a quick HTTP GET to determine if a server is healthy.
+// ══════════════════════════════════════════════
+//  Local Servers
+// ══════════════════════════════════════════════
+
+// GetLocalServers returns locally listening servers with framework detection and health checks.
+func (d *DevOps) GetLocalServers() []LocalServer {
+	defer common.RecoverPanic()
+	if runtime.GOOS == "windows" {
+		return d.getLocalServersWindows()
+	}
+	return []LocalServer{} // Windows-only focused
+}
+
+func (d *DevOps) getLocalServersWindows() []LocalServer {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cmd := common.HiddenCommandContext(ctx, "netstat", "-ano")
+	var stdout strings.Builder
+	cmd.Stdout = &stdout
+	if err := cmd.Run(); err != nil {
+		return []LocalServer{}
+	}
+
+	servers := parseNetstatOutput(stdout.String())
+	for i := range servers {
+		servers[i].Health = healthCheckProbe(servers[i].Port)
+	}
+	return servers
+}
+
 func healthCheckProbe(port int) string {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -535,7 +598,6 @@ func healthCheckProbe(port int) string {
 	return "error"
 }
 
-// parseNetstatOutput parses Windows netstat -ano output for listening ports on localhost.
 func parseNetstatOutput(output string) []LocalServer {
 	servers := []LocalServer{}
 	pidProcess := make(map[string]string)
@@ -585,11 +647,6 @@ func parseNetstatOutput(output string) []LocalServer {
 			continue
 		}
 
-		ip := localAddr[:lastColon]
-		if ip != "127.0.0.1" && ip != "0.0.0.0" && ip != "[::1]" && ip != "::" && ip != "0:0:0:0" {
-			continue
-		}
-
 		procName := ""
 		if pid != "" && pid != "0" {
 			if name, ok := pidProcess[pid]; ok {
@@ -611,122 +668,6 @@ func parseNetstatOutput(output string) []LocalServer {
 	return servers
 }
 
-// parseSSOutput parses Linux ss -tlnp output for listening ports.
-func parseSSOutput(output string) []LocalServer {
-	servers := []LocalServer{}
-
-	for _, line := range strings.Split(output, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "State") || strings.HasPrefix(line, "LISTEN") {
-			continue
-		}
-		parts := strings.Fields(line)
-		if len(parts) < 4 {
-			continue
-		}
-
-		localAddr := ""
-		for _, p := range parts {
-			if strings.Contains(p, ":") && (strings.HasPrefix(p, "127.") || strings.HasPrefix(p, "0.0.0.0") || strings.HasPrefix(p, "[::1]") || p == "*:*") {
-				localAddr = p
-				break
-			}
-		}
-		if localAddr == "" {
-			continue
-		}
-
-		lastColon := strings.LastIndex(localAddr, ":")
-		if lastColon < 0 {
-			continue
-		}
-		port := parseIntOr(localAddr[lastColon+1:], 0)
-		if port == 0 {
-			continue
-		}
-
-		procName := ""
-		for _, p := range parts {
-			if strings.HasPrefix(p, "users:") {
-				start := strings.Index(p, "(")
-				end := strings.Index(p, ",")
-				if start >= 0 && end > start {
-					procName = p[start+1 : end]
-				}
-			}
-		}
-
-		servers = append(servers, LocalServer{
-			Port:      port,
-			Protocol:  "tcp",
-			Process:   procName,
-			Framework: detectFramework(procName),
-		})
-	}
-	return servers
-}
-
-// severityRank returns a numeric rank for sorting (higher = more severe).
-func severityRank(s string) int {
-	switch s {
-	case "critical":
-		return 3
-	case "warning":
-		return 2
-	case "info":
-		return 1
-	default:
-		return 0
-	}
-}
-
-// categorizeService maps a service name to its category.
-func categorizeService(name string) string {
-	lower := strings.ToLower(name)
-
-	databases := []string{"mysql", "postgres", "postgresql", "sqlite", "mongodb", "mongo",
-		"redis", "mariadb", "sqlserver", "mssql", "oracle", "couchdb", "cassandra", "memcached"}
-	messageQueues := []string{"rabbitmq", "nats", "kafka", "zeromq", "activemq", "mosquito"}
-	webServers := []string{"nginx", "apache", "httpd", "iis", "caddy", "traefik", "haproxy"}
-	containers := []string{"docker", "podman", "containerd", "containerd-shim", "docker-proxy"}
-
-	for _, db := range databases {
-		if strings.Contains(lower, db) {
-			return "databases"
-		}
-	}
-	for _, mq := range messageQueues {
-		if strings.Contains(lower, mq) {
-			return "message-queues"
-		}
-	}
-	for _, ws := range webServers {
-		if strings.Contains(lower, ws) {
-			return "web-servers"
-		}
-	}
-	for _, ct := range containers {
-		if strings.Contains(lower, ct) {
-			return "containers"
-		}
-	}
-
-	return "other"
-}
-
-// normalizeServiceStatus converts various status strings to a standard form.
-func normalizeServiceStatus(status string) string {
-	lower := strings.ToLower(status)
-	if strings.Contains(lower, "running") {
-		return "running"
-	}
-	if strings.Contains(lower, "stopped") || strings.Contains(lower, "disabled") {
-		return "stopped"
-	}
-	return "unknown"
-}
-
-// lookupProcessName returns the process name for a given PID string (Windows).
 func lookupProcessName(pid string) string {
 	if runtime.GOOS != "windows" {
 		return ""
@@ -778,49 +719,18 @@ func detectFramework(processName string) string {
 	}
 }
 
-// GetLocalServers returns locally listening servers with framework detection and health checks.
-func (d *DevOps) GetLocalServers() []LocalServer {
-	defer common.RecoverPanic()
-	if runtime.GOOS == "windows" {
-		return d.getLocalServersWindows()
+// severityRank returns a numeric rank for sorting (higher = more severe).
+func severityRank(s string) int {
+	switch s {
+	case "critical":
+		return 3
+	case "warning":
+		return 2
+	case "info":
+		return 1
+	default:
+		return 0
 	}
-	return d.getLocalServersUnix()
-}
-
-func (d *DevOps) getLocalServersWindows() []LocalServer {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	cmd := common.HiddenCommandContext(ctx, "netstat", "-ano")
-	var stdout strings.Builder
-	cmd.Stdout = &stdout
-	if err := cmd.Run(); err != nil {
-		return []LocalServer{}
-	}
-
-	servers := parseNetstatOutput(stdout.String())
-	for i := range servers {
-		servers[i].Health = healthCheckProbe(servers[i].Port)
-	}
-	return servers
-}
-
-func (d *DevOps) getLocalServersUnix() []LocalServer {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	cmd := common.HiddenCommandContext(ctx, "ss", "-tlnp")
-	var stdout strings.Builder
-	cmd.Stdout = &stdout
-	if err := cmd.Run(); err != nil {
-		return []LocalServer{}
-	}
-
-	servers := parseSSOutput(stdout.String())
-	for i := range servers {
-		servers[i].Health = healthCheckProbe(servers[i].Port)
-	}
-	return servers
 }
 
 // GetEnvironment returns environment variables, SDKs, and package managers.
@@ -856,9 +766,7 @@ func (d *DevOps) GetEnvironment() EnvironmentInfo {
 			}
 			return line
 		}},
-		{Name: ".NET", Command: "dotnet", Args: []string{"--version"}, Parse: func(out, _ string) string {
-			return firstLine(out)
-		}},
+		{Name: ".NET", Command: "dotnet", Args: []string{"--version"}, Parse: func(out, _ string) string { return firstLine(out) }},
 		{Name: "Rust", Command: "rustc", Args: []string{"--version"}, Parse: func(out, _ string) string {
 			fields := strings.Fields(firstLine(out))
 			if len(fields) >= 2 {
@@ -876,9 +784,7 @@ func (d *DevOps) GetEnvironment() EnvironmentInfo {
 	}
 
 	pmSpecs := []toolSpec{
-		{Name: "npm", Command: "npm", Args: []string{"--version"}, Parse: func(out, _ string) string {
-			return firstLine(out)
-		}},
+		{Name: "npm", Command: "npm", Args: []string{"--version"}, Parse: func(out, _ string) string { return firstLine(out) }},
 		{Name: "pip", Command: "pip", Args: []string{"--version"}, Parse: func(out, _ string) string {
 			fields := strings.Fields(firstLine(out))
 			if len(fields) >= 2 {
@@ -1007,59 +913,6 @@ func (d *DevOps) GetAISuggestions() []DevOpsSuggestion {
 	return suggestions
 }
 
-// GetDockerStatus checks Docker installation, daemon status, and container counts.
-func (d *DevOps) GetDockerStatus() DockerStatus {
-	defer common.RecoverPanic()
-	res, _ := devops.GetDockerStatus()
-
-	summary := ContainerSummary{
-		Running: res.Summary.Running,
-		Stopped: res.Summary.Stopped,
-		Failed:  res.Summary.Failed,
-		Total:   res.Summary.Total,
-	}
-
-	containers := make([]ContainerInfo, len(res.Summary.Containers))
-	for i, c := range res.Summary.Containers {
-		containers[i] = ContainerInfo{
-			ID:     c.ID,
-			Name:   c.Name,
-			Image:  c.Image,
-			State:  c.State,
-			Status: c.Status,
-			Ports:  c.Ports,
-		}
-	}
-	summary.Containers = containers
-
-	return DockerStatus{
-		Installed: res.Installed,
-		Running:   res.Running,
-		Version:   res.Version,
-		Containers: summary,
-	}
-}
-
-// GetKubernetesStatus checks kubectl availability and cluster connectivity.
-func (d *DevOps) GetKubernetesStatus() KubernetesStatus {
-	defer common.RecoverPanic()
-	res, _ := devops.GetKubernetesStatus()
-
-	return KubernetesStatus{
-		Installed: res.Installed,
-		Connected: res.Connected,
-		Cluster:   res.Cluster,
-		Nodes:     res.Nodes,
-		Pods:      res.Pods,
-	}
-}
-
-// GetKubernetesStatusDomain returns domain-level K8s status for MCP.
-func (d *DevOps) GetKubernetesStatusDomain() devops.KubernetesStatus {
-	res, _ := devops.GetKubernetesStatus()
-	return res
-}
-
 // GetServiceCategories returns services grouped by function type.
 func (d *DevOps) GetServiceCategories() []ServiceCategory {
 	defer common.RecoverPanic()
@@ -1092,6 +945,52 @@ func (d *DevOps) GetServiceCategories() []ServiceCategory {
 	}
 
 	return categories
+}
+
+// categorizeService maps a service name to its category.
+func categorizeService(name string) string {
+	lower := strings.ToLower(name)
+
+	databases := []string{"mysql", "postgres", "postgresql", "sqlite", "mongodb", "mongo",
+		"redis", "mariadb", "sqlserver", "mssql", "oracle", "couchdb", "cassandra", "memcached"}
+	messageQueues := []string{"rabbitmq", "nats", "kafka", "zeromq", "activemq", "mosquito"}
+	webServers := []string{"nginx", "apache", "httpd", "iis", "caddy", "traefik", "haproxy"}
+	containers := []string{"docker", "podman", "containerd", "containerd-shim", "docker-proxy"}
+
+	for _, db := range databases {
+		if strings.Contains(lower, db) {
+			return "databases"
+		}
+	}
+	for _, mq := range messageQueues {
+		if strings.Contains(lower, mq) {
+			return "message-queues"
+		}
+	}
+	for _, ws := range webServers {
+		if strings.Contains(lower, ws) {
+			return "web-servers"
+		}
+	}
+	for _, ct := range containers {
+		if strings.Contains(lower, ct) {
+			return "containers"
+		}
+	}
+
+	return "other"
+}
+
+// normalizeServiceStatus converts various status strings to a standard form.
+func normalizeServiceStatus(status string) string {
+	lower := strings.ToLower(status)
+	if strings.Contains(lower, "running") {
+		return "running"
+	}
+	if strings.Contains(lower, "stopped") || strings.Contains(lower, "disabled") {
+		return "stopped"
+	}
+	return "unknown"
 }
 
 // GetServiceGroupSummary returns aggregated service counts by category.
@@ -1329,6 +1228,8 @@ func (d *DevOps) DockerRename(id string, newName string) DockerActionResult {
 		Success: true,
 	}
 }
+
+// ── DevOps Extended Methods: Kubernetes ──────────────────────────────────────
 
 // GetK8sNamespaces returns all Kubernetes namespaces.
 func (d *DevOps) GetK8sNamespaces() []K8sNamespaceInfo {

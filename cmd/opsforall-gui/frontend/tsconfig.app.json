@@ -19,7 +19,8 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@wailsjs/*": ["./wailsjs/*"]
     }
   },
   "include": ["src", "wailsjs"]

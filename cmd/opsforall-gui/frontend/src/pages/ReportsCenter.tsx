@@ -13,7 +13,7 @@ import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog'
 import { toast } from 'sonner'
 import { toCSV, downloadText, safeFilename, reportToCSVRows } from '@/lib/export'
 import type { ReportRecord, PrebuiltTemplate } from '@/types'
-import { app, common } from '../../wailsjs/go/models'
+import { app, common } from '@wailsjs/go/models'
 
 const TYPE_META: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   health: {

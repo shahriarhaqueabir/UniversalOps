@@ -4,6 +4,7 @@ package main
 
 import (
 	"log"
+	"os"
 	"syscall"
 	"unsafe"
 
@@ -15,6 +16,9 @@ import (
 // checkWindowsPrereqs verifies WebView2 Runtime is installed before the app
 // starts. If missing, it shows a Win32 MessageBox and exits with a clear error.
 func checkWindowsPrereqs() {
+	if os.Getenv("UNIVERSALOPS_SKIP_PREREQS") == "1" {
+		return
+	}
 	if !webView2Installed() {
 		showFatalError(
 			"WebView2 Runtime Not Found",
