@@ -7,6 +7,7 @@ import {
   isShellPayload,
   isStepResult,
   resultToRows,
+  shellPayloadOf,
 } from './workflowResults'
 
 describe('isStepResult', () => {
@@ -28,6 +29,20 @@ describe('isShellPayload', () => {
   it('rejects envelopes and non-shell shapes', () => {
     expect(isShellPayload({ status: 'success', data: [] })).toBe(false)
     expect(isShellPayload('nope')).toBe(false)
+  })
+})
+
+describe('shellPayloadOf', () => {
+  it('returns the payload for shell results', () => {
+    const payload = shellPayloadOf({ Command: 'Get-Process', Output: 'a\nb', ExitCode: 0, Duration: 5 })
+    expect(payload?.ExitCode).toBe(0)
+    expect(payload?.Output).toBe('a\nb')
+  })
+  it('returns null for non-shell shapes', () => {
+    expect(shellPayloadOf({ status: 'success', data: [] })).toBeNull()
+    expect(shellPayloadOf('nope')).toBeNull()
+    expect(shellPayloadOf(null)).toBeNull()
+    expect(shellPayloadOf(undefined)).toBeNull()
   })
 })
 

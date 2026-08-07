@@ -12,7 +12,7 @@ import { toast } from 'sonner'
 import {
   StepResult,
   isStepResult,
-  isShellPayload,
+  shellPayloadOf,
   formatDurationNs,
   formatTimestamp,
   formatValue,
@@ -255,15 +255,12 @@ export function WorkflowCenter() {
 
                            {step.result && (() => {
                              const env: StepResult | null = isStepResult(step.result) ? step.result : null
-                             const shellPayload = isShellPayload(env ? env.data : step.result)
+                             const shellPayload = shellPayloadOf(env ? env.data : step.result)
                              const data = env ? env.data : step.result
                              const failed = env ? env.status === 'error' : Boolean(step.error)
                              const rows = resultToRows(shellPayload ? undefined : data)
                              const summary = env ? getResultSummary(env) : ''
                              const durationNs = env ? env.duration_ns : (step.result as any)?.Duration
-                             const exitCode = shellPayload
-                               ? (env ? env.data.ExitCode : (step.result as any).ExitCode)
-                               : undefined
                              const rawCommand = shellPayload
                                ? (env ? env.data.Command : (step.result as any).Command)
                                : step.command

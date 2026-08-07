@@ -37,14 +37,24 @@ export interface ShellPayload {
   Duration: number
 }
 
-export function isShellPayload(d: any): d is ShellPayload {
+export function isShellPayload(d: unknown): d is ShellPayload {
+  if (d === null || typeof d !== 'object') return false
+  const rec = d as Record<string, unknown>
   return (
-    d !== null &&
-    typeof d === 'object' &&
-    typeof d.Command === 'string' &&
-    typeof d.Output === 'string' &&
-    typeof d.ExitCode === 'number'
+    typeof rec.Command === 'string' &&
+    typeof rec.Output === 'string' &&
+    typeof rec.ExitCode === 'number'
   )
+}
+
+/**
+ * Returns the payload when it is a shell result, otherwise null.
+ * Unlike `isShellPayload(...)` (a boolean predicate), the return value is
+ * typed as `ShellPayload | null`, so callers can safely access `.Output` /
+ * `.ExitCode` after a simple truthiness check without re-narrowing `any`.
+ */
+export function shellPayloadOf(data: unknown): ShellPayload | null {
+  return isShellPayload(data) ? data : null
 }
 
 export function formatDurationNs(ns?: number): string {
