@@ -26,8 +26,6 @@ Thank you for your interest in making UniversalOps better! We aim to build the m
 - **Node.js**: 22+ (using npm)
 - **Wails CLI**: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
 - **GCC (Windows)**: MinGW or TDM-GCC
-- **Linux**: `sudo apt install gcc libgtk-3-dev libwebkit2gtk-4.1-dev`
-- **macOS**: Xcode Command Line Tools
 
 ### Running the App
 ```bash

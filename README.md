@@ -61,8 +61,8 @@
 | 🛡️ **Enterprise Ready** | 100% private, zero telemetry, and [GDPR/HIPAA compliant design](docs/ENTERPRISE.md) |
 | 🔒 **100% Private** | Zero telemetry, zero cloud sync. All data stays on your machine |
 | 🤖 **Local AI (Hawk)** | Autonomous RCA via Ollama — no data ever leaves your hardware |
-| 🧪 **Battle-Tested** | 142 frontend tests + 7 Go packages — CI on Windows, Linux, macOS |
-| 📦 **One-Click Install** | PowerShell one-liner or portable binary — running in under 60 seconds |
+| 🧪 **Battle-Tested** | 142 frontend tests + 7 Go packages — CI on Windows |
+| 📦 **One-Click Install** | PowerShell one-liner or Windows Installer — running in under 60 seconds |
 
 ---
 
@@ -89,12 +89,7 @@
 irm https://raw.githubusercontent.com/shahriarhaqueabir/UniversalOps/main/install.ps1 | iex
 ```
 
-### Linux / macOS (Terminal)
-```bash
-curl -fsSL https://raw.githubusercontent.com/shahriarhaqueabir/UniversalOps/main/install.sh | bash
-```
-
-> Or download the portable binary directly from the [Releases page](https://github.com/shahriarhaqueabir/UniversalOps/releases).
+> Or download the installer directly from the [Releases page](https://github.com/shahriarhaqueabir/UniversalOps/releases).
 
 ---
 
@@ -199,7 +194,7 @@ flowchart TD
 |--------|--------|
 | **Frontend Tests** | 188 tests across 26 files (Vitest + React Testing Library) |
 | **Backend Tests** | 7 Go packages — `internal/{app,common,sysops,netops,secops,devops,aiops}` |
-| **CI Matrix** | Windows, Linux, macOS — every push to `main` and `develop` |
+| **CI Matrix** | Windows — every push to `main` and `develop` |
 | **TypeScript** | Strict mode — `tsc -b` clean (build mode; root tsconfig is project references) |
 | **Linting** | `golangci-lint` (Go) + ESLint (TypeScript) |
 | **E2E** | Python-based end-to-end test suite (Windows) |
@@ -238,9 +233,6 @@ We welcome contributions to enhance the Command Center.
 
 | Issue | Impact | Status |
 |-------|--------|--------|
-| **Windows-optimized collectors** | Linux/macOS use fallback paths with reduced sensor data | 🏗️ Improving |
-| **Ollama required for AI features** | AIOps tab shows limited functionality without local LLM | 📖 Documented |
-| **SQLite WAL write amplification** | High-frequency metric ingestion increases disk I/O under load | 🔍 Under investigation |
 | **Single-user session** | No multi-user or role-based access — designed for local desktop use | ✅ By design |
 
 ---

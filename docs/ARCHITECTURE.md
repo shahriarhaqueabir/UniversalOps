@@ -53,7 +53,7 @@ We use **Write-Ahead Logging (WAL)** mode to handle high-frequency metric ingest
 - **Hardware Forensics**: GPU temperature/utilization, fan speeds, and baseboard metadata.
 - **Standards Compliance**: Metrics are mapped to OTel namespaces (e.g., `system.cpu.utilization`, `system.memory.usage`).
 - **Collection Strategy**:
-    - **Primary**: `gopsutil/v4` for cross-platform metrics.
+    - **Primary**: `gopsutil/v4` for system metrics.
     - **Windows Native**: Direct WMI queries via `yusufpapurcu/wmi` for detailed hardware (GPU, Motherboard, Battery).
     - **Fallback**: PowerShell CIM instances if WMI namespaces are restricted.
     - **External**: `nvidia-smi` (NVIDIA) and `LibreHardwareMonitor` (AMD/Intel) for real-time sensor data.
