@@ -118,9 +118,14 @@ func TestAIOps_GetAISetupRecommendation_Logic(t *testing.T) {
 		}
 	}
 
-	// PullRequired must be false if the recommended model is present
-	if !rec.PullRequired && rec.QwythosExists {
-		t.Errorf("QwythosExists = true but PullRequired = false (only set when exists)")
+	// PullRequired must be the inverse of "recommended model present":
+	// in the Qwythos branch the code sets PullRequired = !QwythosExists,
+	// so a present model must never require a pull (and vice versa).
+	// (Previously the assertion was inverted and flagged the correct state
+	// whenever a Qwythos model existed in Ollama.)
+	if rec.CanRunQwythos && rec.PullRequired == rec.QwythosExists {
+		t.Errorf("QwythosExists = %t but PullRequired = %t — want inverse (model present ⇒ no pull needed)",
+			rec.QwythosExists, rec.PullRequired)
 	}
 }
 

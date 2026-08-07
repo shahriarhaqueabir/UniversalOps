@@ -3,39 +3,22 @@ import { useQuery } from '@tanstack/react-query'
 import {
   Library, ChevronRight,
   Zap, Terminal, Search,
-  RefreshCw, CheckCircle2, XCircle, Clock, ShieldCheck
+  RefreshCw, CheckCircle2, XCircle, Clock, ShieldCheck, Copy, ListTree
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBackend } from '@/hooks/useBackend'
 import { SectionBriefing } from '@/components/ui/SectionBriefing'
 import { toast } from 'sonner'
-
-interface ShellResult {
-  Command: string
-  Output: string
-  ExitCode: number
-  Duration: number
-}
-
-function isShellResult(r: any): r is ShellResult {
-  return r && typeof r === 'object' && 'Command' in r && 'Output' in r && 'ExitCode' in r
-}
-
-function formatDuration(ns: number): string {
-  if (!ns || ns <= 0) return ''
-  const ms = Math.floor(ns / 1_000_000)
-  if (ms < 1000) return `${ms}ms`
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`
-  const min = Math.floor(ms / 60_000)
-  const sec = Math.floor((ms % 60_000) / 1000)
-  return `${min}m ${sec}s`
-}
-
-function formatJSONSmart(obj: any): string {
-  if (obj === null || obj === undefined) return ''
-  if (typeof obj === 'string') return obj
-  return JSON.stringify(obj, null, 2)
-}
+import {
+  StepResult,
+  isStepResult,
+  isShellPayload,
+  formatDurationNs,
+  formatTimestamp,
+  formatValue,
+  getResultSummary,
+  resultToRows,
+} from '@/lib/workflowResults'
 
 interface WorkflowStep {
   id: string
@@ -271,48 +254,153 @@ export function WorkflowCenter() {
                            )}
 
                            {step.result && (() => {
-                             const sr = isShellResult(step.result)
+                             const env: StepResult | null = isStepResult(step.result) ? step.result : null
+                             const shellPayload = isShellPayload(env ? env.data : step.result)
+                             const data = env ? env.data : step.result
+                             const failed = env ? env.status === 'error' : Boolean(step.error)
+                             const rows = resultToRows(shellPayload ? undefined : data)
+                             const summary = env ? getResultSummary(env) : ''
+                             const durationNs = env ? env.duration_ns : (step.result as any)?.Duration
+                             const exitCode = shellPayload
+                               ? (env ? env.data.ExitCode : (step.result as any).ExitCode)
+                               : undefined
+                             const rawCommand = shellPayload
+                               ? (env ? env.data.Command : (step.result as any).Command)
+                               : step.command
+                             const copyResult = () => {
+                               navigator.clipboard?.writeText(JSON.stringify(data, null, 2))
+                                 .then(() => toast.success('Result copied to clipboard'))
+                                 .catch(() => toast.error('Failed to copy result'))
+                             }
+
                              return (
                                <div className="animate-in fade-in zoom-in-95 duration-300">
-                                 <p className="text-[9px] font-black uppercase text-success tracking-widest mb-2 flex items-center gap-2">
-                                   <CheckCircle2 size={10} className="text-success" />
-                                   Execution Result
-                                   {sr && (
-                                     <span className="text-text-faint font-mono text-[8px] tracking-wider">
-                                       shell output
-                                     </span>
+                                 <div className="flex items-center justify-between mb-2">
+                                   <p className={cn(
+                                     "text-[9px] font-black uppercase tracking-widest flex items-center gap-2",
+                                     failed ? "text-danger" : "text-success"
+                                   )}>
+                                     {failed
+                                       ? <XCircle size={10} className="text-danger" />
+                                       : <CheckCircle2 size={10} className="text-success" />}
+                                     Execution Result
+                                     {env ? (
+                                       <span className={cn(
+                                         "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider border",
+                                         failed
+                                           ? "text-danger border-danger/30 bg-danger/10"
+                                           : "text-success border-success/30 bg-success/10"
+                                       )}>
+                                         {env.status}
+                                       </span>
+                                     ) : shellPayload ? (
+                                       <span className="text-text-faint font-mono text-[8px] tracking-wider">
+                                         shell output
+                                       </span>
+                                     ) : null}
+                                   </p>
+                                   {env && (
+                                     <button
+                                       onClick={copyResult}
+                                       className="inline-flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-wider text-text-faint hover:text-accent transition-colors px-2 py-1 rounded-md border border-white/5 hover:border-accent/30"
+                                     >
+                                       <Copy size={10} /> Copy
+                                     </button>
                                    )}
-                                 </p>
+                                 </div>
 
-                                 {sr ? (
+                                 {summary && !shellPayload && (
+                                   <p className={cn(
+                                     "text-xs font-bold mb-2 px-3 py-2 rounded-lg border",
+                                     failed
+                                       ? "text-danger bg-danger/5 border-danger/20"
+                                       : "text-text-dim bg-panel-3/60 border-white/5"
+                                   )}>
+                                     {summary}
+                                   </p>
+                                 )}
+
+                                 {shellPayload ? (
                                    <>
-                                     <div className="bg-[#0a0a0f] rounded-xl p-5 font-mono text-[11px] text-[var(--color-text)] leading-relaxed border border-white/10 max-h-[32rem] overflow-y-auto shadow-inner">
+                                     <div className="bg-[#0a0a0f] rounded-xl p-5 font-mono text-[11px] text-text leading-relaxed border border-white/10 max-h-128 overflow-y-auto shadow-inner">
                                        <div className="whitespace-pre-wrap break-all">
-                                         {step.result.Output}
+                                         {shellPayload.Output}
                                        </div>
                                      </div>
                                      <div className="flex flex-wrap items-center gap-4 mt-2.5">
                                        <span className={cn(
                                          "inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border",
-                                         step.result.ExitCode === 0
+                                         shellPayload.ExitCode === 0
                                            ? "text-success border-success/30 bg-success/5"
                                            : "text-danger border-danger/30 bg-danger/5"
                                        )}>
                                          <ShieldCheck size={10} />
-                                         Exit {step.result.ExitCode}
+                                         Exit {shellPayload.ExitCode}
                                        </span>
                                        <span className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-text-faint">
                                          <Clock size={10} />
-                                         {formatDuration(step.result.Duration)}
+                                         {formatDurationNs(durationNs)}
                                        </span>
-                                       <span className="text-[8px] font-mono text-text-faint/50 truncate max-w-[200px]">
-                                         {step.result.Command}
+                                       {env?.timestamp && (
+                                         <span className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-text-faint">
+                                           <RefreshCw size={10} />
+                                           {formatTimestamp(env.timestamp)}
+                                         </span>
+                                       )}
+                                       <span className="text-[8px] font-mono text-text-faint/50 truncate max-w-50">
+                                         {rawCommand}
                                        </span>
+                                     </div>
+                                   </>
+                                 ) : env ? (
+                                   <>
+                                     {rows.length > 0 ? (
+                                       <div className="rounded-xl border border-white/10 overflow-hidden max-h-60 overflow-y-auto">
+                                         <table className="w-full text-left">
+                                           <tbody>
+                                             {rows.map((row, i) => (
+                                               <tr key={i} className={cn(
+                                                 "border-b border-white/5 last:border-0",
+                                                 i % 2 === 0 ? "bg-panel-3/40" : "bg-transparent"
+                                               )}>
+                                                 <td className="px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-text-faint whitespace-nowrap align-top w-1/3">
+                                                   {row.key}
+                                                 </td>
+                                                 <td className="px-3 py-1.5 text-[10px] font-mono text-text whitespace-pre-wrap break-all align-top">
+                                                   {formatValue(row.value)}
+                                                 </td>
+                                               </tr>
+                                             ))}
+                                           </tbody>
+                                         </table>
+                                       </div>
+                                     ) : (
+                                       <div className="bg-success/5 rounded-xl p-4 font-mono text-[10px] text-success/90 border border-success/20 max-h-60 overflow-y-auto whitespace-pre leading-relaxed">
+                                         {typeof data === 'string' ? data : JSON.stringify(data, null, 2)}
+                                       </div>
+                                     )}
+                                     <div className="flex flex-wrap items-center gap-4 mt-2.5">
+                                       <span className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-text-faint">
+                                         <Clock size={10} />
+                                         {formatDurationNs(durationNs)}
+                                       </span>
+                                       {typeof env.items === 'number' && env.items > 0 && (
+                                         <span className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-text-faint">
+                                           <ListTree size={10} />
+                                           {env.items} record{env.items === 1 ? '' : 's'}
+                                         </span>
+                                       )}
+                                       {env.timestamp && (
+                                         <span className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-text-faint">
+                                           <RefreshCw size={10} />
+                                           {formatTimestamp(env.timestamp)}
+                                         </span>
+                                       )}
                                      </div>
                                    </>
                                  ) : (
                                    <div className="bg-success/5 rounded-xl p-4 font-mono text-[10px] text-success/90 border border-success/20 max-h-60 overflow-y-auto whitespace-pre leading-relaxed">
-                                     {formatJSONSmart(step.result)}
+                                     {typeof data === 'string' ? data : JSON.stringify(data, null, 2)}
                                    </div>
                                  )}
                                </div>

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/shahriarhaqueabir/UniversalOps/internal/aiops"
 	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
@@ -92,6 +93,8 @@ func (api *WorkflowAPI) ExecuteWorkflow(id string) (common.WorkflowDefinition, e
 		step := &wf.Steps[i]
 		common.LogInfo("Workflow %q: Executing step %q (%s)", id, step.ID, step.Label)
 
+		started := time.Now()
+
 		var res any
 		var err error
 
@@ -106,11 +109,16 @@ func (api *WorkflowAPI) ExecuteWorkflow(id string) (common.WorkflowDefinition, e
 		if err != nil {
 			common.LogWarn("Workflow %q: Step %q failed: %v", id, step.ID, err)
 			step.Error = err.Error()
+			// Attach the standardized error envelope so the frontend always
+			// receives a uniform StepResult shape.
+			step.Result = common.NewErrorStepResult(err, started)
 			// ABORT POLICY: Workflows are transactional by default. Stop on first error.
 			return wf, fmt.Errorf("workflow aborted at step %q: %w", step.ID, err)
 		}
 
-		step.Result = res
+		// Standardize the payload: status, summary, duration, item count,
+		// timestamp, and raw data in a single envelope.
+		step.Result = common.NewSuccessStepResult(res, started)
 	}
 
 	return wf, nil
