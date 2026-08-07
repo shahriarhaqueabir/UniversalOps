@@ -152,6 +152,8 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         return { level: 'low', message: 'Standard lookup timeout.' }
       case 'modelfile':
         return { level: 'med', message: 'Rebuilding the neural core may take 10-30 seconds depending on hardware.' }
+      case 'autoEcoMode':
+        return { level: 'low', message: 'Intelligent power-aware collection.' }
       default:
         return { level: 'low', message: 'Safe configuration change.' }
     }

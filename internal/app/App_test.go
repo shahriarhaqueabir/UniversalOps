@@ -27,7 +27,7 @@ func TestGetAppInfo(t *testing.T) {
 	a.startedAt = time.Now().Add(-1 * time.Hour)
 	info := a.GetAppInfo()
 
-	assert.Equal(t, "Universal-Ops Operations Platform", info.Name)
+	assert.Equal(t, "UniversalOps Operations Platform", info.Name)
 	assert.NotEmpty(t, info.Uptime, "Uptime should not be empty")
 }
 

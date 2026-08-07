@@ -46,6 +46,8 @@ type AIOps struct {
 	capabilities *common.CapabilityRegistry
 	pipelineAPI  *PipelineAPI
 	sysOps       *SysOps
+	netOps       *NetOps
+	devOps       *DevOps
 	dataDir      string
 
 	// Configurable models per capability
@@ -60,7 +62,7 @@ type AIOps struct {
 }
 
 // NewAIOps creates a new AIOps facade.
-func NewAIOps(ctx context.Context, pipeline *common.DataPipeline, knowledge *KnowledgeAPI, capabilities *common.CapabilityRegistry, pipelineAPI *PipelineAPI, sysOps *SysOps, dataDir string) *AIOps {
+func NewAIOps(ctx context.Context, pipeline *common.DataPipeline, knowledge *KnowledgeAPI, capabilities *common.CapabilityRegistry, pipelineAPI *PipelineAPI, sysOps *SysOps, netOps *NetOps, devOps *DevOps, dataDir string) *AIOps {
 	return &AIOps{
 		ctx:          ctx,
 		pipeline:     pipeline,
@@ -68,8 +70,10 @@ func NewAIOps(ctx context.Context, pipeline *common.DataPipeline, knowledge *Kno
 		capabilities: capabilities,
 		pipelineAPI:  pipelineAPI,
 		sysOps:       sysOps,
+		netOps:       netOps,
+		devOps:       devOps,
 		dataDir:      dataDir,
-		mcpServer:    mcp.NewServer(pipeline),
+		mcpServer:    mcp.NewServer(pipeline, netOps, devOps),
 		contextCache: &systemContextCache{},
 	}
 }
@@ -1088,6 +1092,8 @@ SYSTEM """
 
 # Parameters for technical precision and consistency
 PARAMETER temperature 0.1
+PARAMETER repeat_penalty 1.1
+PARAMETER top_k 40
 PARAMETER num_ctx 32768
 PARAMETER stop "</action_request>"
 PARAMETER stop "──"
@@ -1185,6 +1191,8 @@ SYSTEM """
 
 # Parameters for technical precision and consistency
 PARAMETER temperature 0.1
+PARAMETER repeat_penalty 1.1
+PARAMETER top_k 40
 PARAMETER num_ctx 32768
 PARAMETER stop "</action_request>"
 PARAMETER stop "──"

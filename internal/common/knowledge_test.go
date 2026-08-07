@@ -16,7 +16,7 @@ func TestKnowledgeManager(t *testing.T) {
 	}
 
 	// Test Update
-	km.UpdateSecurityState("A", 2, 10, "1h30m")
+	km.UpdateSystemState("A", 2, 10, "1h30m", []string{"eth0"})
 
 	s2 := km.GetSnapshot()
 	if s2.SecurityGrade != "A" {

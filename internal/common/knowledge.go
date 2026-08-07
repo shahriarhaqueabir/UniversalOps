@@ -17,6 +17,7 @@ type KnowledgeManager struct {
 	anomalies     int
 	activeConns   int
 	uptime        string
+	interfaces    []string
 }
 
 var globalKnowledge *KnowledgeManager
@@ -31,14 +32,15 @@ func GetKnowledge() *KnowledgeManager {
 	return globalKnowledge
 }
 
-// UpdateSecurityState updates the heuristic findings.
-func (k *KnowledgeManager) UpdateSecurityState(grade string, anomalies int, conns int, uptime string) {
+// UpdateSystemState updates the heuristic findings and environmental context.
+func (k *KnowledgeManager) UpdateSystemState(grade string, anomalies int, conns int, uptime string, ifaces []string) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	k.securityGrade = grade
 	k.anomalies = anomalies
 	k.activeConns = conns
 	k.uptime = uptime
+	k.interfaces = ifaces
 }
 
 // GetSnapshot synthesizes the "Current Truth" from all sources.
@@ -48,10 +50,11 @@ func (k *KnowledgeManager) GetSnapshot() SystemKnowledge {
 	defer k.mu.RUnlock()
 
 	sk := SystemKnowledge{
-		SecurityGrade: k.securityGrade,
-		Anomalies:     k.anomalies,
-		ActiveConns:   k.activeConns,
-		SystemUptime:  k.uptime,
+		SecurityGrade:     k.securityGrade,
+		Anomalies:         k.anomalies,
+		ActiveConns:       k.activeConns,
+		SystemUptime:      k.uptime,
+		NetworkInterfaces: k.interfaces,
 	}
 
 	if k.pipeline != nil {

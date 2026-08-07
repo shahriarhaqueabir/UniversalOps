@@ -42,7 +42,7 @@ export function ReviewModal({ isOpen, onOpenChange }: ReviewModalProps) {
       useOllamaStore.getState().setProgress(null)
 
       // 1. Handle standard settings via batch update (triggers App.tsx sync)
-      const standardParams = ['refreshInterval', 'pingCount', 'dnsTimeout', 'companionName']
+      const standardParams = ['refreshInterval', 'pingCount', 'dnsTimeout', 'companionName', 'autoEcoMode']
       const toBatch: Record<string, any> = {}
       standardParams.forEach(p => {
         if (stagedChanges.has(p)) toBatch[p] = stagedChanges.get(p)

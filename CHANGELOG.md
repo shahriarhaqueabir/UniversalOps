@@ -5,14 +5,19 @@ All notable changes to Universal-Ops will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.6.0] - 2026-08-05
+## [1.6.0] - 2026-08-06
 
 ### Added
+- **AI Sensory Awareness**: Hawk now has passive knowledge of active network interfaces (e.g. Teredo, VPNs, Wi-Fi) in every prompt.
+- **DevOps MCP Tools**: Added `get_docker_summary`, `get_k8s_status`, `get_k8s_pods`, and `get_k8s_events` to Hawk's toolkit.
+- **Network Discovery Tool**: Added `get_network_interfaces` tool for Hawk to inspect detailed adapter stats and rates.
+- **Self-Diagnosis**: Renamed `query_logs` to `get_app_logs` and enhanced instructions for Hawk to use app logs for self-troubleshooting.
 - Observation-layer UX upgrades: persistent sidebar collapse, denser alerts, clearer dashboard metadata, and improved collector/settings summaries.
 - Searchability and metadata improvements: page metadata, document metadata, and SEO-friendly app tags.
 - Code-splitting and bundle-size work: centralized lazy page registry, suggested route preloading, and removal of the frontend `date-fns` dependency.
 
 ### Fixed
+- **Version Drift**: Consolidated version numbering into `internal/common/version.go` (v1.6.0).
 - Release surface consistency: version metadata, installers, and app packaging now align on `1.6.0`.
 - Frontend utility date formatting now uses local helpers, reducing bundle weight and removing an unnecessary dependency.
 

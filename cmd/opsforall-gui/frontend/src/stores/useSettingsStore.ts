@@ -8,10 +8,12 @@ interface SettingsState {
   pingCount: number
   dnsTimeout: number
   companionName: string
+  autoEcoMode: boolean
   setRefreshInterval: (val: number) => void
   setPingCount: (val: number) => void
   setDnsTimeout: (val: number) => void
   setCompanionName: (name: string) => void
+  setAutoEcoMode: (val: boolean) => void
   setBatch: (changes: Record<string, any>) => void
 }
 
@@ -31,6 +33,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   pingCount: loadSetting('universalops_pingCount', 4),
   dnsTimeout: loadSetting('universalops_dnsTimeout', 2000),
   companionName: loadSetting('universalops_companionName', 'Hawk'),
+  autoEcoMode: loadSetting('universalops_autoEcoMode', true),
 
   setRefreshInterval: (val) => {
     saveSetting('universalops_refreshInterval', val)
@@ -47,6 +50,10 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setCompanionName: (name) => {
     saveSetting('universalops_companionName', name)
     set({ companionName: name })
+  },
+  setAutoEcoMode: (val) => {
+    saveSetting('universalops_autoEcoMode', val)
+    set({ autoEcoMode: val })
   },
   setBatch: (changes) => {
     Object.entries(changes).forEach(([key, value]) => {

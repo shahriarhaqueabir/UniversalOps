@@ -25,6 +25,10 @@ jobs:
       - name: Set up MSVC for Windows
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Install NSIS
+        run: choco install nsis -y
+        shell: powershell
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
@@ -90,6 +94,10 @@ jobs:
       - name: Set up MSVC for Windows
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Install NSIS
+        run: choco install nsis -y
+        shell: powershell
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
@@ -118,12 +126,10 @@ jobs:
           $ver = "${{ github.ref_name }}".TrimStart('v')
           "VER=$ver" >> $env:GITHUB_OUTPUT
 
-      - name: Build standalone executable
-        # windows/amd64 only — per project scope (no mac/linux for this turn).
-        # The NSIS step was removed: windows-latest runners have no makensis, so
-        # it was a silent no-op that left a 21 MB extension-less duplicate in the
-        # artifact. Re-add only if makensis is provisioned on the runner.
-        run: wails build -platform windows/amd64 -o universal-ops-${{ steps.ver.outputs.ver }}-windows-amd64.exe
+      - name: Build standalone executable and installer
+        # Builds both the .exe and the NSIS installer.
+        # Note: --nsis is only available on Windows build hosts.
+        run: wails build -platform windows/amd64 -nsis -o universal-ops-${{ steps.ver.outputs.ver }}-windows-amd64.exe
         shell: bash
 
       - name: Generate individual checksums

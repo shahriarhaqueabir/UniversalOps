@@ -41,6 +41,7 @@ The theme: **turn collected telemetry into configurable, exportable, alertable i
       desktop notifications. Backend: alert rule CRUD + evaluation loop; frontend:
       rule editor + notification wiring. *Builds on existing Alert engine in `internal/common/`.*
 - [ ] **ALR-02** Alert history + acknowledgement workflow (persist, dismiss, snooze).
+- [ ] **UPD-01** In-app update checker with one-click upgrade (GitHub Releases API, local-first).
 
 ### P1 — Export & Reporting
 - [ ] **EXP-01** PDF/CSV export for reports and metrics (ReportsCenter + per-discipline overviews).
@@ -49,9 +50,6 @@ The theme: **turn collected telemetry into configurable, exportable, alertable i
 ### P1 — Custom Dashboard Layouts
 - [ ] **DASH-01** Drag-and-drop widget arrangement (persisted via existing ConfigSchema + AJV).
 - [ ] **DASH-02** Widget presets + per-widget refresh (builds on `useWidgetRefresh`).
-
-### P2 — Auto-Update
-- [ ] **UPD-01** In-app update checker with one-click upgrade (GitHub Releases API, local-first).
 
 ### P2 — Performance Profiling
 - [ ] **PERF-01** pprof integration for long-running session analysis.

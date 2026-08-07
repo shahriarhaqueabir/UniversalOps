@@ -75,11 +75,17 @@ type App struct {
 	// lastSecurityScore is the cached security score to prevent ticker bloat
 	lastSecurityScore string
 
+	// ecoModeActive is true when the app has automatically applied eco-throttling
+	ecoModeActive bool
+
 	currentDataDir string
 	currentLogsDir string
 
 	// processWorkerQuit signals the background process worker goroutine to stop
 	processWorkerQuit chan struct{}
+
+	// ecoWorkerQuit signals the eco-mode worker goroutine to stop
+	ecoWorkerQuit chan struct{}
 }
 
 // NewApp creates a new App with initialized subsystems.
@@ -116,8 +122,8 @@ func NewApp() *App {
 
 	// Initialize subsystems that might need context later
 	ctx := context.Background()
-	a.AIOps = NewAIOps(ctx, a.pipeline, a.Knowledge, a.capabilities, a.PipelineAPI, a.SysOps, a.currentDataDir)
 	a.DevOps = NewDevOps(ctx, a.eventBus)
+	a.AIOps = NewAIOps(ctx, a.pipeline, a.Knowledge, a.capabilities, a.PipelineAPI, a.SysOps, a.NetOps, a.DevOps, a.currentDataDir)
 	a.Workflows = NewWorkflowAPI(a.workflowEngine, a.SysOps, a.SecOps, a.DevOps, a.AlertAPI)
 	a.Timeline = NewTimeline(a.eventBus, a.AIOps)
 	a.Reports = NewReportsAPI(a.SysOps, a.SecOps, a.AIOps)
@@ -136,11 +142,22 @@ func NewApp() *App {
 		grade = a.lastSecurityScore
 		a.lastMu.Unlock()
 
-		common.GetKnowledge().UpdateSecurityState(
+		// Get active interface names for AI situational awareness
+		ifaces := []string{}
+		if a.NetOps != nil {
+			for _, iface := range a.NetOps.GetInterfaces() {
+				if iface.IsUp {
+					ifaces = append(ifaces, iface.Name)
+				}
+			}
+		}
+
+		common.GetKnowledge().UpdateSystemState(
 			grade,
 			a.alerts.AlertCount(),
 			s.Connections,
 			a.GetAppInfo().Uptime,
+			ifaces,
 		)
 	}
 
@@ -300,13 +317,14 @@ func (a *App) Startup(ctx context.Context) {
 	}
 
 	a.startProcessWorker()
+	a.startEcoWorker()
 }
 
 // Shutdown is called by Wails when the application shuts down.
 func (a *App) Shutdown(ctx context.Context) {
 	common.LogInfo("Universal-Ops shutting down")
 
-	// 0. Stop bundled LHM before general process cleanup
+	// Start bundled LHM before general process cleanup
 	common.GetLHMManager().Stop()
 
 	// 1. Terminate any active child processes (zombie prevention)
@@ -327,6 +345,11 @@ func (a *App) Shutdown(ctx context.Context) {
 		close(a.processWorkerQuit)
 	}
 
+	// Signal the eco worker to stop
+	if a.ecoWorkerQuit != nil {
+		close(a.ecoWorkerQuit)
+	}
+
 	// Close persistent storage
 	if s := common.GetStorage(); s != nil {
 		s.Close()
@@ -338,11 +361,17 @@ func (a *App) Shutdown(ctx context.Context) {
 // GetAppInfo returns metadata about the application.
 func (a *App) GetAppInfo() AppInfo {
 	return AppInfo{
-		Name:      "Universal-Ops Operations Platform",
-		Version:   "1.3.1",
+		Name:      common.AppName + " Operations Platform",
+		Version:   common.Version,
 		GoVersion: goruntime.Version(),
 		Uptime:    common.FormatUptime(uint64(time.Since(a.startedAt).Seconds())),
 	}
+}
+
+// CheckForUpdates initiates a query to the GitHub API for the latest version.
+func (a *App) CheckForUpdates() (*common.UpdateInfo, error) {
+	defer common.RecoverPanic()
+	return common.CheckForUpdates()
 }
 
 type PerformanceProfile struct {
@@ -424,15 +453,127 @@ func (a *App) GenerateBaselineSnapshot() (*BaselineSnapshot, error) {
 	// Save to data/baseline.json for future comparison
 	path := filepath.Join(a.GetDataDir(), "baseline.json")
 	if b, err := json.MarshalIndent(snapshot, "", "  "); err == nil {
-		os.WriteFile(path, b, 0644)
+		_ = os.WriteFile(path, b, 0644)
 	}
 
 	return snapshot, nil
 }
 
+// GetBaselineSnapshot loads the saved baseline snapshot.
+func (a *App) GetBaselineSnapshot() (*BaselineSnapshot, error) {
+	path := filepath.Join(a.GetDataDir(), "baseline.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var snap BaselineSnapshot
+	if err := json.Unmarshal(data, &snap); err != nil {
+		return nil, err
+	}
+	return &snap, nil
+}
+
+type StateDrift struct {
+	Category string   `json:"category"`
+	Key      string   `json:"key"`
+	Before   string   `json:"before"`
+	After    string   `json:"after"`
+	Severity string   `json:"severity"` // "info", "warning", "critical"
+}
+
+// CompareCurrentAgainstBaseline returns a list of differences between current state and saved baseline.
+func (a *App) CompareCurrentAgainstBaseline() ([]StateDrift, error) {
+	old, err := a.GetBaselineSnapshot()
+	if err != nil {
+		return nil, fmt.Errorf("no baseline snapshot found: %w", err)
+	}
+
+	now, _ := a.GenerateBaselineSnapshot()
+	var drifts []StateDrift
+
+	// Compare Software (Capabilities)
+	// Cast interfaces back to correct types for comparison
+	var oldCaps []common.CapabilityInfo
+	if b, err := json.Marshal(old.Software); err == nil {
+		_ = json.Unmarshal(b, &oldCaps)
+	}
+
+	var nowCaps []common.CapabilityInfo
+	if b, err := json.Marshal(now.Software); err == nil {
+		_ = json.Unmarshal(b, &nowCaps)
+	}
+
+	oldMap := make(map[common.CapabilityID]bool)
+	for _, c := range oldCaps {
+		if c.Available {
+			oldMap[c.ID] = true
+		}
+	}
+
+	for _, c := range nowCaps {
+		if c.Available && !oldMap[c.ID] {
+			drifts = append(drifts, StateDrift{
+				Category: "Software",
+				Key:      string(c.ID),
+				Before:   "Not Found",
+				After:    "Available",
+				Severity: "info",
+			})
+		}
+	}
+
+	// Check for removals
+	nowMap := make(map[common.CapabilityID]bool)
+	for _, c := range nowCaps {
+		if c.Available { nowMap[c.ID] = true }
+	}
+	for _, c := range oldCaps {
+		if c.Available && !nowMap[c.ID] {
+			drifts = append(drifts, StateDrift{
+				Category: "Software",
+				Key: string(c.ID),
+				Before: "Available",
+				After: "Not Found",
+				Severity: "warning",
+			})
+		}
+	}
+
+	// Compare Hardware (CPU name, RAM total)
+	// (Simplified example)
+
+	return drifts, nil
+}
+
 // IsOnboarded returns true if the user has completed the onboarding flow.
 func (a *App) IsOnboarded() bool {
 	return common.IsOnboarded()
+}
+
+// GetAutoEcoMode returns the current Auto-Eco-Mode setting.
+func (a *App) GetAutoEcoMode() bool {
+	s := common.GetStorage()
+	if s == nil {
+		return true
+	}
+	val, err := s.GetSetting("autoEcoMode")
+	if err != nil || val == "" {
+		return true
+	}
+	return val == "true"
+}
+
+// SetAutoEcoMode updates the Auto-Eco-Mode setting.
+func (a *App) SetAutoEcoMode(enabled bool) {
+	s := common.GetStorage()
+	if s != nil {
+		val := "false"
+		if enabled {
+			val = "true"
+		}
+		s.UpsertSetting("autoEcoMode", val)
+		common.LogInfo("App: Auto-Eco-Mode set to %v", enabled)
+	}
 }
 
 // MarkOnboarded marks the onboarding flow as completed.
@@ -452,11 +593,13 @@ func (a *App) ClearOnboarded() {
 // ApplyOperationalProfile adjusts engine parameters based on a selected profile (eco, standard, burst).
 func (a *App) ApplyOperationalProfile(profile string) {
 	interval := 3000
-	level := "debug" // AUDIT: Force debug level for Phase 0 telemetry
+	level := "info"
 
 	switch profile {
 	case "eco":
 		interval = 10000
+	case "standard":
+		interval = 3000
 	case "burst":
 		interval = 1000
 	}
@@ -691,6 +834,81 @@ func (a *App) SaveFileDialog(title string, filename string, filters []string) (s
 }
 
 // ── Internal helpers ─────────────────────────────────────────────────────────
+
+// startEcoWorker monitors battery status and applies eco-throttling when on battery.
+func (a *App) startEcoWorker() {
+	a.ecoWorkerQuit = make(chan struct{})
+	go func() {
+		defer common.RecoverPanic()
+
+		// Check battery status every 30 seconds
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				a.evaluateEcoMode()
+			case <-a.ecoWorkerQuit:
+				return
+			}
+		}
+	}()
+}
+
+func (a *App) evaluateEcoMode() {
+	s := common.GetStorage()
+	if s == nil {
+		return
+	}
+
+	// Check if Auto-Eco is enabled in settings
+	enabledStr, _ := s.GetSetting("autoEcoMode")
+	if enabledStr != "true" {
+		// If it was active but user disabled it, restore standard
+		if a.ecoModeActive {
+			common.LogInfo("EcoMode: Auto-Eco disabled by user, restoring standard profile")
+			a.ApplyOperationalProfile("standard")
+			a.ecoModeActive = false
+		}
+		return
+	}
+
+	bat := a.SysOps.GetBatteryInfo()
+	if !bat.Detected {
+		return
+	}
+
+	// Logic: If discharging, apply eco. If charging or full, apply standard.
+	// Only apply if the state changed to prevent ticker-blocking profile re-applications.
+	shouldBeEco := !bat.Charging && bat.Percent < 100
+
+	if shouldBeEco && !a.ecoModeActive {
+		common.LogInfo("EcoMode: Battery discharging (%.0f%%), applying ECO profile", bat.Percent)
+		a.ApplyOperationalProfile("eco")
+		a.ecoModeActive = true
+
+		a.eventBus.Emit(common.NewEvent(
+			common.CatSystem,
+			common.EventInfo,
+			"system",
+			"Eco-Mode Activated",
+			fmt.Sprintf("Battery is discharging (%.0f%%). Telemetry frequency reduced to preserve power.", bat.Percent),
+		))
+	} else if !shouldBeEco && a.ecoModeActive {
+		common.LogInfo("EcoMode: External power detected or battery full, restoring standard profile")
+		a.ApplyOperationalProfile("standard")
+		a.ecoModeActive = false
+
+		a.eventBus.Emit(common.NewEvent(
+			common.CatSystem,
+			common.EventInfo,
+			"system",
+			"Standard-Mode Restored",
+			"External power detected. High-frequency telemetry resumed.",
+		))
+	}
+}
 
 // startProcessWorker performs periodic heavy process scans in the background.
 // This decouples the per-tick collectors from the multi-millisecond cost

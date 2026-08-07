@@ -32,6 +32,11 @@
       "minLength": 1,
       "maxLength": 50,
       "default": "Hawk"
+    },
+    "autoEcoMode": {
+      "type": "boolean",
+      "description": "Throttles telemetry frequency to preserve battery when discharging",
+      "default": true
     }
   },
   "additionalProperties": {

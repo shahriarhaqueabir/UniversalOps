@@ -78,8 +78,9 @@ type SystemKnowledge struct {
 	DiskIOReadTrend   string  `json:"disk_io_read_trend"`
 	SystemDiskIOWrite float64 `json:"system.disk.io.write"`
 	DiskIOWriteTrend  string  `json:"disk_io_write_trend"`
-	ProcessCount      int     `json:"process.count"`
-	ConnectionCount   int     `json:"connection.count"`
+	ProcessCount      int      `json:"process.count"`
+	ConnectionCount   int      `json:"connection.count"`
+	NetworkInterfaces []string `json:"network.interfaces"` // Active interface names
 }
 
 // SecActionResult holds the result of a security action.
@@ -88,6 +89,27 @@ type SecActionResult struct {
 	Message string `json:"message"`
 	Detail  string `json:"detail,omitempty"`
 	Error   string `json:"error,omitempty"`
+}
+
+// ProcessTopology represents the mapping between local processes and network endpoints.
+type ProcessTopology struct {
+	Nodes []TopologyNode `json:"nodes"`
+	Edges []TopologyEdge `json:"edges"`
+}
+
+type TopologyNode struct {
+	ID    string `json:"id"`
+	Type  string `json:"type"` // "process", "ip", "dns"
+	Label string `json:"label"`
+	Value string `json:"value,omitempty"`
+}
+
+type TopologyEdge struct {
+	Source   string `json:"source"`
+	Target   string `json:"target"`
+	Protocol string `json:"protocol"`
+	Port     int    `json:"port"`
+	State    string `json:"state"`
 }
 
 // These prevent excessive output in terminal views where space is constrained.

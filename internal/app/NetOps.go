@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"fmt"
+	"net"
+	"strconv"
 	"sync"
 	"time"
 
@@ -283,6 +285,27 @@ func (n *NetOps) collectInterfaces(cachedSpeeds map[string]int64) ([]InterfaceIn
 
 	n.model.lastIfaces = out
 	return out, nil
+}
+
+// GetInterfacesDomain returns domain-level interface info for MCP.
+func (n *NetOps) GetInterfacesDomain() []netops.InterfaceInfo {
+	n.model.mu.Lock()
+	defer n.model.mu.Unlock()
+
+	if n.model.speedCache == nil || time.Since(n.model.speedCacheAge) > 5*time.Minute {
+		n.model.speedCache = netops.GetLinkSpeeds()
+		n.model.speedCacheAge = time.Now()
+	}
+
+	elapsed := time.Since(n.model.lastCapture)
+	result, err := netops.GetInterfaces(n.model.lastCounters, elapsed, n.model.speedCache)
+	if err != nil {
+		return nil
+	}
+
+	n.model.lastCounters = result.Counters
+	n.model.lastCapture = time.Now()
+	return result.Interfaces
 }
 
 // RunNetworkHealthCheck runs a comprehensive network health check and returns the report.
@@ -800,4 +823,61 @@ func convertTopologyToData(topo netops.GraphTopology) NetworkTopologyData {
 		})
 	}
 	return data
+}
+
+// GetProcessTopology returns a mapping of local processes to network endpoints.
+func (n *NetOps) GetProcessTopology() common.ProcessTopology {
+	defer common.RecoverPanic()
+	conns, _ := netops.GetConnections()
+
+	nodes := make(map[string]common.TopologyNode)
+	var edges []common.TopologyEdge
+
+	for _, c := range conns {
+		if c.State == "LISTEN" || c.RemoteAddr == "" || c.RemoteAddr == "0.0.0.0:0" || c.RemoteAddr == "[::]:0" {
+			continue
+		}
+
+		procID := fmt.Sprintf("proc-%d", c.PID)
+		procLabel := c.ProcessName
+		if procLabel == "" {
+			procLabel = fmt.Sprintf("PID %d", c.PID)
+		}
+
+		nodes[procID] = common.TopologyNode{
+			ID: procID,
+			Type: "process",
+			Label: procLabel,
+			Value: strconv.Itoa(c.PID),
+		}
+
+		remoteHost, remotePortStr, _ := net.SplitHostPort(c.RemoteAddr)
+		remotePort, _ := strconv.Atoi(remotePortStr)
+		remoteID := "ip-" + remoteHost
+
+		nodes[remoteID] = common.TopologyNode{
+			ID: remoteID,
+			Type: "ip",
+			Label: remoteHost,
+			Value: remoteHost,
+		}
+
+		edges = append(edges, common.TopologyEdge{
+			Source: procID,
+			Target: remoteID,
+			Protocol: c.Protocol,
+			Port: remotePort,
+			State: c.State,
+		})
+	}
+
+	var nodeSlice []common.TopologyNode
+	for _, node := range nodes {
+		nodeSlice = append(nodeSlice, node)
+	}
+
+	return common.ProcessTopology{
+		Nodes: nodeSlice,
+		Edges: edges,
+	}
 }

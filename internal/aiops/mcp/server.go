@@ -7,6 +7,7 @@ import (
 	"regexp"
 
 	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
+	"github.com/shahriarhaqueabir/UniversalOps/internal/devops"
 	"github.com/shahriarhaqueabir/UniversalOps/internal/netops"
 	"github.com/shahriarhaqueabir/UniversalOps/internal/secops"
 	"github.com/shahriarhaqueabir/UniversalOps/internal/sysops"
@@ -71,18 +72,29 @@ type Tool struct {
 }
 
 // Server provides internal MCP-compatible tool definitions for the local AI.
-// This is NOT a network-accessible MCP server — it is a programmatic abstraction
-// used by the Ollama chat handler (analyst.go) to offer structured tool-calling
-// to the local LLM. No transport layer is needed; all calls are in-process.
-//
-// To expose these tools externally (e.g., for MCP-compatible clients), add
-// an HTTP/WebSocket transport in a separate package.
 type Server struct {
 	pipeline *common.DataPipeline
+
+	// Providers injected from the app layer to avoid circular dependencies
+	NetProvider    NetProvider
+	DevOpsProvider DevOpsProvider
 }
 
-func NewServer(pipeline *common.DataPipeline) *Server {
-	return &Server{pipeline: pipeline}
+type NetProvider interface {
+	GetInterfacesDomain() []netops.InterfaceInfo
+}
+
+type DevOpsProvider interface {
+	GetContainersDomain() devops.ContainerSummary
+	GetKubernetesStatusDomain() devops.KubernetesStatus
+}
+
+func NewServer(pipeline *common.DataPipeline, net NetProvider, dev DevOpsProvider) *Server {
+	return &Server{
+		pipeline:       pipeline,
+		NetProvider:    net,
+		DevOpsProvider: dev,
+	}
 }
 
 // ListTools returns all available MCP tools for the AI.
@@ -125,7 +137,34 @@ func (s *Server) ListTools() ([]Tool, error) {
 			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
 		},
 
+		// ── DevOps Tools ─────────────────────────────────────────────────────
+		{
+			Name:        "get_docker_summary",
+			Description: "Return summary of Docker containers (running, stopped, failed) and a list of all containers with their status.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+		},
+		{
+			Name:        "get_k8s_status",
+			Description: "Return Kubernetes cluster connectivity status, cluster name, node count, and pod count.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+		},
+		{
+			Name:        "get_k8s_pods",
+			Description: "List Kubernetes pods in a given namespace (default all).",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{"namespace":{"type":"string","description":"Namespace to filter pods (default all)"}}}`),
+		},
+		{
+			Name:        "get_k8s_events",
+			Description: "List recent Kubernetes events for troubleshooting cluster issues.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{"namespace":{"type":"string","description":"Namespace to filter events (default all)"},"limit":{"type":"integer","description":"Max events to return","default":50}}}`),
+		},
+
 		// ── Network Tools ─────────────────────────────────────────────────────
+		{
+			Name:        "get_network_interfaces",
+			Description: "List all network interfaces with their status, IPs, MAC, speed, and real-time RX/TX rates.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+		},
 		{
 			Name:        "ping",
 			Description: "Ping a target host or IP address.",
@@ -201,8 +240,8 @@ func (s *Server) ListTools() ([]Tool, error) {
 			InputSchema: json.RawMessage(`{"type":"object","properties":{"category":{"type":"string","description":"Event category filter (system, network, security, pipeline, etc.)"},"level":{"type":"string","description":"Minimum severity level (info, warning, error, critical)"},"limit":{"type":"integer","description":"Max events to return (default 50)","default":50}},"required":[]}`),
 		},
 		{
-			Name:        "query_logs",
-			Description: "Search application logs by level and text pattern.",
+			Name:        "get_app_logs",
+			Description: "Search internal application logs (UniversalOps system logs) by level and text pattern. Useful for self-diagnosis of app errors.",
 			InputSchema: json.RawMessage(`{"type":"object","properties":{"level":{"type":"string","description":"Log level filter (info, warn, error, debug)"},"search":{"type":"string","description":"Text to search for in log messages"},"limit":{"type":"integer","description":"Max entries (default 50)","default":50}},"required":[]}`),
 		},
 		{
@@ -218,7 +257,7 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 	switch name {
 	// ── System ──────────────────────────────────────────────────────────
 	case "get_system_telemetry":
-		return handleGetTelemetry()
+		return s.handleGetTelemetry()
 	case "get_process_list":
 		var args struct {
 			N int `json:"n"`
@@ -232,7 +271,7 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 		if args.N > maxProcessListN {
 			args.N = maxProcessListN
 		}
-		return handleGetProcessList(args.N)
+		return s.handleGetProcessList(args.N)
 	case "get_system_logs":
 		var args struct {
 			N      int    `json:"n"`
@@ -250,17 +289,42 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 		if args.Source == "" {
 			args.Source = "Application"
 		}
-		return handleGetSystemLogs(args.N, args.Source)
+		return s.handleGetSystemLogs(args.N, args.Source)
 	case "get_scheduled_tasks":
-		return handleGetScheduledTasks()
+		return s.handleGetScheduledTasks()
 	case "get_hardware_info":
-		return handleGetHardwareInfo()
+		return s.handleGetHardwareInfo()
 	case "get_disk_usage":
-		return handleGetDiskUsage()
+		return s.handleGetDiskUsage()
 	case "get_baseboard_info":
-		return handleGetBaseboardInfo()
+		return s.handleGetBaseboardInfo()
+
+	// ── DevOps ──────────────────────────────────────────────────────────
+	case "get_docker_summary":
+		return s.handleGetDockerSummary()
+	case "get_k8s_status":
+		return s.handleGetK8sStatus()
+	case "get_k8s_pods":
+		var args struct {
+			Namespace string `json:"namespace"`
+		}
+		if err := json.Unmarshal(arguments, &args); err != nil {
+			return nil, err
+		}
+		return s.handleGetK8sPods(args.Namespace)
+	case "get_k8s_events":
+		var args struct {
+			Namespace string `json:"namespace"`
+			Limit     int    `json:"limit"`
+		}
+		if err := json.Unmarshal(arguments, &args); err != nil {
+			return nil, err
+		}
+		return s.handleGetK8sEvents(args.Namespace, args.Limit)
 
 	// ── Network ─────────────────────────────────────────────────────────
+	case "get_network_interfaces":
+		return s.handleGetInterfaces()
 	case "ping":
 		var args struct {
 			Target string `json:"target"`
@@ -278,7 +342,7 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 		if args.Count > maxCountValue {
 			args.Count = maxCountValue
 		}
-		return handlePing(args.Target, args.Count)
+		return s.handlePing(args.Target, args.Count)
 	case "dns_lookup":
 		var args struct {
 			Hostname string `json:"hostname"`
@@ -295,7 +359,7 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 				return nil, fmt.Errorf("invalid server: %w", err)
 			}
 		}
-		return handleDNSSLookup(args.Hostname, args.Server)
+		return s.handleDNSSLookup(args.Hostname, args.Server)
 	case "port_scan":
 		var args struct {
 			Host  string `json:"host"`
@@ -311,7 +375,7 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 			return nil, err
 		}
 		common.LogInfo("MCP port_scan: host=%s ports=%v", args.Host, args.Ports)
-		return handlePortScan(args.Host, args.Ports)
+		return s.handlePortScan(args.Host, args.Ports)
 	case "traceroute":
 		var args struct {
 			Target string `json:"target"`
@@ -329,25 +393,25 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 		if args.MaxTTL > maxTTLValue {
 			args.MaxTTL = maxTTLValue
 		}
-		return handleTraceRoute(args.Target, args.MaxTTL)
+		return s.handleTraceRoute(args.Target, args.MaxTTL)
 	case "get_network_connections":
-		return handleGetConnections()
+		return s.handleGetConnections()
 	case "get_network_health":
-		return handleGetNetworkHealth()
+		return s.handleGetNetworkHealth()
 
 	// ── Security ────────────────────────────────────────────────────────
 	case "get_firewall_rules":
-		return handleGetFirewallRules()
+		return s.handleGetFirewallRules()
 	case "get_listening_ports":
-		return handleGetListeningPorts()
+		return s.handleGetListeningPorts()
 	case "get_defender_status":
-		return handleGetDefenderStatus()
+		return s.handleGetDefenderStatus()
 	case "run_security_audit":
-		return handleRunSecurityAudit()
+		return s.handleRunSecurityAudit()
 	case "get_failed_logins":
-		return handleGetFailedLogins()
+		return s.handleGetFailedLogins()
 	case "get_security_summary":
-		return handleGetSecuritySummary()
+		return s.handleGetSecuritySummary()
 
 	// ── Database / Storage ──────────────────────────────────────────────
 	case "query_metric_history":
@@ -367,7 +431,7 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 		if len(args.Metric) > maxMetricNameLen {
 			return nil, fmt.Errorf("metric name too long (max %d chars)", maxMetricNameLen)
 		}
-		return handleQueryMetricHistory(args.Metric, args.Limit)
+		return s.handleQueryMetricHistory(args.Metric, args.Limit)
 	case "query_events":
 		var args struct {
 			Category string `json:"category"`
@@ -383,8 +447,8 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 		if args.Limit > maxQueryLimit {
 			args.Limit = maxQueryLimit
 		}
-		return handleQueryEvents(args.Category, args.Level, args.Limit)
-	case "query_logs":
+		return s.handleQueryEvents(args.Category, args.Level, args.Limit)
+	case "get_app_logs":
 		var args struct {
 			Level  string `json:"level"`
 			Search string `json:"search"`
@@ -402,7 +466,7 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 		if len(args.Search) > maxSearchLength {
 			return nil, fmt.Errorf("search string too long (max %d chars)", maxSearchLength)
 		}
-		return handleQueryLogs(args.Level, args.Search, args.Limit)
+		return s.handleQueryLogs(args.Level, args.Search, args.Limit)
 	case "query_alerts":
 		var args struct {
 			Limit int `json:"limit"`
@@ -416,18 +480,16 @@ func (s *Server) CallTool(ctx context.Context, name string, arguments json.RawMe
 		if args.Limit > maxQueryLimit {
 			args.Limit = maxQueryLimit
 		}
-		return handleQueryAlerts(args.Limit)
+		return s.handleQueryAlerts(args.Limit)
 
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", name)
 	}
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-// System Tool Handlers
-// ══════════════════════════════════════════════════════════════════════════
+// ── System Tool Handlers ──────────────────────────────────────────────────
 
-func handleGetTelemetry() (interface{}, error) {
+func (s *Server) handleGetTelemetry() (interface{}, error) {
 	km := common.GetKnowledge()
 	if km == nil {
 		return nil, fmt.Errorf("knowledge manager not initialized")
@@ -435,7 +497,7 @@ func handleGetTelemetry() (interface{}, error) {
 	return km.GetSnapshot(), nil
 }
 
-func handleGetProcessList(n int) (interface{}, error) {
+func (s *Server) handleGetProcessList(n int) (interface{}, error) {
 	procs, err := sysops.GetTopProcesses(n)
 	if err != nil {
 		return nil, fmt.Errorf("get processes: %w", err)
@@ -443,7 +505,7 @@ func handleGetProcessList(n int) (interface{}, error) {
 	return procs, nil
 }
 
-func handleGetSystemLogs(n int, source string) (interface{}, error) {
+func (s *Server) handleGetSystemLogs(n int, source string) (interface{}, error) {
 	result, err := sysops.GetSystemLogs(n, source)
 	if err != nil {
 		return nil, fmt.Errorf("get logs: %w", err)
@@ -451,7 +513,7 @@ func handleGetSystemLogs(n int, source string) (interface{}, error) {
 	return result, nil
 }
 
-func handleGetScheduledTasks() (interface{}, error) {
+func (s *Server) handleGetScheduledTasks() (interface{}, error) {
 	tasks, err := sysops.GetScheduledTasks()
 	if err != nil {
 		return nil, fmt.Errorf("get scheduled tasks: %w", err)
@@ -459,7 +521,7 @@ func handleGetScheduledTasks() (interface{}, error) {
 	return tasks, nil
 }
 
-func handleGetHardwareInfo() (interface{}, error) {
+func (s *Server) handleGetHardwareInfo() (interface{}, error) {
 	info, err := sysops.GetSystemInfo()
 	if err != nil {
 		return nil, fmt.Errorf("get system info: %w", err)
@@ -467,7 +529,7 @@ func handleGetHardwareInfo() (interface{}, error) {
 	return info, nil
 }
 
-func handleGetDiskUsage() (interface{}, error) {
+func (s *Server) handleGetDiskUsage() (interface{}, error) {
 	stats, err := sysops.GetDiskStats()
 	if err != nil {
 		return nil, fmt.Errorf("get disk stats: %w", err)
@@ -475,15 +537,52 @@ func handleGetDiskUsage() (interface{}, error) {
 	return stats, nil
 }
 
-func handleGetBaseboardInfo() (interface{}, error) {
+func (s *Server) handleGetBaseboardInfo() (interface{}, error) {
 	return sysops.GetBaseboardInfo(), nil
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-// Network Tool Handlers
-// ══════════════════════════════════════════════════════════════════════════
+// ── DevOps Tool Handlers ───────────────────────────────────────────────────
 
-func handlePing(target string, count int) (interface{}, error) {
+func (s *Server) handleGetDockerSummary() (interface{}, error) {
+	if s.DevOpsProvider == nil {
+		return nil, fmt.Errorf("DevOps provider not available")
+	}
+	return s.DevOpsProvider.GetContainersDomain(), nil
+}
+
+func (s *Server) handleGetK8sStatus() (interface{}, error) {
+	if s.DevOpsProvider == nil {
+		return nil, fmt.Errorf("DevOps provider not available")
+	}
+	return s.DevOpsProvider.GetKubernetesStatusDomain(), nil
+}
+
+func (s *Server) handleGetK8sPods(namespace string) (interface{}, error) {
+	pods, err := devops.GetK8sPods(namespace)
+	if err != nil {
+		return nil, fmt.Errorf("get k8s pods: %w", err)
+	}
+	return pods, nil
+}
+
+func (s *Server) handleGetK8sEvents(namespace string, limit int) (interface{}, error) {
+	events, err := devops.GetK8sEvents(namespace, limit)
+	if err != nil {
+		return nil, fmt.Errorf("get k8s events: %w", err)
+	}
+	return events, nil
+}
+
+// ── Network Tool Handlers ──────────────────────────────────────────────────
+
+func (s *Server) handleGetInterfaces() (interface{}, error) {
+	if s.NetProvider == nil {
+		return nil, fmt.Errorf("network provider not available")
+	}
+	return s.NetProvider.GetInterfacesDomain(), nil
+}
+
+func (s *Server) handlePing(target string, count int) (interface{}, error) {
 	result, err := netops.Ping(target, count)
 	if err != nil {
 		return nil, fmt.Errorf("ping %s: %w", target, err)
@@ -491,7 +590,7 @@ func handlePing(target string, count int) (interface{}, error) {
 	return result, nil
 }
 
-func handleDNSSLookup(hostname, server string) (interface{}, error) {
+func (s *Server) handleDNSSLookup(hostname, server string) (interface{}, error) {
 	var result *netops.DNSResult
 	var err error
 	if server != "" {
@@ -505,7 +604,7 @@ func handleDNSSLookup(hostname, server string) (interface{}, error) {
 	return result, nil
 }
 
-func handlePortScan(host string, ports []int) (interface{}, error) {
+func (s *Server) handlePortScan(host string, ports []int) (interface{}, error) {
 	result, err := netops.ScanPorts(host, ports)
 	if err != nil {
 		return nil, fmt.Errorf("port scan %s: %w", host, err)
@@ -513,7 +612,7 @@ func handlePortScan(host string, ports []int) (interface{}, error) {
 	return result, nil
 }
 
-func handleTraceRoute(target string, maxTTL int) (interface{}, error) {
+func (s *Server) handleTraceRoute(target string, maxTTL int) (interface{}, error) {
 	result, err := netops.TraceRouteWithMaxHops(target, maxTTL)
 	if err != nil {
 		return nil, fmt.Errorf("traceroute %s: %w", target, err)
@@ -521,7 +620,7 @@ func handleTraceRoute(target string, maxTTL int) (interface{}, error) {
 	return result, nil
 }
 
-func handleGetConnections() (interface{}, error) {
+func (s *Server) handleGetConnections() (interface{}, error) {
 	conns, err := netops.GetConnections()
 	if err != nil {
 		return nil, fmt.Errorf("get connections: %w", err)
@@ -529,16 +628,14 @@ func handleGetConnections() (interface{}, error) {
 	return conns, nil
 }
 
-func handleGetNetworkHealth() (interface{}, error) {
+func (s *Server) handleGetNetworkHealth() (interface{}, error) {
 	// RunNetworkHealthCheck returns a value type (no error).
 	return netops.RunNetworkHealthCheck(), nil
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-// Security Tool Handlers
-// ══════════════════════════════════════════════════════════════════════════
+// ── Security Tool Handlers ──────────────────────────────────────────────────
 
-func handleGetFirewallRules() (interface{}, error) {
+func (s *Server) handleGetFirewallRules() (interface{}, error) {
 	rules, err := secops.GetFirewallRules()
 	if err != nil {
 		return nil, fmt.Errorf("get firewall rules: %w", err)
@@ -546,7 +643,7 @@ func handleGetFirewallRules() (interface{}, error) {
 	return rules, nil
 }
 
-func handleGetListeningPorts() (interface{}, error) {
+func (s *Server) handleGetListeningPorts() (interface{}, error) {
 	ports, err := secops.GetListeningPorts()
 	if err != nil {
 		return nil, fmt.Errorf("get listening ports: %w", err)
@@ -554,7 +651,7 @@ func handleGetListeningPorts() (interface{}, error) {
 	return ports, nil
 }
 
-func handleGetDefenderStatus() (interface{}, error) {
+func (s *Server) handleGetDefenderStatus() (interface{}, error) {
 	status, err := secops.GetDefenderStatus()
 	if err != nil {
 		return nil, fmt.Errorf("get defender status: %w", err)
@@ -562,7 +659,7 @@ func handleGetDefenderStatus() (interface{}, error) {
 	return status, nil
 }
 
-func handleRunSecurityAudit() (interface{}, error) {
+func (s *Server) handleRunSecurityAudit() (interface{}, error) {
 	result, err := secops.RunSecurityAuditChecklist()
 	if err != nil {
 		return nil, fmt.Errorf("security audit: %w", err)
@@ -570,7 +667,7 @@ func handleRunSecurityAudit() (interface{}, error) {
 	return result, nil
 }
 
-func handleGetFailedLogins() (interface{}, error) {
+func (s *Server) handleGetFailedLogins() (interface{}, error) {
 	logins, err := secops.GetFailedLogins()
 	if err != nil {
 		return nil, fmt.Errorf("get failed logins: %w", err)
@@ -578,31 +675,29 @@ func handleGetFailedLogins() (interface{}, error) {
 	return logins, nil
 }
 
-func handleGetSecuritySummary() (interface{}, error) {
+func (s *Server) handleGetSecuritySummary() (interface{}, error) {
 	// GetSecuritySummary returns a value type (no error).
 	return secops.GetSecuritySummary(), nil
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-// Storage / Database Handlers
-// ══════════════════════════════════════════════════════════════════════════
+// ── Storage / Database Handlers ──────────────────────────────────────────────
 
-func getStorageOrError() (*common.Storage, error) {
-	s := common.GetStorage()
-	if s == nil {
+func (s *Server) getStorageOrError() (*common.Storage, error) {
+	storage := common.GetStorage()
+	if storage == nil {
 		return nil, fmt.Errorf("storage not initialized")
 	}
-	return s, nil
+	return storage, nil
 }
 
-func handleQueryMetricHistory(metric string, limit int) (interface{}, error) {
-	s, err := getStorageOrError()
+func (s *Server) handleQueryMetricHistory(metric string, limit int) (interface{}, error) {
+	storage, err := s.getStorageOrError()
 	if err != nil {
 		return nil, err
 	}
 
 	// Also fetch timestamps if available for richer output
-	values, err := s.GetMetricHistory(metric, limit)
+	values, err := storage.GetMetricHistory(metric, limit)
 	if err != nil {
 		return nil, fmt.Errorf("query metric %s: %w", metric, err)
 	}
@@ -613,36 +708,36 @@ func handleQueryMetricHistory(metric string, limit int) (interface{}, error) {
 	}, nil
 }
 
-func handleQueryEvents(category, level string, limit int) (interface{}, error) {
-	s, err := getStorageOrError()
+func (s *Server) handleQueryEvents(category, level string, limit int) (interface{}, error) {
+	storage, err := s.getStorageOrError()
 	if err != nil {
 		return nil, err
 	}
-	events, err := s.QueryEvents(category, level, limit, 0)
+	events, err := storage.QueryEvents(category, level, limit, 0)
 	if err != nil {
 		return nil, fmt.Errorf("query events: %w", err)
 	}
 	return events, nil
 }
 
-func handleQueryLogs(level, search string, limit int) (interface{}, error) {
-	s, err := getStorageOrError()
+func (s *Server) handleQueryLogs(level, search string, limit int) (interface{}, error) {
+	storage, err := s.getStorageOrError()
 	if err != nil {
 		return nil, err
 	}
-	entries, err := s.QueryLogs(level, search, limit)
+	entries, err := storage.QueryLogs(level, search, limit)
 	if err != nil {
 		return nil, fmt.Errorf("query logs: %w", err)
 	}
 	return entries, nil
 }
 
-func handleQueryAlerts(limit int) (interface{}, error) {
-	s, err := getStorageOrError()
+func (s *Server) handleQueryAlerts(limit int) (interface{}, error) {
+	storage, err := s.getStorageOrError()
 	if err != nil {
 		return nil, err
 	}
-	alerts, err := s.QueryAlertHistory(limit)
+	alerts, err := storage.QueryAlertHistory(limit)
 	if err != nil {
 		return nil, fmt.Errorf("query alerts: %w", err)
 	}

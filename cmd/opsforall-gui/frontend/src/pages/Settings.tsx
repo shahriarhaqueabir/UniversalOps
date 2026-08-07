@@ -240,10 +240,12 @@ export function Settings() {
     pingCount,
     dnsTimeout,
     companionName,
+    autoEcoMode,
     setRefreshInterval,
     setPingCount,
     setDnsTimeout,
     setCompanionName,
+    setAutoEcoMode,
   } = useSettingsStore()
 
   const { stagedChanges, stageChange, stageBatch } = useConfigStore()
@@ -567,6 +569,24 @@ export function Settings() {
 
                 <div className="h-px bg-[var(--color-border)]/50 my-4" />
 
+                <SettingRow label="Auto Eco-Mode" description="Throttles telemetry to preserve battery when discharging">
+                  <button
+                    onClick={() => stageChange('autoEcoMode', !getVal('autoEcoMode', autoEcoMode))}
+                    className={cn(
+                      "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none",
+                      getVal('autoEcoMode', autoEcoMode) ? "bg-accent" : "bg-[var(--color-panel-3)] border border-[var(--color-border)]",
+                      stagedChanges.has('autoEcoMode') && "ring-2 ring-accent ring-offset-2 ring-offset-[var(--color-bg)]"
+                    )}
+                  >
+                    <span className={cn(
+                      "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                      getVal('autoEcoMode', autoEcoMode) ? "translate-x-6" : "translate-x-1"
+                    )} />
+                  </button>
+                </SettingRow>
+
+                <div className="h-px bg-[var(--color-border)]/50 my-4" />
+
                 <p className="text-[10px] font-black text-[var(--color-text-faint)] uppercase tracking-widest mb-3">Active Collectors</p>
                 <CollectorList call={call} />
               </div>
@@ -847,6 +867,7 @@ export function Settings() {
           setPingCount(DEFAULT_SETTINGS.pingCount)
           setDnsTimeout(DEFAULT_SETTINGS.dnsTimeout)
           setCompanionName('Hawk')
+          setAutoEcoMode(true)
           call('PipelineAPI.UpdateSettings', DEFAULT_SETTINGS.refreshInterval, 0, DEFAULT_SETTINGS.pingCount, DEFAULT_SETTINGS.dnsTimeout)
           toast.success('All settings reset')
         }}

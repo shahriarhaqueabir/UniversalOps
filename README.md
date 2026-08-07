@@ -7,8 +7,11 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-2ea44f?style=flat-square" alt="License">
   </a>
-  <a href="https://github.com/shahriarhaqueabir/UniversalOps/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/shahriarhaqueabir/UniversalOps/.github/workflows/test.yml?branch=main&style=flat-square&label=CI" alt="CI">
+  <a href="https://github.com/shahriarhaqueabir/UniversalOps/actions/workflows/test.yml">
+    <img src="https://github.com/shahriarhaqueabir/UniversalOps/actions/workflow/status/shahriarhaqueabir/UniversalOps/.github/workflows/test.yml?branch=main&style=flat-square&label=CI" alt="CI">
+  </a>
+  <a href="https://github.com/shahriarhaqueabir/UniversalOps/actions/workflows/codeql-analysis.yml">
+    <img src="https://github.com/shahriarhaqueabir/UniversalOps/actions/workflow/status/shahriarhaqueabir/UniversalOps/.github/workflows/codeql-analysis.yml?branch=main&style=flat-square&label=Security" alt="Security">
   </a>
   <a href="https://github.com/shahriarhaqueabir/UniversalOps/blob/main/go.mod">
     <img src="https://img.shields.io/github/go-mod/go-version/shahriarhaqueabir/UniversalOps?style=flat-square&label=Go" alt="Go">
@@ -32,7 +35,7 @@
 ### Key Capabilities
 
 - **System Observability:** Real-time metrics for CPU, memory, disk I/O, and process tracking.
-- **Network Diagnostics:** Integrated utilities for DNS resolution, ICMP ping, port scanning, and Whois lookups.
+- **Network Diagnostics:** Integrated utilities for DNS resolution, ICMP ping, port scanning, and visual socket topology.
 - **Security Auditing:** Live visibility into listening ports, active firewall rules, and process integrity checks.
 - **DevOps Tools:** Local management for Docker containers and execution tracking for CI/CD pipelines.
 - **Local AI Analysis:** Privacy-focused incident analysis, log parsing, and remediation suggestions powered by local LLMs via Ollama.
@@ -55,6 +58,7 @@
 |---|---|
 | 🖥️ **5 Operations Layers** | SysOps, NetOps, SecOps, DevOps, AIOps — unified single pane of glass |
 | ⚡ **Native Performance** | Go/Wails backend with sub-second telemetry — no network roundtrips |
+| 🛡️ **Enterprise Ready** | 100% private, zero telemetry, and [GDPR/HIPAA compliant design](docs/ENTERPRISE.md) |
 | 🔒 **100% Private** | Zero telemetry, zero cloud sync. All data stays on your machine |
 | 🤖 **Local AI (Hawk)** | Autonomous RCA via Ollama — no data ever leaves your hardware |
 | 🧪 **Battle-Tested** | 142 frontend tests + 7 Go packages — CI on Windows, Linux, macOS |
