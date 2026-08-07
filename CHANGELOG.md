@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.3] - 2026-08-07
+
+### Fixed
+
+- Hotfix release: the previous v1.6.2 binary reported v1.6.1 and carried pre-branding strings (built before the branding commit). v1.6.3 re-cuts the release so the downloadable "latest" build reports v1.6.3 with unified UniversalOps branding.
+
 ## [1.6.2] - 2026-08-07
 
 ### Added

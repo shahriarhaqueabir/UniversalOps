@@ -60,7 +60,7 @@ describe('Settings Page', () => {
     vi.clearAllMocks()
     vi.mocked(useQuery).mockImplementation(({ queryKey }: any) => {
       if (queryKey.includes('app-info')) {
-        return mockQueryReturn({ data: { name: 'UniversalOps', version: '1.6.2', go_version: 'go1.26', uptime: '1h' } })
+        return mockQueryReturn({ data: { name: 'UniversalOps', version: '1.6.3', go_version: 'go1.26', uptime: '1h' } })
       }
       if (queryKey.includes('alert-rules')) {
         return mockQueryReturn({ data: [] })

@@ -44,7 +44,7 @@ describe('Sidebar', () => {
   it('shows version footer', async () => {
     render(<Sidebar currentPage="dashboard" onNavigate={vi.fn()} />)
 
-    expect(await screen.findByText('UniversalOps v1.6.2')).toBeInTheDocument()
+    expect(await screen.findByText('UniversalOps v1.6.3')).toBeInTheDocument()
   })
 
   it('collapses and expands when toggle is clicked', () => {
