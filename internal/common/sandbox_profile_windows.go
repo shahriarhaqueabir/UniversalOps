@@ -37,7 +37,7 @@ func DeriveAppContainerSID(name string) (*windows.SID, error) {
 func EnsureAppContainerProfile(name, displayName string) (*windows.SID, error) {
 	namePtr, _ := windows.UTF16PtrFromString(name)
 	displayPtr, _ := windows.UTF16PtrFromString(displayName)
-	descPtr, _ := windows.UTF16PtrFromString("Isolated execution environment for Universal-Ops remediation tools.")
+	descPtr, _ := windows.UTF16PtrFromString("Isolated execution environment for UniversalOps remediation tools.")
 
 	var sid *windows.SID
 	r1, _, _ := procCreate.Call(

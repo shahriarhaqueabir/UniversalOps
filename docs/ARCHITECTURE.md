@@ -204,7 +204,7 @@ All telemetry and configuration are stored in `universalops.db` using Write-Ahea
 - **Retention**: Automated background pruning based on a configurable duration (default 7 days).
 
 ### 4. Local-First AI Integration
-Universal-Ops integrates with **Ollama** locally.
+UniversalOps integrates with **Ollama** locally.
 - **Consultative Partner**: Uses **MiniCPM5-1B-Thinking** for Chain-of-Thought (CoT) reasoning and Root Cause Analysis (RCA).
 - **Expanded Context**: A consistent **32k context window** allows for long-horizon analysis of system events and anomalies.
 - **Contextual Grounding**: Hawk is grounded via the Knowledge Layer, which receives real-time updates (last 100 samples) from the Engine Loop.

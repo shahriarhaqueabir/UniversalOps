@@ -1,6 +1,6 @@
-# Universal-Ops Testing Guide
+# UniversalOps Testing Guide
 
-Canonical reference for all testing practices, conventions, and infrastructure in the Universal-Ops project.
+Canonical reference for all testing practices, conventions, and infrastructure in the UniversalOps project.
 
 ---
 
@@ -233,7 +233,7 @@ Use snapshots for components that change infrequently (layout, navigation):
 
 ```tsx
 it('renders consistently', () => {
-  const { container } = render(<TopBar title="Universal-Ops" />)
+  const { container } = render(<TopBar title="UniversalOps" />)
   expect(container).toMatchSnapshot()
 })
 ```

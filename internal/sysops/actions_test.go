@@ -25,7 +25,7 @@ func TestActionErrorHint_AccessDenied(t *testing.T) {
 		{"defrag", ActionDefrag, "administrator privileges"},
 		{"restart_service", ActionRestartService, "administrator privileges"},
 		{"reboot default", ActionReboot, "administrator privileges"},
-		{"shutdown default", ActionShutdown, "Run Universal-Ops as Administrator"},
+		{"shutdown default", ActionShutdown, "Run UniversalOps as Administrator"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

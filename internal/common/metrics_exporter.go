@@ -41,7 +41,7 @@ func InitMetricsExporter(port int) {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"status":    "ok",
-				"app":       "Universal-Ops",
+				"app":       "UniversalOps",
 				"version":   "1.4.0",
 				"timestamp": time.Now().UTC().Format(time.RFC3339),
 				"port":      metricsPort,

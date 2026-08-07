@@ -1,5 +1,5 @@
 """
-UIA tree inspector for Universal-Ops WebView2 onboarding.
+UIA tree inspector for UniversalOps WebView2 onboarding.
 
 Usage:
     python tests/e2e/inspect_uia.py
@@ -36,7 +36,7 @@ APP_PATH = os.environ.get(
         "..", "..", "build", "bin", "universal-ops.exe",
     ),
 )
-APP_TITLE = os.environ.get("APP_TITLE", "Universal-Ops Operations Platform")
+APP_TITLE = os.environ.get("APP_TITLE", "UniversalOps Operations Platform")
 
 
 # ── helpers ─────────────────────────────────────────────────────────

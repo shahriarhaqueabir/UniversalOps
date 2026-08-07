@@ -19,17 +19,17 @@ func actionErrorHint(action SystemAction, err error, output string) string {
 		strings.Contains(lower, "required privilege") || strings.Contains(lower, "elevated") {
 		switch action {
 		case ActionFlushDNS:
-			return "DNS cache flush requires administrator privileges. Run Universal-Ops as Administrator."
+			return "DNS cache flush requires administrator privileges. Run UniversalOps as Administrator."
 		case ActionClearTemp:
 			return "Clearing temp files needs administrator rights for some system folders. Run as Administrator."
 		case ActionDiskCleanup:
-			return "Disk Cleanup requires administrator privileges. Run Universal-Ops as Administrator."
+			return "Disk Cleanup requires administrator privileges. Run UniversalOps as Administrator."
 		case ActionDefrag:
-			return "Defragmentation requires administrator privileges. Run Universal-Ops as Administrator."
+			return "Defragmentation requires administrator privileges. Run UniversalOps as Administrator."
 		case ActionRestartService:
-			return "Restarting services requires administrator privileges. Run Universal-Ops as Administrator."
+			return "Restarting services requires administrator privileges. Run UniversalOps as Administrator."
 		default:
-			return "This action requires administrator privileges. Run Universal-Ops as Administrator."
+			return "This action requires administrator privileges. Run UniversalOps as Administrator."
 		}
 	}
 

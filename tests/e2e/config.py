@@ -1,4 +1,4 @@
-"""E2E test configuration for the current Universal-Ops navigation model."""
+"""E2E test configuration for the current UniversalOps navigation model."""
 
 import os
 
@@ -9,7 +9,7 @@ APP_PATH = os.environ.get(
         '..', '..', 'build', 'bin', 'universal-ops.exe',
     ),
 )
-APP_TITLE = os.environ.get('APP_TITLE', 'Universal-Ops Operations Platform')
+APP_TITLE = os.environ.get('APP_TITLE', 'UniversalOps Operations Platform')
 LAUNCH_TIMEOUT = int(os.environ.get('LAUNCH_TIMEOUT', '45'))
 ACTION_TIMEOUT = int(os.environ.get('ACTION_TIMEOUT', '15'))
 ARTIFACT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'artifacts')

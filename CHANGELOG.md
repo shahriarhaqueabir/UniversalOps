@@ -1,9 +1,25 @@
 # Changelog
 
-All notable changes to Universal-Ops will be documented in this file.
+All notable changes to UniversalOps will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [1.6.2] - 2026-08-07
+
+### Added
+
+- StepResult envelope + standardized result rendering across operational workflows.
+- Unified **UniversalOps** branding across the UI, docs, scripts, and repo metadata.
+
+### Fixed
+
+- Version constants bumped to v1.6.2 (`version.go`, `wails.json`, `package.json`, `install.ps1`).
+- Stale version references (README badge, sidebar footer, Settings defaults, test mocks).
+- `wails.json`: removed `wailsjsdir` override that broke frontend bindings.
+- CHANGELOG entry for the v1.6.2 release (commit `5ccf9b11`).
 
 ## [1.6.1] - 2026-08-06
 

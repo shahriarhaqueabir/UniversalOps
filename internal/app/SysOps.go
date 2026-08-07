@@ -612,7 +612,7 @@ func (s *SysOps) GetLHMStatus() LHMStatusResult {
 func (s *SysOps) GetLHMAuthorization() LHMAuthorization {
 	defer common.RecoverPanic()
 	return LHMAuthorization{
-		Reason: "Universal-Ops needs admin privileges to start LibreHardwareMonitor, " +
+		Reason: "UniversalOps needs admin privileges to start LibreHardwareMonitor, " +
 			"which reads low-level hardware sensor data (CPU temperature, GPU " +
 			"temperature, fan speeds, voltages). These sensors are restricted to " +
 			"admin-level processes by Windows for security reasons.",
@@ -625,7 +625,7 @@ func (s *SysOps) GetLHMAuthorization() LHMAuthorization {
 		Risks: []string{
 			"LibreHardwareMonitor will run as a hidden background process",
 			"It communicates only via local WMI — no network traffic",
-			"The process stops automatically when Universal-Ops closes",
+			"The process stops automatically when UniversalOps closes",
 		},
 		BinaryName: "LibreHardwareMonitor.exe",
 		Publisher:  "LibreHardwareMonitor Contributors (MPL-2.0)",

@@ -387,7 +387,7 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
                   <span className="text-[var(--color-accent)] italic">Professional.</span>
                 </h3>
                 <p className="text-[var(--color-text-dim)] text-base max-w-md mx-auto">
-                  Welcome to Universal-Ops. Let&apos;s configure your local operations environment.
+                  Welcome to UniversalOps. Let&apos;s configure your local operations environment.
                 </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">

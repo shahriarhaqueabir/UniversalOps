@@ -71,7 +71,7 @@ describe('AIOps Page', () => {
   it('shows ollama status', async () => {
     render(<AIOps />)
     expect(await screen.findByText(/Ollama Online/i)).toBeInTheDocument()
-    expect(await screen.findByText(/universalops/i)).toBeInTheDocument()
+    expect(await screen.findByText('universalops')).toBeInTheDocument()
   })
 
   it('switches to AI Insights tab', async () => {

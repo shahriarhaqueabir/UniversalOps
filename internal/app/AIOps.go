@@ -944,10 +944,10 @@ const (
 	qwen3_0_6B_Label = "Qwen3-0.6B"
 )
 
-// analystSystemPrompt is the shared system prompt for the Universal-Ops
+// analystSystemPrompt is the shared system prompt for the UniversalOps
 // System Analyst persona. Both SetupOllamaPersona and CreateOpsPersona
 // reference this constant so the prompt text cannot drift between code paths.
-const analystSystemPrompt = `You are the Universal-Ops System Analyst, a high-density technical co-pilot.
+const analystSystemPrompt = `You are the UniversalOps System Analyst, a high-density technical co-pilot.
 Objective: Synthesize complex telemetry into factual technical briefings.
 
 ### Operational Protocol
@@ -1085,7 +1085,7 @@ func (a *AIOps) SetupOllamaPersona(baseModel string) error {
 	modelfilePath := filepath.Join(a.dataDir, "universalops.modelfile")
 	modelfileContent := fmt.Sprintf(`FROM %s
 
-# System message for Universal-Ops System Analyst
+# System message for UniversalOps System Analyst
 SYSTEM """
 %s
 """
@@ -1184,7 +1184,7 @@ func (a *AIOps) CreateOpsPersona() error {
 		common.LogInfo("AIOps: universalops.modelfile missing in data/. Creating default (Qwythos-9B).")
 		content := fmt.Sprintf(`FROM %s
 
-# System message for Universal-Ops System Analyst
+# System message for UniversalOps System Analyst
 SYSTEM """
 %s
 """
@@ -1279,7 +1279,7 @@ func (a *AIOps) DetectAnomalies() []AnomalyInfo {
 func (a *AIOps) AskAI(ctx context.Context, prompt string) (string, error) {
 	defer common.RecoverPanic()
 	messages := []aiops.ChatMessage{
-		{Role: "system", Content: "You are the Universal-Ops AI assistant, an expert operations analyst. Be concise and specific."},
+		{Role: "system", Content: "You are the UniversalOps AI assistant, an expert operations analyst. Be concise and specific."},
 		{Role: "user", Content: prompt},
 	}
 	return aiops.ChatWithContext(ctx, messages)
@@ -1625,7 +1625,7 @@ If no changes are needed, return the current settings in the payload.`,
 
 	optStart := time.Now()
 	resp, err := aiops.ChatWithModelAndContext(optCtx, []aiops.ChatMessage{
-		{Role: "system", Content: "You are the Universal-Ops Engine Optimizer. Output JSON only."},
+		{Role: "system", Content: "You are the UniversalOps Engine Optimizer. Output JSON only."},
 		{Role: "user", Content: prompt},
 	}, a.OptimizerModel)
 	optElapsed := time.Since(optStart)
@@ -1732,7 +1732,7 @@ Keep it technical and focused on system/network/security ops.`, objective)
 
 	// Use OptimizerModel for structured planning if available
 	resp, err := aiops.ChatWithModelAndContext(a.ctx, []aiops.ChatMessage{
-		{Role: "system", Content: "You are the Universal-Ops Workflow Architect. Output JSON only."},
+		{Role: "system", Content: "You are the UniversalOps Workflow Architect. Output JSON only."},
 		{Role: "user", Content: prompt},
 	}, a.OptimizerModel)
 

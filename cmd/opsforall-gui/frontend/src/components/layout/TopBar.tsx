@@ -78,7 +78,7 @@ export function TopBar({ currentPage, onToggleHawk }: TopBarProps) {
             <ArrowLeft size={16} />
           </button>
         )}
-        <span className="text-[var(--color-text-faint)]">Universal-Ops</span>
+        <span className="text-[var(--color-text-faint)]">UniversalOps</span>
         <span className="text-[var(--color-text-faint)] text-[10px]">/</span>
         <span className="text-[var(--color-text)] font-medium" title={pageMeta.description}>
           {pageMeta.title}

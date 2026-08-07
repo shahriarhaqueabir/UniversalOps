@@ -11,7 +11,7 @@ describe('Sidebar', () => {
     const onNavigate = vi.fn()
     render(<Sidebar currentPage="dashboard" onNavigate={onNavigate} />)
 
-    expect(screen.getByText('UNIVERSAL-OPS')).toBeInTheDocument()
+    expect(screen.getByText('UNIVERSALOPS')).toBeInTheDocument()
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
     expect(screen.getByText('System Ops')).toBeInTheDocument()
     expect(screen.getByText('Workflow Library')).toBeInTheDocument()
@@ -41,10 +41,10 @@ describe('Sidebar', () => {
     expect(onNavigate).toHaveBeenCalledWith('logs')
   })
 
-  it('shows version footer', () => {
+  it('shows version footer', async () => {
     render(<Sidebar currentPage="dashboard" onNavigate={vi.fn()} />)
 
-    expect(screen.getByText('Universal-Ops v1.3.1')).toBeInTheDocument()
+    expect(await screen.findByText('UniversalOps v1.6.2')).toBeInTheDocument()
   })
 
   it('collapses and expands when toggle is clicked', () => {

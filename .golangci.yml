@@ -1,4 +1,4 @@
-# golangci-lint configuration for Universal-Ops (Pragmatic Edition)
+# golangci-lint configuration for UniversalOps (Pragmatic Edition)
 # Docs: https://golangci-lint.run/usage/configuration/
 
 run:

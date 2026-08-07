@@ -8,7 +8,7 @@ try {
     $Version = $latest.tag_name -replace '^v', ''
 } catch {
     Write-Host "Could not fetch latest version. Falling back to default." -ForegroundColor Yellow
-    $Version = "1.6.0"
+    $Version = "1.6.2"
 }
 
 # Asset name matches release.yml CI output (lowercase, no v prefix)

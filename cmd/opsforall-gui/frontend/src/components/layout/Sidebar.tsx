@@ -19,6 +19,7 @@ import {
 import { type Page } from '../../stores'
 import { cn } from '../../lib/utils'
 import { preloadPage } from '@/lib/pageRegistry'
+import { useBackend } from '../../hooks/useBackend'
 
 interface NavItem {
   id: Page
@@ -69,6 +70,23 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
     }
   }, [collapsed])
 
+  const [appVersion, setAppVersion] = useState('')
+  const { call } = useBackend()
+
+  useEffect(() => {
+    let cancelled = false
+    call('App.GetAppInfo')
+      .then((r) => {
+        if (!cancelled) setAppVersion((r as { version?: string })?.version ?? '')
+      })
+      .catch(() => {
+        if (!cancelled) setAppVersion('')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [call])
+
   const getItemLabel = (item: NavItem) => (
     item.shortcut ? `${item.label} (shortcut ${item.shortcut})` : item.label
   )
@@ -104,7 +122,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         {!collapsed && (
           <div className="flex flex-col min-w-0 flex-1 wails-no-drag">
             <span className="font-bold text-lg tracking-wider text-[var(--color-text)] truncate">
-              UNIVERSAL-OPS
+              UNIVERSALOPS
             </span>
             <span className="text-xs text-[var(--color-text-faint)] truncate leading-tight uppercase font-medium">
               The all-in-one Operations dashboard
@@ -224,7 +242,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
 
       {/* Footer */}
       <div className="px-3 pb-4 pt-1 wails-no-drag">
-        <p className="text-[11px] text-[var(--color-text-faint)]">Universal-Ops v1.3.1</p>
+        <p className="text-[11px] text-[var(--color-text-faint)]">UniversalOps{appVersion ? ` v${appVersion}` : ''}</p>
       </div>
     </aside>
   )

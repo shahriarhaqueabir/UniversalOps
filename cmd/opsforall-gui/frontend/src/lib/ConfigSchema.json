@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "universalops-config-schema",
-  "title": "Universal-Ops Configuration Schema",
+  "title": "UniversalOps Configuration Schema",
   "description": "Validates staged config changes in useConfigStore before deployment.",
   "type": "object",
   "properties": {

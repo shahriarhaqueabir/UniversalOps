@@ -2,7 +2,7 @@ param(
     [string]$Version,
     [string]$Sha256 = ""
 )
-# Generates a Scoop manifest for Universal-Ops.
+# Generates a Scoop manifest for UniversalOps.
 # Usage (from repo root, pwsh):
 #   & scripts/package-scoop.ps1 -Version v1.5.0 -Sha256 <real-sha256-of-exe>
 # Accepts "v1.5.0" (git tag) or "1.5.0". The release download URL uses the tag (with v),

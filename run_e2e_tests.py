@@ -27,10 +27,10 @@ if not app_path:
     app_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "build", "bin", "universal-ops.exe")
 
 os.environ["APP_PATH"] = app_path
-os.environ["APP_TITLE"] = os.environ.get("APP_TITLE", "Universal-Ops Operations Platform")
+os.environ["APP_TITLE"] = os.environ.get("APP_TITLE", "UniversalOps Operations Platform")
 
 if __name__ == "__main__":
-    print("--- Starting Universal-Ops E2E Tests ---")
+    print("--- Starting UniversalOps E2E Tests ---")
     print(f"App Path: {os.environ['APP_PATH']}")
 
     if not os.path.exists(os.environ['APP_PATH']):

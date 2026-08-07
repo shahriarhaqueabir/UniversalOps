@@ -1,4 +1,4 @@
-"""E2E tests: tab navigation across all sections of Universal-Ops.
+"""E2E tests: tab navigation across all sections of UniversalOps.
 
 Tests use the conftest.py app() fixture (isolated data dirs per test).
 """

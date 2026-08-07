@@ -15,7 +15,7 @@ func NewLogs() *Logs {
 	return &Logs{}
 }
 
-// GetLogs returns filtered log entries from the Universal-Ops database.
+// GetLogs returns filtered log entries from the UniversalOps database.
 func (l *Logs) GetLogs(level string, since string, n int) []LogEntry {
 	defer common.RecoverPanic()
 	if n <= 0 {

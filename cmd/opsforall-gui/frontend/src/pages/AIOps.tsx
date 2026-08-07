@@ -776,11 +776,11 @@ function ChatTab() {
         if (!cancelled && msgs && msgs.length > 0) {
           setMessages(msgs)
         } else if (!cancelled) {
-          setMessages([{ role: 'assistant', content: 'Greetings. I am the Universal-Ops AI Analyst. I have analyzed your system metrics and identified several areas for potential optimization. How can I assist you today?' }])
+          setMessages([{ role: 'assistant', content: 'Greetings. I am the UniversalOps AI Analyst. I have analyzed your system metrics and identified several areas for potential optimization. How can I assist you today?' }])
         }
       } catch { /* ignore */
         if (!cancelled) {
-          setMessages([{ role: 'assistant', content: 'Greetings. I am the Universal-Ops AI Analyst. I have analyzed your system metrics and identified several areas for potential optimization. How can I assist you today?' }])
+          setMessages([{ role: 'assistant', content: 'Greetings. I am the UniversalOps AI Analyst. I have analyzed your system metrics and identified several areas for potential optimization. How can I assist you today?' }])
         }
       } finally {
         if (!cancelled) setLoaded(true)

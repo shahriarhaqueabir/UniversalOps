@@ -1,6 +1,6 @@
 ---
 name: Pull Request
-about: Submit changes to Universal-Ops
+about: Submit changes to UniversalOps
 title: "[PR] "
 labels: []
 assignees: ''

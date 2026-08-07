@@ -103,7 +103,7 @@ Currently, UniversalOps
 
 ### Theming
 - Use the **Theme Toggle** button in the TopBar to switch between **Dark** and **Light** modes.
-- Universal-Ops uses a "Squib" design system with fluid CSS variables, adapting its palette for optimal readability and focus.
+- UniversalOps uses a "Squib" design system with fluid CSS variables, adapting its palette for optimal readability and focus.
 
 ### Refresh Interval
 The dashboard refreshes every 3 seconds by default. This can be configured in the **Settings** page, allowing you to balance data granularity with system overhead.
@@ -114,4 +114,4 @@ The dashboard refreshes every 3 seconds by default. This can be configured in th
 
 - **AI Ops not responding**: Ensure Ollama is running and you have initialized the substrate (`ollama create universalops -f Modelfile`).
 - **Permission Denied (SecOps)**: Some security checks (like firewall rules) require Administrator/Sudo privileges.
-- **High CPU usage by Universal-Ops**: This can happen if the refresh interval is set too low (e.g., < 500ms).
+- **High CPU usage by UniversalOps**: This can happen if the refresh interval is set too low (e.g., < 500ms).

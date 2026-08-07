@@ -18,7 +18,7 @@ Go to the **[Releases page](https://github.com/shahriarhaqueabir/UniversalOps/re
 **Installer version:** Double-click the installer and follow the prompts.
 
 ### 3. (Optional) Install Extras
-Universal-Ops works out of the box, but for extra features:
+UniversalOps works out of the box, but for extra features:
 
 | Extra | What it adds | How to get it |
 |-------|-------------|---------------|

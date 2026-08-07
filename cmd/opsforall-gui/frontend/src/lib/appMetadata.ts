@@ -1,6 +1,6 @@
 import type { Page } from '@/stores'
 
-export const APP_NAME = 'Universal-Ops'
+export const APP_NAME = 'UniversalOps'
 export const APP_DESCRIPTION = 'High-performance native operations platform for systems, network, security, and AI operations.'
 const THEME_COLOR: Record<'dark' | 'light', string> = {
   dark: '#080a0f',

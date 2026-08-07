@@ -1,4 +1,4 @@
-# Universal-Ops — Development Standards
+# UniversalOps — Development Standards
 
 ## Go Conventions (Backend)
 

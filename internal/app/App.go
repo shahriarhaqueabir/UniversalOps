@@ -283,7 +283,7 @@ func (a *App) Startup(ctx context.Context) {
 	a.PipelineAPI.LoadSettings()
 	a.AIOps.LoadModels()
 
-	common.LogInfo("Universal-Ops initialized in self-contained mode (portable)")
+	common.LogInfo("UniversalOps initialized in self-contained mode (portable)")
 
 	// Initialize System Knowledge Layer (linked to Pipeline for consistency)
 	common.InitKnowledge(a.pipeline)
@@ -322,7 +322,7 @@ func (a *App) Startup(ctx context.Context) {
 
 // Shutdown is called by Wails when the application shuts down.
 func (a *App) Shutdown(ctx context.Context) {
-	common.LogInfo("Universal-Ops shutting down")
+	common.LogInfo("UniversalOps shutting down")
 
 	// Start bundled LHM before general process cleanup
 	common.GetLHMManager().Stop()

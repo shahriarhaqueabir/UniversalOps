@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://github.com/shahriarhaqueabir/UniversalOps/releases">
-    <img src="https://img.shields.io/badge/version-v1.6.0-7c6cff?style=flat-square" alt="Version">
+    <img src="https://img.shields.io/badge/version-v1.6.2-7c6cff?style=flat-square" alt="Version">
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-2ea44f?style=flat-square" alt="License">
@@ -44,7 +44,7 @@
 ### Tech Stack
 | **Component** | **Technology** |
 |---|---|
-| **Backend & System APIs** | Go 1.22+ |
+| **Backend & System APIs** | Go 1.26+ |
 | **Desktop Runtime** | Wails v2 |
 | **Frontend** | React 19, TypeScript, TailwindCSS |
 | **Persistence** | SQLite |
@@ -61,7 +61,7 @@
 | 🛡️ **Enterprise Ready** | 100% private, zero telemetry, and [GDPR/HIPAA compliant design](docs/ENTERPRISE.md) |
 | 🔒 **100% Private** | Zero telemetry, zero cloud sync. All data stays on your machine |
 | 🤖 **Local AI (Hawk)** | Autonomous RCA via Ollama — no data ever leaves your hardware |
-| 🧪 **Battle-Tested** | 142 frontend tests + 7 Go packages — CI on Windows |
+| 🧪 **Battle-Tested** | 225 frontend tests + 7 Go packages — CI on Windows |
 | 📦 **One-Click Install** | PowerShell one-liner or Windows Installer — running in under 60 seconds |
 
 ---
@@ -192,7 +192,7 @@ flowchart TD
 
 | Metric | Status |
 |--------|--------|
-| **Frontend Tests** | 188 tests across 26 files (Vitest + React Testing Library) |
+| **Frontend Tests** | 225 tests across 30 files (Vitest + React Testing Library) |
 | **Backend Tests** | 7 Go packages — `internal/{app,common,sysops,netops,secops,devops,aiops}` |
 | **CI Matrix** | Windows — every push to `main` and `develop` |
 | **TypeScript** | Strict mode — `tsc -b` clean (build mode; root tsconfig is project references) |

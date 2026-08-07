@@ -1,8 +1,8 @@
-# Onboarding Guide: Universal-Ops
+# Onboarding Guide: UniversalOps
  Operations Platform
 
 ## Overview
-Universal-Ops
+UniversalOps
  is a high-performance, local-first operations platform designed for system administrators, security analysts, and DevOps engineers. It provides real-time telemetry across five specialized layers (Sys, Net, Sec, Dev, AI) using a Go-based backend and a React-based GUI via Wails.
 
 ## Tech Stack
@@ -15,7 +15,7 @@ Universal-Ops
 | Monitoring | gopsutil/v4 | v4.x |
 
 ## Architecture
-Universal-Ops
+UniversalOps
  follows a **Modular Monolith** architecture with a **Facade-Bridge** pattern:
 1. **Core Modules** (`internal/*ops/`): Pure domain logic, platform-specific implementations, and high-performance collection.
 2. **Common Layer** (`internal/common/`): Shared infrastructure including the Time-Series Data Pipeline, Alert Engine, and Persistent Storage.

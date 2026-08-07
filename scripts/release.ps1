@@ -9,7 +9,7 @@ $Targets = @(
     @{ Platform = "darwin/universal"; Ext = "" }
 )
 
-Write-Host "Building Universal-Ops v$Version..." -ForegroundColor Cyan
+Write-Host "Building UniversalOps v$Version..." -ForegroundColor Cyan
 
 foreach ($target in $Targets) {
     Write-Host "Building for $($target.Platform)..."

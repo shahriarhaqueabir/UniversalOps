@@ -132,14 +132,14 @@ function App() {
       try {
         if ('Notification' in window) {
           if (Notification.permission === 'granted') {
-            new Notification('Universal-Ops: Critical Alert', {
+            new Notification('UniversalOps: Critical Alert', {
               body: msg,
               tag: `alert-${alert.id}`,
             })
           } else if (Notification.permission !== 'denied') {
             Notification.requestPermission().then((perm) => {
               if (perm === 'granted') {
-                new Notification('Universal-Ops: Critical Alert', {
+                new Notification('UniversalOps: Critical Alert', {
                   body: msg,
                   tag: `alert-${alert.id}`,
                 })

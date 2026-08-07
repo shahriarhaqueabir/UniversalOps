@@ -23,7 +23,7 @@ If applicable, add screenshots to help explain your problem.
 
 **Environment (please complete the following information):**
 - OS: [e.g. Windows 11]
-- Version: [e.g. v1.3.1]
+- Version: [e.g. v1.6.2]
 - Hardware: [e.g. NVIDIA RTX 3060, 16GB RAM]
 - External Dependencies installed: [e.g. Ollama, LibreHardwareMonitor]
 

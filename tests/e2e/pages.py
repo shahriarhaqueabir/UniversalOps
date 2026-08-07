@@ -162,7 +162,7 @@ class MainWindow(BasePage):
         """Click a top-level navigation tab."""
         if os.environ.get("E2E_ENABLE_UIA_DOM") != "1":
             pytest.skip("WebView2 DOM automation is opt-in; run browser-level E2E with E2E_ENABLE_UIA_DOM=1")
-        webview = self.app.window(title="Universal-Ops - Web content", control_type="Pane")
+        webview = self.app.window(title="UniversalOps - Web content", control_type="Pane")
         if webview.exists(timeout=1):
             exposed = [c for c in webview.descendants() if c.element_info.control_type in ("Button", "TabItem")]
             if not exposed:
