@@ -474,11 +474,11 @@ func (a *App) GetBaselineSnapshot() (*BaselineSnapshot, error) {
 }
 
 type StateDrift struct {
-	Category string   `json:"category"`
-	Key      string   `json:"key"`
-	Before   string   `json:"before"`
-	After    string   `json:"after"`
-	Severity string   `json:"severity"` // "info", "warning", "critical"
+	Category string `json:"category"`
+	Key      string `json:"key"`
+	Before   string `json:"before"`
+	After    string `json:"after"`
+	Severity string `json:"severity"` // "info", "warning", "critical"
 }
 
 // CompareCurrentAgainstBaseline returns a list of differences between current state and saved baseline.
@@ -525,15 +525,17 @@ func (a *App) CompareCurrentAgainstBaseline() ([]StateDrift, error) {
 	// Check for removals
 	nowMap := make(map[common.CapabilityID]bool)
 	for _, c := range nowCaps {
-		if c.Available { nowMap[c.ID] = true }
+		if c.Available {
+			nowMap[c.ID] = true
+		}
 	}
 	for _, c := range oldCaps {
 		if c.Available && !nowMap[c.ID] {
 			drifts = append(drifts, StateDrift{
 				Category: "Software",
-				Key: string(c.ID),
-				Before: "Available",
-				After: "Not Found",
+				Key:      string(c.ID),
+				Before:   "Available",
+				After:    "Not Found",
 				Severity: "warning",
 			})
 		}
