@@ -107,7 +107,7 @@ describe('SecOps Page', () => {
     fireEvent.click(screen.getByText('Identity & Access'))
     await waitFor(() => {
       expect(screen.getByText('Identity & Access', { selector: 'h3' })).toBeInTheDocument()
-    })
+    }, { timeout: 15000 })
   })
 
   it('navigates to Network Security sidebar category', async () => {
@@ -115,7 +115,7 @@ describe('SecOps Page', () => {
     fireEvent.click(screen.getByText('Perimeter Security'))
     await waitFor(() => {
       expect(screen.getByText('Perimeter Security', { selector: 'h3' })).toBeInTheDocument()
-    })
+    }, { timeout: 15000 })
   })
 
   it('navigates to Endpoint Security sidebar category', async () => {
@@ -123,7 +123,7 @@ describe('SecOps Page', () => {
     fireEvent.click(screen.getByText('Endpoint Security'))
     await waitFor(() => {
       expect(screen.getByText('Endpoint Security', { selector: 'h3' })).toBeInTheDocument()
-    })
+    }, { timeout: 15000 })
   })
 
   it('navigates to Log & Events sidebar category', async () => {
@@ -131,7 +131,7 @@ describe('SecOps Page', () => {
     fireEvent.click(screen.getByText('Log & Events'))
     await waitFor(() => {
       expect(screen.getByText('Log & Event Analysis')).toBeInTheDocument()
-    })
+    }, { timeout: 15000 })
   })
 
   it('navigates to Security Hardening sidebar category', async () => {

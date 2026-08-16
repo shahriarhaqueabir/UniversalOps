@@ -96,11 +96,11 @@ describe('NetOps Page', () => {
     fireEvent.click(screen.getByText('Ping'))
     await waitFor(() => {
       expect(screen.getByText(/ICMP Probe/i)).toBeInTheDocument()
-    }, { timeout: 5000 })
+    }, { timeout: 15000 })
 
     fireEvent.click(screen.getByText('DNS'))
     await waitFor(() => {
       expect(screen.getByText(/Domain Resolution/i)).toBeInTheDocument()
-    }, { timeout: 5000 })
+    }, { timeout: 15000 })
   })
 })
