@@ -287,6 +287,11 @@ func RunCommandWithLiveOutput(cmd string, output chan string) (result *ShellResu
 		return nil, startErr
 	}
 
+	// M3: done unblocks the reader goroutines if the consumer abandons the
+	// output channel (see the grace-period wait below). Without it, an
+	// unbuffered send blocks forever and wg.Wait() hangs the caller.
+	done := make(chan struct{})
+
 	var wg sync.WaitGroup
 	wg.Add(2)
 
@@ -298,7 +303,11 @@ func RunCommandWithLiveOutput(cmd string, output chan string) (result *ShellResu
 		for scanner.Scan() {
 			line := scanner.Text()
 			stdoutBuf.WriteString(line + "\n")
-			output <- line
+			select {
+			case output <- line:
+			case <-done:
+				return
+			}
 		}
 	}()
 
@@ -310,12 +319,33 @@ func RunCommandWithLiveOutput(cmd string, output chan string) (result *ShellResu
 		for scanner.Scan() {
 			line := scanner.Text()
 			stderrBuf.WriteString(line + "\n")
-			output <- line
+			select {
+			case output <- line:
+			case <-done:
+				return
+			}
 		}
 	}()
 
 	waitErr := c.Wait()
-	wg.Wait()
+
+	// Wait for the readers to drain the pipes. If the consumer abandoned the
+	// output channel, the readers block on send — unblock them via done after
+	// a short grace period instead of hanging forever. In the normal case the
+	// pipes EOF immediately after the process exits, so this returns at once
+	// and no lines are dropped.
+	readerDone := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(readerDone)
+	}()
+
+	select {
+	case <-readerDone:
+	case <-time.After(2 * time.Second):
+		close(done)
+		<-readerDone
+	}
 	close(output)
 
 	exitCode := 0
@@ -502,6 +532,10 @@ func RunPowerShellWithLiveOutput(cmd string, output chan string) (result *ShellR
 		return nil, startErr
 	}
 
+	// M3: done unblocks the reader goroutines if the consumer abandons the
+	// output channel (see the grace-period wait below).
+	done := make(chan struct{})
+
 	var wg sync.WaitGroup
 	wg.Add(2)
 
@@ -512,7 +546,11 @@ func RunPowerShellWithLiveOutput(cmd string, output chan string) (result *ShellR
 		for scanner.Scan() {
 			line := stripANSI(scanner.Text())
 			stdoutBuf.WriteString(line + "\n")
-			output <- line
+			select {
+			case output <- line:
+			case <-done:
+				return
+			}
 		}
 	}()
 
@@ -523,12 +561,31 @@ func RunPowerShellWithLiveOutput(cmd string, output chan string) (result *ShellR
 		for scanner.Scan() {
 			line := stripANSI(scanner.Text())
 			stderrBuf.WriteString(line + "\n")
-			output <- line
+			select {
+			case output <- line:
+			case <-done:
+				return
+			}
 		}
 	}()
 
 	waitErr := c.Wait()
-	wg.Wait()
+
+	// Wait for the readers to drain the pipes. If the consumer abandoned the
+	// output channel, the readers block on send — unblock them via done after
+	// a short grace period instead of hanging forever.
+	readerDone := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(readerDone)
+	}()
+
+	select {
+	case <-readerDone:
+	case <-time.After(2 * time.Second):
+		close(done)
+		<-readerDone
+	}
 	close(output)
 
 	exitCode := 0
@@ -580,6 +637,10 @@ func RunGitBashWithLiveOutput(cmd string, output chan string) (result *ShellResu
 		return nil, startErr
 	}
 
+	// M3: done unblocks the reader goroutines if the consumer abandons the
+	// output channel (see the grace-period wait below).
+	done := make(chan struct{})
+
 	var wg sync.WaitGroup
 	wg.Add(2)
 
@@ -590,7 +651,11 @@ func RunGitBashWithLiveOutput(cmd string, output chan string) (result *ShellResu
 		for scanner.Scan() {
 			line := scanner.Text()
 			stdoutBuf.WriteString(line + "\n")
-			output <- line
+			select {
+			case output <- line:
+			case <-done:
+				return
+			}
 		}
 	}()
 
@@ -601,12 +666,31 @@ func RunGitBashWithLiveOutput(cmd string, output chan string) (result *ShellResu
 		for scanner.Scan() {
 			line := scanner.Text()
 			stderrBuf.WriteString(line + "\n")
-			output <- line
+			select {
+			case output <- line:
+			case <-done:
+				return
+			}
 		}
 	}()
 
 	waitErr := c.Wait()
-	wg.Wait()
+
+	// Wait for the readers to drain the pipes. If the consumer abandoned the
+	// output channel, the readers block on send — unblock them via done after
+	// a short grace period instead of hanging forever.
+	readerDone := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(readerDone)
+	}()
+
+	select {
+	case <-readerDone:
+	case <-time.After(2 * time.Second):
+		close(done)
+		<-readerDone
+	}
 	close(output)
 
 	exitCode := 0

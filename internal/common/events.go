@@ -106,6 +106,9 @@ func (eb *EventBus) Subscribe(h EventHandler) func() {
 }
 
 // Emit publishes an event to all subscribers and stores it in the ring buffer.
+// M2: handlers are dispatched asynchronously (fire-and-forget) so a slow
+// subscriber (e.g. synchronous SQLite write) does not block the emitter's
+// critical path. Each handler runs in its own goroutine with RecoverPanic.
 func (eb *EventBus) Emit(evt TimelineEvent) {
 	eb.mu.Lock()
 
@@ -121,9 +124,13 @@ func (eb *EventBus) Emit(evt TimelineEvent) {
 	copy(handlers, eb.handlers)
 	eb.mu.Unlock()
 
-	// Notify outside lock
+	// Notify outside lock — each handler in its own goroutine so a slow
+	// subscriber (DB write) cannot stall the emitter (engine tick).
 	for _, h := range handlers {
-		h(evt)
+		go func(handler EventHandler) {
+			defer RecoverPanic()
+			handler(evt)
+		}(h)
 	}
 }
 

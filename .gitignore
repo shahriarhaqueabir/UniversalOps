@@ -76,6 +76,10 @@ docs/superpowers/
 plans/
 tests/e2e/artifacts/
 
+# OpenCode IDE config (local paths, API keys — never track)
+agents.json
+models.json
+
 # IDE / tool config
 .qodo/
 

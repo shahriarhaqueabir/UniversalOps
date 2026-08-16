@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/shahriarhaqueabir/UniversalOps/internal/common"
 )
@@ -19,6 +20,8 @@ type NetworkReport struct {
 }
 
 // RunNetworkDiagnostics runs all network checks and returns a combined report.
+// M4: wraps the entire diagnostic in a 30s timeout so a silently-dropped
+// ICMP packet or hung DNS query cannot block the caller forever.
 func RunNetworkDiagnostics() (*NetworkReport, error) {
 	report := &NetworkReport{}
 	var errs []string
@@ -115,7 +118,19 @@ func RunNetworkDiagnostics() (*NetworkReport, error) {
 		}
 	}()
 
-	wg.Wait()
+	// M4: Wait with a 30s timeout. If any sub-check hangs (e.g. a silently
+	// dropped ICMP packet on Linux/macOS), the caller is not blocked forever.
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(30 * time.Second):
+		common.LogWarn("RunNetworkDiagnostics: timed out after 30s")
+	}
 
 	if len(errs) > 0 && report.Ping == nil && report.DNS == nil && len(report.PortScan) == 0 {
 		return nil, fmt.Errorf("all network checks failed: %s", strings.Join(errs, "; "))

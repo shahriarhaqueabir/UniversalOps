@@ -221,7 +221,7 @@ interface AppInfo {
 
 const DEFAULT_APP_INFO: AppInfo = {
   name: 'UniversalOps',
-  version: '1.6.3',
+  version: '1.6.4',
   go_version: 'go1.26.5',
   uptime: '--',
 }

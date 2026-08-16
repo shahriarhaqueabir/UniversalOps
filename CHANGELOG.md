@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.4] - 2026-08-16
+
+### Fixed
+
+- **M1 — Logger globals race:** Added `sync.RWMutex` to protect `logger`/`logFile` globals in `logger.go`. `getLogger()` takes RLock; `InitLogger()`/`CloseLogger()` take write lock.
+- **M2 — Event-bus async dispatch:** `Emit()` now dispatches handlers via goroutines (`go func(h) { defer RecoverPanic(); h(evt) }(handler)`) so database writes no longer block engine ticks.
+- **M3 — Live-output non-blocking send:** All three shell live-output functions (`RunCommandWithLiveOutput`, `RunPowerShellWithLiveOutput`, `RunGitBashWithLiveOutput`) use a `done` channel with `select` to prevent blocking on channel send, plus 2s grace period WaitGroup drain.
+- **M4 — Network diagnostics timeout:** Added 30s `time.After` timeout wrapper on `RunNetworkDiagnostics` to prevent indefinite hangs from slow pings.
+- **M5 — Alert persistence tx rollback:** Added `defer tx.Rollback()` after `Begin()` in `persistAlertsAsync` and error checking on `InsertAlert` to abort batch on failure.
+- **M6 — Audit guard bypass:** `autonomousAudit` now blocks until the workflow finishes before releasing `auditRunning` flag. Added `timedOut` tracking; success events only emitted on non-timeout completion.
+
+### Changed
+
+- Upgraded `github.com/ollama/ollama` to v0.32.6 (`go.mod` / `go.sum`).
+
+### Added
+
+- Concurrency audit report: `docs/audit/CONCURRENCY_AUDIT_2026-08-16.md` — 6 MEDIUM findings addressed in this release, 11 LOW findings documented for future work.
+
 ## [1.6.3] - 2026-08-07
 
 ### Fixed

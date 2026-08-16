@@ -6,7 +6,6 @@ require (
 	github.com/miekg/dns v1.1.63
 	github.com/ollama/ollama v0.32.6
 	github.com/prometheus/client_golang v1.24.1
-	github.com/rs/zerolog v1.35.1
 	github.com/shirou/gopsutil/v4 v4.26.6
 	github.com/stretchr/testify v1.11.1
 	github.com/wailsapp/wails/v2 v2.13.0

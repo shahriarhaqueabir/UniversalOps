@@ -1,18 +1,82 @@
 package common
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
-	"time"
-
-	"github.com/rs/zerolog"
+	"sync"
 )
 
 var (
-	logFile *os.File
-	zlog    zerolog.Logger
+	// loggerMu guards logFile and logger against concurrent re-init
+	// (UpdateLogsConfig / Shutdown) while background goroutines log (M1).
+	loggerMu sync.RWMutex
+	logFile  *os.File
+	logger   *slog.Logger
+	logLevel = new(slog.LevelVar) // supports dynamic level changes at runtime
 )
+
+// defaultLogger is used before InitLogger runs (e.g. in tests or early boot).
+// slog.Logger is nil until initialized, so a zero-value logger would panic on
+// first use — this guarantees LogInfo/LogWarn/LogError/LogDebug are always safe.
+var defaultLogger = slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{
+	Level: slog.LevelInfo,
+}))
+
+// getLogger returns the active logger, falling back to the discard default
+// when InitLogger has not been called yet.
+func getLogger() *slog.Logger {
+	loggerMu.RLock()
+	defer loggerMu.RUnlock()
+	if logger != nil {
+		return logger
+	}
+	return defaultLogger
+}
+
+// multiHandler fans out log records to multiple slog.Handlers.
+type multiHandler struct {
+	handlers []slog.Handler
+}
+
+func (m *multiHandler) Enabled(_ context.Context, level slog.Level) bool {
+	for _, h := range m.handlers {
+		if h.Enabled(context.Background(), level) {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *multiHandler) Handle(ctx context.Context, r slog.Record) error {
+	for _, h := range m.handlers {
+		if h.Enabled(ctx, r.Level) {
+			if err := h.Handle(ctx, r); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (m *multiHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	handlers := make([]slog.Handler, len(m.handlers))
+	for i, h := range m.handlers {
+		handlers[i] = h.WithAttrs(attrs)
+	}
+	return &multiHandler{handlers: handlers}
+}
+
+func (m *multiHandler) WithGroup(name string) slog.Handler {
+	handlers := make([]slog.Handler, len(m.handlers))
+	for i, h := range m.handlers {
+		handlers[i] = h.WithGroup(name)
+	}
+	return &multiHandler{handlers: handlers}
+}
 
 // InitLogger initializes the session logger locally.
 func InitLogger(filename string) error {
@@ -25,26 +89,40 @@ func InitLogger(filename string) error {
 		return fmt.Errorf("open log file: %w", err)
 	}
 
-	logFile = f
-
-	// Configure zerolog with JSON output to file
-	output := zerolog.MultiLevelWriter(
-		zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339, NoColor: false},
-		f,
-	)
-
-	zlog = zerolog.New(output).
-		With().
-		Timestamp().
-		Str("app", "universalops").
-		Logger()
-
-	// AUDIT: Default to Debug level to capture Phase 2 telemetry
+	// Default to Debug in dev, Info in production
 	if os.Getenv("GO_ENV") != "production" {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		logLevel.Set(slog.LevelDebug)
 	} else {
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		logLevel.Set(slog.LevelInfo)
 	}
+
+	// Console handler: human-readable text output to stderr
+	consoleHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		Level: logLevel,
+	})
+
+	// File handler: structured JSON output to file
+	fileHandler := slog.NewJSONHandler(f, &slog.HandlerOptions{
+		Level: logLevel,
+	})
+
+	// Fan-out to both handlers
+	handler := &multiHandler{
+		handlers: []slog.Handler{consoleHandler, fileHandler},
+	}
+
+	newLogger := slog.New(handler).With("app", "universalops")
+
+	loggerMu.Lock()
+	if logFile != nil && logFile != f {
+		// Close a previous file if re-initializing without CloseLogger.
+		logFile.Close()
+	}
+	logFile = f
+	logger = newLogger
+	loggerMu.Unlock()
+
+	slog.SetDefault(newLogger)
 
 	LogInfo("Session started")
 	return nil
@@ -52,9 +130,16 @@ func InitLogger(filename string) error {
 
 // CloseLogger closes the log file.
 func CloseLogger() {
+	loggerMu.Lock()
+	defer loggerMu.Unlock()
 	if logFile != nil {
-		LogInfo("Session ended")
+		// Log via the captured logger directly — getLogger would re-acquire
+		// the lock and deadlock while we hold the write lock.
+		if logger != nil {
+			logger.Info("Session ended")
+		}
 		logFile.Close()
+		logFile = nil
 	}
 }
 
@@ -69,42 +154,42 @@ func enqueueLog(level, msg string) {
 // LogInfo logs an informational message.
 func LogInfo(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
-	zlog.Info().Msg(msg)
+	getLogger().Info(msg)
 	enqueueLog("INFO", msg)
 }
 
 // LogWarn logs a warning message.
 func LogWarn(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
-	zlog.Warn().Msg(msg)
+	getLogger().Warn(msg)
 	enqueueLog("WARN", msg)
 }
 
 // LogError logs an error message.
 func LogError(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
-	zlog.Error().Msg(msg)
+	getLogger().Error(msg)
 	enqueueLog("ERROR", msg)
 }
 
 // LogDebug logs a debug message (only in dev builds or when enabled).
 func LogDebug(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
-	zlog.Debug().Msg(msg)
+	getLogger().Debug(msg)
 }
 
-// SetLogLevel updates the dynamic log level of the zerolog instance.
+// SetLogLevel updates the dynamic log level at runtime.
 func SetLogLevel(level string) {
 	switch level {
 	case "trace":
-		zerolog.SetGlobalLevel(zerolog.TraceLevel)
+		logLevel.Set(slog.LevelDebug - 4) // slog has no trace; use sub-debug
 	case "debug":
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		logLevel.Set(slog.LevelDebug)
 	case "warn":
-		zerolog.SetGlobalLevel(zerolog.WarnLevel)
+		logLevel.Set(slog.LevelWarn)
 	case "error":
-		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+		logLevel.Set(slog.LevelError)
 	default:
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		logLevel.Set(slog.LevelInfo)
 	}
 }

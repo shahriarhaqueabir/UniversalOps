@@ -470,16 +470,24 @@ func (e *EngineLoop) autonomousAudit(workflowID, reason string) {
 
 		var reportID string
 		var err error
+		timedOut := false
 		select {
 		case res := <-resultCh:
 			reportID = res.reportID
 			err = res.err
 		case <-time.After(30 * time.Second):
+			timedOut = true
 			LogInfo("Autonomous audit timed out for workflow %s", workflowID)
-			return
+			// M6: keep the auditRunning guard held until the underlying
+			// workflow actually finishes — otherwise a new audit can start
+			// while this one is still executing (re-introducing the
+			// spike-re-entry bug). The timeout only stops *waiting*.
+			res := <-resultCh
+			reportID = res.reportID
+			err = res.err
 		}
 
-		if err == nil && e.eventBus != nil {
+		if !timedOut && err == nil && e.eventBus != nil {
 			e.eventBus.Emit(NewEventWithMeta(
 				CatAlert, EventInfo, "engine",
 				"Autonomous Diagnostic Complete",

@@ -974,9 +974,12 @@ func (a *App) persistAlertsAsync(newAlerts []common.Alert) {
 	if err != nil {
 		return
 	}
+	// M5: ensure the transaction is rolled back on any error path so a
+	// connection slot is never left in a transaction state (MaxOpenConns=2).
+	defer tx.Rollback()
 
 	for _, alert := range newAlerts {
-		storage.InsertAlert(common.AlertRecord{
+		if err := storage.InsertAlert(common.AlertRecord{
 			ID:        alert.ID,
 			Timestamp: alert.Timestamp,
 			Level:     alert.Level.String(),
@@ -984,7 +987,10 @@ func (a *App) persistAlertsAsync(newAlerts []common.Alert) {
 			Message:   alert.Message,
 			Value:     alert.Value,
 			Threshold: alert.Threshold,
-		}, tx)
+		}, tx); err != nil {
+			common.LogWarn("App: failed to insert alert %s: %v", alert.ID, err)
+			return
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		common.LogError("App: failed to commit alert transaction: %v", err)
